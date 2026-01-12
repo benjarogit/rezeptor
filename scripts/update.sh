@@ -246,3 +246,75 @@ update::check_async() {
     return 0
 }
 
+# ============================================================================
+# @function update::init_version_file
+# @description Initialize VERSION file if it doesn't exist
+# @return 0 on success, 1 on error
+# ============================================================================
+update::init_version_file() {
+    # If VERSION file already exists, don't do anything
+    if [ -f "VERSION" ]; then
+        return 0
+    fi
+    
+    local detected_version=""
+    
+    # PRIORITY 1: Try to get version from GitHub API (most accurate)
+    detected_version=$(update::get_latest_version 2>/dev/null || echo "")
+    if [ -n "$detected_version" ] && [ "$detected_version" != "" ]; then
+        local version_clean="${detected_version#v}"
+        echo "$version_clean" > "VERSION"
+        return 0
+    fi
+    
+    # PRIORITY 2: Try to get version from git tag (for development)
+    if command -v git >/dev/null 2>&1 && [ -d ".git" ]; then
+        local git_version
+        git_version=$(git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || echo "")
+        if [ -n "$git_version" ]; then
+            local version_clean="${git_version#v}"
+            echo "$version_clean" > "VERSION"
+            return 0
+        fi
+    fi
+    
+    # PRIORITY 3: Try to extract from CHANGELOG.md
+    if [ -f "CHANGELOG.md" ]; then
+        local changelog_version
+        changelog_version=$(grep -m 1 "^## \[" CHANGELOG.md 2>/dev/null | sed -E 's/^## \[v?([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/' || echo "")
+        if [ -n "$changelog_version" ]; then
+            echo "$changelog_version" > "VERSION"
+            return 0
+        fi
+    fi
+    
+    # If we couldn't determine version, return error
+    return 1
+}
+
+# ============================================================================
+# @function update::update_version_file
+# @description Update VERSION file with latest GitHub release version
+# @return 0 on success, 1 on error
+# ============================================================================
+update::update_version_file() {
+    local latest_version
+    latest_version=$(update::get_latest_version)
+    
+    if [ -z "$latest_version" ] || [ "$latest_version" = "" ]; then
+        return 1
+    fi
+    
+    # Remove 'v' prefix if present (VERSION file should contain "3.0.1" not "v3.0.1")
+    local version_clean="${latest_version#v}"
+    
+    # Write to VERSION file
+    echo "$version_clean" > "VERSION"
+    
+    # Invalidate update cache so new version is immediately recognized
+    if [ -f "$UPDATE_CACHE_FILE" ]; then
+        rm -f "$UPDATE_CACHE_FILE"
+    fi
+    
+    return 0
+}

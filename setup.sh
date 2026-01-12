@@ -52,6 +52,10 @@ fi
 # Load update module for version checking
 if [ -f "$SCRIPT_DIR/scripts/update.sh" ]; then
     source "$SCRIPT_DIR/scripts/update.sh"
+    # Initialize VERSION file if it doesn't exist (non-blocking, silent on error)
+    if type update::init_version_file >/dev/null 2>&1; then
+        update::init_version_file 2>/dev/null || true
+    fi
 fi
 
 # Set PROJECT_ROOT for functions that need it (like detect_photoshop_version)
@@ -347,6 +351,27 @@ show_install_or_update_menu() {
             # Try git pull if in git repository
             if command -v git >/dev/null 2>&1 && [ -d ".git" ]; then
                 if git pull origin main 2>/dev/null || git pull origin master 2>/dev/null; then
+                    # Update VERSION file with latest GitHub release version
+                    # Load update module if not already loaded
+                    if ! type update::update_version_file >/dev/null 2>&1; then
+                        if [ -f "$SCRIPT_DIR/scripts/update.sh" ]; then
+                            source "$SCRIPT_DIR/scripts/update.sh" 2>/dev/null || true
+                        fi
+                    fi
+                    
+                    # Update VERSION file if function is available
+                    if type update::update_version_file >/dev/null 2>&1; then
+                        if ! update::update_version_file 2>/dev/null; then
+                            # Warning but don't fail - git pull was successful
+                            # Use simple echo since this is non-critical
+                            if [ "$LANG_CODE" = "de" ]; then
+                                echo -e "${C_YELLOW}⚠ Hinweis: VERSION-Datei konnte nicht aktualisiert werden, aber Update war erfolgreich${C_RESET}" >&2
+                            else
+                                echo -e "${C_YELLOW}⚠ Note: Could not update VERSION file, but update was successful${C_RESET}" >&2
+                            fi
+                        fi
+                    fi
+                    
                     if [ "$LANG_CODE" = "de" ]; then
                         echo -e "${C_GREEN}Update erfolgreich!${C_RESET}"
                     else
@@ -759,7 +784,58 @@ function get_system_info() {
     [ $ram_gb -eq 0 ] && ram_gb=1  # Minimum 1GB display
     local wine_ver=$(wine --version 2>/dev/null | cut -d'-' -f2 || echo "not installed")
     
-    echo "$distro|$kernel|${ram_gb}GB|$wine_ver"
+    # Detect architecture
+    local arch=$(uname -m 2>/dev/null || echo "unknown")
+    local arch_display=""
+    case "$arch" in
+        "x86_64")
+            arch_display="(64-bit)"
+            ;;
+        "aarch64")
+            arch_display="(ARM64)"
+            ;;
+        *)
+            arch_display="($arch)"
+            ;;
+    esac
+    
+    # Detect GPU
+    local gpu=""
+    # Try nvidia-smi first (most reliable for Nvidia)
+    if command -v nvidia-smi >/dev/null 2>&1; then
+        gpu=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1 | sed 's/ NVIDIA.*//' | sed 's/GeForce //' | sed 's/ RTX / RTX/' | sed 's/ GTX / GTX/' || echo "")
+        if [ -n "$gpu" ]; then
+            gpu="Nvidia $gpu"
+        fi
+    fi
+    
+    # Fallback to lspci if nvidia-smi didn't work
+    if [ -z "$gpu" ] && command -v lspci >/dev/null 2>&1; then
+        gpu=$(lspci | grep -iE 'vga|3d|display' | head -1 | sed 's/.*: //' | sed 's/ \[.*\]//' || echo "")
+        # Shorten common GPU names
+        if [ -n "$gpu" ]; then
+            # Extract manufacturer and model (first 2-3 words usually)
+            gpu=$(echo "$gpu" | awk '{print $1, $2, $3, $4}' | sed 's/  */ /g' | sed 's/ $//')
+        fi
+    fi
+    
+    # Fallback to glxinfo if available
+    if [ -z "$gpu" ] && command -v glxinfo >/dev/null 2>&1; then
+        gpu=$(glxinfo 2>/dev/null | grep "OpenGL renderer" | sed 's/.*: //' | head -1 || echo "")
+    fi
+    
+    # Format GPU for display (shorten if too long)
+    local gpu_display=""
+    if [ -n "$gpu" ]; then
+        # Limit GPU name to ~25 characters for display
+        if [ ${#gpu} -gt 25 ]; then
+            gpu_display="GPU: ${gpu:0:22}..."
+        else
+            gpu_display="GPU: $gpu"
+        fi
+    fi
+    
+    echo "$distro|$arch_display|$kernel|${ram_gb}GB|$gpu_display|$wine_ver"
 }
 
 # ============================================================================
@@ -918,9 +994,11 @@ function banner() {
     # Get system information
     local sys_info=$(get_system_info)
     local distro=$(echo "$sys_info" | cut -d'|' -f1)
-    local kernel=$(echo "$sys_info" | cut -d'|' -f2)
-    local ram=$(echo "$sys_info" | cut -d'|' -f3)
-    local wine_ver=$(echo "$sys_info" | cut -d'|' -f4)
+    local arch_display=$(echo "$sys_info" | cut -d'|' -f2)
+    local kernel=$(echo "$sys_info" | cut -d'|' -f3)
+    local ram=$(echo "$sys_info" | cut -d'|' -f4)
+    local gpu_display=$(echo "$sys_info" | cut -d'|' -f5)
+    local wine_ver=$(echo "$sys_info" | cut -d'|' -f6)
     
     # Dynamic copyright year (start year - current year)
     # Note: This fork started in 2025, so start_year is 2025 (not 2024 from original project)
@@ -1053,7 +1131,12 @@ function banner() {
     
     # System info line - width is 74 chars (75 from empty line - 1 for leading space in echo)
     local sys_info_width=74
-    local sys_info_line="${sys_label} ${distro} | Kernel ${kernel} | RAM ${ram} | Wine ${wine_ver}"
+    # Build system info line with architecture and GPU
+    local sys_info_line="${sys_label} ${distro} ${arch_display} | Kernel ${kernel} | RAM ${ram}"
+    if [ -n "$gpu_display" ] && [ "$gpu_display" != "" ]; then
+        sys_info_line="${sys_info_line} | ${gpu_display}"
+    fi
+    sys_info_line="${sys_info_line} | Wine ${wine_ver}"
     
     # Truncate distro if line is too long
     if [ ${#sys_info_line} -gt $sys_info_width ]; then
@@ -1063,7 +1146,12 @@ function banner() {
         # Only truncate if result would be shorter than original distro (avoid expanding short names)
         if [ $new_distro_len -gt 3 ] && [ $((new_distro_len + 3)) -lt ${#distro} ]; then
             distro="${distro:0:$new_distro_len}..."
-            sys_info_line="${sys_label} ${distro} | Kernel ${kernel} | RAM ${ram} | Wine ${wine_ver}"
+            # Rebuild system info line with truncated distro
+            sys_info_line="${sys_label} ${distro} ${arch_display} | Kernel ${kernel} | RAM ${ram}"
+            if [ -n "$gpu_display" ] && [ "$gpu_display" != "" ]; then
+                sys_info_line="${sys_info_line} | ${gpu_display}"
+            fi
+            sys_info_line="${sys_info_line} | Wine ${wine_ver}"
         fi
         # If distro is already very short, leave it unchanged - padding will be reduced to fit
     fi
@@ -1116,30 +1204,37 @@ function banner() {
     fi
     
     # Print colored banner with echo -e (bash/sh compatible)
-    echo -e "${C_CYAN}                     ┏━━━━━━━━━━━━━━━━━━━━━━━━━┫ ${C_MAGENTA}${version_display}${C_CYAN} ┣━━━━━━━━━━━━━━━━━━━━━━━━━━━┓${C_RESET}"
+    # Calculate consistent banner width (25 chars for both header and footer)
+    local banner_width=25
+    local banner_line_top=$(printf "━%.0s" $(seq 1 $banner_width))
+    local banner_line_bottom=$(printf "━%.0s" $(seq 1 $banner_width))
+    echo -e "${C_CYAN}                     ┏${banner_line_top}┫ ${C_MAGENTA}${version_display}${C_CYAN} ┣${banner_line_top}┓${C_RESET}"
     echo -e "${C_CYAN}                     ┃${C_RESET} ${C_GRAY}${sys_info_line}${C_RESET}"
     echo -e "${C_CYAN}                     ┃${C_RESET}                                                                           ${C_RESET}"
-    echo -e "${C_BLUE}  ███████████████████████████${C_RESET}                                                                    ${C_RESET}"
-    echo -e "${C_BLUE}  ██${C_RESET}                       ${C_BLUE_LIGHT}██${C_RESET}      ${opt1}${C_RESET}"
-    echo -e "${C_BLUE}  ██  ███████▆▃${C_RESET}            ${C_BLUE_LIGHT}██${C_RESET}      ${opt2}${C_RESET}"
-    echo -e "${C_BLUE}  ██  ███   ▝██▙${C_RESET}           ${C_BLUE_LIGHT}██${C_RESET}      ${opt3}${C_RESET}"
-    echo -e "${C_BLUE}  ██  ███    ███${C_RESET}           ${C_BLUE_LIGHT}██${C_RESET}      ${opt4}${C_RESET}"
-    echo -e "${C_BLUE}  ██  ███   ▟██▛▗▟████▙${C_RESET}    ${C_BLUE_LIGHT}██${C_RESET}      ${opt5}${C_RESET}"
-    echo -e "${C_BLUE}  ██  ███████▛  ██▋${C_RESET}        ${C_BLUE_LIGHT}██${C_RESET}      ${opt6}${C_RESET}"
-    echo -e "${C_BLUE}  ██  ███       ▝▜█████▙${C_RESET}   ${C_BLUE_LIGHT}██${C_RESET}      ${opt7}${C_RESET}"
-    echo -e "${C_BLUE}  ██  ███             ██▌${C_RESET}  ${C_BLUE_LIGHT}██${C_RESET}      ${opt8}${C_RESET}"
-    echo -e "${C_BLUE}  ██  ███        ▗▟████▛${C_RESET}   ${C_BLUE_LIGHT}██${C_RESET}                                                                    ${C_RESET}"
-    echo -e "${C_BLUE}  ██${C_RESET}                       ${C_BLUE_LIGHT}██${C_RESET}      ${opt9}${C_RESET}"
-    echo -e "${C_BLUE}  ███████████████████████████${C_RESET}                                                                    ${C_RESET}"
+    echo -e "${C_CYAN}  ███████████████████████████${C_RESET}                                                                    ${C_RESET}"
+    echo -e "${C_CYAN}  ██${C_RESET}                       ${C_CYAN}██${C_RESET}      ${opt1}${C_RESET}"
+    echo -e "${C_CYAN}  ██  ${C_BLUE_LIGHT}███████▆▃${C_RESET}            ${C_CYAN}██${C_RESET}      ${opt2}${C_RESET}"
+    echo -e "${C_CYAN}  ██  ${C_BLUE_LIGHT}███   ▝██▙${C_RESET} ${C_YELLOW}Linux${C_RESET}     ${C_CYAN}██${C_RESET}      ${opt3}${C_RESET}"
+    echo -e "${C_CYAN}  ██  ${C_BLUE_LIGHT}███    ███${C_RESET}           ${C_CYAN}██${C_RESET}      ${opt4}${C_RESET}"
+    echo -e "${C_CYAN}  ██  ${C_BLUE_LIGHT}███   ▟██▛▗▟████▙${C_RESET}    ${C_CYAN}██${C_RESET}      ${opt5}${C_RESET}"
+    echo -e "${C_CYAN}  ██  ${C_BLUE_LIGHT}███████▛  ██▋${C_RESET}        ${C_CYAN}██${C_RESET}      ${opt6}${C_RESET}"
+    echo -e "${C_CYAN}  ██  ${C_BLUE_LIGHT}███       ▝▜█████▙${C_RESET}   ${C_CYAN}██${C_RESET}      ${opt7}${C_RESET}"
+    echo -e "${C_CYAN}  ██  ${C_BLUE_LIGHT}███   ${C_MAGENTA}2021${C_RESET}      ${C_BLUE_LIGHT}██▌${C_RESET}  ${C_CYAN}██${C_RESET}      ${opt8}${C_RESET}"
+    echo -e "${C_CYAN}  ██  ${C_BLUE_LIGHT}███        ▗▟████▛${C_RESET}   ${C_CYAN}██${C_RESET}                                                                    ${C_RESET}"
+    echo -e "${C_CYAN}  ██${C_RESET}                       ${C_CYAN}██${C_RESET}      ${opt9}${C_RESET}"
+    echo -e "${C_CYAN}  ███████████████████████████${C_RESET}                                                                    ${C_RESET}"
     echo -e "${C_CYAN}                     ┃${C_RESET}                                                                           ${C_RESET}"
     # GitHub link with OSC 8 for clickable links in modern terminals
     local github_url="https://github.com/benjarogit/photoshopCClinux"
+    # Use consistent banner width (same as header)
+    local banner_width=25
+    local banner_line_bottom=$(printf "━%.0s" $(seq 1 $banner_width))
     # Use printf to properly escape ANSI codes
-    printf "${C_CYAN}                     ┗━━━━━━━━━━━━━━━┫ "
+    printf "${C_CYAN}                     ┗${banner_line_bottom}┫ "
     printf "\033]8;;%s\033\\" "$github_url"
     printf "${C_WHITE}%s" "$github_url"
     printf "\033]8;;\033\\"
-    printf "${C_CYAN} ┣━━━━━━━━━━┛${C_RESET}\n"
+    printf "${C_CYAN} ┣${banner_line_bottom}┛${C_RESET}\n"
     echo -e "                     ${C_GRAY}${copyright}${C_RESET}"
     
     echo ""
