@@ -5,6 +5,12 @@
 # Description:
 #   Properly terminates all Photoshop and Wine processes related to Photoshop
 #
+# Author:       Sunny C.
+# Website:      https://sunnyc.de
+# Repository:   https://github.com/benjarogit/photoshopCClinux
+# License:      GPL-2.0
+# Copyright:    (c) 2024-2026 Sunny C.
+#
 # Usage:
 #   ./kill-photoshop.sh
 #   or

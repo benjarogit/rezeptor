@@ -6,10 +6,11 @@
 #   Automatic diagnosis and troubleshooting for common Photoshop CC issues.
 #   Checks Wine configuration, installation integrity, and provides fixes.
 #
-# Author:       benjarogit
+# Author:       Sunny C.
+# Website:      https://sunnyc.de
 # Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-3.0
-# Copyright:    (c) 2024 benjarogit
+# License:      GPL-2.0
+# Copyright:    (c) 2024-2026 Sunny C.
 ################################################################################
 
 echo "═══════════════════════════════════════════════════════════════"
@@ -129,6 +130,12 @@ if [ -d "$SCR_PATH" ]; then
     check_ok "Installations-Verzeichnis gefunden: $SCR_PATH"
 else
     check_error "Installations-Verzeichnis nicht gefunden: $SCR_PATH"
+    # If called from setup.sh, return to menu
+    if [ -n "${RETURN_TO_MENU:-}" ]; then
+        echo ""
+        read -p "Drücke Enter, um zum Hauptmenü zurückzukehren... " dummy
+        exit 0
+    fi
     echo "        → Photoshop ist nicht installiert. Führe setup.sh aus."
     exit 1
 fi

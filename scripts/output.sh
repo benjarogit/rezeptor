@@ -6,10 +6,11 @@
 #   Provides consistent, formatted console output throughout the installation.
 #   All output follows a unified format for better readability.
 #
-# Author:       benjarogit
+# Author:       Sunny C.
+# Website:      https://sunnyc.de
 # Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-3.0
-# Copyright:    (c) 2024 benjarogit
+# License:      GPL-2.0
+# Copyright:    (c) 2024-2026 Sunny C.
 ################################################################################
 
 # ============================================================================

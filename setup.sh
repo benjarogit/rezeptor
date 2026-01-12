@@ -7,10 +7,11 @@
 #   on Linux using Wine. Supports multi-language (English/German) interface
 #   with ANSI colored banner display.
 #
-# Author:       benjarogit
+# Author:       Sunny C.
+# Website:      https://sunnyc.de
 # Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-3.0
-# Copyright:    (c) 2024 benjarogit
+# License:      GPL-2.0
+# Copyright:    (c) 2024-2026 Sunny C.
 #
 # Based on:     photoshopCClinux by Gictorbit
 #               https://github.com/Gictorbit/photoshopCClinux
@@ -383,16 +384,22 @@ show_install_or_update_menu() {
 function show_wine_selection_menu() {
     # Direkt zur Installation mit Wine Standard
     msg_run_photoshop
+    # Export RETURN_TO_MENU so PhotoshopSetup.sh knows to return to menu
+    export RETURN_TO_MENU="true"
     run_script "$SCRIPT_DIR/scripts/PhotoshopSetup.sh" "PhotoshopSetup.sh" --wine-standard
     local exit_code=$?
+    unset RETURN_TO_MENU
     # Exit code 130 = STRG+C (user interrupt) - return to main menu
-    if [ $exit_code -eq 130 ]; then
-        if [ "$LANG_CODE" = "de" ]; then
-            echo ""
-            echo "Installation abgebrochen. Zurück zum Hauptmenü..."
-        else
-            echo ""
-            echo "Installation cancelled. Returning to main menu..."
+    # Exit code 0 = successful installation - return to main menu
+    if [ $exit_code -eq 130 ] || [ $exit_code -eq 0 ]; then
+        if [ $exit_code -eq 130 ]; then
+            if [ "$LANG_CODE" = "de" ]; then
+                echo ""
+                echo "Installation abgebrochen. Zurück zum Hauptmenü..."
+            else
+                echo ""
+                echo "Installation cancelled. Returning to main menu..."
+            fi
         fi
         wait_second 2
         main
@@ -418,7 +425,10 @@ function main() {
         ;;
     2)  
         msg_run_camera_raw
+        export RETURN_TO_MENU="true"
         run_script "scripts/cameraRawInstaller.sh" "cameraRawInstaller.sh"
+        local exit_code=$?
+        unset RETURN_TO_MENU
         wait_second 2
         main
         ;;
@@ -438,6 +448,7 @@ function main() {
     4)  
         msg_troubleshoot
         # Troubleshoot is in root directory - use script directory
+        export RETURN_TO_MENU="true"
         local troubleshoot_path="$SCRIPT_DIR/troubleshoot.sh"
         if [ -f "$troubleshoot_path" ]; then
             chmod +x "$troubleshoot_path"
@@ -445,6 +456,7 @@ function main() {
         else
             error "troubleshoot.sh not found at $troubleshoot_path"
         fi
+        unset RETURN_TO_MENU
         wait_second 2
         main
         ;;
@@ -1068,7 +1080,6 @@ function banner() {
     
     if type update::get_current_version >/dev/null 2>&1; then
         current_version=$(update::get_current_version 2>/dev/null || echo "")
-        latest_version=$(update::get_latest_version 2>/dev/null || echo "")
         
         # Clean version strings - remove git commit hash if present (e.g., "v2.2.18-16-g8f6dc65" -> "v2.2.18")
         if [ -n "$current_version" ]; then
@@ -1079,21 +1090,27 @@ function banner() {
             fi
         fi
         
-        if [ -n "$latest_version" ]; then
-            # Remove 'v' prefix for comparison, but keep it for display
-            latest_version=$(echo "$latest_version" | sed 's/^v//')
-        fi
+        # Always try to get GitHub version (non-blocking, may fail silently)
+        latest_version=$(update::get_latest_version 2>/dev/null || echo "")
         
+        # Always show local version and GitHub version
         if [ -n "$current_version" ] && [ "$current_version" != "unknown" ]; then
-            # Remove 'v' prefix from current_version for display (we add it back)
-            local current_clean=$(echo "$current_version" | sed 's/^v//')
+            # Show local version
             version_display="Photoshop Installer ${current_version}"
             
-            # If update available, add GitHub version in brackets
-            if [ -n "$latest_version" ] && type update::compare_versions >/dev/null 2>&1; then
-                if update::compare_versions "$current_version" "v${latest_version}" 2>/dev/null; then
-                    version_display="Photoshop Installer ${current_version} ${C_GRAY}(v${latest_version})${C_RESET}"
-                fi
+            # Always add GitHub version if available
+            if [ -n "$latest_version" ] && [ "$latest_version" != "" ]; then
+                # Remove 'v' prefix for display (we add it back)
+                local latest_clean=$(echo "$latest_version" | sed 's/^v//')
+                version_display="${version_display} ${C_BRACKET}- Github v${latest_clean}${C_RESET}"
+            fi
+        else
+            # If no local version found, show GitHub version only
+            if [ -n "$latest_version" ] && [ "$latest_version" != "" ]; then
+                local latest_clean=$(echo "$latest_version" | sed 's/^v//')
+                version_display="Photoshop Installer ${C_BRACKET}(Github v${latest_clean})${C_RESET}"
+            else
+                version_display="Photoshop Installer"
             fi
         fi
     fi

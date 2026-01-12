@@ -6,10 +6,11 @@
 #   Installs Adobe Camera Raw v12 plugin for Photoshop CC.
 #   Handles file extraction and integration into the Photoshop installation.
 #
-# Author:       benjarogit
+# Author:       Sunny C.
+# Website:      https://sunnyc.de
 # Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-3.0
-# Copyright:    (c) 2024 benjarogit
+# License:      GPL-2.0
+# Copyright:    (c) 2024-2026 Sunny C.
 #
 # Based on:     photoshopCClinux by Gictorbit
 #               https://github.com/Gictorbit/photoshopCClinux
@@ -34,7 +35,25 @@ function main() {
 }
 
 function check_ps_installed() {
-    ([ -d "$SCR_PATH" ] && [ -d "$CACHE_PATH" ] && [ -d "$WINE_PREFIX" ] && show_message2 "photoshop installed") || error2 "photoshop not found you should intsall photoshop first"
+    if [ -d "$SCR_PATH" ] && [ -d "$CACHE_PATH" ] && [ -d "$WINE_PREFIX" ]; then
+        show_message2 "photoshop installed"
+        return 0
+    else
+        error2 "photoshop not found you should intsall photoshop first"
+        # Return to main menu if called from setup.sh
+        if [ -n "${RETURN_TO_MENU:-}" ]; then
+            if [ "$LANG_CODE" = "de" ]; then
+                echo ""
+                echo "Drücke Enter, um zum Hauptmenü zurückzukehren..."
+                read -r dummy
+            else
+                echo ""
+                echo "Press Enter to return to main menu..."
+                read -r dummy
+            fi
+        fi
+        exit 1
+    fi
 }
 
 function install_cameraRaw() {

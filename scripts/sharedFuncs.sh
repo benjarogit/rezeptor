@@ -6,10 +6,11 @@
 #   Common utility functions used across all installer scripts including
 #   package detection, path management, progress indicators, and notifications.
 #
-# Author:       benjarogit
+# Author:       Sunny C.
+# Website:      https://sunnyc.de
 # Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-3.0
-# Copyright:    (c) 2024 benjarogit
+# License:      GPL-2.0
+# Copyright:    (c) 2024-2026 Sunny C.
 #
 # Based on:     photoshopCClinux by Gictorbit
 #               https://github.com/Gictorbit/photoshopCClinux

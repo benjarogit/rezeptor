@@ -1,13 +1,13 @@
-# Adobe Photoshop Installer for Linux ![Status](https://img.shields.io/badge/status-production%20ready-green) ![Version](https://img.shields.io/badge/version-3.0.0-blue)
+# Adobe Photoshop Installer for Linux ![Status](https://img.shields.io/badge/status-production%20ready-green)
 
 > [!NOTE]
-> **Production Ready - Complete Toolset v3.0.0**
+> **Production Ready - Complete Toolset**
 > 
 > This project has evolved from a simple installer into a **comprehensive, production-ready toolset** for running Photoshop on Linux. With modular architecture, extensive features, and professional polish, it's ready for widespread use.
 > 
 > **Every hint, fix, or idea is welcome!** Please report issues, share solutions, or contribute improvements via [GitHub Issues](https://github.com/benjarogit/photoshopCClinux/issues).
 > 
-> See [CHANGELOG.md](CHANGELOG.md) for what's new in v3.0.0!
+> See [CHANGELOG.md](CHANGELOG.md) for latest changes!
 
 > [!IMPORTANT]
 > **Tested and Working Versions**
@@ -68,7 +68,7 @@ A simple, automated installer that helps you set up Photoshop on Linux. Works on
 - ✅ **Desktop Integration** - Creates menu entry and terminal command
 - ✅ **Multi-Language** - Full i18n support (DE/EN) with external language files
 
-### Advanced Features (v3.0.0)
+### Advanced Features
 - 🔧 **Automatic Troubleshooting** - Built-in diagnostic tools with automatic fixes
 - 📦 **Camera Raw Installer** - Automated installation with MD5 verification
 - 🔄 **Update Check System** - GitHub API integration with caching and timeout protection
@@ -233,19 +233,19 @@ chmod +x setup.sh
 
 ```
 ┌─────────────────────────────────────────────┐
-│  1) Install photoshop CC                   │
-│  2) Install camera raw v12                 │
-│  3) Pre-installation check                 │
-│  4) Troubleshooting                        │
-│  5) Configure wine                         │
-│  6) Uninstall photoshop + killer            │
-│  7) Internet: ON/OFF                       │
-│  8) Language: English/Deutsch              │
-│  9) Exit                                   │
+│  1- Installieren / Update                   │
+│  2- Camera Raw v12 installieren            │
+│  3- System-Vorprüfung (empfohlen)           │
+│  4- Fehlerbehebung                          │
+│  5- Wine konfigurieren                      │
+│  6- Internet: ON (Toggle)                  │
+│  7- Sprache: Deutsch (L)                   │
+│  8- Deinstallieren / Killen                │
+│  9- Schließen                               │
 └─────────────────────────────────────────────┘
 ```
 
-Select **Option 1** (install photoshop CC)
+Select **Option 1** (Installieren / Update)
 
 ![Setup Screenshot](images/setup-screenshot.png)
 
@@ -677,7 +677,7 @@ Want to contribute code?
 ### Official Resources
 
 - **German Documentation:** [README.de.md](README.de.md)
-- **Changelog:** [CHANGELOG.md](CHANGELOG.md) - See what's new in v3.0.0 and previous versions
+- **Changelog:** [CHANGELOG.md](CHANGELOG.md) - See latest changes and previous versions
 - **Quick Start Guide:** Quick start section above
 - **Wine AppDB:** [Photoshop on Wine](https://appdb.winehq.org/objectManager.php?iId=17&sClass=application)
 
@@ -726,7 +726,7 @@ This project is licensed under the **GPL-2.0 License** - see the [LICENSE](LICEN
 ![GitHub issues](https://img.shields.io/github/issues/benjarogit/photoshopCClinux)
 ![GitHub stars](https://img.shields.io/github/stars/benjarogit/photoshopCClinux)
 
-**Status:** ✅ Production Ready (v3.0.0 - Complete Toolset)
+**Status:** ✅ Production Ready (Complete Toolset)
 
 **Tested on:**
 - CachyOS (Primary)
@@ -788,9 +788,9 @@ Photoshop 2020+ has increased Adobe login requirements and may not work well off
 
 ## 📄 License & Copyright
 
-**Copyright © 2024 benjarogit**
+**Copyright © 2024-2026 Sunny C.**
 
-This project is licensed under the **GPL-3.0 License**.
+This project is licensed under the **GPL-2.0 License**.
 
 Based on [photoshopCClinux](https://github.com/Gictorbit/photoshopCClinux) by Gictorbit.
 

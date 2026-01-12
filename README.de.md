@@ -1,13 +1,13 @@
-# Adobe Photoshop Installer für Linux ![Status](https://img.shields.io/badge/status-produktionsreif-green) ![Version](https://img.shields.io/badge/version-3.0.0-blue)
+# Adobe Photoshop Installer für Linux ![Status](https://img.shields.io/badge/status-produktionsreif-green)
 
 > [!NOTE]
-> **Produktionsreif - Komplettes Toolset v3.0.0**
+> **Produktionsreif - Komplettes Toolset**
 > 
 > Dieses Projekt hat sich von einem einfachen Installer zu einem **umfassenden, produktionsreifen Toolset** für Photoshop auf Linux entwickelt. Mit modularer Architektur, umfangreichen Features und professionellem Finish ist es bereit für den breiten Einsatz.
 > 
 > **Jeder Hinweis, Fix oder Idee ist willkommen!** Bitte melde Probleme, teile Lösungen oder trage Verbesserungen über [GitHub Issues](https://github.com/benjarogit/photoshopCClinux/issues) bei.
 > 
-> Siehe [CHANGELOG.md](CHANGELOG.md) für Neuerungen in v3.0.0!
+> Siehe [CHANGELOG.md](CHANGELOG.md) für aktuelle Änderungen!
 
 > [!IMPORTANT]
 > **Getestete und funktionierende Versionen**
@@ -68,7 +68,7 @@ Ein einfacher, automatisierter Installer, der dir hilft, Photoshop auf Linux ein
 - ✅ **Desktop-Integration** - Erstellt Menüeintrag und Terminal-Befehl
 - ✅ **Mehrsprachig** - Vollständige i18n-Unterstützung (DE/EN) mit externen Sprachdateien
 
-### Erweiterte Features (v3.0.0)
+### Erweiterte Features
 - 🔧 **Automatische Fehlerbehebung** - Eingebaute Diagnosetools mit automatischen Fixes
 - 📦 **Camera Raw Installer** - Automatisierte Installation mit MD5-Verifikation
 - 🔄 **Update-Check-System** - GitHub API-Integration mit Caching und Timeout-Schutz
@@ -229,19 +229,19 @@ chmod +x setup.sh
 
 ```
 ┌─────────────────────────────────────────────┐
-│  1) Photoshop CC installieren              │
-│  2) Camera Raw v12 installieren            │
-│  3) System-Vorprüfung                       │
-│  4) Fehlerbehebung                          │
-│  5) Wine konfigurieren                      │
-│  6) Photoshop deinstallieren + Killer      │
-│  7) Internet: ON/OFF                        │
-│  8) Sprache: Deutsch/English                │
-│  9) Beenden                                 │
+│  1- Installieren / Update                   │
+│  2- Camera Raw v12 installieren             │
+│  3- System-Vorprüfung (empfohlen)           │
+│  4- Fehlerbehebung                          │
+│  5- Wine konfigurieren                      │
+│  6- Internet: ON (Toggle)                   │
+│  7- Sprache: Deutsch (L)                    │
+│  8- Deinstallieren / Killen                │
+│  9- Schließen                               │
 └─────────────────────────────────────────────┘
 ```
 
-Wähle **Option 1** (Photoshop CC installieren)
+Wähle **Option 1** (Installieren / Update)
 
 ![Setup Screenshot](images/setup-screenshot-de.png)
 
@@ -662,7 +662,7 @@ Möchtest du Code beitragen?
 ### Offizielle Ressourcen
 
 - **English Documentation:** [README.md](README.md)
-- **Changelog:** [CHANGELOG.md](CHANGELOG.md) - Siehe was in v3.0.0 und vorherigen Versionen neu ist
+- **Changelog:** [CHANGELOG.md](CHANGELOG.md) - Siehe aktuelle Änderungen und vorherige Versionen
 - **Schnellstart-Anleitung:** Schnellstart-Sektion oben
 - **Wine AppDB:** [Photoshop on Wine](https://appdb.winehq.org/objectManager.php?iId=17&sClass=application)
 
@@ -711,7 +711,7 @@ Dieses Projekt ist unter der **GPL-2.0 Lizenz** lizenziert - siehe die [LICENSE]
 ![GitHub issues](https://img.shields.io/github/issues/benjarogit/photoshopCClinux)
 ![GitHub stars](https://img.shields.io/github/stars/benjarogit/photoshopCClinux)
 
-**Status:** ✅ Produktionsreif (v3.0.0 - Komplettes Toolset)
+**Status:** ✅ Produktionsreif (Komplettes Toolset)
 
 **Getestet auf:**
 - CachyOS (Primär)
@@ -773,9 +773,9 @@ Photoshop 2020+ hat erhöhte Adobe-Login-Anforderungen und funktioniert möglich
 
 ## 📄 Lizenz & Copyright
 
-**Copyright © 2024 benjarogit**
+**Copyright © 2024-2026 Sunny C.**
 
-Dieses Projekt ist unter der **GPL-3.0 Lizenz** lizenziert.
+Dieses Projekt ist unter der **GPL-2.0 Lizenz** lizenziert.
 
 Basiert auf [photoshopCClinux](https://github.com/Gictorbit/photoshopCClinux) von Gictorbit.
 

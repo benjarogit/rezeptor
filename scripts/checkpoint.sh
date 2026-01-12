@@ -7,10 +7,11 @@
 #   critical installation steps and allows rollback to previous checkpoints
 #   if errors occur.
 #
-# Author:       benjarogit
+# Author:       Sunny C.
+# Website:      https://sunnyc.de
 # Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-3.0
-# Copyright:    (c) 2024 benjarogit
+# License:      GPL-2.0
+# Copyright:    (c) 2024-2026 Sunny C.
 ################################################################################
 
 # ============================================================================

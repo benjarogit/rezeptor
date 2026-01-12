@@ -1,84 +1,45 @@
 ---
 name: 🐛 Bug Report
-about: Report a bug or issue with Photoshop installation or usage
+about: Report a bug or issue
 title: '[BUG] '
 labels: bug
 assignees: ''
 ---
 
-## 🐛 Bug Description
+## 🐛 Problem
 
-A clear and concise description of what the bug is.
+Kurze Beschreibung des Problems.
 
-## 📋 System Information
+## 📋 System
 
-**Linux Distribution:**
-- Distro: [e.g. CachyOS, Arch, Ubuntu 22.04]
-- Desktop Environment: [e.g. KDE, GNOME, XFCE]
-- Kernel Version: [run: `uname -r`]
+- **Distro:** [z.B. CachyOS, Arch, Ubuntu]
+- **Wine:** [run: `wine --version`]
+- **Photoshop:** [z.B. CC 2021]
 
-**Hardware:**
-- GPU: [e.g. Nvidia RTX 3060, Intel UHD 620, AMD RX 6700]
-  - Check with: `lspci | grep -i 'vga\|3d\|2d'`
-- RAM: [e.g. 16GB]
+## 🔍 Schritte zum Reproduzieren
 
-**Display Server:**
-- [ ] X11
-- [ ] Wayland
+1. ...
+2. ...
+3. ...
 
-**Wine Version:**
-- Wine Version: [run: `wine --version`]
-- [ ] wine-staging
-- [ ] wine-stable
+## ✅ Erwartetes Verhalten
 
-## 🔍 Steps to Reproduce
+Was sollte passieren?
 
-1. Go to '...'
-2. Click on '...'
-3. Scroll down to '...'
-4. See error
+## ❌ Tatsächliches Verhalten
 
-## ✅ Expected Behavior
+Was passiert stattdessen?
 
-A clear description of what you expected to happen.
-
-## ❌ Actual Behavior
-
-What actually happened instead.
-
-## 📸 Screenshots / Logs
-
-If applicable, add screenshots or logs:
+## 📸 Logs
 
 ```bash
-# Include relevant logs
-cat ~/.photoshopCCV19/wine-error.log | tail -n 50
-
-# Or output from troubleshoot tool
-./troubleshoot.sh
+# Relevante Logs
+tail -n 50 ~/.photoshop/logs/*.log
 ```
 
-## 🔧 Troubleshooting Already Done
+## 🔧 Bereits versucht
 
-- [ ] Ran `./pre-check.sh` - all checks passed
-- [ ] Ran `./troubleshoot.sh` - no critical errors
-- [ ] Disabled GPU in Photoshop (Ctrl+K → Performance)
-- [ ] Checked logs in `~/.photoshopCCV19/`
-- [ ] Tried reinstalling
-
-## 📦 Installation Method
-
-- [ ] Fresh installation (v2.0.1)
-- [ ] Upgrade from v2.0.0
-- [ ] Custom installation path (specify: _______)
-
-## 📝 Additional Context
-
-Add any other context about the problem here.
-
----
-
-**Note:** Please run `./troubleshoot.sh` and include relevant output for faster diagnosis!
-
-
-
+- [ ] `./pre-check.sh` ausgeführt
+- [ ] `./troubleshoot.sh` ausgeführt
+- [ ] GPU in Photoshop deaktiviert
+- [ ] Logs geprüft

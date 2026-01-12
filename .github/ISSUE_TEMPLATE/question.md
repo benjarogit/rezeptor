@@ -1,43 +1,24 @@
 ---
-name: ❓ Question / Help
-about: Ask a question or get help with installation/usage
+name: ❓ Question
+about: Ask a question
 title: '[QUESTION] '
 labels: question
 assignees: ''
 ---
 
-## ❓ Your Question
+## ❓ Frage
 
-A clear and concise question about installation or usage.
+Deine Frage hier.
 
-## 🔍 What I've Tried
+## 🔍 Bereits versucht
 
-What have you already tried to solve this?
+- [ ] README.md / README.de.md gelesen
+- [ ] Bestehende Issues durchsucht
+- [ ] `./pre-check.sh` ausgeführt
+- [ ] `./troubleshoot.sh` ausgeführt
 
-- [ ] Read the README.md / README.de.md
-- [ ] Checked existing issues
-- [ ] Ran `./pre-check.sh`
-- [ ] Ran `./troubleshoot.sh`
-- [ ] Searched online for solutions
+## 📋 System
 
-## 📋 Context
-
-**My Setup:**
-- Linux Distro: [e.g. CachyOS]
-- Wine Version: [run: `wine --version`]
-- Photoshop Version: [e.g. CC 2019]
-
-## 📝 Additional Information
-
-Add any other relevant information here.
-
----
-
-**Common Questions:**
-- Installation fails → Check `./pre-check.sh` output
-- Photoshop crashes → Try disabling GPU (Ctrl+K → Performance)
-- PNG export broken → Should be fixed in v2.0.1+
-- Screen lag → Check Wine registry tweaks in launcher
-
-
-
+- **Distro:** [z.B. CachyOS]
+- **Wine:** [run: `wine --version`]
+- **Photoshop:** [z.B. CC 2021]

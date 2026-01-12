@@ -6,10 +6,11 @@
 #   Opens Wine configuration (winecfg) for the Photoshop Wine prefix.
 #   Allows users to adjust Wine settings, Windows version, and drives.
 #
-# Author:       benjarogit
+# Author:       Sunny C.
+# Website:      https://sunnyc.de
 # Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-3.0
-# Copyright:    (c) 2024 benjarogit
+# License:      GPL-2.0
+# Copyright:    (c) 2024-2026 Sunny C.
 #
 # Based on:     photoshopCClinux by Gictorbit
 #               https://github.com/Gictorbit/photoshopCClinux
@@ -101,7 +102,16 @@ function main() {
     notify-send "Photoshop CC" "Wine-Konfiguration wird geöffnet..." -i "photoshop"
     sleep 2
     
-    winecfg
+    # Suppress Wine fixme/err messages and allow CTRL+C
+    # Use trap to handle CTRL+C gracefully
+    trap 'echo ""; echo "Wine-Konfiguration abgebrochen."; exit 0' INT TERM
+    
+    # Run winecfg and suppress fixme/err messages (they're normal Wine warnings)
+    # Use WINEDEBUG=-all to suppress all Wine debug messages
+    WINEDEBUG=-all winecfg 2>/dev/null || true
+    
+    # Clear trap
+    trap - INT TERM
     
     echo ""
     echo "✓ Konfiguration abgeschlossen!"

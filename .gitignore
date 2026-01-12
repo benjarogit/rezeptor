@@ -58,6 +58,8 @@ desktop.ini
 # ============================================================
 gitpush.sh
 stagefiles.sh
+tests/
+.shellcheckrc
 
 # ============================================================
 # Developer Documentation (not for end users)

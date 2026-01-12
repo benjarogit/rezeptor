@@ -6,10 +6,11 @@
 #   Centralized internationalization system for DE/EN language support.
 #   Uses external language files (de.lang, en.lang) for better maintainability.
 #
-# Author:       benjarogit
+# Author:       Sunny C.
+# Website:      https://sunnyc.de
 # Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-3.0
-# Copyright:    (c) 2024 benjarogit
+# License:      GPL-2.0
+# Copyright:    (c) 2024-2026 Sunny C.
 ################################################################################
 
 # ============================================================================

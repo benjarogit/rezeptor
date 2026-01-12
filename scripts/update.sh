@@ -6,10 +6,11 @@
 #   Automatically checks for new versions on GitHub and notifies users
 #   when updates are available. Non-blocking and runs in background.
 #
-# Author:       benjarogit
+# Author:       Sunny C.
+# Website:      https://sunnyc.de
 # Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-3.0
-# Copyright:    (c) 2024 benjarogit
+# License:      GPL-2.0
+# Copyright:    (c) 2024-2026 Sunny C.
 ################################################################################
 
 # ============================================================================
@@ -31,7 +32,25 @@ UPDATE_CACHE_TTL="${UPDATE_CACHE_TTL:-86400}"  # 24 hours in seconds
 # @return Current version (echoed to stdout)
 # ============================================================================
 update::get_current_version() {
-    # Try to get version from git tag
+    # PRIORITY 1: Try to get version from VERSION file (local installed version)
+    # This is the actual installed version, not the git tag
+    if [ -f "VERSION" ]; then
+        local version_content
+        version_content=$(cat "VERSION" | tr -d '[:space:]')
+        if [ -n "$version_content" ]; then
+            # Ensure it starts with 'v' if it's a version number
+            if [[ "$version_content" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+                echo "v$version_content"
+            elif [[ "$version_content" =~ ^v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+                echo "$version_content"
+            else
+                echo "$version_content"
+            fi
+            return 0
+        fi
+    fi
+    
+    # PRIORITY 2: Try to get version from git tag (for development)
     if command -v git >/dev/null 2>&1 && [ -d ".git" ]; then
         local git_version
         git_version=$(git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || echo "")
@@ -41,16 +60,11 @@ update::get_current_version() {
         fi
     fi
     
-    # Try to get version from VERSION file
-    if [ -f "VERSION" ]; then
-        cat "VERSION"
-        return 0
-    fi
-    
-    # Fallback: try to extract from CHANGELOG.md
+    # PRIORITY 3: Fallback: try to extract from CHANGELOG.md
     if [ -f "CHANGELOG.md" ]; then
         local changelog_version
-        changelog_version=$(grep -m 1 "^## \[v" CHANGELOG.md 2>/dev/null | sed 's/^## \[v\([0-9.]*\)\].*/\1/' || echo "")
+        # Try both formats: "## [v3.0.0]" and "## [3.0.0]"
+        changelog_version=$(grep -m 1 "^## \[" CHANGELOG.md 2>/dev/null | sed -E 's/^## \[v?([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/' || echo "")
         if [ -n "$changelog_version" ]; then
             echo "v$changelog_version"
             return 0
@@ -84,11 +98,21 @@ update::get_latest_version() {
     fi
     
     # Fetch latest version from GitHub API
-    local latest_version
+    local latest_version=""
     if command -v curl >/dev/null 2>&1; then
-        latest_version=$(curl -s --connect-timeout 10 --max-time 30 "$GITHUB_API" 2>/dev/null | grep -o '"tag_name":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+        local api_response
+        api_response=$(curl -s --connect-timeout 10 --max-time 30 "$GITHUB_API" 2>/dev/null || echo "")
+        if [ -n "$api_response" ]; then
+            # Extract tag_name (handle both with and without spaces: "tag_name":"v3.0.0" or "tag_name": "v3.0.0")
+            latest_version=$(echo "$api_response" | grep -oE '"tag_name"\s*:\s*"[^"]*"' | head -1 | sed -E 's/.*"tag_name"\s*:\s*"([^"]*)".*/\1/' || echo "")
+        fi
     elif command -v wget >/dev/null 2>&1; then
-        latest_version=$(wget -q --timeout=30 -O- "$GITHUB_API" 2>/dev/null | grep -o '"tag_name":"[^"]*"' | head -1 | cut -d'"' -f4 || echo "")
+        local api_response
+        api_response=$(wget -q --timeout=30 -O- "$GITHUB_API" 2>/dev/null || echo "")
+        if [ -n "$api_response" ]; then
+            # Extract tag_name (handle both with and without spaces)
+            latest_version=$(echo "$api_response" | grep -oE '"tag_name"\s*:\s*"[^"]*"' | head -1 | sed -E 's/.*"tag_name"\s*:\s*"([^"]*)".*/\1/' || echo "")
+        fi
     fi
     
     # Cache the result

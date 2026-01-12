@@ -7,10 +7,11 @@
 #   including Wine configuration, dependency installation, registry tweaks,
 #   and performance optimizations for stable operation.
 #
-# Author:       benjarogit
+# Author:       Sunny C.
+# Website:      https://sunnyc.de
 # Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-3.0
-# Copyright:    (c) 2024 benjarogit
+# License:      GPL-2.0
+# Copyright:    (c) 2024-2026 Sunny C.
 #
 # Based on:     photoshopCClinux by Gictorbit
 #               https://github.com/Gictorbit/photoshopCClinux
@@ -2823,10 +2824,11 @@ finish_installation() {
         
         # Start Photoshop - capture errors but don't block
         if [ -f "$SCR_PATH/launcher/launcher.sh" ]; then
-            log "Starte Launcher: $SCR_PATH/launcher/launcher.sh"
-            log "SCR_PATH: $SCR_PATH"
-            log "WINE_PREFIX: ${WINE_PREFIX:-not set}"
-            log "RESOURCES_PATH: ${RESOURCES_PATH:-not set}"
+            # Log debug info to file only (not shown to user)
+            log_debug "Starte Launcher: $SCR_PATH/launcher/launcher.sh"
+            log_debug "SCR_PATH: $SCR_PATH"
+            log_debug "WINE_PREFIX: ${WINE_PREFIX:-not set}"
+            log_debug "RESOURCES_PATH: ${RESOURCES_PATH:-not set}"
             
             # Export necessary variables for launcher
             export SCR_PATH
@@ -2851,15 +2853,15 @@ finish_installation() {
                     output::info "Check logs: $LOG_FILE"
                 fi
                 log_error "Photoshop-Prozess (PID: $ps_pid) beendet sich sofort nach Start"
-                # Show last few lines of log for debugging
-                if [ -f "$LOG_FILE" ]; then
+                # Show last few lines of log for debugging (only in verbose mode)
+                if [ "${VERBOSE:-0}" = "1" ] && [ -f "$LOG_FILE" ]; then
                     log_error "Letzte Zeilen aus Launcher-Output:"
                     tail -20 "$LOG_FILE" | while IFS= read -r line; do
                         log_error "  $line"
                     done
                 fi
             else
-                log "Photoshop-Prozess läuft (PID: $ps_pid)"
+                log_debug "Photoshop-Prozess läuft (PID: $ps_pid)"
             fi
         else
             output::error "$(printf "$(i18n::get "launcher_not_found")" "$SCR_PATH/launcher/launcher.sh")"
@@ -3204,6 +3206,19 @@ Please copy Photoshop installation files to: $PROJECT_ROOT/photoshop/"
     log "Rufe finish_installation() auf..."
     finish_installation
     log "finish_installation() abgeschlossen"
+    
+    # After installation, return to main menu (if called from setup.sh)
+    if [ -n "${RETURN_TO_MENU:-}" ]; then
+        if [ "$LANG_CODE" = "de" ]; then
+            echo ""
+            output::info "Installation abgeschlossen. Kehre zum Hauptmenü zurück..."
+            sleep 2
+        else
+            echo ""
+            output::info "Installation completed. Returning to main menu..."
+            sleep 2
+        fi
+    fi
     
     unset local_installer install_status possible_paths
 }
