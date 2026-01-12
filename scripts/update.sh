@@ -22,10 +22,6 @@
 GITHUB_REPO="benjarogit/photoshopCClinux"
 GITHUB_API="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
 
-# Cache file for update check results (to avoid too frequent checks)
-UPDATE_CACHE_FILE="${UPDATE_CACHE_FILE:-$HOME/.photoshop/.update_cache}"
-UPDATE_CACHE_TTL="${UPDATE_CACHE_TTL:-86400}"  # 24 hours in seconds
-
 # ============================================================================
 # @function update::get_current_version
 # @description Get current version from git or VERSION file
@@ -82,22 +78,7 @@ update::get_current_version() {
 # @return Latest version (echoed to stdout), empty string on error
 # ============================================================================
 update::get_latest_version() {
-    # Check if we have cached result and it's still valid
-    if [ -f "$UPDATE_CACHE_FILE" ]; then
-        local cache_time
-        cache_time=$(stat -c %Y "$UPDATE_CACHE_FILE" 2>/dev/null || stat -f %m "$UPDATE_CACHE_FILE" 2>/dev/null || echo "0")
-        local current_time
-        current_time=$(date +%s)
-        local age=$((current_time - cache_time))
-        
-        if [ $age -lt $UPDATE_CACHE_TTL ]; then
-            # Cache is still valid, return cached version
-            cat "$UPDATE_CACHE_FILE"
-            return 0
-        fi
-    fi
-    
-    # Fetch latest version from GitHub API
+    # Fetch latest version from GitHub API (no caching - simple and direct)
     local latest_version=""
     if command -v curl >/dev/null 2>&1; then
         local api_response
@@ -113,12 +94,6 @@ update::get_latest_version() {
             # Extract tag_name (handle both with and without spaces)
             latest_version=$(echo "$api_response" | grep -oE '"tag_name"\s*:\s*"[^"]*"' | head -1 | sed -E 's/.*"tag_name"\s*:\s*"([^"]*)".*/\1/' || echo "")
         fi
-    fi
-    
-    # Cache the result
-    if [ -n "$latest_version" ]; then
-        mkdir -p "$(dirname "$UPDATE_CACHE_FILE")"
-        echo "$latest_version" > "$UPDATE_CACHE_FILE"
     fi
     
     echo "$latest_version"
@@ -161,11 +136,7 @@ update::compare_versions() {
 # ============================================================================
 update::check() {
     local force="${1:-false}"
-    
-    # Clear cache if force check
-    if [ "$force" = "true" ] && [ -f "$UPDATE_CACHE_FILE" ]; then
-        rm -f "$UPDATE_CACHE_FILE"
-    fi
+    # Force parameter kept for compatibility but no longer needed (no cache)
     
     local current_version
     current_version=$(update::get_current_version)
@@ -310,11 +281,6 @@ update::update_version_file() {
     
     # Write to VERSION file
     echo "$version_clean" > "VERSION"
-    
-    # Invalidate update cache so new version is immediately recognized
-    if [ -f "$UPDATE_CACHE_FILE" ]; then
-        rm -f "$UPDATE_CACHE_FILE"
-    fi
     
     return 0
 }
