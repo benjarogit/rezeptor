@@ -16,7 +16,7 @@
 > 
 > **Note about version numbers**: The specific version I tested is **v22.0.0.35**, but **any Photoshop v22.x version should work**. The exact build number may vary depending on where you obtained your installation files.
 > 
-> 💡 **Recommendation**: Try installation with whatever Photoshop version you have available. If you have CC 2021 (v22.x), it should work well!
+> 💡 **Important**: Only CC 2021 (v22.x) has been tested. Other versions have not been tested.
 > 
 > 
 > ✅ **Tested on**: CachyOS Linux (Arch-based) with KDE desktop environment
@@ -25,7 +25,7 @@
 
 ![Photoshop on Linux](images/Screenshot.png)
 
-![License](https://img.shields.io/badge/license-GPL--3.0-blue) ![Platform](https://img.shields.io/badge/platform-Linux-green) ![OS](https://img.shields.io/badge/OS-CachyOS-blue) ![Desktop](https://img.shields.io/badge/Desktop-KDE-blue) ![Wine](https://img.shields.io/badge/Wine-5.0%2B-red) ![Photoshop](https://img.shields.io/badge/Photoshop-CC%202021-blue)
+![License](https://img.shields.io/badge/license-GPL--2.0-blue) ![Platform](https://img.shields.io/badge/platform-Linux-green) ![OS](https://img.shields.io/badge/OS-CachyOS-blue) ![Desktop](https://img.shields.io/badge/Desktop-KDE-blue) ![Wine](https://img.shields.io/badge/Wine-5.0%2B-red) ![Photoshop](https://img.shields.io/badge/Photoshop-CC%202021-blue)
 
 **Run Adobe Photoshop natively on Linux using Wine**
 
@@ -137,43 +137,27 @@ sudo zypper install wine winetricks
 **This repository does NOT include Photoshop installation files.**
 
 You must:
-1. **Own a valid Adobe Photoshop CC 2019 license**
+1. **Own a valid Adobe Photoshop CC 2021 license**
 2. **Obtain the installer yourself** (see [How to Get Photoshop](#how-to-get-photoshop-files))
 3. **Place files in `photoshop/` directory** (see [photoshop/README.md](photoshop/README.md))
 
 ### ⚡ Version Compatibility
 
-**This installer has been tested with Photoshop CC 2021 (v22.x).**
+**This installer has been tested with Photoshop CC 2021 (v22.x) only.**
 
-According to [Wine AppDB](https://appdb.winehq.org/objectManager.php?iId=17&sClass=application) and community testing, different Photoshop versions have varying compatibility:
+- ✅ **CC 2021 (v22.x)** - Tested and working (GPU disabled) - **Only tested version**
 
-- ✅ **CC 2021 (v22.x)** - Tested and working (GPU disabled) - **Recommended**
-- ✅ **CC 2019 (v20.x)** - Should work with similar setup
-- ⚠️ **CC 2024** - Limited support, many GPU issues
-- 🏆 **CS3-CS6** - Better Wine compatibility, but older features
-- ❌ **CC 2020+** - Some versions have increased online requirements
-
-**General Recommendation:**
-Try installation with whatever Photoshop version you have access to. The installer is designed to work with various CC versions. If you encounter issues with your version, please report them in GitHub Issues!
-
-**Why CC 2021 works well:**
-- Good balance of modern features and Wine compatibility
-- Works reliably with GPU disabled
-- Offline installation possible
-- Stable performance for professional work
-
-**Alternative Versions:**
-If you have access to older versions, **Photoshop CS6 (13.0)** or **CS3 (10.0)** have better Wine ratings (Silver/Platinum), but lack modern features.
+**Note:** The specific version tested is **v22.0.0.35**, but any Photoshop v22.x version should work. Other versions have not been tested and may or may not work.
 
 ### How to Get Photoshop Files
 
 #### Option 1: Official Adobe (Recommended)
 - Download from Adobe Creative Cloud
-- Get offline installer for Photoshop CC 2019 (v20.x)
+- Get offline installer for Photoshop CC 2021 (v22.x)
 
 #### Option 2: Existing Installation
 - If you have Photoshop on Windows, extract installation files
-- Windows location: `C:\Program Files\Adobe\Adobe Photoshop CC 2019\`
+- Windows location: `C:\Program Files\Adobe\Adobe Photoshop CC 2021\`
 
 **⚖️ Legal:** You must have a valid license. This script only automates Wine installation.
 
@@ -190,7 +174,7 @@ cd photoshopCClinux
 
 ### 2. Place Photoshop Files
 
-Copy your Photoshop CC 2019 installation files to `photoshop/` directory:
+Copy your Photoshop CC 2021 installation files to `photoshop/` directory:
 
 ```
 photoshop/
@@ -342,7 +326,7 @@ The installer supports several command-line flags for automation and debugging:
    - Wine config window → Set to Windows 10, click OK
 
 2. **Component Installation** (automatic, ~10 minutes)
-   - vcrun2010, vcrun2012, vcrun2013, vcrun2015
+   - Visual C++ 2015-2022 Redistributable
    - fonts and font-smoothing
    - msxml3, msxml6, gdiplus
 
@@ -396,6 +380,7 @@ The installer supports several command-line flags for automation and debugging:
 **Cause:** Visual C++ Runtime not installed properly
 
 **Solution:**
+Run the installer again or manually install:
 ```bash
 WINEPREFIX=~/.photoshop/prefix winetricks vcrun2015
 ```
@@ -512,20 +497,17 @@ This tool:
 #### Check Logs
 
 ```bash
-# Setup log
-cat ~/.photoshop/setuplog.log
+# All logs are stored in:
+ls ~/.photoshop/logs/
 
-# Wine errors
-tail -n 50 ~/.photoshop/wine-error.log
-
-# Runtime errors
-tail -n 30 ~/.photoshop/photoshop-runtime.log
+# View latest log
+tail -n 50 ~/.photoshop/logs/*.log | tail -50
 ```
 
 #### Wine Configuration
 
 ```bash
-./setup.sh  # Select Option 5
+./setup.sh  # Select Option 5 (Wine konfigurieren)
 ```
 
 Recommended settings:
@@ -567,7 +549,7 @@ WINEPREFIX=~/.photoshop/prefix winetricks --force vcrun2015 msxml6
 
 5. **Use Virtual Desktop** (if performance issues)
    ```bash
-   ./setup.sh  # Option 5 → Graphics → Enable virtual desktop
+   ./setup.sh  # Option 5 (Wine konfigurieren) → Graphics → Enable virtual desktop
    ```
 
 ### Expected Performance
@@ -590,10 +572,10 @@ WINEPREFIX=~/.photoshop/prefix winetricks --force vcrun2015 msxml6
 ### Complete Removal
 
 ```bash
-./setup.sh  # Select Option 6
+./setup.sh  # Select Option 8
 ```
 
-When you select Option 6, you'll see a submenu:
+When you select Option 8, you'll see a submenu:
 - **Option 1**: Uninstall Photoshop (complete removal)
 - **Option 2**: Force kill Photoshop processes (if Photoshop is stuck/hanging)
 - **Option 3**: Back to main menu
@@ -655,17 +637,6 @@ Want to contribute code?
 1. Fork the repository
 2. Create a feature branch
 3. Test your changes thoroughly
-4. **Run ShellCheck** before submitting:
-   ```bash
-   # Install ShellCheck (if not already installed)
-   # Arch/CachyOS: sudo pacman -S shellcheck
-   # Ubuntu/Debian: sudo apt install shellcheck
-   # Fedora: sudo dnf install ShellCheck
-   
-   # Run ShellCheck on all scripts
-   shellcheck scripts/*.sh
-   ```
-   The project includes a `.shellcheckrc` configuration file for consistent checks.
 4. Submit a pull request with a clear description
 
 **Every contribution, big or small, makes this project better! 🙏**
@@ -679,7 +650,6 @@ Want to contribute code?
 - **German Documentation:** [README.de.md](README.de.md)
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md) - See latest changes and previous versions
 - **Quick Start Guide:** Quick start section above
-- **Wine AppDB:** [Photoshop on Wine](https://appdb.winehq.org/objectManager.php?iId=17&sClass=application)
 
 ### Alternative Solutions
 
@@ -688,13 +658,10 @@ If this installer doesn't work for you, consider these alternatives:
 - **[PhotoGIMP](https://github.com/Diolinux/PhotoGIMP)** - GIMP configured to look/feel like Photoshop
 - **[Krita](https://krita.org/)** - Professional painting and illustration (native Linux)
 - **[Photopea](https://www.photopea.com/)** - Online Photoshop alternative (browser-based)
-- **Older Photoshop Versions** - CS6 or CS3 have better Wine compatibility (see Wine AppDB)
 
-### Community & Helpful Guides
+### Original Project
 
-- [How to Run Photoshop on Linux](https://www.linuxnest.com/how-to-run-photoshop-on-linux-an-ultimate-guide/)
-- [Install Adobe Photoshop on Linux](https://thelinuxcode.com/install_adobe_photoshop_linux/)
-- [Original Gictorbit Project](https://github.com/Gictorbit/photoshopCClinux)
+- [Original Gictorbit Project](https://github.com/Gictorbit/photoshopCClinux) - Based on this project
 
 ---
 
@@ -729,11 +696,7 @@ This project is licensed under the **GPL-2.0 License** - see the [LICENSE](LICEN
 **Status:** ✅ Production Ready (Complete Toolset)
 
 **Tested on:**
-- CachyOS (Primary)
-- Arch Linux
-- Ubuntu 22.04+
-- Fedora 38+
-- Other major distributions
+- CachyOS Linux (Arch-based) with KDE desktop environment
 
 ---
 
@@ -748,13 +711,13 @@ You need a valid Photoshop license, but you can use the offline installer withou
 <details>
 <summary><b>Q: Which Photoshop version works?</b></summary>
 
-Photoshop CC 2021 (v22.x) is tested and confirmed working. CC 2019 (v20.x) should also work. Generally, try with whatever version you have available - many CC versions work with proper configuration!
+Only Photoshop CC 2021 (v22.x) has been tested and confirmed working. Other versions have not been tested.
 </details>
 
 <details>
 <summary><b>Q: Can I use plugins?</b></summary>
 
-Most plugins work. Install them to: `~/.photoshop/prefix/drive_c/Program Files/Adobe/Adobe Photoshop CC 2019/Plug-ins/`
+Most plugins work. Install them to: `~/.photoshop/prefix/drive_c/Program Files/Adobe/Adobe Photoshop CC 2021/Plug-ins/`
 </details>
 
 <details>
@@ -770,9 +733,9 @@ Wine has limited GPU acceleration support. Disabling it prevents crashes and imp
 </details>
 
 <details>
-<summary><b>Q: Can I use the latest Photoshop version?</b></summary>
+<summary><b>Q: Can I use other Photoshop versions?</b></summary>
 
-Photoshop 2020+ has increased Adobe login requirements and may not work well offline. CC 2019 is the sweet spot for Linux.
+Only CC 2021 (v22.x) has been tested. Other versions may or may not work - they have not been tested.
 </details>
 
 ---

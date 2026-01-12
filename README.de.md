@@ -16,7 +16,7 @@
 > 
 > **Hinweis zu Versionsnummern**: Die von mir getestete spezifische Version ist **v22.0.0.35**, aber **jede Photoshop v22.x Version sollte funktionieren**. Die genaue Build-Nummer kann variieren, je nachdem woher du deine Installationsdateien hast.
 > 
-> 💡 **Empfehlung**: Versuche die Installation mit welcher Photoshop-Version auch immer du zur Verfügung hast. Wenn du CC 2021 (v22.x) hast, sollte es gut funktionieren!
+> 💡 **Wichtig**: Nur CC 2021 (v22.x) wurde getestet. Andere Versionen wurden nicht getestet.
 > 
 > 
 > ✅ **Getestet auf**: CachyOS Linux (Arch-basiert) mit KDE Desktop-Umgebung
@@ -25,7 +25,7 @@
 
 ![Photoshop on Linux](images/Screenshot.png)
 
-![Lizenz](https://img.shields.io/badge/license-GPL--3.0-blue) ![Platform](https://img.shields.io/badge/platform-Linux-green) ![OS](https://img.shields.io/badge/OS-CachyOS-blue) ![Desktop](https://img.shields.io/badge/Desktop-KDE-blue) ![Wine](https://img.shields.io/badge/Wine-5.0%2B-red) ![Photoshop](https://img.shields.io/badge/Photoshop-CC%202021-blue)
+![Lizenz](https://img.shields.io/badge/license-GPL--2.0-blue) ![Platform](https://img.shields.io/badge/platform-Linux-green) ![OS](https://img.shields.io/badge/OS-CachyOS-blue) ![Desktop](https://img.shields.io/badge/Desktop-KDE-blue) ![Wine](https://img.shields.io/badge/Wine-5.0%2B-red) ![Photoshop](https://img.shields.io/badge/Photoshop-CC%202021-blue)
 
 **Adobe Photoshop nativ auf Linux mit Wine ausführen**
 
@@ -137,39 +137,27 @@ sudo zypper install wine winetricks
 **Dieses Repository enthält KEINE Photoshop-Installationsdateien.**
 
 Du musst:
-1. **Eine gültige Adobe Photoshop CC 2019 Lizenz besitzen**
+1. **Eine gültige Adobe Photoshop CC 2021 Lizenz besitzen**
 2. **Den Installer selbst beschaffen** (siehe [Wie bekomme ich Photoshop?](#wie-bekomme-ich-photoshop-dateien))
 3. **Dateien im `photoshop/` Verzeichnis platzieren** (siehe [photoshop/README.md](photoshop/README.md))
 
 ### ⚡ Versions-Kompatibilität
 
-**Dieser Installer ist für Photoshop CC 2019 (v20.x) optimiert.**
+**Dieser Installer wurde nur mit Photoshop CC 2021 (v22.x) getestet.**
 
-Laut [Wine AppDB](https://appdb.winehq.org/objectManager.php?iId=17&sClass=application) haben verschiedene Photoshop-Versionen unterschiedliche Kompatibilität:
+- ✅ **CC 2021 (v22.x)** - Getestet und funktionierend (GPU deaktiviert) - **Einzige getestete Version**
 
-- ✅ **CC 2019 (v20.0)** - Funktioniert mit Workarounds (GPU deaktiviert) - **Dieser Installer**
-- ⚠️ **CC 2024** - Eingeschränkte Unterstützung, viele GPU-Probleme
-- 🏆 **CS3-CS6** - Bessere Wine-Kompatibilität, aber ältere Features
-- ❌ **CC 2020+** - Erhöhte Online-Anforderungen, nicht empfohlen
-
-**Warum CC 2019?**
-- Letzte Version vor starker Creative Cloud Integration
-- Gutes Feature-Set für professionelle Arbeit
-- Funktioniert zuverlässig mit deaktivierter GPU
-- Offline-Installation möglich
-
-**Alternative Versionen:**
-Falls du Zugriff auf ältere Versionen hast, haben **Photoshop CS6 (13.0)** oder **CS3 (10.0)** bessere Wine-Bewertungen (Silver/Platinum), aber weniger moderne Features.
+**Hinweis:** Die spezifische getestete Version ist **v22.0.0.35**, aber jede Photoshop v22.x Version sollte funktionieren. Andere Versionen wurden nicht getestet und funktionieren möglicherweise nicht.
 
 ### Wie bekomme ich Photoshop-Dateien?
 
 #### Option 1: Offiziell von Adobe (Empfohlen)
 - Download über Adobe Creative Cloud
-- Offline-Installer für Photoshop CC 2019 (v20.x) verwenden
+- Offline-Installer für Photoshop CC 2021 (v22.x) verwenden
 
 #### Option 2: Von vorhandener Windows-Installation
 - Falls du Photoshop unter Windows hast, extrahiere die Installationsdateien
-- Windows-Pfad: `C:\Program Files\Adobe\Adobe Photoshop CC 2019\`
+- Windows-Pfad: `C:\Program Files\Adobe\Adobe Photoshop CC 2021\`
 
 **⚖️ Legal:** Du benötigst eine gültige Lizenz. Dieses Script automatisiert nur die Wine-Installation.
 
@@ -186,7 +174,7 @@ cd photoshopCClinux
 
 ### 2. Photoshop-Dateien platzieren
 
-Kopiere deine Photoshop CC 2019 Installationsdateien in das `photoshop/` Verzeichnis:
+Kopiere deine Photoshop CC 2021 Installationsdateien in das `photoshop/` Verzeichnis:
 
 ```
 photoshop/
@@ -338,7 +326,7 @@ Der Installer unterstützt mehrere Befehlszeilen-Flags für Automatisierung und 
    - Wine-Config-Fenster → Auf Windows 10 setzen, OK klicken
 
 2. **Komponenten-Installation** (automatisch, ~10 Minuten)
-   - vcrun2010, vcrun2012, vcrun2013, vcrun2015
+   - Visual C++ 2015-2022 Redistributable
    - Schriftarten und Font-Smoothing
    - msxml3, msxml6, gdiplus
 
@@ -508,20 +496,17 @@ Dieses Tool:
 #### Logs prüfen
 
 ```bash
-# Setup-Log
-cat ~/.photoshop/setuplog.log
+# Alle Logs werden gespeichert in:
+ls ~/.photoshop/logs/
 
-# Wine-Fehler
-tail -n 50 ~/.photoshop/wine-error.log
-
-# Runtime-Fehler
-tail -n 30 ~/.photoshop/photoshop-runtime.log
+# Neuestes Log anzeigen
+tail -n 50 ~/.photoshop/logs/*.log | tail -50
 ```
 
 #### Wine-Konfiguration
 
 ```bash
-./setup.sh  # Wähle Option 5
+./setup.sh  # Wähle Option 5 (Wine konfigurieren)
 ```
 
 Empfohlene Einstellungen:
@@ -563,7 +548,7 @@ WINEPREFIX=~/.photoshop/prefix winetricks --force vcrun2015 msxml6
 
 5. **Virtual Desktop verwenden** (bei Performance-Problemen)
    ```bash
-   ./setup.sh  # Option 5 → Grafik → Virtual Desktop aktivieren
+   ./setup.sh  # Option 5 (Wine konfigurieren) → Grafik → Virtual Desktop aktivieren
    ```
 
 ### Erwartete Performance
@@ -586,10 +571,10 @@ WINEPREFIX=~/.photoshop/prefix winetricks --force vcrun2015 msxml6
 ### Vollständige Entfernung
 
 ```bash
-./setup.sh  # Wähle Option 6
+./setup.sh  # Wähle Option 8
 ```
 
-Wenn du Option 6 auswählst, erscheint ein Untermenü:
+Wenn du Option 8 auswählst, erscheint ein Untermenü:
 - **Option 1**: Photoshop deinstallieren (vollständige Entfernung)
 - **Option 2**: Photoshop Prozesse zwangsweise beenden (wenn Photoshop hängt/nicht reagiert)
 - **Option 3**: Zurück zum Hauptmenü
@@ -664,7 +649,6 @@ Möchtest du Code beitragen?
 - **English Documentation:** [README.md](README.md)
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md) - Siehe aktuelle Änderungen und vorherige Versionen
 - **Schnellstart-Anleitung:** Schnellstart-Sektion oben
-- **Wine AppDB:** [Photoshop on Wine](https://appdb.winehq.org/objectManager.php?iId=17&sClass=application)
 
 ### Alternative Lösungen
 
@@ -673,13 +657,10 @@ Falls dieser Installer für dich nicht funktioniert, erwäge diese Alternativen:
 - **[PhotoGIMP](https://github.com/Diolinux/PhotoGIMP)** - GIMP konfiguriert wie Photoshop
 - **[Krita](https://krita.org/)** - Professionelles Malen und Illustration (nativ Linux)
 - **[Photopea](https://www.photopea.com/)** - Online Photoshop Alternative (Browser-basiert)
-- **Ältere Photoshop Versionen** - CS6 oder CS3 haben bessere Wine-Kompatibilität (siehe Wine AppDB)
 
-### Community & Hilfreiche Guides
+### Originales Projekt
 
-- [How to Run Photoshop on Linux](https://www.linuxnest.com/how-to-run-photoshop-on-linux-an-ultimate-guide/)
-- [Install Adobe Photoshop on Linux](https://thelinuxcode.com/install_adobe_photoshop_linux/)
-- [Original Gictorbit Project](https://github.com/Gictorbit/photoshopCClinux)
+- [Original Gictorbit Projekt](https://github.com/Gictorbit/photoshopCClinux) - Basiert auf diesem Projekt
 
 ---
 
@@ -714,11 +695,7 @@ Dieses Projekt ist unter der **GPL-2.0 Lizenz** lizenziert - siehe die [LICENSE]
 **Status:** ✅ Produktionsreif (Komplettes Toolset)
 
 **Getestet auf:**
-- CachyOS (Primär)
-- Arch Linux
-- Ubuntu 22.04+
-- Fedora 38+
-- Andere große Distributionen
+- CachyOS Linux (Arch-basiert) mit KDE Desktop-Umgebung
 
 ---
 
@@ -733,13 +710,13 @@ Du benötigst eine gültige Photoshop-Lizenz, aber du kannst den Offline-Install
 <details>
 <summary><b>F: Welche Photoshop-Version funktioniert?</b></summary>
 
-Photoshop CC 2019 (v20.x) ist getestet und empfohlen. Andere Versionen funktionieren möglicherweise nicht richtig.
+Nur Photoshop CC 2021 (v22.x) wurde getestet und funktioniert. Andere Versionen wurden nicht getestet.
 </details>
 
 <details>
 <summary><b>F: Kann ich Plugins verwenden?</b></summary>
 
-Die meisten Plugins funktionieren. Installiere sie nach: `~/.photoshop/prefix/drive_c/Program Files/Adobe/Adobe Photoshop CC 2019/Plug-ins/`
+Die meisten Plugins funktionieren. Installiere sie nach: `~/.photoshop/prefix/drive_c/Program Files/Adobe/Adobe Photoshop CC 2021/Plug-ins/`
 </details>
 
 <details>
@@ -755,9 +732,9 @@ Wine hat eingeschränkte GPU-Beschleunigungsunterstützung. Deaktivierung verhin
 </details>
 
 <details>
-<summary><b>F: Kann ich die neueste Photoshop-Version verwenden?</b></summary>
+<summary><b>F: Kann ich andere Photoshop-Versionen verwenden?</b></summary>
 
-Photoshop 2020+ hat erhöhte Adobe-Login-Anforderungen und funktioniert möglicherweise nicht gut offline. CC 2019 ist der Sweet Spot für Linux.
+Nur CC 2021 (v22.x) wurde getestet. Andere Versionen wurden nicht getestet und funktionieren möglicherweise nicht.
 </details>
 
 ---
