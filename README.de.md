@@ -20,8 +20,6 @@
 > 
 > 
 > ✅ **Getestet auf**: CachyOS Linux (Arch-basiert) mit KDE Desktop-Umgebung
-> 
-> ⚠️ **Bekanntes Problem**: Icon-Anzeigeproblem in KDE Desktop-Umgebung - Icons erscheinen möglicherweise nicht im Startmenü oder Desktop-Verknüpfung. Workaround: Desktop-Sitzung neu starten oder abmelden und wieder anmelden.
 
 ![Photoshop on Linux](images/Screenshot.png)
 

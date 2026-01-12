@@ -1004,7 +1004,7 @@ function banner() {
     # Note: This fork started in 2025, so start_year is 2025 (not 2024 from original project)
     local start_year="2025"
     local current_year=$(date +%Y)
-    local copyright="© ${start_year}-${current_year} benjarogit | GPL-3.0 License"
+    local copyright="© ${start_year}-${current_year} Sunny C. | GPL-3.0 License"
     
     # Define menu options based on language
     # Check internet status for menu display (check all connections except loopback)

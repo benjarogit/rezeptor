@@ -20,8 +20,6 @@
 > 
 > 
 > ✅ **Tested on**: CachyOS Linux (Arch-based) with KDE desktop environment
-> 
-> ⚠️ **Known Issue**: Icon display issue in KDE desktop environment - icons may not appear in start menu or desktop shortcut. Workaround: Restart desktop session or log out and log back in.
 
 ![Photoshop on Linux](images/Screenshot.png)
 
