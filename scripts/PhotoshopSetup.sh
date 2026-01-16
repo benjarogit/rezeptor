@@ -813,16 +813,19 @@ detect_all_wine_versions() {
         ((index++))
     fi
     
-    # Priority 3: Standard Wine (Warnung bei Wine 10.x)
+    # Priority 3: Standard Wine (Warnung bei Wine 10.x, nicht bei 11.0+)
     if command -v wine &> /dev/null; then
         local version=$(wine --version 2>/dev/null | head -1 || echo "unknown")
         local wine_major_version=$(echo "$version" | grep -oE "wine-[0-9]+" | grep -oE "[0-9]+" | head -1 || echo "0")
         
         options+=("$index")
         local fallback_text=$(i18n::get "fallback")
-        if [ "$wine_major_version" -ge 10 ]; then
-            # Wine 10.x - Warnung hinzufügen
-            descriptions+=("Standard Wine: $version ($fallback_text) ⚠ Wine 10.x kann Probleme verursachen - Wine 9.x empfohlen")
+        if [ "$wine_major_version" -eq 10 ]; then
+            # Wine 10.x - Warnung hinzufügen (WoW64 experimentell)
+            descriptions+=("Standard Wine: $version ($fallback_text) ⚠ Wine 10.x kann Probleme verursachen - Wine 9.x oder 11.0+ empfohlen")
+        elif [ "$wine_major_version" -ge 11 ]; then
+            # Wine 11.0+ - WoW64 vollständig unterstützt, keine Warnung
+            descriptions+=("Standard Wine: $version ($fallback_text)")
         else
             descriptions+=("Standard Wine: $version ($fallback_text)")
         fi
@@ -1811,27 +1814,28 @@ function main() {
     local enable_wow64=true  # Default: enabled
     
     # CRITICAL: Wine 10.x WOW64-Modus ist experimentell und kann bei Photoshop Probleme verursachen
-    # Warnung anzeigen, wenn Wine 10.x verwendet wird
-    if [ -n "$wine_major" ] && [ "$wine_major" -ge 10 ]; then
+    # Wine 11.0+ hat vollständigen WoW64-Support - keine Warnung nötig
+    # Warnung nur für Wine 10.x anzeigen
+    if [ -n "$wine_major" ] && [ "$wine_major" -eq 10 ]; then
         if [ "$LANG_CODE" = "de" ]; then
             log_warning "⚠ Wine 10.x erkannt - WOW64-Modus ist experimentell und kann Rendering-Glitches verursachen"
-            log_warning "   Empfehlung: Wine 9.x (staging) für bessere Stabilität mit Photoshop 2021"
+            log_warning "   Empfehlung: Wine 9.x (staging) oder Wine 11.0+ für bessere Stabilität mit Photoshop 2021"
         else
             log_warning "⚠ Wine 10.x detected - WOW64 mode is experimental and may cause rendering glitches"
-            log_warning "   Recommendation: Wine 9.x (staging) for better stability with Photoshop 2021"
+            log_warning "   Recommendation: Wine 9.x (staging) or Wine 11.0+ for better stability with Photoshop 2021"
         fi
     fi
     
-    if [ -n "$wine_major" ] && [ "$wine_major" -ge 10 ]; then
-        # Wine 10.x+ has experimental WOW64 mode
+    if [ -n "$wine_major" ] && [ "$wine_major" -eq 10 ]; then
+        # Wine 10.x has experimental WOW64 mode
         # CRITICAL: Wine 10.x WOW64-Modus ist experimentell und kann bei Photoshop Rendering-Glitches verursachen
-        # Empfehlung: Wine 9.x (staging) für bessere Stabilität
+        # Empfehlung: Wine 9.x (staging) oder Wine 11.0+ für bessere Stabilität
         if [ "$LANG_CODE" = "de" ]; then
             echo ""
-            output::warning "ℹ WOW64-Modus (Wine 10.x+)"
+            output::warning "ℹ WOW64-Modus (Wine 10.x - experimentell)"
             echo "  ⚠ Wine 10.x verwendet den experimentellen WOW64-Modus."
             echo "  Dies kann bei Photoshop Rendering-Glitches und langsamere Prefix-Initialisierung verursachen."
-            echo "  Empfehlung: Wine 9.x (staging) für bessere Stabilität mit Photoshop 2021"
+            echo "  Empfehlung: Wine 9.x (staging) oder Wine 11.0+ für bessere Stabilität mit Photoshop 2021"
             echo ""
             echo "  Standard: Aktiviert (kann Probleme verursachen)"
             echo ""
@@ -1842,10 +1846,10 @@ function main() {
             fi
         else
             echo ""
-            output::warning "ℹ WOW64 Mode (Wine 10.x+)"
+            output::warning "ℹ WOW64 Mode (Wine 10.x - experimental)"
             echo "  ⚠ Wine 10.x uses experimental WOW64 mode."
             echo "  This may cause rendering glitches and slower prefix initialization with Photoshop."
-            echo "  Recommendation: Wine 9.x (staging) for better stability with Photoshop 2021"
+            echo "  Recommendation: Wine 9.x (staging) or Wine 11.0+ for better stability with Photoshop 2021"
             echo ""
             echo "  Default: Enabled (may cause issues)"
             echo ""
@@ -1864,35 +1868,43 @@ function main() {
     export WINEDEBUG=-all,+err
     
     # ============================================================================
-    # Wine 10.x Detection and Workarounds (GitHub Issue - Wine 10.20 WOW64)
+    # Wine Version Detection and Workarounds
+    # Wine 10.x: Extended timeouts needed (experimental WoW64)
+    # Wine 11.0+: WoW64 fully supported, standard timeouts should be sufficient
     # ============================================================================
     local is_wine_10=0
     local wineboot_timeout=30
     local wait_timeout=30
     
     if [ -n "$wine_major" ] && [ "$wine_major" -ge 10 ]; then
-        is_wine_10=1
         # Wine 10.x needs significantly more time (tested: ~27s for user.reg to appear + buffer)
-        wineboot_timeout=90
-        wait_timeout=90
-        
-        log_debug "Wine 10.x detected ($wine_version_output) - using extended timeouts (wineboot=${wineboot_timeout}s, wait=${wait_timeout}s)"
-        
-        # Wine 10.x specific warnings
-        if [ "$LANG_CODE" = "de" ]; then
-            output::warning "Wine 10.x erkannt - Erweiterte Initialisierung (bis zu 90s)"
-            output::substep "Wine 10.x benötigt mehr Zeit für Prefix-Initialisierung..."
-        else
-            output::warning "Wine 10.x detected - Extended initialization (up to 90s)"
-            output::substep "Wine 10.x requires more time for prefix initialization..."
+        # Wine 11.0+ should be faster (WoW64 fully supported)
+        if [ "$wine_major" -eq 10 ]; then
+            is_wine_10=1
+            wineboot_timeout=90
+            wait_timeout=90
+            
+            log_debug "Wine 10.x detected ($wine_version_output) - using extended timeouts (wineboot=${wineboot_timeout}s, wait=${wait_timeout}s)"
+            
+            # Wine 10.x specific warnings
+            if [ "$LANG_CODE" = "de" ]; then
+                output::warning "Wine 10.x erkannt - Erweiterte Initialisierung (bis zu 90s)"
+                output::substep "Wine 10.x benötigt mehr Zeit für Prefix-Initialisierung..."
+            else
+                output::warning "Wine 10.x detected - Extended initialization (up to 90s)"
+                output::substep "Wine 10.x requires more time for prefix initialization..."
+            fi
+            echo ""
+            echo ""
+        elif [ "$wine_major" -ge 11 ]; then
+            # Wine 11.0+ - WoW64 fully supported, standard timeouts should be sufficient
+            log_debug "Wine 11.0+ detected ($wine_version_output) - WoW64 fully supported, using standard timeouts"
         fi
-        echo ""
-        echo ""
         
         # Suppress WOW64 errors for Wine 10.x (if enabled)
-        if [ "$enable_wow64" = true ]; then
+        if [ "$is_wine_10" -eq 1 ] && [ "$enable_wow64" = true ]; then
             export WINEDEBUG=-all,fixme-all,err-environ
-        else
+        elif [ "$is_wine_10" -eq 1 ]; then
             # Disable WOW64 if user chose to
             export WINE_DISABLE_WOW64=1
             log_debug "WOW64 disabled via WINE_DISABLE_WOW64=1"
