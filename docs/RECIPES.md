@@ -35,13 +35,13 @@ The repository **never** ships Adobe or Buhl binaries.
 | Recipe | You provide | We provide |
 |--------|-------------|------------|
 | `photoshop` | `Set-up.exe`, `packages/`, `products/` in `photoshop/` | Prefix + Proton-GE, Adobe installer flow |
-| `wiso-steuer` | Licensed WISO Steuer Portable folder | Prefix + Proton-GE, launcher script in portable tree |
+| `wiso-steuer` | Licensed WISO Steuer Portable folder | Prefix + system Wine, launcher script in portable tree |
 
 ## Adding a recipe
 
 1. Copy `recipes/_template/` to `recipes/myapp/`.
 2. Edit `recipe.yml` (flat keys — see RECIPE-AUTHORING.md).
-3. Implement hooks; use `core/wine-runtime.sh` — **Proton-GE only**.
+3. Implement hooks; use `core/wine-runtime.sh` — set `runtime: proton-ge` or `runtime: system` in `recipe.yml`.
 4. Run `./scripts/recipe-lint.sh` and `./scripts/recipe-manifest.sh`.
 5. Test with `REZEPTOR_DEV=1 ./setup.sh` before merging.
 

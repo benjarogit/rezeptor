@@ -91,6 +91,8 @@ AppDir-build/
 .idea/
 *.sublime-*
 .cursor/
+__pycache__/
+*.pyc
 
 # ============================================================
 # IMPORTANT: Keep redist/ versioned

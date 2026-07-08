@@ -1,788 +1,169 @@
-# Adobe Photoshop Installer for Linux ![Status](https://img.shields.io/badge/status-production%20ready-green)
+# Rezeptor
+
+**Recipe-driven launcher for Windows software on Linux** — Wine and Proton GE, one GUI, separate prefixes per app.
+
+![License](https://img.shields.io/badge/license-GPL--2.0-blue) ![Platform](https://img.shields.io/badge/platform-Linux-green)
 
 > [!NOTE]
-> **Production Ready - Complete Toolset**
-> 
-> This project has evolved from a simple installer into a **comprehensive, production-ready toolset** for running Photoshop on Linux. With modular architecture, extensive features, and professional polish, it's ready for widespread use.
-> 
-> **Every hint, fix, or idea is welcome!** Please report issues, share solutions, or contribute improvements via [GitHub Issues](https://github.com/benjarogit/photoshopCClinux/issues).
-> 
-> See [CHANGELOG.md](CHANGELOG.md) for latest changes!
-
-> [!IMPORTANT]
-> **Tested and Working Versions**
-> 
-> ✅ **Adobe Photoshop CC 2021 (v22.x)** — **Proton-GE only** (no system Wine / `--wine-standard`).
-
-> **Data directory**: `~/.local/share/wine-software/photoshop/` (prefix, resources). Runtime: `~/.local/share/wine-software/runtime/proton-ge/`.
-
-> **Launcher**: PyQt6 required (`python-pyqt6`). `./setup.sh` → GUI; no bash menu fallback.
-> 
-> **Note about version numbers**: The specific version I tested is **v22.0.0.35**, but **any Photoshop v22.x version should work**. The exact build number may vary depending on where you obtained your installation files.
-> 
-> 💡 **Important**: Only CC 2021 (v22.x) has been tested. Other versions have not been tested.
-> 
-> 
-> ✅ **Tested on**: CachyOS Linux (Arch-based) with KDE desktop environment
-
-![Photoshop on Linux](images/Screenshot.png)
-
-![License](https://img.shields.io/badge/license-GPL--2.0-blue) ![Platform](https://img.shields.io/badge/platform-Linux-green) ![OS](https://img.shields.io/badge/OS-CachyOS-blue) ![Desktop](https://img.shields.io/badge/Desktop-KDE-blue) ![Wine](https://img.shields.io/badge/Wine-5.0%2B-red) ![Photoshop](https://img.shields.io/badge/Photoshop-CC%202021-blue)
-
-**Run Adobe Photoshop natively on Linux using Wine**
-
-A simple, automated installer that helps you set up Photoshop on Linux. Works on CachyOS, Arch, Ubuntu, Fedora, and all major Linux distributions.
+> **Development repository (private backup):** [github.com/benjarogit/rezeptor](https://github.com/benjarogit/rezeptor)  
+> **Public Photoshop lineage:** [github.com/benjarogit/photoshopCClinux](https://github.com/benjarogit/photoshopCClinux)
 
 ---
 
-## 🌍 Languages / Sprachen
+## What is Rezeptor?
 
-- 🇬🇧 **[English Documentation](#english-documentation)** - See below
-- 🇩🇪 **[Deutsche Dokumentation](README.de.md)** - Vollständige Anleitung
+Rezeptor is a **PyQt6 launcher** that installs and runs Windows applications through **recipes** — small packages under `recipes/<id>/` with `recipe.yml`, install/launch/repair scripts, and shared logic in `core/`.
 
----
+| You provide | Rezeptor provides |
+|-------------|-------------------|
+| Licensed installer files (Adobe, Buhl, …) | Wine prefix, runtime, winetricks, desktop entry, logs |
+| Portable folder path (WISO) | Launcher script, Qt fixes, validation |
 
-# English Documentation
-
-## 📋 Table of Contents
-
-- [Features](#-features)
-- [System Requirements](#-system-requirements)
-- [Important Notice](#-important-notice)
-- [Quick Start](#-quick-start)
-- [Installation Guide](#-installation-guide)
-- [Known Issues & Solutions](#-known-issues--solutions)
-- [Troubleshooting](#-troubleshooting)
-- [Performance Tips](#-performance-tips)
-- [Uninstallation](#-uninstallation)
-- [Contributing](#-contributing)
-- [License](#-license)
+**No piracy.** This repo never ships Adobe, Buhl, or other proprietary binaries.
 
 ---
 
-## ✨ Features
+## Quick start
 
-### Core Installation
-- ✅ **Local Installation** - Uses local installation files (no downloads from Adobe)
-- ✅ **Automatic Setup** - Installs Wine components and dependencies automatically
-- ✅ **Multi-Distribution Support** - Works on CachyOS, Arch, Ubuntu, Fedora, and more
-- ✅ **Pre-Installation Check** - Validates system before installation with distro-specific hints
-- ✅ **Desktop Integration** - Creates menu entry and terminal command
-- ✅ **Multi-Language** - Full i18n support (DE/EN) with external language files
-
-### Advanced Features
-- 🔧 **Automatic Troubleshooting** - Built-in diagnostic tools with automatic fixes
-- 📦 **Camera Raw Installer** - Automated installation with MD5 verification
-- 🔄 **Update Check System** - GitHub API integration with caching and timeout protection
-- 💾 **Checkpoint/Rollback** - Safe installation with recovery points
-- 🔒 **Security Module** - Path validation, safe operations, shell injection prevention
-- 📊 **System Information** - Cross-distro system detection and reporting
-- 🎨 **Responsive UI** - Banner, boxes, and headers adapt to terminal width
-- 🔇 **Quiet/Verbose Modes** - `--quiet` / `-q` and `--verbose` / `-v` flags for CI/testing
-- 📝 **Log Rotation** - Automatic compression (gzip) and cleanup of old logs
-- 🚀 **File Opening Support** - Launcher accepts files as parameters ("Open with Photoshop")
-- ⚙️ **Wine Configuration** - Interactive winecfg launcher with tips
-- 🛑 **Kill-Photoshop Utility** - Force termination of stuck processes
-- 🎯 **GPU Workarounds** - Fixes for common graphics issues
-
----
-
-## 🖥️ System Requirements
-
-### Required
-
-- **OS:** 64-bit Linux distribution
-- **RAM:** Minimum 4 GB (8 GB recommended)
-- **Storage:** 5 GB free space in `/home`
-- **Graphics:** Any GPU (Intel, Nvidia, AMD) with up-to-date drivers
-
-### Required Packages
-
-<details>
-<summary><b>CachyOS / Arch Linux</b></summary>
+### Requirements
 
 ```bash
-sudo pacman -S wine winetricks
-``` 
-</details>
+# Arch / CachyOS
+sudo pacman -S wine winetricks python-pyqt6
 
-<details>
-<summary><b>Ubuntu / Debian / Linux Mint</b></summary>
+# Ubuntu / Debian
+sudo apt install wine winetricks python3-pyqt6
+```
+
+### Run
 
 ```bash
-sudo apt install wine winetricks
-```
-</details>
-
-<details>
-<summary><b>Fedora / RHEL</b></summary>
-
-```bash
-sudo dnf install wine winetricks
-```
-</details>
-
-<details>
-<summary><b>openSUSE</b></summary>
-
-```bash
-sudo zypper install wine winetricks
-```
-</details>
-
----
-
-## ⚠️ Important Notice
-
-### You Must Provide Photoshop Installation Files
-
-**This repository does NOT include Photoshop installation files.**
-
-You must:
-1. **Own a valid Adobe Photoshop CC 2021 license**
-2. **Obtain the installer yourself** (see [How to Get Photoshop](#how-to-get-photoshop-files))
-3. **Place files in `photoshop/` directory** (see [photoshop/README.md](photoshop/README.md))
-
-### ⚡ Version Compatibility
-
-| Status | Version |
-|--------|---------|
-| **Guaranteed** | Adobe Photoshop CC 2021 **v22.0.0.35** |
-| Best effort | Other **v22.x** builds (may show UI/installer issues) |
-| Not supported | v21, v23+, CC 2019 and older |
-
-### Installation tiers
-
-| Tier | Audience | Method |
-|------|----------|--------|
-| **1** | End users, Fedora Silverblue / Bazzite / immutable | [GitHub Release AppImage](https://github.com/benjarogit/photoshopCClinux/releases) |
-| **2** | Arch / CachyOS / Pop!\_OS / developers | `git clone` + `python-pyqt6` + `./setup.sh` |
-| **3** | Immutable (Silverblue, Bazzite, Kinoite, Bluefin) | AppImage from Releases (Proton bundled; host needs PyQt6) |
-
-Runtime: pinned [Proton-GE](https://github.com/GloriousEggroll/proton-ge-custom) (`core/runtime.lock`), under `~/.local/share/wine-software/runtime/proton-ge/`.
-
-### How to Get Photoshop Files
-
-#### Option 1: Official Adobe (Recommended)
-- Download from Adobe Creative Cloud
-- Get offline installer for Photoshop CC 2021 (v22.x)
-
-#### Option 2: Existing Installation
-- If you have Photoshop on Windows, extract installation files
-- Windows location: `C:\Program Files\Adobe\Adobe Photoshop CC 2021\`
-
-**⚖️ Legal:** You must have a valid license. This script only automates Wine installation.
-
----
-
-## 🚀 Quick Start
-
-### Tier 1: AppImage (recommended for immutable distros)
-
-1. Download `photoshopCClinux-<version>-x86_64.AppImage` from [Releases](https://github.com/benjarogit/photoshopCClinux/releases)
-2. `chmod +x photoshopCClinux-*.AppImage`
-3. Run the AppImage and select your folder containing `Set-up.exe`
-
-No system Wine package required.
-
-### Tier 2: Git clone
-
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/benjarogit/photoshopCClinux.git
-cd photoshopCClinux
-```
-
-### 2. Place Photoshop Files
-
-Copy your Photoshop CC 2021 installation files to `photoshop/` directory:
-
-```
-photoshop/
-├── Set-up.exe
-├── packages/
-└── products/
-```
-
-See [photoshop/README.md](photoshop/README.md) for detailed structure.
-
-### 3. Run Pre-Check
-
-```bash
-chmod +x pre-check.sh
-./pre-check.sh
-```
-
-Should show: ✅ "All critical checks passed!"
-
-### 4. Disable Internet (Recommended)
-
-```bash
-# WiFi
-nmcli radio wifi off
-
-# Or Ethernet
-sudo ip link set <interface> down
-```
-
-This prevents Adobe login prompts during installation.
-
-### 5. Run Installation
-
-```bash
+git clone https://github.com/benjarogit/rezeptor.git
+cd rezeptor
 chmod +x setup.sh
 ./setup.sh
 ```
 
-### 6. In the Menu, Select Option 1
-
-```
-┌─────────────────────────────────────────────┐
-│  1- Installieren / Update                   │
-│  2- Camera Raw v12 installieren            │
-│  3- System-Vorprüfung (empfohlen)           │
-│  4- Fehlerbehebung                          │
-│  5- Wine konfigurieren                      │
-│  6- Internet: ON (Toggle)                  │
-│  7- Sprache: Deutsch (L)                   │
-│  8- Deinstallieren / Killen                │
-│  9- Schließen                               │
-└─────────────────────────────────────────────┘
-```
-
-Select **Option 1** (Installieren / Update)
-
-![Setup Screenshot](images/setup-screenshot.png)
-
-### 7. In Adobe Setup Window
-
-- Click "Install"
-- Keep default path (`C:\Program Files\Adobe\...`)
-- Select your language (e.g., en_US or de_DE)
-- Wait 10-20 minutes
-
-### 8. Re-enable Internet
+Optional desktop entry:
 
 ```bash
-nmcli radio wifi on
+./scripts/install-rezeptor-desktop.sh
 ```
 
-### 9. Launch Photoshop
+Then open **Rezeptor** from the application menu, pick a recipe, and use **Install → Validate → Launch**.
+
+---
+
+## Recipes
+
+| Recipe | Software | Runtime | Data directory |
+|--------|----------|---------|----------------|
+| [`photoshop`](recipes/photoshop/) | Adobe Photoshop CC 2021 (v22.x) | **Proton GE** | `~/.local/share/wine-software/photoshop/` |
+| [`wiso-steuer`](recipes/wiso-steuer/) | WISO Steuer (Portable) | **System Wine** | `~/.local/share/wine-software/wiso-steuer/` |
+
+Each recipe declares `runtime:` in `recipe.yml`. Rezeptor picks **Proton GE** or **distro Wine** automatically — both can coexist; prefixes stay separate.
+
+### Photoshop
+
+1. Place `Set-up.exe`, `packages/`, `products/` in [`photoshop/`](photoshop/) — see [photoshop/README.md](photoshop/README.md).
+2. Rezeptor → **Photoshop** → Install (disable network when prompted during Adobe setup).
+3. After install: **Edit → Preferences → Performance** → disable GPU in Photoshop.
+
+### WISO Steuer (Portable)
+
+1. Rezeptor → **WISO Steuer** → Install → select your portable root (folder containing `Steuersoftware 20XX/`).
+2. On KDE/Wayland: repair sets Wine graphics to **X11** automatically.
+3. If a **Wine-Mono** dialog appears for `~/.wine`: click **Cancel** — use Rezeptor → **Repair** (installs Mono silently in the WISO prefix).
+
+---
+
+## Directory layout
+
+```
+~/.local/share/wine-software/
+├── runtime/proton-ge/GE-Proton10-28/   # downloaded on first Photoshop use
+├── cache/winetricks/
+├── logs/                             # install, repair, launch logs
+├── photoshop/{prefix,resources}
+└── wiso-steuer/{prefix,portable.env,bin/}
+```
+
+Project tree:
+
+```
+rezeptor/
+├── core/           # shared bash: wine-runtime, recipes, security, i18n
+├── launcher/       # PyQt6 GUI (Rezeptor)
+├── recipes/        # one folder per application
+├── docs/           # authoring & testing
+├── setup.sh        # entry point → launcher
+└── scripts/        # manifest, lint, AppImage, desktop file
+```
+
+---
+
+## Documentation
+
+| Topic | File |
+|-------|------|
+| Recipe overview | [docs/RECIPES.md](docs/RECIPES.md) |
+| Write a new recipe | [docs/RECIPE-AUTHORING.md](docs/RECIPE-AUTHORING.md) |
+| Testing | [docs/TESTING.md](docs/TESTING.md) |
+| Brand / naming | [docs/BRAND.md](docs/BRAND.md) |
+| Photoshop files | [photoshop/README.md](photoshop/README.md) |
+
+---
+
+## Development
 
 ```bash
-photoshop
+# lint + syntax + recipe manifest check
+make validate
+
+# regenerate trust manifest after recipe edits
+./scripts/recipe-manifest.sh
+
+# dev mode (skip manifest trust check)
+REZEPTOR_DEV=1 ./setup.sh
 ```
 
-Or search for "Adobe Photoshop CC" in your application menu.
+Runtime pin: [`core/runtime.lock`](core/runtime.lock) (Proton GE tag + optional SHA256).
 
-### 10. Disable GPU (Important!)
-
-For stability:
-1. In Photoshop: `Edit > Preferences > Performance` (Ctrl+K)
-2. Uncheck "Use Graphics Processor"
-3. Restart Photoshop
+Logs: `~/.local/share/wine-software/logs/`
 
 ---
 
-## ⚙️ Command Line Options
+## Runtime: Wine vs Proton GE
 
-The installer supports several command-line flags for automation and debugging:
+| | System Wine | Proton GE |
+|---|-------------|-----------|
+| Binary | `/usr/bin/wine` | `~/.local/share/wine-software/runtime/proton-ge/…` |
+| Best for | Qt/office (WISO) | Games, DXVK, Adobe IE installer |
+| Per recipe | `runtime: system` | `runtime: proton-ge` |
 
-- `--wine-standard`: Use Wine Standard (skip interactive Wine selection menu)
-- `--quiet` / `-q`: Quiet mode - suppress all output except errors (useful for CI/testing)
-- `--verbose` / `-v`: Verbose mode - show debug logs on console (useful for debugging)
-
-### Examples
-
-```bash
-# Standard installation with Wine Standard (non-interactive)
-./setup.sh --wine-standard
-
-# Quiet installation (for CI/testing - only errors shown)
-./setup.sh --quiet --wine-standard
-
-# Verbose installation (for debugging - shows all debug logs)
-./setup.sh --verbose --wine-standard
-
-# Combine flags
-./setup.sh --quiet --wine-standard
-```
-
-**Note:** All output is still logged to files even in quiet mode. Check `~/.local/share/wine-software/logs/` for detailed logs.
+Proton GE is **not** “better Wine for everything” — it is Wine plus gaming-oriented patches and graphics stacks.
 
 ---
 
-## 📖 Installation Guide
+## Languages
 
-### Detailed Steps
-
-#### Pre-Installation
-
-1. **Install Required Packages**
-   ```bash
-   # CachyOS/Arch
-   sudo pacman -S wine winetricks
-   
-   # Ubuntu/Debian
-   sudo apt install wine winetricks
-   ```
-
-2. **Check System**
-   ```bash
-   ./pre-check.sh
-   ```
-   
-   This validates:
-   - 64-bit architecture
-   - Wine/winetricks installation
-   - Available disk space
-   - RAM
-   - Installation files presence
-
-#### During Installation
-
-1. **Wine Configuration**
-   - Mono installer will appear → Click "Install"
-   - Gecko installer will appear → Click "Install"
-   - Wine config window → Set to Windows 10, click OK
-
-2. **Component Installation** (automatic, ~10 minutes)
-   - Visual C++ 2015-2022 Redistributable
-   - fonts and font-smoothing
-   - msxml3, msxml6, gdiplus
-
-3. **Adobe Photoshop Setup** (10-20 minutes)
-   - Adobe installer window appears
-   - Click "Install"
-   - Choose language
-   - Wait for completion
-   - **Ignore** "ARKServiceAdmin" errors if they appear
-
-#### Post-Installation
-
-1. **Run Troubleshoot**
-   ```bash
-   ./troubleshoot.sh
-   ```
-
-2. **Launch Photoshop**
-   ```bash
-   photoshop
-   ```
-   
-   First launch takes 1-2 minutes (normal!)
-
-3. **Disable GPU**
-   - Edit > Preferences > Performance
-   - Uncheck "Use Graphics Processor"
+- 🇬🇧 **English** — this file
+- 🇩🇪 **[Deutsche Dokumentation](README.de.md)**
 
 ---
 
+## Support & contributing
+
+- **Issues (public Photoshop repo):** [github.com/benjarogit/photoshopCClinux/issues](https://github.com/benjarogit/photoshopCClinux/issues)
+- **Automatic checks:** `./troubleshoot.sh` or Rezeptor → Validate / Repair
 
 ---
 
-## 🐛 Known Issues & Solutions
+## License
 
-### Issue 1: Photoshop Crashes on Startup
+**GPL-2.0** — see [LICENSE](LICENSE).
 
-**Cause:** GPU acceleration incompatibility with Wine
+Based on [photoshopCClinux](https://github.com/Gictorbit/photoshopCClinux) by Gictorbit.  
+Copyright © 2024–2026 Sunny C.
 
-**Solution:**
-```
-1. Launch Photoshop
-2. Edit > Preferences > Performance (Ctrl+K)
-3. Uncheck "Use Graphics Processor"
-4. Uncheck "Use OpenCL"
-5. Restart Photoshop
-```
-
-### Issue 2: "VCRUNTIME140.dll is missing"
-
-**Cause:** Visual C++ Runtime not installed properly
-
-**Solution:**
-Run the installer again or manually install:
-```bash
-WINEPREFIX=~/.local/share/wine-software/photoshop/prefix winetricks vcrun2015
-```
-
-### Issue 3: Liquify Tool Doesn't Work
-
-**Cause:** GPU/OpenCL issues
-
-**Solution:**
-- Disable GPU acceleration (see Issue 1)
-- Or disable OpenCL: Preferences > Performance > Uncheck "Use OpenCL"
-
-### Issue 4: Blurry/Ugly Fonts
-
-**Solution:**
-```bash
-WINEPREFIX=~/.local/share/wine-software/photoshop/prefix winetricks fontsmooth=rgb
-```
-
-### Issue 5: Installation Hangs at 100%
-
-**Solution:**
-- Wait 2-3 minutes
-- If nothing happens, close installer (Alt+F4)
-- Installation is likely complete
-- Verify: `ls ~/.local/share/wine-software/photoshop/prefix/drive_c/Program\ Files/Adobe/`
-
-### Issue 6: "ARKServiceAdmin" Error During Installation
-
-**Solution:**
-- This error can be **ignored**
-- Click "Ignore" or "Continue"
-- Installation will complete successfully
-
-### Issue 7: Slow First Startup (1-2 Minutes)
-
-**Not an Issue:**
-- First startup is always slow
-- Subsequent starts take 10-30 seconds
-- This is normal Wine behavior
-
-### Issue 8: Cannot Save as PNG
-
-**Cause:** File format plugin issue in Wine
-
-**Solution:**
-```
-1. File > Save As
-2. Choose "PNG" from format dropdown
-3. If it fails, try: File > Export > Export As > PNG
-4. Alternative: Save as PSD, then use GIMP to export as PNG
-```
-
-### Issue 9: Screen Doesn't Update Immediately (Undo/Redo)
-
-**Cause:** Wine rendering lag
-
-**Solution:**
-- This is a known Wine limitation
-- Workaround: Force refresh with Ctrl+0 (fit to screen)
-- Or: Enable virtual desktop in winecfg
-
-### Issue 10: Zooming is Laggy
-
-**Cause:** GPU acceleration disabled + Wine overhead
-
-**Solution:**
-```
-1. Use keyboard shortcuts (Ctrl + / Ctrl -)
-2. Zoom with mouse wheel is slower than native
-3. This is expected behavior with Wine
-4. Performance is better on wine-staging
-```
-
-### Issue 11: Adobe Installer "Next" Button Doesn't Respond
-
-**Cause:** Adobe installer uses Internet Explorer engine (mshtml.dll) which doesn't work perfectly in Wine
-
-**Solution:**
-```
-1. Install IE8 when prompted (takes 5-10 minutes, but significantly helps)
-2. Wait 15-30 seconds - installer sometimes loads slowly
-3. Use keyboard navigation:
-   - Tab key multiple times to focus the button
-   - Press Enter to click
-   - Or: Alt+N (Next) / Alt+W (Weiter in German)
-4. Click directly on the button (not beside it)
-5. Bring installer window to foreground (Alt+Tab)
-6. If nothing works: Try reinstalling Wine components with winetricks
-```
-
-**Note:** This is a known limitation of Wine with IE-based installers. The installer has already configured DLL-overrides and registry tweaks to improve compatibility.
-
----
-
-## 🔧 Troubleshooting
-
-### Automatic Troubleshooting
-
-```bash
-./troubleshoot.sh
-```
-
-This tool:
-- ✅ Checks system requirements
-- ✅ Validates installation
-- ✅ Analyzes Wine configuration
-- ✅ Scans logs for errors
-- ✅ Applies automatic fixes when possible
-- ✅ Provides detailed reports
-
-### Manual Troubleshooting
-
-#### Check Logs
-
-```bash
-# All logs are stored in:
-ls ~/.local/share/wine-software/logs/
-
-# View latest log
-tail -n 50 ~/.local/share/wine-software/logs/*.log | tail -50
-```
-
-#### Wine Configuration
-
-```bash
-./setup.sh  # Select Option 5 (Wine konfigurieren)
-```
-
-Recommended settings:
-- **Windows Version:** Windows 10
-- **DPI:** 96 (default)
-- **Virtual Desktop:** Optional (enable if fullscreen issues)
-
-#### Reinstall Components
-
-```bash
-WINEPREFIX=~/.local/share/wine-software/photoshop/prefix winetricks --force vcrun2015 msxml6
-```
-
----
-
-## 🚀 Performance Tips
-
-### Essential (For Stability)
-
-1. **Disable GPU in Photoshop** (Ctrl+K → Performance)
-2. **Disable OpenCL** (Ctrl+K → Performance)
-
-### Optional (For Speed)
-
-3. **Use Wine-Staging**
-   ```bash
-   # CachyOS/Arch
-   sudo pacman -S wine-staging
-   
-   # Ubuntu
-   sudo add-apt-repository ppa:cybermax-dexter/sdl2-backport
-   sudo apt install wine-staging
-   ```
-
-4. **Enable CSMT**
-   ```bash
-   WINEPREFIX=~/.local/share/wine-software/photoshop/prefix winetricks csmt
-   ```
-
-5. **Use Virtual Desktop** (if performance issues)
-   ```bash
-   ./setup.sh  # Option 5 (Wine konfigurieren) → Graphics → Enable virtual desktop
-   ```
-
-### Expected Performance
-
-| Feature | Native Windows | Wine Linux | Notes |
-|---------|---------------|------------|-------|
-| Basic Tools | 100% | 90-95% | Excellent |
-| Filters | 100% | 80-90% | Good |
-| Liquify | 100% | 70-80% | Usable (GPU off) |
-| 3D Features | 100% | 30-50% | Limited |
-| Camera Raw | 100% | 60-80% | Usable |
-| Startup Time | 5-10s | 10-30s | After first launch |
-
-**Overall:** 85-90% of native performance for standard photo editing.
-
----
-
-## 🗑️ Uninstallation
-
-### Complete Removal
-
-```bash
-./setup.sh  # Select Option 8
-```
-
-When you select Option 8, you'll see a submenu:
-- **Option 1**: Uninstall Photoshop (complete removal)
-- **Option 2**: Force kill Photoshop processes (if Photoshop is stuck/hanging)
-- **Option 3**: Back to main menu
-
-**Option 1** removes:
-- Wine prefix (`~/.local/share/wine-software/photoshop/`)
-- Desktop entry
-- Terminal command (`/usr/local/bin/photoshop`)
-
-**Option 2** forcefully terminates all Photoshop and Wine processes related to Photoshop. Use this if Photoshop is stuck or not responding.
-
-### Manual Removal
-
-```bash
-# Remove installation
-rm -rf ~/.local/share/wine-software/photoshop/
-
-# Remove desktop entry
-rm ~/.local/share/applications/photoshop.desktop
-
-# Remove command
-sudo rm /usr/local/bin/photoshop
-```
-
----
-
-## 🤝 Contributing
-
-**We need your help!** This project is made better by contributions from the community.
-
-### How You Can Help
-
-#### 🐛 Report Bugs
-Found something that doesn't work? Let us know!
-- [Open a GitHub Issue](https://github.com/benjarogit/photoshopCClinux/issues)
-- Include: Linux distro, Wine version, error logs, steps to reproduce
-- Even if you're not sure it's a bug - report it anyway!
-
-#### 💡 Suggest Features
-Have an idea to make this better?
-- [Open a Feature Request](https://github.com/benjarogit/photoshopCClinux/issues)
-- Describe what you'd like to see
-- Explain why it would be helpful
-
-#### 🔧 Share Fixes & Workarounds
-Found a solution to a problem?
-- Share it in the [GitHub Issues](https://github.com/benjarogit/photoshopCClinux/issues)
-- Help others who have the same problem
-- Your experience helps everyone!
-
-#### 📝 Improve Documentation
-Found something unclear in the README?
-- [Open an Issue](https://github.com/benjarogit/photoshopCClinux/issues) or submit a pull request
-- Help make this easier for beginners
-- Translate to other languages
-
-#### 💻 Code Contributions
-Want to contribute code?
-1. Fork the repository
-2. Create a feature branch
-3. Test your changes thoroughly
-4. Submit a pull request with a clear description
-
-**Every contribution, big or small, makes this project better! 🙏**
-
----
-
-## 📚 Additional Resources
-
-### Official Resources
-
-- **German Documentation:** [README.de.md](README.de.md)
-- **Changelog:** [CHANGELOG.md](CHANGELOG.md) - See latest changes and previous versions
-- **Quick Start Guide:** Quick start section above
-
-### Alternative Solutions
-
-If this installer doesn't work for you, consider these alternatives:
-
-- **[PhotoGIMP](https://github.com/Diolinux/PhotoGIMP)** - GIMP configured to look/feel like Photoshop
-- **[Krita](https://krita.org/)** - Professional painting and illustration (native Linux)
-- **[Photopea](https://www.photopea.com/)** - Online Photoshop alternative (browser-based)
-
-### Original Project
-
-- [Original Gictorbit Project](https://github.com/Gictorbit/photoshopCClinux) - Based on this project
-
----
-
-## 📄 License
-
-This project is licensed under the **GPL-2.0 License** - see the [LICENSE](LICENSE) file for details.
-
-### Legal Notice
-
-- ⚠️ Adobe Photoshop is proprietary software owned by Adobe Inc.
-- ⚠️ You must have a valid license to use Photoshop
-- ⚠️ This script only automates Wine installation
-- ⚠️ No piracy is supported or encouraged
-- ✅ Use at your own risk
-
----
-
-## 🙏 Acknowledgments
-
-- **[Gictorbit](https://github.com/Gictorbit)** - Original installer script
-- **Wine Team** - Windows compatibility layer
-- **Community Contributors** - Bug reports and fixes
-
----
-
-## 📊 Project Status
-
-![GitHub last commit](https://img.shields.io/github/last-commit/benjarogit/photoshopCClinux)
-![GitHub issues](https://img.shields.io/github/issues/benjarogit/photoshopCClinux)
-![GitHub stars](https://img.shields.io/github/stars/benjarogit/photoshopCClinux)
-
-**Status:** ✅ Production Ready (Complete Toolset)
-
-**Tested on:**
-- CachyOS Linux (Arch-based) with KDE desktop environment
-
----
-
-## ❓ FAQ
-
-<details>
-<summary><b>Q: Do I need an Adobe account?</b></summary>
-
-You need a valid Photoshop license, but you can use the offline installer without logging in during installation. Disable internet connection during setup.
-</details>
-
-<details>
-<summary><b>Q: Which Photoshop version works?</b></summary>
-
-Only Photoshop CC 2021 (v22.x) has been tested and confirmed working. Other versions have not been tested.
-</details>
-
-<details>
-<summary><b>Q: Can I use plugins?</b></summary>
-
-Most plugins work. Install them to: `~/.local/share/wine-software/photoshop/prefix/drive_c/Program Files/Adobe/Adobe Photoshop CC 2021/Plug-ins/`
-</details>
-
-<details>
-<summary><b>Q: Does Camera Raw work?</b></summary>
-
-Yes! After Photoshop installation, run `./setup.sh` and select Option 2 to install Camera Raw.
-</details>
-
-<details>
-<summary><b>Q: Why is GPU disabled?</b></summary>
-
-Wine has limited GPU acceleration support. Disabling it prevents crashes and improves stability.
-</details>
-
-<details>
-<summary><b>Q: Can I use other Photoshop versions?</b></summary>
-
-Only CC 2021 (v22.x) has been tested. Other versions may or may not work - they have not been tested.
-</details>
-
----
-
-## 💬 Support
-
-- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/benjarogit/photoshopCClinux/issues)
-- 💡 **Feature Requests:** [GitHub Issues](https://github.com/benjarogit/photoshopCClinux/issues)
-- 📖 **Documentation:** See files in this repository
-- 🔧 **Automatic Help:** Run `./troubleshoot.sh`
-
----
-
-## 📄 License & Copyright
-
-**Copyright © 2024-2026 Sunny C.**
-
-This project is licensed under the **GPL-2.0 License**.
-
-Based on [photoshopCClinux](https://github.com/Gictorbit/photoshopCClinux) by Gictorbit.
-
----
-
-**Made with ❤️ for the Linux community**
-
-**Star ⭐ this repo if it helped you!**
-
-
+Adobe Photoshop and WISO Steuer are proprietary; you must own valid licenses.
