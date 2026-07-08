@@ -1,0 +1,31 @@
+WISO Steuer — Portable Version
+
+Ablauf (wichtig):
+1. Portable von Buhl besorgen (lizenziert) — liegt bei dir z. B. als WISO.*.Portable/
+2. Rezeptor → WISO → Mehr ▾ → Portable-Pfad… (oder Installieren, wenn noch nicht eingerichtet)
+   → richtet Wine-Prefix + Mono/VC++ ein, verknüpft dein Portable
+3. Optional: Fix-/Update-.exe von Buhl beim Installieren wählen (nur wenn du ein separates Paket hast)
+4. Reparieren → fehlende Prefix-Komponenten + wined3d (kein DXVK) + Qt-Startfix
+5. Starten
+
+Das Portable wird nicht kopiert — es bleibt in deinem Ordner (BYOS).
+
+Internet:
+Rezeptor trennt dein Linux-WLAN nicht. Der Qt-Startfix betrifft nur eine WISO-interne
+DLL (qnetworklistmanager.dll → .bak). WLAN/LAN bleibt aktiv.
+Nur die Adobe-Photoshop-Installation empfiehlt optional kurz offline zu gehen.
+
+Wine-Mono (.NET):
+Rezeptor installiert Wine-Mono still (msiexec). Kein separates Fenster nötig.
+Falls „Wine-Mono-Installation“ erscheint: Abbrechen — nicht Installieren.
+Im Tab „Vorgang“ warten; bei anderen Wine-OK-Dialogen ebenfalls Abbrechen.
+
+Wine-Startfix:
+Unter Wine stürzt WISO oft ab, wenn networkinformation/qnetworklistmanager.dll aktiv ist.
+Install/Reparieren benennt sie in .bak um (Buhl-/WineHQ-Workaround).
+
+Grafik (Qt WebEngine):
+WISO nutzt Qt6/WebView2 — DXVK crasht unter Wine. Reparieren stellt wined3d wieder her
+und startet mit --disable-gpu (Linux-Internet bleibt an).
+
+Logs: ~/.local/share/wine-software/logs/

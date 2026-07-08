@@ -1,0 +1,11 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="96" fill="#1C1C1A"/>
+  <!-- Rezeptkarte -->
+  <rect x="152" y="122" width="208" height="268" rx="14" fill="none" stroke="#EDE6D6" stroke-width="10"/>
+  <line x1="182" y1="176" x2="330" y2="176" stroke="#EDE6D6" stroke-width="9"/>
+  <line x1="182" y1="210" x2="330" y2="210" stroke="#EDE6D6" stroke-width="9"/>
+  <line x1="182" y1="244" x2="270" y2="244" stroke="#EDE6D6" stroke-width="9"/>
+  <!-- Prüfsiegel -->
+  <circle cx="336" cy="336" r="74" fill="#B87333"/>
+  <path d="M300 336 L324 360 L376 306" fill="none" stroke="#1C1C1A" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Rezeptor
+Name[de]=Rezeptor
+Comment=Getestete Wine-Rezepte — Installieren, Starten, Prüfen
+Comment[de]=Getestete Wine-Rezepte — Installieren, Starten, Prüfen
+Exec=REPO_ROOT/setup.sh
+Path=REPO_ROOT
+Icon=rezeptor
+Categories=Utility;Settings;
+Terminal=false
+StartupNotify=true
+Keywords=wine;proton;photoshop;wiso;rezept;launcher;
+Keywords[de]=wine;proton;photoshop;wiso;rezept;launcher;

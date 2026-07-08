@@ -1,0 +1,6 @@
+# Pinned runtimes for photoshopCClinux
+# Update only after QA with Photoshop CC 2021 v22.0.0.35
+
+PROTON_GE_TAG=GE-Proton10-28
+PROTON_GE_URL=https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton10-28/GE-Proton10-28.tar.gz
+PROTON_GE_SHA256=4c5cc46e7f1af53f610e02c60bc9470db0d82e072b0072372ef588a82c4de316

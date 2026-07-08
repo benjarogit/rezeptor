@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck bats
+
+      - name: Shellcheck
+        run: make shellcheck
+
+      - name: Bash syntax
+        run: make syntax
+
+      - name: Python compile
+        run: make compile
+
+      - name: Recipe structure
+        run: make recipes-check
+
+      - name: Recipe lint
+        run: make recipe-lint
+
+      - name: Recipe manifest
+        run: make recipe-manifest-check
+
+      - name: Bats tests
+        run: make test

@@ -13,7 +13,7 @@ Kurze Beschreibung des Problems.
 ## 📋 System
 
 - **Distro:** [z.B. CachyOS, Arch, Ubuntu]
-- **Wine:** [run: `wine --version`]
+- **Runtime:** Proton-GE (`core/runtime.lock`) — run: `source core/wine-runtime.sh && wine_runtime::describe`
 - **Photoshop:** [z.B. CC 2021]
 
 ## 🔍 Schritte zum Reproduzieren
@@ -34,7 +34,7 @@ Was passiert stattdessen?
 
 ```bash
 # Relevante Logs
-tail -n 50 ~/.photoshop/logs/*.log
+tail -n 50 ~/.local/share/wine-software/logs/*.log
 ```
 
 ## 🔧 Bereits versucht

@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Shellcheck
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y shellcheck
+          find . -name '*.sh' -not -path './AppDir-build/*' -print0 | xargs -0 shellcheck -e SC1091,SC2034,SC2155,SC2207
+
+  release:
+    needs: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y curl tar rsync fuse libfuse2
+          curl -fsSL -o /tmp/appimagetool \
+            https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x /tmp/appimagetool
+          sudo mv /tmp/appimagetool /usr/local/bin/appimagetool
+
+      - name: Build AppImage
+        run: |
+          chmod +x scripts/build-appimage.sh AppDir/AppRun
+          scripts/build-appimage.sh
+
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: photoshopCClinux-*-x86_64.AppImage
+          generate_release_notes: true

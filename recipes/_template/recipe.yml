@@ -1,0 +1,22 @@
+# Vorlage für neue Rezepte — nicht im offiziellen Manifest (Ordner _template).
+id: example-app
+name: "Example App (Template)"
+category: "Vorlage"
+version_guaranteed: "1.0.0"
+version_label: "Example 1.0.0"
+data_root: "~/.local/share/wine-software/example-app"
+prefix: "{data_root}/prefix"
+runtime: proton-ge
+install_type: installer_offline
+source_kind: installer
+source_label: "Setup.exe wählen"
+fix_kind: none
+exe_glob: "**/*.exe"
+winetricks: [win10]
+env:
+  WINEDEBUG: "-all"
+validate: validate.sh
+launch: launch.sh
+install: install.sh
+repair: repair.sh
+kill: kill.sh

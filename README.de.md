@@ -12,7 +12,11 @@
 > [!IMPORTANT]
 > **Getestete und funktionierende Versionen**
 > 
-> ✅ **Adobe Photoshop CC 2021 (v22.x)** wurde erfolgreich getestet mit **Wine Standard** Installationsmethode.
+> ✅ **Adobe Photoshop CC 2021 (v22.x)** — nur **Proton-GE** (kein System-Wine / `--wine-standard`).
+
+> **Datenverzeichnis**: `~/.local/share/wine-software/photoshop/`. Runtime: `~/.local/share/wine-software/runtime/proton-ge/`.
+
+> **Launcher**: PyQt6 Pflicht (`python-pyqt6`). `./setup.sh` startet die GUI.
 > 
 > **Hinweis zu Versionsnummern**: Die von mir getestete spezifische Version ist **v22.0.0.35**, aber **jede Photoshop v22.x Version sollte funktionieren**. Die genaue Build-Nummer kann variieren, je nachdem woher du deine Installationsdateien hast.
 > 
@@ -141,11 +145,22 @@ Du musst:
 
 ### ⚡ Versions-Kompatibilität
 
-**Dieser Installer wurde nur mit Photoshop CC 2021 (v22.x) getestet.**
+| Status | Version |
+|--------|---------|
+| **Garantiert** | Adobe Photoshop CC 2021 **v22.0.0.35** |
+| Best effort | Andere **v22.x** Builds |
+| Nicht supported | v21, v23+, CC 2019 und älter |
 
-- ✅ **CC 2021 (v22.x)** - Getestet und funktionierend (GPU deaktiviert) - **Einzige getestete Version**
+### Installations-Tiers
 
-**Hinweis:** Die spezifische getestete Version ist **v22.0.0.35**, aber jede Photoshop v22.x Version sollte funktionieren. Andere Versionen wurden nicht getestet und funktionieren möglicherweise nicht.
+| Tier | Zielgruppe | Methode |
+|------|------------|---------|
+| **1** | End-User, Silverblue / Bazzite / immutable | [AppImage Release](https://github.com/benjarogit/photoshopCClinux/releases) |
+| **2** | Arch / CachyOS / Entwickler | `git clone` + `./setup.sh` (Proton-GE automatisch) |
+| **2** | Arch / CachyOS / Pop!\_OS / Entwickler | `git clone` + `python-pyqt6` + `./setup.sh` |
+| **3** | Immutable (Silverblue, Bazzite, Kinoite, Bluefin) | AppImage von Releases (Proton + PyQt6 gebündelt) |
+
+Runtime: gepinntes [Proton-GE](https://github.com/GloriousEggroll/proton-ge-custom) (`core/runtime.lock`), unter `~/.local/share/wine-software/runtime/proton-ge/`.
 
 ### Wie bekomme ich Photoshop-Dateien?
 
@@ -162,6 +177,16 @@ Du musst:
 ---
 
 ## 🚀 Schnellstart
+
+### Tier 1: AppImage (empfohlen für immutable Distros)
+
+1. `photoshopCClinux-<version>-x86_64.AppImage` von [Releases](https://github.com/benjarogit/photoshopCClinux/releases) laden
+2. `chmod +x photoshopCClinux-*.AppImage`
+3. AppImage starten und Ordner mit `Set-up.exe` wählen
+
+Kein System-Wine-Paket nötig.
+
+### Tier 2: Git clone
 
 ### 1. Repository klonen
 
@@ -263,29 +288,22 @@ Für Stabilität:
 
 ## ⚙️ Befehlszeilen-Optionen
 
-Der Installer unterstützt mehrere Befehlszeilen-Flags für Automatisierung und Debugging:
+Install (Terminal): `bash recipes/photoshop/install.sh`
 
-- `--wine-standard`: Wine Standard verwenden (überspringt interaktive Wine-Auswahl)
-- `--quiet` / `-q`: Quiet-Modus - unterdrückt alle Ausgaben außer Fehlern (nützlich für CI/Testing)
-- `--verbose` / `-v`: Verbose-Modus - zeigt Debug-Logs auf der Konsole (nützlich für Debugging)
+- `--quiet` / `-q`: Quiet-Modus — nur Fehler
+- `--verbose` / `-v`: Debug-Logs auf der Konsole
+- `--wine-standard`: **entfernt** — nur Proton-GE
 
 ### Beispiele
 
 ```bash
-# Standard-Installation mit Wine Standard (nicht-interaktiv)
-./setup.sh --wine-standard
-
-# Quiet-Installation (für CI/Testing - nur Fehler werden angezeigt)
-./setup.sh --quiet --wine-standard
-
-# Verbose-Installation (für Debugging - zeigt alle Debug-Logs)
-./setup.sh --verbose --wine-standard
-
-# Flags kombinieren
-./setup.sh --quiet --wine-standard
+./setup.sh
+bash recipes/photoshop/install.sh --quiet
+bash recipes/photoshop/validate.sh
+bash recipes/photoshop/launch.sh
 ```
 
-**Hinweis:** Alle Ausgaben werden auch im Quiet-Modus in Dateien protokolliert. Prüfe `~/.photoshop/logs/` für detaillierte Logs.
+**Hinweis:** Alle Ausgaben werden auch im Quiet-Modus in Dateien protokolliert. Prüfe `~/.local/share/wine-software/logs/` für detaillierte Logs.
 
 ---
 
@@ -379,7 +397,7 @@ Der Installer unterstützt mehrere Befehlszeilen-Flags für Automatisierung und 
 
 **Lösung:**
 ```bash
-WINEPREFIX=~/.photoshop/prefix winetricks vcrun2015
+WINEPREFIX=~/.local/share/wine-software/photoshop/prefix winetricks vcrun2015
 ```
 
 ### Problem 3: Liquify-Tool funktioniert nicht
@@ -394,7 +412,7 @@ WINEPREFIX=~/.photoshop/prefix winetricks vcrun2015
 
 **Lösung:**
 ```bash
-WINEPREFIX=~/.photoshop/prefix winetricks fontsmooth=rgb
+WINEPREFIX=~/.local/share/wine-software/photoshop/prefix winetricks fontsmooth=rgb
 ```
 
 ### Problem 5: Installation hängt bei 100%
@@ -403,7 +421,7 @@ WINEPREFIX=~/.photoshop/prefix winetricks fontsmooth=rgb
 - Warte 2-3 Minuten
 - Falls nichts passiert, schließe Installer (Alt+F4)
 - Installation ist wahrscheinlich abgeschlossen
-- Überprüfe: `ls ~/.photoshop/prefix/drive_c/Program\ Files/Adobe/`
+- Überprüfe: `ls ~/.local/share/wine-software/photoshop/prefix/drive_c/Program\ Files/Adobe/`
 
 ### Problem 6: "ARKServiceAdmin" Fehler während Installation
 
@@ -495,10 +513,10 @@ Dieses Tool:
 
 ```bash
 # Alle Logs werden gespeichert in:
-ls ~/.photoshop/logs/
+ls ~/.local/share/wine-software/logs/
 
 # Neuestes Log anzeigen
-tail -n 50 ~/.photoshop/logs/*.log | tail -50
+tail -n 50 ~/.local/share/wine-software/logs/*.log | tail -50
 ```
 
 #### Wine-Konfiguration
@@ -515,7 +533,7 @@ Empfohlene Einstellungen:
 #### Komponenten neu installieren
 
 ```bash
-WINEPREFIX=~/.photoshop/prefix winetricks --force vcrun2015 msxml6
+WINEPREFIX=~/.local/share/wine-software/photoshop/prefix winetricks --force vcrun2015 msxml6
 ```
 
 ---
@@ -541,7 +559,7 @@ WINEPREFIX=~/.photoshop/prefix winetricks --force vcrun2015 msxml6
 
 4. **CSMT aktivieren**
    ```bash
-   WINEPREFIX=~/.photoshop/prefix winetricks csmt
+   WINEPREFIX=~/.local/share/wine-software/photoshop/prefix winetricks csmt
    ```
 
 5. **Virtual Desktop verwenden** (bei Performance-Problemen)
@@ -578,7 +596,7 @@ Wenn du Option 8 auswählst, erscheint ein Untermenü:
 - **Option 3**: Zurück zum Hauptmenü
 
 **Option 1** entfernt:
-- Wine-Prefix (`~/.photoshop/`)
+- Wine-Prefix (`~/.local/share/wine-software/photoshop/`)
 - Desktop-Eintrag
 - Terminal-Befehl (`/usr/local/bin/photoshop`)
 
@@ -588,7 +606,7 @@ Wenn du Option 8 auswählst, erscheint ein Untermenü:
 
 ```bash
 # Installation entfernen
-rm -rf ~/.photoshop/
+rm -rf ~/.local/share/wine-software/photoshop/
 
 # Desktop-Eintrag entfernen
 rm ~/.local/share/applications/photoshop.desktop
@@ -714,7 +732,7 @@ Nur Photoshop CC 2021 (v22.x) wurde getestet und funktioniert. Andere Versionen 
 <details>
 <summary><b>F: Kann ich Plugins verwenden?</b></summary>
 
-Die meisten Plugins funktionieren. Installiere sie nach: `~/.photoshop/prefix/drive_c/Program Files/Adobe/Adobe Photoshop CC 2021/Plug-ins/`
+Die meisten Plugins funktionieren. Installiere sie nach: `~/.local/share/wine-software/photoshop/prefix/drive_c/Program Files/Adobe/Adobe Photoshop CC 2021/Plug-ins/`
 </details>
 
 <details>

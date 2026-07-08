@@ -30,6 +30,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Source sharedFuncs.sh to use load_paths()
 if [ -f "$SCRIPT_DIR/scripts/sharedFuncs.sh" ]; then
     source "$SCRIPT_DIR/scripts/sharedFuncs.sh" 2>/dev/null || true
+    if [ -f "$SCRIPT_DIR/scripts/wine-runtime.sh" ]; then
+        source "$SCRIPT_DIR/scripts/wine-runtime.sh" 2>/dev/null || true
+    fi
     # Try to load paths (skip validation for troubleshooting)
     if [ -f "$HOME/.psdata.txt" ]; then
         load_paths "true" 2>/dev/null || true
@@ -44,6 +47,11 @@ SCR_PATH="$HOME/.photoshopCCV19"
 fi
 
 WINE_PREFIX="$SCR_PATH/prefix"
+
+if type wine_runtime::init >/dev/null 2>&1; then
+    wine_runtime::init 2>/dev/null || true
+    echo -e "${BLUE}[INFO]${NC} Runtime: $(wine_runtime::describe 2>/dev/null || echo n/a)"
+fi
 
 # Use new structured logs if available, fallback to old location
 if [ -d "$SCRIPT_DIR/logs" ]; then
@@ -150,13 +158,14 @@ fi
 
 # Check Photoshop.exe
 PHOTOSHOP_EXE=""
+if type photoshop::find_exe >/dev/null 2>&1 && photoshop_exe="$(photoshop::find_exe "$WINE_PREFIX" 2>/dev/null)"; then
+    PHOTOSHOP_EXE="$photoshop_exe"
+    check_ok "Photoshop.exe gefunden: $PHOTOSHOP_EXE"
+else
 POSSIBLE_PATHS=(
     "$WINE_PREFIX/drive_c/Program Files/Adobe/Adobe Photoshop 2021/Photoshop.exe"
     "$WINE_PREFIX/drive_c/Program Files/Adobe/Adobe Photoshop 2022/Photoshop.exe"
-    "$WINE_PREFIX/drive_c/Program Files/Adobe/Adobe Photoshop 2023/Photoshop.exe"
     "$WINE_PREFIX/drive_c/Program Files/Adobe/Adobe Photoshop CC 2019/Photoshop.exe"
-    "$WINE_PREFIX/drive_c/Program Files/Adobe/Adobe Photoshop CC 2018/Photoshop.exe"
-    "$WINE_PREFIX/drive_c/users/$USER/PhotoshopSE/Photoshop.exe"
 )
 
 for path in "${POSSIBLE_PATHS[@]}"; do
@@ -166,6 +175,7 @@ for path in "${POSSIBLE_PATHS[@]}"; do
         break
     fi
 done
+fi
 
 if [ -z "$PHOTOSHOP_EXE" ]; then
     check_error "Photoshop.exe nicht gefunden!"

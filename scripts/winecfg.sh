@@ -23,6 +23,11 @@ if [ -f "$SCRIPT_DIR/security.sh" ]; then
     source "$SCRIPT_DIR/security.sh"
 fi
 source "$SCRIPT_DIR/sharedFuncs.sh"
+if [ -f "$SCRIPT_DIR/wine-runtime.sh" ]; then
+    source "$SCRIPT_DIR/wine-runtime.sh"
+    export WINE_METHOD="${WINE_METHOD:-proton-ge}"
+    wine() { wine_runtime::wine "$@"; }
+fi
 
 function main() {
     # Try to load Photoshop paths, but continue if not installed
@@ -106,9 +111,12 @@ function main() {
     # Use trap to handle CTRL+C gracefully
     trap 'echo ""; echo "Wine-Konfiguration abgebrochen."; exit 0' INT TERM
     
-    # Run winecfg and suppress fixme/err messages (they're normal Wine warnings)
-    # Use WINEDEBUG=-all to suppress all Wine debug messages
-    WINEDEBUG=-all winecfg 2>/dev/null || true
+    WINEDEBUG=-all
+    if type wine_runtime::winecfg >/dev/null 2>&1; then
+        wine_runtime::winecfg 2>/dev/null || true
+    else
+        winecfg 2>/dev/null || true
+    fi
     
     # Clear trap
     trap - INT TERM

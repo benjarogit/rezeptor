@@ -50,7 +50,9 @@ fi
 # Use LOG_DIR if set (from PhotoshopSetup.sh), otherwise use PROJECT_ROOT/logs
 LOG_DIR="${LOG_DIR:-${PROJECT_ROOT:-}/logs}"
 TIMESTAMP="${TIMESTAMP:-$(date +%d.%m.%y\ %H:%M\ Uhr)}"
-DEBUG_LOG="${LOG_DIR}/Log: ${TIMESTAMP}_debug.log"
+if [ -z "${DEBUG_LOG:-}" ]; then
+    DEBUG_LOG="${LOG_DIR}/debug.log"
+fi
 debug_log() {
     local location="$1"
     local message="$2"
@@ -371,61 +373,56 @@ function show_message2() {
 }
 
 function launcher() {
-    
-    #create launcher script
-    # KRITISCH: SCRIPT_DIR sollte von aufrufendem Script exportiert werden
-        # Fallback: Try to determine it ourselves
-        if [ -z "${SCRIPT_DIR:-}" ]; then
-        # Try via BASH_SOURCE (if called from PhotoshopSetup.sh)
-        local caller_script="${BASH_SOURCE[1]:-}"
-        if [ -n "$caller_script" ] && [ -f "$caller_script" ]; then
-            SCRIPT_DIR="$(cd "$(dirname "$caller_script")" && pwd)" 2>/dev/null || true
-        fi
-        # Last fallback: Try to find scripts/ directory relative to SCR_PATH
-        if [ -z "${SCRIPT_DIR:-}" ] && [ -n "${SCR_PATH:-}" ]; then
-            # SCR_PATH is usually ~/.photoshop, project is one directory up
-            local possible_script_dir="$(dirname "$(dirname "$SCR_PATH")")/scripts" 2>/dev/null || true
-            if [ -d "$possible_script_dir" ] && [ -f "$possible_script_dir/launcher.sh" ]; then
-                SCRIPT_DIR="$possible_script_dir"
-            fi
-        fi
+
+    local project_root="${PROJECT_ROOT:-}"
+    if [ -z "$project_root" ] && [ -n "${SCRIPT_DIR:-}" ]; then
+        project_root="$(cd "$SCRIPT_DIR/.." && pwd 2>/dev/null || true)"
     fi
-    
-    # KRITISCH: Prüfe ob SCRIPT_DIR gesetzt ist
-    if [ -z "${SCRIPT_DIR:-}" ]; then
-        error "SCRIPT_DIR ist nicht gesetzt - kann launcher.sh nicht finden"
+    if [ -z "$project_root" ]; then
+        error "PROJECT_ROOT nicht gesetzt - kann Launcher nicht deployen"
         return 1
     fi
-    
-    # KRITISCH: Verwende SCRIPT_DIR statt PWD (PWD kann falsch sein)
-    local launcher_path="$SCRIPT_DIR/launcher.sh"
+
+    local core_dir="$project_root/core"
+    local recipe_launcher="$project_root/recipes/photoshop/launch.sh"
+    local desktop_entry="$project_root/scripts/photoshop.desktop"
     local launcher_dest="$SCR_PATH/launcher"
+
     rmdir_if_exist "$launcher_dest"
     mkdir -p "$launcher_dest" || error "can't create launcher directory"
 
-    if [ -f "$launcher_path" ]; then
-        # Silent - don't show "detected" message to user (irrelevant info)
-        cp "$launcher_path" "$launcher_dest" || error "can't copy launcher"
-        
-        # Copy sharedFuncs.sh to launcher directory so launcher.sh can source it
-        local shared_funcs_path="$SCRIPT_DIR/sharedFuncs.sh"
-        if [ -f "$shared_funcs_path" ]; then
-            cp "$shared_funcs_path" "$launcher_dest" || error "can't copy sharedFuncs.sh"
-        else
-            error "sharedFuncs.sh Not Found"
-        fi
-        
-        chmod +x "$SCR_PATH/launcher/launcher.sh" || error "can't chmod launcher script"
-    else
-        error "launcher.sh Not Found"
+    if [ ! -f "$recipe_launcher" ]; then
+        error "recipes/photoshop/launch.sh Not Found: $recipe_launcher"
+        return 1
     fi
 
-    #create desktop entry
-    # CRITICAL: Use SCRIPT_DIR instead of PWD (PWD can be wrong)
-    local desktop_entry="$SCRIPT_DIR/photoshop.desktop"
+    cp "$recipe_launcher" "$launcher_dest/launcher.sh" || error "can't copy launcher"
+
+    for _f in sharedFuncs.sh wine-runtime.sh paths.sh env-file.sh; do
+        if [ -f "$core_dir/$_f" ]; then
+            cp "$core_dir/$_f" "$launcher_dest/" || error "can't copy $_f"
+        fi
+    done
+
+    if [ -f "$project_root/core/runtime.lock" ]; then
+        cp "$project_root/core/runtime.lock" "$launcher_dest/" || true
+    fi
+
+    # shellcheck source=/dev/null
+    source "$core_dir/env-file.sh"
+    env_file_write "$launcher_dest/install.env" \
+        DATA_ROOT "$SCR_PATH" \
+        SCR_PATH "$SCR_PATH" \
+        WINE_PREFIX "$SCR_PATH/prefix" \
+        PROJECT_ROOT "$project_root"
+
+    chmod +x "$launcher_dest/launcher.sh" || error "can't chmod launcher script"
+
+    # Legacy block removed — paths resolved above
+    local launcher_path="$launcher_dest/launcher.sh"
     local desktop_entry_dest="$HOME/.local/share/applications/photoshop.desktop"
-    
-    if [ -f "$desktop_entry" ];then
+
+    if [ -f "$desktop_entry" ]; then
         # Silent - don't show "detected" message to user (irrelevant info)
         # Backup existing desktop entry before overwriting
         if [ -f "$desktop_entry_dest" ]; then
@@ -1423,11 +1420,14 @@ function export_var() {
         fi
     fi
     export WINEPREFIX="$WINE_PREFIX"
-    # Use i18n for translation
-    if type i18n::get >/dev/null 2>&1; then
-        show_message "$(i18n::get "wine_variables_exported")"
+    if [ "${LAUNCHER_GUI:-0}" != "1" ]; then
+        if type i18n::get >/dev/null 2>&1; then
+            show_message "$(i18n::get "wine_variables_exported")"
+        else
+            show_message "wine variables exported..."
+        fi
     else
-    show_message "wine variables exported..."
+        log_debug "WINEPREFIX=$WINEPREFIX"
     fi
 }
 
@@ -1908,24 +1908,37 @@ function check_arg() {
 
     if [[ $dashd != 1 ]] ;then
         # Only log, don't show to user (less noise)
-        setup_log "-d not defined, using default directory: $HOME/.photoshop"
+        local _default_data
+        if type recipe_data_root >/dev/null 2>&1; then
+            _default_data="$(recipe_data_root "${RECIPE_ID:-photoshop}")"
+        else
+            _default_data="${HOME}/.local/share/wine-software/photoshop"
+        fi
+        setup_log "-d not defined, using default directory: $_default_data"
         # KRITISCH: Umgebungsvariablen-Validierung - prüfe dass $HOME sicher ist
         if [ -z "$HOME" ] || [ "$HOME" = "/" ] || [ "$HOME" = "/root" ]; then
             error "Unsichere HOME-Umgebungsvariable: ${HOME:-not set}"
             exit 1
         fi
-        SCR_PATH="$HOME/.photoshop"
+        SCR_PATH="$_default_data"
+        DATA_ROOT="$SCR_PATH"
     fi
 
     if [[ $dashc != 1 ]];then
         # Only log, don't show to user (less noise)
-        setup_log "-c not defined, using default cache directory: $HOME/.cache/photoshop"
+        local _default_cache
+        if type wine_software_cache_dir >/dev/null 2>&1; then
+            _default_cache="$(wine_software_cache_dir)"
+        else
+            _default_cache="${HOME}/.local/share/wine-software/cache/winetricks"
+        fi
+        setup_log "-c not defined, using default cache directory: $_default_cache"
         # KRITISCH: Umgebungsvariablen-Validierung - prüfe dass $HOME sicher ist
         if [ -z "$HOME" ] || [ "$HOME" = "/" ] || [ "$HOME" = "/root" ]; then
             error "Unsichere HOME-Umgebungsvariable: ${HOME:-not set}"
             exit 1
         fi
-        CACHE_PATH="$HOME/.cache/photoshop"
+        CACHE_PATH="$_default_cache"
     fi
 }
 
@@ -2035,6 +2048,14 @@ function load_paths() {
     
     # Validate datafile exists and is readable
     if [ ! -f "$datafile" ]; then
+        if [ "$skip_validation" = "true" ]; then
+            if [ -n "${SCR_PATH:-}" ] && [ -n "${CACHE_PATH:-}" ]; then
+                return 0
+            fi
+            SCR_PATH="${SCR_PATH:-}"
+            CACHE_PATH="${CACHE_PATH:-}"
+            return 0
+        fi
         echo "ERROR: Installation data file not found: $datafile"
         if [ "$skip_validation" = "false" ]; then
             echo -e "${C_RED}✗${C_RESET} ${C_YELLOW}Please reinstall Photoshop using setup.sh${C_RESET}"
@@ -2140,5 +2161,97 @@ function load_paths() {
     unset datafile
 }
 
+# ============================================================================
+# @namespace photoshop
+# ============================================================================
+
+photoshop::possible_exe_paths() {
+    local prefix="${1:-${WINE_PREFIX:-${WINEPREFIX:-}}}"
+    local user_name="${USER:-$(id -un)}"
+    if [ -z "$prefix" ]; then
+        return 0
+    fi
+    printf '%s\n' \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Photoshop 2021/Photoshop.exe" \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Photoshop CC 2021/Photoshop.exe" \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Photoshop 2022/Photoshop.exe" \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Photoshop CC 2019/Photoshop.exe" \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Photoshop CC 2018/Photoshop.exe" \
+        "$prefix/drive_c/users/$user_name/PhotoshopSE/Photoshop.exe" \
+        "$prefix/drive_c/Program Files (x86)/Adobe/Adobe Photoshop CC 2021/Photoshop.exe" \
+        "$prefix/drive_c/Program Files (x86)/Adobe/Adobe Photoshop CC 2019/Photoshop.exe"
+}
+
+photoshop::find_exe() {
+    local prefix="${1:-${WINE_PREFIX:-${WINEPREFIX:-}}}"
+    local path=""
+    while IFS= read -r path; do
+        if [ -f "$path" ]; then
+            echo "$path"
+            return 0
+        fi
+    done < <(photoshop::possible_exe_paths "$prefix")
+    return 1
+}
+
+photoshop::resolve_installer_dir() {
+    local project_root="${1:-${PROJECT_ROOT:-}}"
+    local candidate=""
+
+    if [ -n "${PHOTOSHOP_INSTALLER_DIR:-}" ] && [ -f "${PHOTOSHOP_INSTALLER_DIR}/Set-up.exe" ]; then
+        echo "$(cd "${PHOTOSHOP_INSTALLER_DIR}" && pwd)"
+        return 0
+    fi
+
+    candidate="$project_root/photoshop"
+    if [ -f "$candidate/Set-up.exe" ]; then
+        echo "$(cd "$candidate" && pwd)"
+        return 0
+    fi
+
+    return 1
+}
+
+# ============================================================================
+# @namespace winetricks_helper
+# ============================================================================
+
+winetricks_helper::check_network() {
+    if ping -c1 -W2 1.1.1.1 >/dev/null 2>&1 || ping -c1 -W2 8.8.8.8 >/dev/null 2>&1; then
+        return 0
+    fi
+    if getent hosts download.microsoft.com >/dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+winetricks_helper::run_critical() {
+    local package="$1"
+    shift
+    local log_file="${LOG_FILE:-/dev/null}"
+    local wt_cmd="winetricks"
+
+    if type wine_runtime::winetricks >/dev/null 2>&1; then
+        wt_cmd="wine_runtime::winetricks"
+    elif ! command -v winetricks >/dev/null 2>&1; then
+        log_error "winetricks not found (critical package: $package)"
+        return 127
+    fi
+
+    if ! winetricks_helper::check_network; then
+        if [ ! -d "${HOME}/.cache/winetricks/$package" ] && \
+           [ ! -d "${WINETRICKS_CACHE:-}/$package" ]; then
+            log_error "Offline and winetricks cache missing for: $package"
+            return 2
+        fi
+    fi
+
+    if $wt_cmd -q "$package" "$@" >> "$log_file" 2>&1; then
+        return 0
+    fi
+    log_error "winetricks failed for critical package: $package"
+    return 1
+}
 
 

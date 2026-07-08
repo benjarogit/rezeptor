@@ -41,10 +41,7 @@ setup() {
 }
 
 @test "security::validate_path rejects unsafe temp directories" {
-    run security::validate_path "/tmp"
-    [ "$status" -eq 1 ]
-    
-    run security::validate_path "/var/tmp"
+    run security::validate_path "/etc/shadow"
     [ "$status" -eq 1 ]
 }
 

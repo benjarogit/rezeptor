@@ -19,7 +19,14 @@ npm install -g bats
 
 ## Test-Ausführung
 
-Alle Tests ausführen:
+Vom Repository-Root (empfohlen für Agenten und CI):
+
+```bash
+make test      # bats tests/
+make validate  # shellcheck + syntax + compile + recipe-check
+```
+
+Alternativ direkt:
 ```bash
 bats tests/
 ```

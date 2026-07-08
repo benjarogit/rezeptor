@@ -59,7 +59,26 @@ if [ -f "$SCRIPT_DIR/security.sh" ]; then
     source "$SCRIPT_DIR/security.sh"
 fi
 source "$SCRIPT_DIR/sharedFuncs.sh"
+if [ -f "$SCRIPT_DIR/wine-runtime.sh" ]; then
+    source "$SCRIPT_DIR/wine-runtime.sh"
+    wine() { wine_runtime::wine "$@"; }
+fi
 load_paths
+
+# Use runtime from installation metadata when available
+if [ -n "${WINE_VERSION_INFO:-}" ]; then
+    if [ -d "${WINE_VERSION_INFO}/files/bin" ] && [ -x "${WINE_VERSION_INFO}/files/bin/wine" ]; then
+        export PROTON_PATH="$WINE_VERSION_INFO"
+        export WINE_METHOD="${WINE_METHOD:-proton-ge}"
+    fi
+fi
+if type wine_runtime::reset >/dev/null 2>&1; then
+    wine_runtime::reset
+fi
+if type wine_runtime::init >/dev/null 2>&1; then
+    wine_runtime::init 2>/dev/null || true
+    wine_runtime::export_env 2>/dev/null || true
+fi
 
 # #region agent log
 agent_debug_log "{\"id\":\"log_$(date +%s)_paths_loaded\",\"timestamp\":$(date +%s)000,\"location\":\"launcher.sh:53\",\"message\":\"Pfade geladen\",\"data\":{\"SCR_PATH\":\"${SCR_PATH:-}\",\"WINE_PREFIX\":\"${WINE_PREFIX:-}\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"B\"}"
@@ -300,41 +319,27 @@ check_and_fix_msvcp140_dll
 
 # Search for Photoshop.exe in various possible paths
 PHOTOSHOP_EXE=""
-
-# Possible installation paths (dynamic - all supported versions)
-POSSIBLE_PATHS=(
-    "$WINE_PREFIX/drive_c/Program Files/Adobe/Adobe Photoshop 2021/Photoshop.exe"
-    "$WINE_PREFIX/drive_c/Program Files/Adobe/Adobe Photoshop CC 2021/Photoshop.exe"
-    "$WINE_PREFIX/drive_c/Program Files/Adobe/Adobe Photoshop 2022/Photoshop.exe"
-    "$WINE_PREFIX/drive_c/Program Files/Adobe/Adobe Photoshop 2021/Photoshop.exe"
-    "$WINE_PREFIX/drive_c/Program Files/Adobe/Adobe Photoshop CC 2019/Photoshop.exe"
-    "$WINE_PREFIX/drive_c/Program Files/Adobe/Adobe Photoshop CC 2018/Photoshop.exe"
-    "$WINE_PREFIX/drive_c/users/${USER:-$(id -un)}/PhotoshopSE/Photoshop.exe"
-    "$WINE_PREFIX/drive_c/Program Files (x86)/Adobe/Adobe Photoshop CC 2021/Photoshop.exe"
-    "$WINE_PREFIX/drive_c/Program Files (x86)/Adobe/Adobe Photoshop CC 2019/Photoshop.exe"
-)
-
-# #region agent log
-agent_debug_log "{\"id\":\"log_$(date +%s)_search_photoshop\",\"timestamp\":$(date +%s)000,\"location\":\"launcher.sh:160\",\"message\":\"Suche Photoshop.exe\",\"data\":{\"possible_paths_count\":${#POSSIBLE_PATHS[@]},\"WINE_PREFIX\":\"$WINE_PREFIX\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}"
-# #endregion
-for path in "${POSSIBLE_PATHS[@]}"; do
-    # #region agent log
-    agent_debug_log "{\"id\":\"log_$(date +%s)_check_path\",\"timestamp\":$(date +%s)000,\"location\":\"launcher.sh:161\",\"message\":\"Prüfe Pfad\",\"data\":{\"path\":\"$path\",\"exists\":\"$([ -f "$path" ] && echo 'true' || echo 'false')\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}"
-    # #endregion
-    if [ -f "$path" ]; then
-        PHOTOSHOP_EXE="$path"
-        echo "✓ Photoshop gefunden: $path"
-        # #region agent log
-        agent_debug_log "{\"id\":\"log_$(date +%s)_photoshop_found\",\"timestamp\":$(date +%s)000,\"location\":\"launcher.sh:163\",\"message\":\"Photoshop.exe gefunden\",\"data\":{\"PHOTOSHOP_EXE\":\"$PHOTOSHOP_EXE\"},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}"
-        # #endregion
-        break
-    fi
-done
+if photoshop_exe="$(photoshop::find_exe "$WINE_PREFIX" 2>/dev/null)"; then
+    PHOTOSHOP_EXE="$photoshop_exe"
+    echo "✓ Photoshop gefunden: $PHOTOSHOP_EXE"
+fi
 
 if [ -z "$PHOTOSHOP_EXE" ]; then
-    # #region agent log
-    agent_debug_log "{\"id\":\"log_$(date +%s)_photoshop_not_found\",\"timestamp\":$(date +%s)000,\"location\":\"launcher.sh:168\",\"message\":\"Photoshop.exe nicht gefunden\",\"data\":{\"checked_paths\":[\"${POSSIBLE_PATHS[*]}\"]},\"sessionId\":\"debug-session\",\"runId\":\"run1\",\"hypothesisId\":\"A\"}"
-    # #endregion
+    POSSIBLE_PATHS=()
+    while IFS= read -r _p; do POSSIBLE_PATHS+=("$_p"); done < <(photoshop::possible_exe_paths "$WINE_PREFIX")
+
+    for path in "${POSSIBLE_PATHS[@]}"; do
+        if [ -f "$path" ]; then
+            PHOTOSHOP_EXE="$path"
+            echo "✓ Photoshop gefunden: $path"
+            break
+        fi
+    done
+fi
+
+if [ -z "$PHOTOSHOP_EXE" ]; then
+    POSSIBLE_PATHS=()
+    while IFS= read -r _p; do POSSIBLE_PATHS+=("$_p"); done < <(photoshop::possible_exe_paths "$WINE_PREFIX")
     send_notification "Photoshop" "Photoshop.exe nicht gefunden! Überprüfe die Installation." "error"
     echo "═══════════════════════════════════════════════════════════════"
     echo "FEHLER: Photoshop.exe nicht in folgenden Pfaden gefunden:"
@@ -355,9 +360,11 @@ echo "Photoshop-Pfad: $PHOTOSHOP_EXE"
 echo "Wine-Prefix: $WINE_PREFIX"
 # Show which Wine version is being used
 if [ -n "${WINE_VERSION_INFO:-}" ] && [ -n "$WINE_VERSION_INFO" ]; then
-    echo "Wine-Version: Proton GE ($WINE_VERSION_INFO)"
+    echo "Wine-Version: Proton-GE ($WINE_VERSION_INFO)"
+elif [ "${WINE_RUNTIME_MODE:-}" = "proton-ge" ] || [ -n "${PROTON_PATH:-}" ]; then
+    echo "Wine-Version: Proton-GE (${PROTON_PATH:-${WINE_RUNTIME_ROOT:-runtime}})"
 else
-    echo "Wine-Version: Wine Standard"
+    echo "Wine-Version: Proton-GE"
 fi
 echo ""
 echo "Tipps bei Problemen:"

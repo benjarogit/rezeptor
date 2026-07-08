@@ -13,6 +13,25 @@
 # Copyright:    (c) 2024-2026 Sunny C.
 ################################################################################
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR"
+export PROJECT_ROOT
+# shellcheck source=core/paths.sh
+source "$PROJECT_ROOT/core/paths.sh"
+export SCR_PATH="${SCR_PATH:-$(recipe_data_root photoshop)}"
+export WINE_SOFTWARE_BASE="$(wine_software_base)"
+if [ -f "$PROJECT_ROOT/core/system.sh" ]; then
+    # shellcheck source=core/system.sh
+    source "$PROJECT_ROOT/core/system.sh"
+elif [ -f "$PROJECT_ROOT/scripts/system.sh" ]; then
+    # shellcheck source=scripts/system.sh
+    source "$PROJECT_ROOT/scripts/system.sh"
+fi
+if [ -f "$PROJECT_ROOT/core/wine-runtime.sh" ]; then
+    # shellcheck source=core/wine-runtime.sh
+    source "$PROJECT_ROOT/core/wine-runtime.sh"
+fi
+
 echo "═══════════════════════════════════════════════════════════════"
 echo "    Photoshop CC - Pre-Installation Check"
 echo "═══════════════════════════════════════════════════════════════"
@@ -28,6 +47,13 @@ NC='\033[0m'
 CHECKS_PASSED=0
 CHECKS_FAILED=0
 CHECKS_WARNING=0
+
+REZEPTOR_MODE=0
+for _arg in "$@"; do
+    case "$_arg" in
+        --rezeptor) REZEPTOR_MODE=1 ;;
+    esac
+done
 
 check_ok() {
     echo -e "${GREEN}[✓]${NC} $1"
@@ -56,19 +82,37 @@ else
 fi
 echo ""
 
-# Check 2: Required Packages
-echo "2. Überprüfe erforderliche Pakete..."
+# Check 2: Required Packages / Runtime
+echo "2. Überprüfe erforderliche Pakete / Runtime..."
 
-if command -v wine &> /dev/null; then
-    WINE_VERSION=$(wine --version 2>/dev/null | cut -d'-' -f2 | cut -d' ' -f1)
-    check_ok "wine installiert (Version: $WINE_VERSION)"
+IMMUTABLE_HINT=""
+if type system::is_immutable >/dev/null 2>&1 && system::is_immutable; then
+    IMMUTABLE_HINT=1
+    check_warning "Immutable Distribution erkannt — AppImage empfohlen (kein sudo pacman/dnf nötig)"
+fi
+
+RUNTIME_OK=0
+if type wine_runtime::init >/dev/null 2>&1 && wine_runtime::init 2>/dev/null; then
+    check_ok "Proton-GE Runtime: $(wine_runtime::describe 2>/dev/null || echo OK)"
+    RUNTIME_OK=1
 else
-    check_error "wine nicht installiert"
-    echo "   Installiere mit: sudo pacman -S wine"
+    if [ -n "$IMMUTABLE_HINT" ]; then
+        check_warning "Proton-GE noch nicht vorhanden — wird beim ersten Start nach $(wine_software_runtime_dir) geladen"
+    else
+        check_warning "Proton-GE noch nicht vorhanden — Setup lädt Runtime nach $(wine_software_runtime_dir)"
+    fi
+    if command -v curl >/dev/null 2>&1 || command -v wget >/dev/null 2>&1; then
+        check_ok "Download-Tools für Proton-GE verfügbar"
+        RUNTIME_OK=1
+    else
+        check_error "curl oder wget benötigt für Proton-GE Download"
+    fi
 fi
 
 if command -v winetricks &> /dev/null; then
     check_ok "winetricks installiert"
+elif [ "$RUNTIME_OK" -eq 1 ]; then
+    check_warning "winetricks nicht system-weit — Setup nutzt Runtime/winetricks falls gebündelt"
 else
     check_error "winetricks nicht installiert"
     echo "   Installiere mit: sudo pacman -S winetricks"
@@ -155,42 +199,45 @@ echo ""
 # Check 6: Internet Connection
 echo "6. Überprüfe Internet-Verbindung..."
 if ping -c 1 -W 2 google.com &> /dev/null; then
-    check_warning "Internet-Verbindung aktiv"
-    echo -e "   ${YELLOW}EMPFEHLUNG: Deaktiviere Internet für die Installation!${NC}"
-    echo ""
-    
-    # Offer to disable internet now
-    if command -v nmcli &> /dev/null; then
-        echo -e "   ${BLUE}Möchtest du alle Netzwerkverbindungen JETZT deaktivieren? [J/n]${NC}"
-        read -p "   Deine Wahl: " -n 1 -r
+    if [ "$REZEPTOR_MODE" -eq 1 ]; then
+        check_ok "Internet aktiv (Rezeptor/WISO — kein Trennen nötig)"
+        echo -e "   ${BLUE}Hinweis: Nur bei Adobe-Photoshop-Installation optional WLAN aus.${NC}"
+    else
+        check_warning "Internet-Verbindung aktiv"
+        echo -e "   ${YELLOW}EMPFEHLUNG (nur Photoshop-Install): Internet kurz deaktivieren${NC}"
         echo ""
-        
-        if [[ $REPLY =~ ^[JjYy]$ ]] || [[ -z $REPLY ]]; then
-            echo "   Deaktiviere Verbindungen..."
-            active_connections=$(nmcli -t -f NAME,STATE connection show | grep ":activated" | cut -d: -f1 | grep -v "^lo$")
-            
-            if [ -n "$active_connections" ]; then
-                # Save disabled connections for later restoration (same file as setup.sh uses)
-                echo "$active_connections" > /tmp/.photoshop_disabled_connections
-                
-                while IFS= read -r conn; do
-                    if [ -n "$conn" ]; then
-                        nmcli connection down "$conn" &> /dev/null
-                        echo "     ✓ $conn deaktiviert"
-                    fi
-                done <<< "$active_connections"
-                echo ""
-                check_ok "Alle Verbindungen deaktiviert (PERFEKT!)"
+
+        # Nur bei explizitem J — niemals standardmäßig trennen
+        if command -v nmcli &> /dev/null; then
+            echo -e "   ${BLUE}Netzwerk JETZT deaktivieren? [j/N]${NC}"
+            read -p "   Deine Wahl: " -n 1 -r
+            echo ""
+
+            if [[ $REPLY =~ ^[JjYy]$ ]]; then
+                echo "   Deaktiviere Verbindungen..."
+                active_connections=$(nmcli -t -f NAME,STATE connection show | grep ":activated" | cut -d: -f1 | grep -v "^lo$")
+
+                if [ -n "$active_connections" ]; then
+                    echo "$active_connections" > /tmp/.photoshop_disabled_connections
+
+                    while IFS= read -r conn; do
+                        if [ -n "$conn" ]; then
+                            nmcli connection down "$conn" &> /dev/null
+                            echo "     ✓ $conn deaktiviert"
+                        fi
+                    done <<< "$active_connections"
+                    echo ""
+                    check_ok "Verbindungen deaktiviert (nur für Photoshop-Setup)"
+                fi
+            else
+                echo -e "   ${GREEN}Internet bleibt aktiv.${NC}"
             fi
         else
-            echo -e "   ${YELLOW}Übersprungen - Bitte vor Installation manuell deaktivieren!${NC}"
+            echo "   Manuell (nur Photoshop): nmcli connection down <name>"
         fi
-    else
-        echo "   Manuell: nmcli connection show (Liste)"
-        echo "   Manuell: nmcli connection down <name> (Deaktivieren)"
     fi
 else
-    check_ok "Keine Internet-Verbindung (PERFEKT für Installation!)"
+    check_ok "Keine Internet-Verbindung"
 fi
 echo ""
 
@@ -226,14 +273,18 @@ echo ""
 echo "8. Überprüfe auf vorherige Installationen..."
 # Check both old and new paths for compatibility
 OLD_PATH="$HOME/.photoshopCCV19"
-NEW_PATH="$HOME/.photoshop"
+NEW_PATH="$HOME/.local/share/wine-software/photoshop"
+LEGACY_PATH="$HOME/.photoshop"
 FOUND_INSTALLATION=""
 
-if [ -d "$NEW_PATH" ]; then
+if [ -d "$NEW_PATH/prefix" ] || [ -d "$NEW_PATH" ]; then
     FOUND_INSTALLATION="$NEW_PATH"
-    check_warning "Vorherige Installation gefunden in ~/.photoshop"
-    echo "   ${YELLOW}Die Installation wird das Verzeichnis überschreiben!${NC}"
-    echo "   Backup erstellen? Befehl: mv ~/.photoshop ~/.photoshop.backup"
+    check_warning "Vorherige Installation gefunden in $NEW_PATH"
+    echo "   ${YELLOW}Die Installation kann das Prefix überschreiben!${NC}"
+elif [ -d "$LEGACY_PATH" ]; then
+    FOUND_INSTALLATION="$LEGACY_PATH"
+    check_warning "Legacy-Installation in ~/.photoshop (nicht mehr verwendet)"
+    echo "   ${BLUE}Neue Daten liegen unter ~/.local/share/wine-software/photoshop${NC}"
 elif [ -d "$OLD_PATH" ]; then
     FOUND_INSTALLATION="$OLD_PATH"
     check_warning "Vorherige Installation gefunden in ~/.photoshopCCV19 (alte Version)"
@@ -247,19 +298,18 @@ echo ""
 
 # Check 9: Required Scripts
 echo "9. Überprüfe Installations-Scripts..."
-SCRIPTS_DIR="$PROJECT_ROOT/scripts"
-
 REQUIRED_SCRIPTS=(
-    "PhotoshopSetup.sh"
-    "sharedFuncs.sh"
-    "launcher.sh"
-    "winecfg.sh"
-    "uninstaller.sh"
+    "recipes/photoshop/install.sh"
+    "recipes/photoshop/launch.sh"
+    "recipes/photoshop/validate.sh"
+    "core/wine-runtime.sh"
+    "launcher/launcher.py"
+    "setup.sh"
 )
 
 ALL_SCRIPTS_OK=true
 for script in "${REQUIRED_SCRIPTS[@]}"; do
-    if [ -f "$SCRIPTS_DIR/$script" ]; then
+    if [ -f "$PROJECT_ROOT/$script" ]; then
         check_ok "Script gefunden: $script"
     else
         check_error "Script fehlt: $script"
@@ -278,6 +328,19 @@ echo -e "Warnungen: ${YELLOW}$CHECKS_WARNING${NC}"
 echo -e "Fehler:    ${RED}$CHECKS_FAILED${NC}"
 echo ""
 
+echo ""
+
+# Check: PyQt6 (required launcher)
+echo "PyQt6 Launcher..."
+if python3 -c "import PyQt6" 2>/dev/null; then
+    check_ok "PyQt6 installiert (Launcher)"
+else
+    check_error "PyQt6 fehlt — Launcher benötigt python-pyqt6"
+    echo "   Arch/CachyOS: sudo pacman -S python-pyqt6"
+    echo "   Debian/Ubuntu: sudo apt install python3-pyqt6"
+fi
+echo ""
+
 if [ $CHECKS_FAILED -eq 0 ]; then
     echo -e "${GREEN}✓ Alle kritischen Checks bestanden!${NC}"
     echo ""
@@ -287,14 +350,13 @@ if [ $CHECKS_FAILED -eq 0 ]; then
     echo ""
     echo "Nächste Schritte:"
     echo ""
-    echo "1. Internet deaktivieren (EMPFOHLEN):"
+    echo "1. Internet deaktivieren (optional, nur Adobe-Photoshop-Install):"
     echo -e "   ${BLUE}nmcli radio wifi off${NC}"
     echo ""
-    echo "2. Installation starten:"
-    echo -e "   ${BLUE}cd <projekt-verzeichnis>${NC}"
+    echo "2. Launcher starten:"
     echo -e "   ${BLUE}./setup.sh${NC}"
     echo ""
-    echo "3. Option 1 wählen (install photoshop CC)"
+    echo "3. Recipe 'photoshop' wählen → Install"
     echo ""
     echo "4. Im Adobe Setup:"
     echo "   - 'Installieren' wählen"
@@ -342,22 +404,24 @@ else
     echo "Bitte behebe die oben aufgeführten Fehler, bevor du fortfährst."
     echo ""
     
-    if ! command -v wine &> /dev/null || ! command -v winetricks &> /dev/null; then
+    if ! python3 -c "import PyQt6" 2>/dev/null; then
         echo "═══════════════════════════════════════════════════════════════"
-        echo "SCHNELLE INSTALLATION DER FEHLENDEN PAKETE:"
+        echo "PYQT6 FEHLT (Launcher-Pflicht):"
         echo "═══════════════════════════════════════════════════════════════"
         echo ""
-        echo "Für Arch Linux / CachyOS:"
-        echo "  ${BLUE}sudo pacman -S wine winetricks${NC}"
-        echo ""
-        echo "Für Ubuntu/Debian:"
-        echo "  ${BLUE}sudo apt install wine winetricks${NC}"
-        echo ""
-        echo "Für Fedora:"
-        echo "  ${BLUE}sudo dnf install wine winetricks${NC}"
+        echo "  sudo pacman -S python-pyqt6"
         echo ""
     fi
-    
+
+    if ! command -v winetricks &> /dev/null && [ "$RUNTIME_OK" -eq 0 ]; then
+        echo "═══════════════════════════════════════════════════════════════"
+        echo "WINETRICKS EMPFOHLEN:"
+        echo "═══════════════════════════════════════════════════════════════"
+        echo ""
+        echo "  sudo pacman -S winetricks"
+        echo ""
+    fi
+
     if [ ! -f "$PHOTOSHOP_INSTALLER" ]; then
         echo "═══════════════════════════════════════════════════════════════"
         echo "PHOTOSHOP INSTALLATIONSDATEIEN FEHLEN:"

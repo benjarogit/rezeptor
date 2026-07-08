@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -eu
+HERE="$(dirname "$(readlink -f "$0")")"
+export APPDIR="$HERE"
+export PROJECT_ROOT="$HERE/usr/share/photoshopCClinux"
+export PATH="$PROJECT_ROOT/core:$PATH"
+
+APPIMAGE_PYTHON="$HERE/venv/bin/python"
+if [ -x "$APPIMAGE_PYTHON" ] && "$APPIMAGE_PYTHON" -c "import PyQt6" 2>/dev/null; then
+    export PYTHON="$APPIMAGE_PYTHON"
+elif python3 -c "import PyQt6" 2>/dev/null; then
+    export PYTHON="python3"
+else
+    echo "PyQt6 not found (bundled venv or host python-pyqt6 required)."
+    exit 1
+fi
+
+if [ -z "${PHOTOSHOP_INSTALLER_DIR:-}" ] && [ ! -f "$PROJECT_ROOT/photoshop/Set-up.exe" ]; then
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "  Photoshop CC Linux — AppImage"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    echo "Adobe installer not bundled (BYOS). Enter path to folder with Set-up.exe"
+    echo "(or press Enter to exit):"
+    read -r -p "> " _installer_path
+    if [ -z "$_installer_path" ] || [ ! -f "$_installer_path/Set-up.exe" ]; then
+        echo "Set-up.exe not found. See photoshop/README.md"
+        exit 1
+    fi
+    export PHOTOSHOP_INSTALLER_DIR="$(cd "$_installer_path" && pwd)"
+    mkdir -p "$PROJECT_ROOT/photoshop"
+    ln -sf "$PHOTOSHOP_INSTALLER_DIR/Set-up.exe" "$PROJECT_ROOT/photoshop/Set-up.exe" 2>/dev/null || \
+        cp -a "$PHOTOSHOP_INSTALLER_DIR/." "$PROJECT_ROOT/photoshop/"
+fi
+
+cd "$PROJECT_ROOT"
+# pre-check: skip PyQt6 fail if bundled python works
+if ! "$PYTHON" -c "import PyQt6" 2>/dev/null; then
+    echo "PyQt6 import failed."
+    exit 1
+fi
+exec "$PYTHON" "$PROJECT_ROOT/launcher/launcher.py"

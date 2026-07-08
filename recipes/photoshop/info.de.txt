@@ -1,0 +1,14 @@
+Adobe Photoshop CC 2021 (Offline-Installer)
+
+Voraussetzungen:
+• Proton-GE (wird automatisch verwendet)
+• Adobe Offline-Installer in: photoshop/ (Set-up.exe + products/)
+• Ca. 15 GB freier Speicher
+• Installation läuft still (kein Adobe-GUI, kein winecfg)
+
+Nach der Installation:
+• „Starten“ im Launcher oder Desktop-Verknüpfung
+• Erster Start kann 1–2 Minuten dauern
+• Bei unscharfer Schrift: Launcher → erneut „Installieren“ (Reparatur) oder Log prüfen
+
+Logs: ~/.local/share/wine-software/logs/

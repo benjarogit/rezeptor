@@ -1,0 +1,16 @@
+<svg width="520" height="140" viewBox="0 0 520 140" xmlns="http://www.w3.org/2000/svg">
+  <rect width="520" height="140" fill="none"/>
+  <!-- Icon -->
+  <g transform="translate(20,20)">
+    <rect width="100" height="100" rx="20" fill="#1C1C1A"/>
+    <rect x="26" y="22" width="48" height="60" rx="4" fill="none" stroke="#EDE6D6" stroke-width="3.5"/>
+    <line x1="33" y1="37" x2="67" y2="37" stroke="#EDE6D6" stroke-width="3"/>
+    <line x1="33" y1="46" x2="67" y2="46" stroke="#EDE6D6" stroke-width="3"/>
+    <line x1="33" y1="55" x2="58" y2="55" stroke="#EDE6D6" stroke-width="3"/>
+    <circle cx="70" cy="72" r="17" fill="#B87333"/>
+    <path d="M61 72 L67 78 L80 65" fill="none" stroke="#1C1C1A" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+  <!-- Wortmarke -->
+  <text x="140" y="72" font-family="Arial, sans-serif" font-size="42" font-weight="600" fill="#EDE6D6">Rezeptor</text>
+  <text x="141" y="100" font-family="Arial, sans-serif" font-size="16" fill="#8a8a92">Getestete Rezepte für Wine · Proton-GE</text>
+</svg>

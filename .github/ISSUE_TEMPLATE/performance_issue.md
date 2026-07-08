@@ -24,7 +24,7 @@ Beschreibung des Performance-Problems.
 - **RAM:** [z.B. 16GB]
 - **GPU:** [z.B. Nvidia RTX 3060]
 - **Distro:** [z.B. CachyOS]
-- **Wine:** [run: `wine --version`]
+- **Runtime:** Proton-GE — `source core/wine-runtime.sh && wine_runtime::describe`
 
 ## 🔧 Bereits versucht
 

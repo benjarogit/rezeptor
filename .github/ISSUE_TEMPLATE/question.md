@@ -20,5 +20,5 @@ Deine Frage hier.
 ## 📋 System
 
 - **Distro:** [z.B. CachyOS]
-- **Wine:** [run: `wine --version`]
+- **Runtime:** Proton-GE — `source core/wine-runtime.sh && wine_runtime::describe`
 - **Photoshop:** [z.B. CC 2021]

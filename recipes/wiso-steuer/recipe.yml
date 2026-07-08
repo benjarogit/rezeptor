@@ -1,0 +1,22 @@
+id: wiso-steuer
+name: "WISO Steuer (Portable)"
+category: "Finanzen & Steuer"
+version_guaranteed: "2026.33.3.2920"
+version_label: "WISO Steuer 2026 (Portable 33.3.2920)"
+data_root: "~/.local/share/wine-software/wiso-steuer"
+prefix: "{data_root}/prefix"
+runtime: system
+install_type: portable_launch
+source_kind: folder
+source_label: "Portable-Root (Ordner mit Steuersoftware 20XX)"
+fix_kind: optional
+portable_root: ""
+exe_glob: "**/wiso*.exe"
+winetricks: [vcrun2019, dotnet48, corefonts, d3dcompiler_47, gdiplus]
+env:
+  WINEARCH: win64
+validate: validate.sh
+launch: launch.sh
+install: install.sh
+repair: repair.sh
+kill: kill.sh
