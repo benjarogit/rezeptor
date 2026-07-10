@@ -2,30 +2,41 @@
   "recipes": {
     "photoshop": {
       "files": {
+        "assets/Rezeptor-Register-Startup.jsx": "sha256:078f30d1e66578de85b6a275a3e5dd06e410cc5c178c6c729706a35eacbe8ba6",
+        "assets/Rezeptor-Text-Glatt-Silent.jsx": "sha256:c84d50353ba8f1a329c9060bc5aaf73f34f9ea1253459c71e746d087598183ee",
+        "assets/Rezeptor-Text-Glatt.jsx": "sha256:30c30f0264bd89119b3155d5934dc342ff6d5db0b75f0034b6d122159838d823",
+        "assets/gpu-profiles/dxvk_ui_only/PSUserConfig.txt": "sha256:3e2a8500347a602f2411ffc7a08ce2f23f01fdc15656f62abd7b89a8d1a795aa",
+        "assets/gpu-profiles/dxvk_ui_only/machine.prefs": "sha256:2c8692414d3a6299a3328746ca63bb6088f936873511b6196630d404110e9a0d",
+        "assets/gpu-profiles/ps_gpu_full/PSUserConfig.txt": "sha256:1392b953464012427e9f54bbc13ccf93321c89c37e7bad81e88cb59259c7a248",
+        "assets/gpu-profiles/ps_gpu_full/machine.prefs": "sha256:9dbf3156a4fd19103db6125729c4d081326029c6b8e8df1150d390e3e56faa78",
+        "assets/gpu-profiles/ps_gpu_no_opencl/PSUserConfig.txt": "sha256:fe841bd78beb15a0ae721f4534f41c2adc8e7b2d5cf737d98edfcf6d686c4e72",
+        "assets/gpu-profiles/ps_gpu_no_opencl/machine.prefs": "sha256:f1d78f838057c4378e33e79175da522fd45006fc66da234c4299489117f7600b",
+        "assets/gpu-profiles/stable/PSUserConfig.txt": "sha256:7f9e20eb8c4e5f2ffc5e968311f4873a53b29298f69847b131dce50ec2e420e5",
+        "assets/gpu-profiles/stable/machine.prefs": "sha256:429dd0aba09f31c81c3ff6b95c813171031e014a6e134bf1a4f862a35967eb68",
         "info.de.txt": "sha256:9057dc2b7efa77bced4b8e24f80595982af3a4d5ba740dbaa4004ac2812c433e",
-        "install.sh": "sha256:d6177964e5559a62f9c4ad38d4ae57909d21e98bac9f586c0c749dfa025d5692",
-        "kill.sh": "sha256:65bd9baf3bf5eb43e91b98da85ee6c51bf7dd132dd22d2afac3a6a1ec3f29b1e",
-        "launch.sh": "sha256:95aec616c617d0392b7d38d6e548cc86eb78b99b8eba93129752426bb0aecbe9",
-        "optional/cameraRawInstaller.sh": "sha256:370aabeebf47b73a4fe9304778ec8a2c77a0e2a93db9e1fd8ae6c7972e7ca9eb",
-        "recipe.yml": "sha256:03fc2d344686bf27aea0c919b46247590fd0d1d139b204749afcf216e866903f",
-        "repair.sh": "sha256:b6ed9dfcbe113b0e1664596f8d317875d5b0ad548fdaa2da5e26a2951ea8091a",
-        "uninstall.sh": "sha256:eabde41e5a76fcc732e3b388044ee32f250fd6164a1d57068dd60374bdc40e62",
-        "validate.sh": "sha256:ce5837b5e4a06f51081b403c395f3248ac24cb8b59246506ebcd443a1feada31"
+        "info.en.txt": "sha256:f2615222c739921b549c7ec5a43245dcf02ec3c21e046624c546f9d4af72eeb5",
+        "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
+        "kill.sh": "sha256:8bb102767ac30c240e662585e13e8735caa5d93b20e7ba722be91c4423c7da52",
+        "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
+        "optional/cameraRawInstaller.sh": "sha256:b3877f81ae1720bbe3284e68bee38298cea546beff6a434e11d7350fcb80cf06",
+        "recipe.yml": "sha256:331ba69199c1ae9cf2dae9e07656d5a6d97b22399020cfbdd4aa413f380131a2",
+        "repair.sh": "sha256:207b6ad05f57fe54a5075cadaa46b91f44b97e243ed1bb90310b75af03316650",
+        "uninstall.sh": "sha256:6bde80bf2cd173d0e70e00de2b7610472e5ed9762b240b3e63221877b7f4fbe8",
+        "validate.sh": "sha256:b202356dcabd5b93c262d58390b05caca9d0517da256e7011a9d2376500911eb"
       }
     },
     "wiso-steuer": {
       "files": {
-        "assets/bootstrap-prefix.sh": "sha256:40beba8cb1b7256d21ec1031251a52c64403e3332f2d69ad90cf15f148b56128",
-        "assets/ensure-mono.sh": "sha256:6a7e95a71fff12376a8e6c74651f3b17af4b2ba069c59ad874b4f08e06982a48",
-        "assets/wiso-mit-wine.sh": "sha256:8bc018cb10846222f4a189d4bb1c5f7fdbf42d4054d07c97f8bcb832cf2680f2",
-        "info.de.txt": "sha256:cac38e47c6cf1d689634b0861a8e0b7e4bfe5bf66dd54e812c1001bee59b5fb8",
-        "install.sh": "sha256:bc8345bd7a5edd7e9a8c4fdbd760772fece156d46dcc489aca494e71893f55f7",
-        "kill.sh": "sha256:d4907ebe97102a48e274cb0d4c5e1f1af9b1f059cb85f4d0700fab4a5143328d",
-        "launch.sh": "sha256:3269b271e0bde7a91be66c40a20c4a0eef158e9f8346a23b9d1b639214bc3c43",
-        "recipe.yml": "sha256:28cc0f88b3373feede623217dde5c9e530727a32f58c5619aecfd1f53cf0ac5a",
-        "repair.sh": "sha256:f74be8999776606990bd80cd623d45e47336b43140d7744dd20fa0afd6b43b6b",
-        "uninstall.sh": "sha256:289110e6d0bd7f672ef4b0a2f2311cbba2632db30115f8460288ebda80ebbfb0",
-        "validate.sh": "sha256:b6e37575d79410821183b1336ad519142f7af282bbfcfeaa75d55b329e6252fc"
+        "assets/wiso-mit-wine.sh": "sha256:58680ec338709d5a8006b64255cd51f4765ca4b1ba8dd558e5b02a32ae19af15",
+        "info.de.txt": "sha256:603f5f3aea01a2aca4221a53e512152482be2624729c267c698b0e75e4a4a955",
+        "info.en.txt": "sha256:951dd8ea7bb769a28a98b453a5c4300f5a9969ea1b3d99d1d59db32ff94d7fca",
+        "install.sh": "sha256:3496986f2c925e149d6997a2f0c26ec0f0daf6e02b5b0fc08d96b40882177f47",
+        "kill.sh": "sha256:45cd86774ab92681a70cc7069460e96d54baec3567292f8073ce571350a06ef8",
+        "launch.sh": "sha256:39454c8de38dfa1007da2424a37d591d9999ee270aacf53893d033268deea716",
+        "recipe.yml": "sha256:4ec734326fe796bbc264ef2f2dff43f7b93cfa53288d02b1fbf5662b21351e5e",
+        "repair.sh": "sha256:b33937ad49655bd63835cb492a9bcb650fb4d96052aa317a54a9d8a7b36e44b3",
+        "uninstall.sh": "sha256:ddd359b474ec19e8cf267c15fbaa724c4ac6b902148a547830e03cb9fd563d6e",
+        "validate.sh": "sha256:db5bf9235de2713625f1667048d35516b9202109e344debf42500c5f52a2965c"
       }
     }
   },

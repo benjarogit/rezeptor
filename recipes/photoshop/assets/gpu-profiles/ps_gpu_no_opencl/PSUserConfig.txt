@@ -1,0 +1,8 @@
+# Rezeptor GPU-Profil: ps_gpu_no_opencl (EXPERIMENT)
+# Bei Fail: bash scripts/photoshop-gpu-profile.sh stable
+WarnRunningScripts 0
+[GPU]
+GPUForce 1
+UseOpenCL 0
+AllowGPU 1
+DisableNativeCanvas 0

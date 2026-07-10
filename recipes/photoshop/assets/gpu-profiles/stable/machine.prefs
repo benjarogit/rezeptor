@@ -1,0 +1,11 @@
+# MachinePrefs bools: key=0|1 (eine Zeile pro Key)
+openglEnabled=0
+nativeGPU=0
+GLCompute=0
+CLCompute=0
+openglD2SEnabled=0
+glAdvancedEnabled=0
+openglAdvAntiAliasEnabled=0
+openglBilerpEnabled=0
+openglVBLSyncEnabled=0
+expFeatureCompCoreGPU=0

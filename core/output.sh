@@ -8,7 +8,7 @@
 #
 # Author:       Sunny C.
 # Website:      https://sunnyc.de
-# Repository:   https://github.com/benjarogit/photoshopCClinux
+# Repository:   https://github.com/benjarogit/rezeptor
 # License:      GPL-2.0
 # Copyright:    (c) 2024-2026 Sunny C.
 ################################################################################
@@ -80,6 +80,42 @@ output::progress() {
     else
         printf "${C_CYAN}Progress: ${pct}%%${C_RESET}\n"
     fi
+}
+
+# Stufen-Progress für kurze Hooks (validate/repair/kill/uninstall).
+# usage: output::progress_begin N "Label" → progress_tick "…" → progress_done "…"
+output::progress_begin() {
+    local total="${1:?}"
+    shift
+    local label="${*:-}"
+    OUTPUT_PROGRESS_TOTAL="$total"
+    OUTPUT_PROGRESS_DONE=0
+    export OUTPUT_PROGRESS_TOTAL OUTPUT_PROGRESS_DONE
+    if [ "$total" -le 0 ] 2>/dev/null; then
+        OUTPUT_PROGRESS_TOTAL=1
+    fi
+    output::progress 0 "${label:-}"
+}
+
+output::progress_tick() {
+    local message="${*:-}"
+    local total="${OUTPUT_PROGRESS_TOTAL:-1}"
+    local done="${OUTPUT_PROGRESS_DONE:-0}"
+    done=$((done + 1))
+    [ "$done" -gt "$total" ] && done="$total"
+    OUTPUT_PROGRESS_DONE="$done"
+    export OUTPUT_PROGRESS_DONE
+    local pct=$((done * 100 / total))
+    [ "$pct" -gt 99 ] && [ "$done" -lt "$total" ] && pct=99
+    output::progress "$pct" "$message"
+}
+
+output::progress_done() {
+    local message="${*:-Fertig}"
+    OUTPUT_PROGRESS_DONE="${OUTPUT_PROGRESS_TOTAL:-1}"
+    export OUTPUT_PROGRESS_DONE
+    output::progress 100 "$message"
+    unset OUTPUT_PROGRESS_TOTAL OUTPUT_PROGRESS_DONE 2>/dev/null || true
 }
 
 # @function output::user_action

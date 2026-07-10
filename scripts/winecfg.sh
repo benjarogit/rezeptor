@@ -1,131 +1,46 @@
 #!/usr/bin/env bash
-################################################################################
-# Photoshop CC Linux - Wine Configuration Launcher
-#
-# Description:
-#   Opens Wine configuration (winecfg) for the Photoshop Wine prefix.
-#   Allows users to adjust Wine settings, Windows version, and drives.
-#
-# Author:       Sunny C.
-# Website:      https://sunnyc.de
-# Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-2.0
-# Copyright:    (c) 2024-2026 Sunny C.
-#
-# Based on:     photoshopCClinux by Gictorbit
-#               https://github.com/Gictorbit/photoshopCClinux
-################################################################################
+# Wine configuration for Photoshop prefix — uses core/ only.
+set -eu
+(set -o pipefail 2>/dev/null) || true
 
-# KRITISCH: Source-Hijacking verhindern - immer absoluten Pfad verwenden
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-# Source security module if available (for path validation)
-if [ -f "$SCRIPT_DIR/security.sh" ]; then
-    source "$SCRIPT_DIR/security.sh"
-fi
-source "$SCRIPT_DIR/sharedFuncs.sh"
-if [ -f "$SCRIPT_DIR/wine-runtime.sh" ]; then
-    source "$SCRIPT_DIR/wine-runtime.sh"
-    export WINE_METHOD="${WINE_METHOD:-proton-ge}"
-    wine() { wine_runtime::wine "$@"; }
-fi
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CORE="$ROOT/core"
+export PROJECT_ROOT="$ROOT" CORE_DIR="$CORE"
 
-function main() {
-    # Try to load Photoshop paths, but continue if not installed
+# shellcheck source=/dev/null
+source "$CORE/paths.sh"
+# shellcheck source=/dev/null
+source "$CORE/security.sh" 2>/dev/null || true
+# shellcheck source=/dev/null
+source "$CORE/sharedFuncs.sh"
+# shellcheck source=/dev/null
+source "$CORE/wine-runtime.sh"
+
+export WINE_METHOD="${WINE_METHOD:-proton-ge}"
+wine() { wine_runtime::wine "$@"; }
+
+main() {
     if load_paths "true" 2>/dev/null && [ -n "$SCR_PATH" ] && [ -d "$SCR_PATH/prefix" ]; then
-        # Photoshop is installed - use its Wine prefix
-    RESOURCES_PATH="$SCR_PATH/resources"
-    WINE_PREFIX="$SCR_PATH/prefix"
-    # KRITISCH: WINEPREFIX-Validierung - verhindere Manipulation
-    # Use centralized security::validate_path function if available
-    if command -v security::validate_path >/dev/null 2>&1; then
-        if ! security::validate_path "$WINE_PREFIX"; then
-            echo "ERROR: WINEPREFIX zeigt auf System-Verzeichnis (Sicherheitsrisiko): $WINE_PREFIX" >&2
-            exit 1
+        RESOURCES_PATH="$SCR_PATH/resources"
+        WINE_PREFIX="$SCR_PATH/prefix"
+        if command -v security::validate_path >/dev/null 2>&1; then
+            security::validate_path "$WINE_PREFIX" || exit 1
         fi
+        export WINEPREFIX="$WINE_PREFIX"
     else
-        # Fallback to inline validation if security module not loaded
-        if [[ "$WINE_PREFIX" =~ ^/etc|^/usr/bin|^/usr/sbin|^/bin|^/sbin|^/lib|^/var/log|^/root ]]; then
-            echo "ERROR: WINEPREFIX zeigt auf System-Verzeichnis (Sicherheitsrisiko): $WINE_PREFIX" >&2
-            exit 1
-        fi
-    fi
-    export WINEPREFIX="$WINE_PREFIX"
-        
-        echo "═══════════════════════════════════════════════════════════════"
-        echo "           Wine-Konfiguration für Photoshop CC"
-        echo "═══════════════════════════════════════════════════════════════"
-        echo ""
-        echo "Wine-Prefix: $WINE_PREFIX"
-    else
-        # Photoshop not installed - use default Wine prefix
-        echo "═══════════════════════════════════════════════════════════════"
-        echo "           Wine-Konfiguration (Standard)"
-        echo "═══════════════════════════════════════════════════════════════"
-        echo ""
-        echo "ℹ Photoshop ist noch nicht installiert."
-        echo "  Öffne Standard-Wine-Konfiguration..."
-        echo ""
-        WINE_PREFIX="$HOME/.wine"
-        # KRITISCH: WINEPREFIX-Validierung - verhindere Manipulation
-    # Use centralized security::validate_path function if available
-    if command -v security::validate_path >/dev/null 2>&1; then
-        if ! security::validate_path "$WINE_PREFIX"; then
-            echo "ERROR: WINEPREFIX zeigt auf System-Verzeichnis (Sicherheitsrisiko): $WINE_PREFIX" >&2
-            exit 1
-        fi
-    else
-        # Fallback to inline validation if security module not loaded
-        if [[ "$WINE_PREFIX" =~ ^/etc|^/usr/bin|^/usr/sbin|^/bin|^/sbin|^/lib|^/var/log|^/root ]]; then
-            echo "ERROR: WINEPREFIX zeigt auf System-Verzeichnis (Sicherheitsrisiko): $WINE_PREFIX" >&2
+        SCR_PATH="$(recipe_data_root photoshop 2>/dev/null || echo "$HOME/.local/share/wine-software/photoshop")"
+        WINE_PREFIX="$SCR_PATH/prefix"
+        export WINEPREFIX="$WINE_PREFIX"
+        if [ ! -d "$WINEPREFIX" ]; then
+            echo "Photoshop prefix not found: $WINEPREFIX" >&2
+            echo "Install first: ./setup.sh → Photoshop → Installieren" >&2
             exit 1
         fi
     fi
-    export WINEPREFIX="$WINE_PREFIX"
-        echo "Wine-Prefix: $WINE_PREFIX"
-    fi
-    echo ""
-    echo "EMPFOHLENE EINSTELLUNGEN:"
-    echo "  1. Applications Tab:"
-    echo "     → Windows Version: Windows 10"
-    echo ""
-    echo "  2. Graphics Tab:"
-    echo "     → Screen resolution: 96 DPI (Standard)"
-    echo "     → Emulate a virtual desktop: Optional (bei Problemen aktivieren)"
-    echo ""
-    echo "  3. Staging Tab (falls vorhanden):"
-    echo "     → CSMT für bessere Performance aktivieren"
-    echo ""
-    echo "BEKANNTE PROBLEME UND LÖSUNGEN (GitHub Issues):"
-    echo "  - Photoshop stürzt ab: GPU-Beschleunigung in PS deaktivieren"
-    echo "  - Schrift unleserlich: Font-Smoothing auf RGB setzen"
-    echo "  - Langsamer Start: Normal beim ersten Start (1-2 Min)"
-    echo "  - VCRUNTIME140.dll fehlt: vcrun2015 über winetricks nachinstallieren"
-    echo ""
-    echo "═══════════════════════════════════════════════════════════════"
-    echo ""
-    
-    notify-send "Photoshop CC" "Wine-Konfiguration wird geöffnet..." -i "photoshop"
-    sleep 2
-    
-    # Suppress Wine fixme/err messages and allow CTRL+C
-    # Use trap to handle CTRL+C gracefully
-    trap 'echo ""; echo "Wine-Konfiguration abgebrochen."; exit 0' INT TERM
-    
-    WINEDEBUG=-all
-    if type wine_runtime::winecfg >/dev/null 2>&1; then
-        wine_runtime::winecfg 2>/dev/null || true
-    else
-        winecfg 2>/dev/null || true
-    fi
-    
-    # Clear trap
-    trap - INT TERM
-    
-    echo ""
-    echo "✓ Konfiguration abgeschlossen!"
+
+    wine_runtime::init || exit 1
+    wine_runtime::export_env
+    exec wine winecfg
 }
 
-main
-
-
-
+main "$@"

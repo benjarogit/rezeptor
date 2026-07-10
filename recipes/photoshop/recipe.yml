@@ -13,7 +13,8 @@ source_label: "Adobe Offline-Installer (Set-up.exe + packages/)"
 fix_kind: none
 installer_dir: "{repo}/photoshop"
 exe_glob: "**/Photoshop.exe"
-winetricks: [win10, ie8, vcrun2015]
+# win10 via recipe_win10::ensure; VC++ via recipe_vcrun::ensure (nicht winetricks)
+winetricks: [atmlib, corefonts, "fontsmooth=rgb", gdiplus, msxml3, msxml6, ie8]
 env:
   WINEDEBUG: "-all,+err"
 validate: validate.sh
@@ -21,3 +22,5 @@ launch: launch.sh
 install: install.sh
 repair: repair.sh
 kill: kill.sh
+install_steps:
+  - module: recipe_photoshop::install

@@ -1,54 +1,17 @@
 #!/usr/bin/env bash
 # Reparatur: validate → nur fehlende Komponenten nachziehen (kein Voll-Install).
-
 set -eu
 (set -o pipefail 2>/dev/null) || true
 
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$RECIPE_DIR/../.." && pwd)"
-CORE_DIR="$PROJECT_ROOT/core"
-export PROJECT_ROOT RECIPE_DIR CORE_DIR
+# shellcheck source=/dev/null
+source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+recipe_hooks::load repair
+recipe_hooks::_source recipe-vcrun.sh
 
-# shellcheck source=/dev/null
-source "$CORE_DIR/paths.sh"
-# shellcheck source=/dev/null
-source "$CORE_DIR/recipe.sh"
-recipe_export_env "$RECIPE_DIR/recipe.yml"
-# shellcheck source=/dev/null
-source "$CORE_DIR/env-file.sh"
-# shellcheck source=/dev/null
-source "$CORE_DIR/output.sh"
-# shellcheck source=/dev/null
-source "$CORE_DIR/wine-runtime.sh"
-# shellcheck source=/dev/null
-source "$CORE_DIR/recipe-prefix.sh"
-# shellcheck source=/dev/null
-source "$CORE_DIR/recipe-winetricks.sh"
-# shellcheck source=/dev/null
-source "$CORE_DIR/recipe-win10.sh"
-# shellcheck source=/dev/null
-source "$CORE_DIR/recipe-validate.sh"
-# shellcheck source=/dev/null
-source "$CORE_DIR/recipe-dotnet.sh"
-# shellcheck source=/dev/null
-source "$CORE_DIR/recipe-wiso.sh"
-# shellcheck source=/dev/null
-source "$CORE_DIR/recipe-vcrun.sh"
+recipe_hooks::log_setup "WISO_Repair"
+log_err() { recipe_hooks::log_err "$@"; }
 
-wine() { wine_runtime::wine "$@"; }
-winetricks() { wine_runtime::winetricks "$@"; }
-wineboot() { wine_runtime::wineboot "$@"; }
-
-LOG_DIR="$(wine_software_logs_dir)"
-mkdir -p "$LOG_DIR"
-TIMESTAMP_ISO=$(date +%Y-%m-%d_%H-%M-%S)
-LOG_FILE="$LOG_DIR/WISO_Repair_${TIMESTAMP_ISO}.log"
-ERROR_LOG="$LOG_DIR/WISO_Repair_${TIMESTAMP_ISO}_errors.log"
-export LOG_FILE ERROR_LOG LOG_DIR
-
-log_err() { echo "[$(date '+%H:%M:%S')] ERROR: $*" | tee -a "$LOG_FILE" >> "$ERROR_LOG"; }
-
-export WINEPREFIX="$DATA_ROOT/prefix"
 export WINEARCH=win64
 
 # Portable-Root aus env, portable.env oder FIX-Pfad ableiten
@@ -77,8 +40,10 @@ if [ -n "${WISO_PORTABLE_ROOT:-}" ] && [ -d "${WISO_PORTABLE_ROOT}" ] \
 fi
 
 output::section "WISO Reparatur"
+output::progress_begin 5 "Reparatur"
 
 _validate_ok=0
+output::progress_tick "Installation prüfen"
 if bash "$RECIPE_DIR/validate.sh" >> "$LOG_FILE" 2>&1; then
     _validate_ok=1
     output::info "Prefix OK — synchronisiere Launcher und wined3d"
@@ -89,6 +54,7 @@ fi
 wine_runtime::init || { log_err "Proton-GE init failed"; exit 1; }
 wine_runtime::export_env
 
+output::progress_tick "Launcher & Grafik"
 mkdir -p "$DATA_ROOT/bin"
 cp -f "$RECIPE_DIR/assets/wiso-mit-wine.sh" "$DATA_ROOT/bin/wiso-launch.sh"
 chmod +x "$DATA_ROOT/bin/wiso-launch.sh"
@@ -97,11 +63,25 @@ output::step "Wine-Grafik (wined3d statt DXVK für Qt/WebEngine)"
 if recipe_wiso::restore_wined3d_prefix >> "$LOG_FILE" 2>&1; then
     output::success "wined3d wiederhergestellt (DXVK für WISO deaktiviert)"
 else
-    log_err "wined3d-Wiederherstellung fehlgeschlagen"
+    log_err "wined3d-Wiederherstellung fehlgeschlagen — $LOG_FILE"
+    exit 1
 fi
 recipe_wiso::ensure_graphics_x11 "$WINE" >> "$LOG_FILE" 2>&1 || true
 
+output::progress_tick "Schriften & ClearType"
+output::step "Schriften & ClearType (Tahoma für Segoe-UI-Ersetzung)"
+recipe_hooks::_source recipe-fonts.sh
+# ensure statt registry: installiert fehlende tahoma/calibri nach —
+# ohne Tahoma läuft die Segoe-UI-Substitution ins Leere (hässliche Schrift)
+if recipe_fonts::ensure "$LOG_DIR/winetricks_fonts_${TIMESTAMP_ISO}.log" >> "$LOG_FILE" 2>&1; then
+    output::success "Schriften vollständig, FontSmoothing aktiv"
+else
+    recipe_fonts::registry
+    output::warning "Schriften unvollständig (siehe Log) — FontSmoothing gesetzt"
+fi
+
 if [ "$_validate_ok" -eq 1 ]; then
+    output::progress_tick "Desktop & Qt-Fix"
     if [ -n "$_wiso_portable" ] && [ -d "$_wiso_portable" ]; then
         _sw_dir="$(recipe_wiso::software_dir "$_wiso_portable" || true)"
         if [ -n "$_sw_dir" ] && recipe_wiso::qnetwork_disabled "$_sw_dir"; then
@@ -110,10 +90,13 @@ if [ "$_validate_ok" -eq 1 ]; then
         cp -f "$RECIPE_DIR/assets/wiso-mit-wine.sh" "$_wiso_portable/wiso-mit-wine.sh" 2>/dev/null || true
         chmod +x "$_wiso_portable/wiso-mit-wine.sh" 2>/dev/null || true
     fi
+    recipe_wiso::install_desktop_entry "$_wiso_portable" "$DATA_ROOT" >> "$LOG_FILE" 2>&1 || true
+    output::progress_done "Reparatur abgeschlossen — Launcher und Grafik aktualisiert"
     output::success "Reparatur abgeschlossen — Launcher und Grafik aktualisiert"
     exit 0
 fi
 
+output::progress_tick "Fehlende Komponenten"
 if ! recipe_validate::prefix_initialized "$WINEPREFIX"; then
     output::error "Prefix fehlt — bitte Installieren (nicht Reparieren)"
     exit 1
@@ -173,7 +156,20 @@ if ! recipe_validate::vcrun_dll_ok "$wow64/msvcp140.dll" \
     fi
 fi
 
-for pkg in corefonts d3dcompiler_47 gdiplus; do
+if ! recipe_validate::native_pe "$wow64/gdiplus.dll" \
+    && ! recipe_validate::native_pe "$WINEPREFIX/drive_c/windows/system32/gdiplus.dll"; then
+    output::step "winetricks: gdiplus (native)"
+    if recipe_winetricks::run "$LOG_DIR/winetricks_gdiplus_${TIMESTAMP_ISO}.log" gdiplus; then
+        wine reg add "HKCU\\Software\\Wine\\DllOverrides" /v gdiplus /t REG_SZ /d "native" /f >> "$LOG_FILE" 2>&1 || true
+        output::success "gdiplus (native) installiert"
+        fixed=1
+    else
+        log_err "gdiplus fehlgeschlagen"
+        _wt_ok=1
+    fi
+fi
+
+for pkg in corefonts d3dcompiler_47; do
     dll="$wow64/${pkg}.dll"
     [ "$pkg" = "corefonts" ] && continue
     if ! recipe_validate::dll_exists "$dll"; then
@@ -234,23 +230,29 @@ if [ -n "$_wiso_portable" ] && [ -d "$_wiso_portable" ]; then
     fi
 fi
 
+recipe_wiso::install_desktop_entry "$_wiso_portable" "$DATA_ROOT" >> "$LOG_FILE" 2>&1 || true
+
 wine reg add "HKCU\\Software\\Wine\\Drivers" /v Graphics /t REG_SZ /d x11 /f >> "$LOG_FILE" 2>&1 || true
 recipe_wiso::ensure_graphics_x11 wine >> "$LOG_FILE" 2>&1 || true
-wine reg add "HKCU\\Control Panel\\Desktop" /v FontSmoothing /t REG_DWORD /d 2 /f >> "$LOG_FILE" 2>&1 || true
 
+output::progress_tick "Erneut prüfen"
 if [ "$_wt_ok" -ne 0 ]; then
+    output::progress_done "Reparatur unvollständig"
     output::error "Reparatur unvollständig — Logs: $LOG_DIR"
     exit 11
 fi
 
 if bash "$RECIPE_DIR/validate.sh" >> "$LOG_FILE" 2>&1; then
+    output::progress_done "Reparatur abgeschlossen — alle Prüfungen OK"
     output::success "Reparatur abgeschlossen — alle Prüfungen OK"
     exit 0
 fi
 
 if [ "$fixed" -eq 1 ]; then
+    output::progress_done "Teilweise repariert"
     output::warning "Teilweise repariert — erneut Prüfen"
     exit 11
 fi
+output::progress_done "Reparatur fehlgeschlagen"
 output::error "Reparatur fehlgeschlagen"
 exit 1

@@ -23,9 +23,9 @@ export WINE_SOFTWARE_BASE="$(wine_software_base)"
 if [ -f "$PROJECT_ROOT/core/system.sh" ]; then
     # shellcheck source=core/system.sh
     source "$PROJECT_ROOT/core/system.sh"
-elif [ -f "$PROJECT_ROOT/scripts/system.sh" ]; then
-    # shellcheck source=scripts/system.sh
-    source "$PROJECT_ROOT/scripts/system.sh"
+else
+    echo "ERROR: core/system.sh fehlt" >&2
+    exit 1
 fi
 if [ -f "$PROJECT_ROOT/core/wine-runtime.sh" ]; then
     # shellcheck source=core/wine-runtime.sh
@@ -290,7 +290,7 @@ elif [ -d "$OLD_PATH" ]; then
     check_warning "Vorherige Installation gefunden in ~/.photoshopCCV19 (alte Version)"
     echo "   ${YELLOW}Die Installation wird das Verzeichnis überschreiben!${NC}"
     echo "   Backup erstellen? Befehl: mv ~/.photoshopCCV19 ~/.photoshopCCV19.backup"
-    echo "   ${BLUE}Hinweis: Neue Installationen verwenden ~/.photoshop${NC}"
+    echo "   ${BLUE}Hinweis: Neue Installationen liegen unter ~/.local/share/wine-software/photoshop${NC}"
 else
     check_ok "Keine vorherige Installation gefunden"
 fi
@@ -340,6 +340,12 @@ else
     echo "   Debian/Ubuntu: sudo apt install python3-pyqt6"
 fi
 echo ""
+
+if [ "$REZEPTOR_MODE" -eq 1 ]; then
+    echo "Wine-Dialoge (Install/Reparatur)..."
+    check_ok "Kurz Wine-Fenster möglich — Rezeptor zeigt, was zu klicken ist (OK / Installieren)"
+    echo ""
+fi
 
 if [ $CHECKS_FAILED -eq 0 ]; then
     echo -e "${GREEN}✓ Alle kritischen Checks bestanden!${NC}"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ################################################################################
-# Wine / Proton-GE runtime resolver (Proton-GE only)
+# Wine / Proton-GE runtime resolver (runtime per recipe: proton-ge | system)
 ################################################################################
 
 _WINE_RUNTIME_INITIALIZED=0
@@ -247,8 +247,14 @@ wine_runtime::export_env() {
     export WINE_RUNTIME_ROOT="${_WINE_RUNTIME_ROOT:-}"
     if [ "$_WINE_RUNTIME_MODE" = "proton-ge" ]; then
         export PROTON_PATH="$_WINE_RUNTIME_ROOT"
-        # Proton-GE (Wine 10): disable experimental WOW64 — required for Adobe IE installer + IE8
-        export WINE_DISABLE_WOW64=1
+        # Proton-GE (Wine 10): neue WOW64-Architektur nur abschalten, wenn das Rezept es
+        # braucht (z. B. Adobe IE-Installer/IE8) — recipe.yml: disable_wow64: true.
+        # Global erzwungen hätte das andere Rezepte (z. B. WISO, 64-bit-lastig) kaputt machen können.
+        if [ "${RECIPE_DISABLE_WOW64:-}" = "true" ] || [ "${RECIPE_DISABLE_WOW64:-}" = "1" ]; then
+            export WINE_DISABLE_WOW64=1
+        else
+            unset WINE_DISABLE_WOW64 2>/dev/null || true
+        fi
     else
         unset PROTON_PATH 2>/dev/null || true
         unset WINE_DISABLE_WOW64 2>/dev/null || true
@@ -277,6 +283,31 @@ wine_runtime::deploy_proton_graphics_dlls() {
     for dll in d3d11.dll dxgi.dll; do
         [ -f "$dxvk64/$dll" ] && cp -f "$dxvk64/$dll" "$sys32/$dll" 2>/dev/null || true
         [ -f "$dxvk32/$dll" ] && cp -f "$dxvk32/$dll" "$wow64/$dll" 2>/dev/null || true
+    done
+    return 0
+}
+
+# DXVK (Vulkan) → wined3d (OpenGL). Community: Photoshop „Legacy OpenGL“ braucht DXVK=aus.
+# libvkd3d bleibt (wined3d/Proton), d3d11/dxgi/d2d1/d3d10core aus default_pfx.
+wine_runtime::restore_wined3d_dlls() {
+    wine_runtime::init || return 1
+    local prefix="${WINEPREFIX:-${WINE_PREFIX:-}}"
+    local root="$_WINE_RUNTIME_ROOT"
+    local def_sys32="$root/files/share/default_pfx/drive_c/windows/system32"
+    local def_wow64="$root/files/share/default_pfx/drive_c/windows/syswow64"
+    local sys32="$prefix/drive_c/windows/system32"
+    local wow64="$prefix/drive_c/windows/syswow64"
+    local dll=""
+
+    [ -n "$prefix" ] && [ -d "$sys32" ] || return 1
+
+    for dll in libvkd3d-1.dll libvkd3d-shader-1.dll; do
+        [ -f "$def_sys32/$dll" ] && cp -f "$def_sys32/$dll" "$sys32/$dll" 2>/dev/null || true
+        [ -f "$def_wow64/$dll" ] && cp -f "$def_wow64/$dll" "$wow64/$dll" 2>/dev/null || true
+    done
+    for dll in d3d11.dll dxgi.dll d2d1.dll d3d10core.dll; do
+        [ -f "$def_sys32/$dll" ] && cp -f "$def_sys32/$dll" "$sys32/$dll" 2>/dev/null || true
+        [ -f "$def_wow64/$dll" ] && cp -f "$def_wow64/$dll" "$wow64/$dll" 2>/dev/null || true
     done
     return 0
 }

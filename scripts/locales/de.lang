@@ -346,5 +346,5 @@ dotnet_takes_time=  Installation dauert 30-60 Minuten (manchmal länger) - das i
 post_install_tips_title=Nächste Schritte & Tipps
 tip_virtual_desktop=→ Virtual Desktop aktivieren: Menu → 5 (Wine konfigurieren) → Graphics → Emulate a virtual desktop
 tip_gpu_glitches=→ Bei Grafik-Problemen: Photoshop → Preferences → Performance → Use Graphics Processor deaktivieren
-tip_documentation=→ Mehr Infos: https://github.com/benjarogit/photoshopCClinux
+tip_documentation=→ Mehr Infos: https://github.com/benjarogit/rezeptor
 

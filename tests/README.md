@@ -35,13 +35,16 @@ Einzelne Test-Datei ausführen:
 ```bash
 bats tests/test_security.bats
 bats tests/test_i18n.bats
+bats tests/test_recipe_trust.bats
 ```
 
 ## Test-Struktur
 
 - `test_helper.bash` - Gemeinsame Helper-Funktionen für alle Tests
-- `test_security.bats` - Tests für das Security-Modul
-- `test_i18n.bats` - Tests für das i18n-Modul
+- `test_security.bats` - Tests für `core/security.sh` (früher `scripts/security.sh`)
+- `test_i18n.bats` - Tests für `core/i18n.sh` (früher `scripts/i18n.sh`)
+- `test_recipe_trust.bats` - Manifest-Trust via `launcher/recipe_trust.py` (ersetzt `core/recipe-trust.sh`)
+- `test_recipe_source.bats` - Archive-Extraktion; Installer-Erkennung über `recipe_deploy::detect_installer`
 
 ## Hinzufügen neuer Tests
 
@@ -56,7 +59,7 @@ Beispiel:
 load test_helper
 
 setup() {
-    source "$BATS_TEST_DIRNAME/../scripts/security.sh"
+    source "$BATS_TEST_DIRNAME/../core/security.sh"
 }
 
 @test "test description" {
@@ -65,3 +68,8 @@ setup() {
 }
 ```
 
+## Hinweis zu verschobenen Modulen
+
+- Bash-i18n/Security liegen unter `core/` (nicht mehr `scripts/`).
+- Rezept-Trust ist Python (`launcher/recipe_trust.py`); das alte `core/recipe-trust.sh` entfällt.
+- GUI-Übersetzungen: `launcher/i18n/` + `launcher/locales/*.json` (nicht von den Bash-i18n-Bats abgedeckt).

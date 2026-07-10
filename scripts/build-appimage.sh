@@ -60,6 +60,10 @@ Exec=setup.sh
 Icon=photoshop
 Categories=Graphics;
 EOF
+# appimagetool requires Icon file next to .desktop
+if [ -f "$ROOT/images/AdobePhotoshop-icon.png" ]; then
+    cp -f "$ROOT/images/AdobePhotoshop-icon.png" "$APPDIR/photoshop.png"
+fi
 
 echo "Creating AppImage venv with PyQt6..."
 python3 -m venv "$APPDIR/venv"

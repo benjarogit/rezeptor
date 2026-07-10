@@ -1,0 +1,7 @@
+# Rezeptor GPU-Profil: dxvk_ui_only (= stable dokumentiert)
+WarnRunningScripts 0
+[GPU]
+GPUForce 0
+UseOpenCL 0
+AllowGPU 0
+DisableNativeCanvas 1

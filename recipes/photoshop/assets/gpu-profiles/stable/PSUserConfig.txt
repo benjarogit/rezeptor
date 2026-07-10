@@ -1,0 +1,8 @@
+# Rezeptor GPU-Profil: stable (Kill-Switch)
+# DXVK für UI bleibt; Photoshop-GPU/OpenGL aus.
+WarnRunningScripts 0
+[GPU]
+GPUForce 0
+UseOpenCL 0
+AllowGPU 0
+DisableNativeCanvas 1

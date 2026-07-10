@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-GITHUB_REPO = "benjarogit/photoshopCClinux"
+GITHUB_REPO = "benjarogit/rezeptor"
 LOG_ROOT = Path.home() / ".local/share/wine-software/logs"
 LOG_RETENTION_DAYS = 14
 LOG_MAX_FILES = 50
@@ -58,6 +58,11 @@ def detect_distro() -> str:
     return platform.platform() or "Linux"
 
 
+def github_doc_url(rel_path: str, branch: str = "main") -> str:
+    """GitHub-URL für eine Datei unter docs/."""
+    return f"https://github.com/{GITHUB_REPO}/blob/{branch}/docs/{rel_path}"
+
+
 def fetch_latest_release() -> tuple[str, str]:
     url = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
     try:
@@ -79,22 +84,24 @@ def version_compare(current: str, latest: str) -> bool:
     return norm(latest) > norm(current)
 
 
-VERSION_GUARANTEE_HELP = (
-    "Rezepte garantieren Installation und Start nur mit der angegebenen, getesteten Version.\n\n"
-    "• Getestete Version: vom Rezept-Autor verifiziert\n"
-    "• Eigene/abweichende Versionen: können funktionieren, sind aber nicht getestet "
-    "und werden nicht unterstützt\n"
-    "• Probleme mit fremden Versionen liegen an der Versionswahl, nicht am Rezept\n\n"
-    "Nutze die vom Rezept dokumentierte Version für eine garantierte Installation."
-)
-
 VERSION_OK_RE = re.compile(
     r"^OK: .+?:\s*(.+?)\s*\(getestet & garantiert\)\s*$"
 )
 
 
 def parse_wiso_portable_version(path: str) -> str:
-    name = Path(path).name
+    root = Path(path)
+    for sw in sorted(root.glob("Steuersoftware*")):
+        if not sw.is_dir():
+            continue
+        for wcrc in sorted(sw.glob("wcrc32list*.txt")):
+            for line in wcrc.read_text(encoding="utf-8", errors="replace").splitlines():
+                line = line.strip()
+                if line.upper().startswith("VERSION"):
+                    ver = line.split("=", 1)[-1].strip()
+                    if ver:
+                        return ver
+    name = root.name
     m = re.match(r"^WISO\.([0-9]+(?:\.[0-9]+){0,3})\.Portable$", name)
     return m.group(1) if m else ""
 
@@ -124,12 +131,19 @@ def version_guarantee_mismatch(guaranteed: str, detected: str) -> bool:
     return guaranteed.strip() != detected.strip()
 
 
-def prune_old_logs(log_root: Path = LOG_ROOT) -> int:
+def prune_old_logs(
+    log_root: Path = LOG_ROOT,
+    *,
+    retention_days: int | None = None,
+    max_files: int | None = None,
+) -> int:
     """Alte Log-Dateien entfernen (Retention). Returns count deleted."""
     if not log_root.is_dir():
         return 0
 
-    cutoff = time.time() - LOG_RETENTION_DAYS * 86400
+    days = LOG_RETENTION_DAYS if retention_days is None else retention_days
+    cap = LOG_MAX_FILES if max_files is None else max_files
+    cutoff = time.time() - days * 86400
     files = sorted(
         (p for p in log_root.iterdir() if p.is_file()),
         key=lambda p: p.stat().st_mtime,
@@ -141,7 +155,7 @@ def prune_old_logs(log_root: Path = LOG_ROOT) -> int:
             mtime = path.stat().st_mtime
         except OSError:
             continue
-        if mtime < cutoff or i >= LOG_MAX_FILES:
+        if mtime < cutoff or i >= cap:
             try:
                 path.unlink()
                 removed += 1
@@ -185,7 +199,7 @@ def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
     out = LOG_ROOT / f"github-report_{recipe_id}_{ts}.txt"
     lines: list[str] = [
-        "Rezepte Launcher — Fehlerbericht (sanitisiert)",
+        "Rezeptor — Fehlerbericht (sanitisiert)",
         f"Zeit (UTC): {datetime.now(timezone.utc).isoformat()}",
         f"Rezept: {recipe_id}",
         f"Version: {read_version()}",
@@ -233,7 +247,7 @@ def build_issue_body(recipe_id: str, report_path: Path, session_id: str = "") ->
     log_excerpt = sanitize_log_text(
         report_path.read_text(encoding="utf-8", errors="replace")[-8000:]
     )
-    recipe_label = recipe_id if recipe_id != "launcher" else "Rezepte-Launcher (allgemein)"
+    recipe_label = recipe_id if recipe_id != "launcher" else "Rezeptor (allgemein)"
     ps_line = f"- **Photoshop:** CC 2021\n" if recipe_id == "photoshop" else ""
     session_note = f"\n- **Support-Session:** `{session_id}` (nur intern)" if session_id else ""
 
@@ -250,7 +264,7 @@ def build_issue_body(recipe_id: str, report_path: Path, session_id: str = "") ->
 {ps_line}
 ## 🔍 Schritte zum Reproduzieren
 
-1. Rezepte-Launcher starten
+1. Rezeptor starten
 2. Rezept „{recipe_label}" wählen
 3. (Aktion: Installieren / Reparieren / …)
 
@@ -288,7 +302,7 @@ def github_issue_url(recipe_id: str, report_path: Path | None = None) -> str:
     from urllib.parse import quote
 
     recipe_label = recipe_id if recipe_id != "launcher" else "launcher"
-    title = f"[BUG] {recipe_label} — Rezepte Launcher"
+    title = f"[BUG] {recipe_label} — Rezeptor"
     # Kurzer Body in URL — volles Template kommt aus Zwischenablage (Strg+V)
     body = (
         "## 🐛 Problem\n\n"

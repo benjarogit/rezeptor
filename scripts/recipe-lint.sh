@@ -31,6 +31,22 @@ recipe_get() {
     echo "$line"
 }
 
+lint_forbidden_patterns() {
+    local base="$1" f="$2"
+    if grep -qE 'winetricks[[:space:]].*dxvk|winetricks[[:space:]]+dxvk' "$f" 2>/dev/null; then
+        lint_err "$base: $(basename "$f"): winetricks dxvk verboten — wine_runtime::deploy_proton_graphics_dlls nutzen"
+    fi
+    if grep -qE 'command[[:space:]]+-v[[:space:]]+wine[[:space:]]|WINE=.*(/usr/bin/wine|wine$)' "$f" 2>/dev/null; then
+        if grep -qE 'system.wine|System-Wine|fallback.*wine' "$f" 2>/dev/null; then
+            lint_err "$base: $(basename "$f"): System-Wine-Fallback verboten — nur Proton-GE"
+        fi
+    fi
+    if grep -qE 'winetricks[[:space:]].*winecfg|winetricks[[:space:]]+win10' "$f" 2>/dev/null \
+        && grep -qE 'recipe_win10::ensure|settings[[:space:]]+win10' "$f" 2>/dev/null; then
+        lint_err "$base: $(basename "$f"): doppeltes win10 (winetricks + recipe_win10) — nur recipe_win10::ensure"
+    fi
+}
+
 lint_recipe_dir() {
     local dir="$1"
     local yml="$dir/recipe.yml"
@@ -81,7 +97,32 @@ lint_recipe_dir() {
     fi
     if [ "$source_kind" = "fixed_path" ]; then
         val="$(recipe_get "$yml" installer_dir 2>/dev/null || true)"
-        [ -n "$val" ] || lint_warn "$base: fixed_path ohne installer_dir"
+        [ -n "$val" ] || lint_err "$base: fixed_path erfordert installer_dir"
+    fi
+
+    deploy_mode="$(recipe_get "$yml" deploy_mode 2>/dev/null || echo copy)"
+    if [ "$install_type" = "portable_launch" ] && [ "$deploy_mode" = "copy" ]; then
+        val="$(recipe_get "$yml" target_default 2>/dev/null || true)"
+        [ -n "$val" ] || lint_warn "$base: portable_launch+copy ohne target_default"
+    fi
+
+    # install_type rule packs
+    case "$install_type" in
+        portable_launch|portable_bootstrap|game_portable)
+            val="$(recipe_get "$yml" exe_glob 2>/dev/null || true)"
+            [ -n "$val" ] || val="$(recipe_get "$yml" portable_root 2>/dev/null || true)"
+            [ -n "$val" ] || lint_err "$base: portable install_type braucht exe_glob oder portable_root"
+            ;;
+        installer_offline|game_install|adobe_offline)
+            if [ "$source_kind" = "fixed_path" ]; then
+                val="$(recipe_get "$yml" installer_dir 2>/dev/null || true)"
+                [ -n "$val" ] || lint_err "$base: installer install_type + fixed_path braucht installer_dir"
+            fi
+            ;;
+    esac
+
+    if ! grep -qE '^install_steps:' "$yml" 2>/dev/null; then
+        lint_err "$base: install_steps fehlt (Pflicht)"
     fi
 
     for hook in "${REQUIRED_HOOKS[@]}"; do
@@ -111,6 +152,13 @@ lint_recipe_dir() {
     done
     shopt -u nullglob
 
+    for f in "$dir"/install.sh "$dir"/launch.sh "$dir"/validate.sh "$dir"/repair.sh "$dir"/kill.sh; do
+        [ -f "$f" ] || continue
+        grep -q 'recipe-hooks\.sh' "$f" 2>/dev/null \
+            || lint_err "$base: $(basename "$f") muss core/recipe-hooks.sh nutzen"
+        lint_forbidden_patterns "$base" "$f"
+    done
+
     for f in "$dir"/install.sh "$dir"/launch.sh "$dir"/repair.sh; do
         [ -f "$f" ] || continue
         if grep -qE 'curl\s+[^|]+\|\s*(ba)?sh' "$f" 2>/dev/null; then
@@ -126,6 +174,13 @@ for dir in "$RECIPES"/*/; do
     [ -d "$dir" ] || continue
     lint_recipe_dir "$dir"
 done
+
+# Schema / install_steps structure
+if [ -f "$ROOT/scripts/recipe-schema-check.py" ]; then
+    if ! python3 "$ROOT/scripts/recipe-schema-check.py"; then
+        errors=$((errors + 1))
+    fi
+fi
 
 if [ "$errors" -gt 0 ]; then
     echo "recipe-lint: $errors Fehler, $warnings Warnungen" >&2

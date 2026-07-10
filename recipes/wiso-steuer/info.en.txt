@@ -1,0 +1,15 @@
+WISO Steuer — Portable (ReadMe-compatible)
+
+Installation (Rezeptor → Install):
+1. Choose source — e.g. Downloads/…Portable (extracted) or archive
+2. Choose target folder — where WISO will be installed (default: ~/Dokumente/WISO Steuer 2026)
+   Rezeptor copies the portable there (deploy_mode: copy).
+3. Automatic: Wine prefix, Patch.exe, VC_redist, Qt start fix, desktop icon
+4. Start via start.exe (as in ReadMe) — menu “WISO Steuer 2026” or Rezeptor → Launch
+
+Patch.exe: started from the installed portable root (host block per ReadMe).
+CRC32 warning: confirm with Yes (ReadMe.txt).
+
+Archive: extract → detect → copy → same steps as above.
+
+Logs: Settings under the “Rezeptor” menu (retention, manual cleanup).

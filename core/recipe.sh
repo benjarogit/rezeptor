@@ -18,6 +18,7 @@ recipe_export_env() {
     export RECIPE_YML="$yml"
     export RECIPE_ID
     RECIPE_ID="$(recipe_get "$yml" id)" || return 1
+    # Immer aus diesem recipe.yml — kein vererbtes DATA_ROOT von einem anderen Rezept.
     export DATA_ROOT
     DATA_ROOT="$(paths_expand "$(recipe_get "$yml" data_root)")"
     export RECIPE_NAME
@@ -27,13 +28,7 @@ recipe_export_env() {
     rt="$(recipe_get "$yml" runtime 2>/dev/null || true)"
     export WINE_METHOD="${rt:-proton-ge}"
     export RECIPE_RUNTIME="$WINE_METHOD"
-}
-
-recipe_list_ids() {
-    local root="${1:?recipes dir}"
-    local d
-    for d in "$root"/*/recipe.yml; do
-        [ -f "$d" ] || continue
-        recipe_get "$d" id
-    done
+    local wow64
+    wow64="$(recipe_get "$yml" disable_wow64 2>/dev/null || true)"
+    export RECIPE_DISABLE_WOW64="$wow64"
 }

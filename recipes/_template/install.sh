@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
+# Standard-Install: deklarative install_steps aus recipe.yml
 set -eu
 (set -o pipefail 2>/dev/null) || true
+
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$RECIPE_DIR/../.." && pwd)"
 # shellcheck source=/dev/null
-source "$PROJECT_ROOT/core/recipe.sh"
-recipe_export_env "$RECIPE_DIR/recipe.yml"
-echo "Template install — ersetzen Sie dieses Skript." >&2
-exit 1
+source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+recipe_hooks::load install
+recipe_install_steps::run "$@"

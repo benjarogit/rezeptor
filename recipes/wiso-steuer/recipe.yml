@@ -1,18 +1,23 @@
 id: wiso-steuer
+icon: "{repo}/images/wiso-steuer-icon.png"
 name: "WISO Steuer (Portable)"
 category: "Finanzen & Steuer"
-version_guaranteed: "2026.33.3.2920"
-version_label: "WISO Steuer 2026 (Portable 33.3.2920)"
+version_guaranteed: "33.05.3220"
+version_label: "WISO Steuer 2026 (Portable 33.05 Build 3220)"
 data_root: "~/.local/share/wine-software/wiso-steuer"
 prefix: "{data_root}/prefix"
-runtime: system
+runtime: proton-ge
 install_type: portable_launch
+deploy_mode: copy
+target_default: "~/Dokumente/WISO Steuer 2026"
+target_label: "Zielordner (Portable wird dorthin installiert)"
 source_kind: folder
-source_label: "Portable-Root (Ordner mit Steuersoftware 20XX)"
-fix_kind: optional
+source_label: "Quelle (Ordner oder Archiv mit start.exe / Steuersoftware 20XX)"
+source_formats: zip,tar.gz,tgz
+fix_kind: none
 portable_root: ""
 exe_glob: "**/wiso*.exe"
-winetricks: [vcrun2019, dotnet48, corefonts, d3dcompiler_47, gdiplus]
+winetricks: [vcrun2019, dotnet48, corefonts, tahoma, calibri, d3dcompiler_47, gdiplus, "fontsmooth=rgb"]
 env:
   WINEARCH: win64
 validate: validate.sh
@@ -20,3 +25,21 @@ launch: launch.sh
 install: install.sh
 repair: repair.sh
 kill: kill.sh
+# Referenz-Beispiel: vollständige deklarative install_steps-Zerlegung
+install_steps:
+  - prepare_source
+  - module: recipe_wiso::after_prepare
+  - prefix
+  - module: recipe_wiso::apply_wined3d
+  - module: recipe_wiso::deploy_portable_launcher
+  - module: recipe_wiso::apply_qt_network_fix
+  - stabilize_prefix
+  - winetricks: [vcrun2019, dotnet48, corefonts, tahoma, calibri, d3dcompiler_47, gdiplus, "fontsmooth=rgb"]
+  - win10
+  - module: recipe_wiso::optional_vc_redist
+  - module: recipe_wiso::optional_patch_exe
+  - module: recipe_wiso::optional_fix_root
+  - module: recipe_wiso::ensure_x11_driver
+  - module: recipe_wiso::apply_ui_layout_fix
+  - fonts_registry
+  - module: recipe_wiso::install_desktop

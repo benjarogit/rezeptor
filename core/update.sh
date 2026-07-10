@@ -8,7 +8,7 @@
 #
 # Author:       Sunny C.
 # Website:      https://sunnyc.de
-# Repository:   https://github.com/benjarogit/photoshopCClinux
+# Repository:   https://github.com/benjarogit/rezeptor
 # License:      GPL-2.0
 # Copyright:    (c) 2024-2026 Sunny C.
 ################################################################################
@@ -19,7 +19,7 @@
 # ============================================================================
 
 # GitHub repository information
-GITHUB_REPO="benjarogit/photoshopCClinux"
+GITHUB_REPO="benjarogit/rezeptor"
 GITHUB_API="https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
 
 # ============================================================================

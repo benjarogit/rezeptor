@@ -17,9 +17,31 @@ recipe_guard::require_mem() {
     return 0
 }
 
+recipe_guard::process_matches() {
+    # True if a real process cmdline matches needle, excluding shells/tools that
+    # merely mention the pattern in their own argv (agent/CI false positives).
+    local needle="$1"
+    local pid cmdline
+    for pid in /proc/[0-9]*; do
+        cmdline="$(tr '\0' ' ' <"${pid}/cmdline" 2>/dev/null || true)"
+        [ -n "$cmdline" ] || continue
+        case "$cmdline" in
+            *"${needle}"*) ;;
+            *) continue ;;
+        esac
+        case "$cmdline" in
+            */bin/bash*|*/bin/zsh*|*/usr/bin/bash*|*/usr/bin/zsh*|*python*|*cursor*|*pgrep*|*rg\ *|*grep\ *|*systemd-run*)
+                continue
+                ;;
+        esac
+        return 0
+    done
+    return 1
+}
+
 recipe_guard::abort_if_running() {
     local pattern="$1"
-    if pgrep -f "$pattern" >/dev/null 2>&1; then
+    if recipe_guard::process_matches "$pattern"; then
         echo "Läuft bereits: $pattern — keine zweite Instanz." >&2
         return 1
     fi
@@ -31,11 +53,8 @@ recipe_guard::kill_stale_winetricks() {
 }
 
 recipe_guard::notify_icon() {
-    local scr_path="${SCR_PATH:-${DATA_ROOT:-}}"
     local project_root="${PROJECT_ROOT:-}"
-    if [ -n "$scr_path" ] && [ -f "$scr_path/launcher/AdobePhotoshop-icon.png" ]; then
-        echo "$scr_path/launcher/AdobePhotoshop-icon.png"
-    elif [ -n "$project_root" ] && [ -f "$project_root/images/AdobePhotoshop-icon.png" ]; then
+    if [ -n "$project_root" ] && [ -f "$project_root/images/AdobePhotoshop-icon.png" ]; then
         echo "$project_root/images/AdobePhotoshop-icon.png"
     elif [ -n "$project_root" ] && [ -f "$project_root/images/AdobePhotoshop-icon.svg" ]; then
         echo "$project_root/images/AdobePhotoshop-icon.svg"
@@ -44,8 +63,27 @@ recipe_guard::notify_icon() {
     fi
 }
 
+# Einheitliche Desktop-Benachrichtigung für alle Rezepte.
+# Syntax: recipe_notify::send <app-name> <summary> [body] [icon]
+# -a <app-name> ist Pflicht (sonst erbt KDE den Parent, z. B. „Cursor“).
+recipe_notify::send() {
+    local app="${1:?app name}"
+    local summary="${2:?summary}"
+    local body="${3:-}"
+    local icon="${4:-}"
+    command -v notify-send >/dev/null 2>&1 || return 0
+    if [ -n "$icon" ]; then
+        notify-send -a "$app" -i "$icon" "$summary" "$body" 2>/dev/null || true
+    else
+        notify-send -a "$app" "$summary" "$body" 2>/dev/null || true
+    fi
+}
+
 recipe_dpi::logpixels() {
-    local dpi="${WINE_LOGPIXELS:-}"
+    # Wine-DPI für UI-Layout. Qt-Apps (WISO): bei Host-DPI>96 oft Header/Sidebar-Versatz —
+    # dann WINE_LOGPIXELS=96 oder WISO_FORCE_DPI=96 erzwingen.
+    local dpi="${WINE_LOGPIXELS:-${WISO_FORCE_DPI:-}}"
+    local log="${LOG_FILE:-${DATA_ROOT:-${SCR_PATH:-}}/dpi-runtime.log}"
     if [ -z "$dpi" ]; then
         if command -v xrdb >/dev/null 2>&1; then
             dpi="$(xrdb -query 2>/dev/null | awk '/Xft\.dpi/ {print $2; exit}')"
@@ -54,9 +92,18 @@ recipe_dpi::logpixels() {
     if [ -z "$dpi" ] && [ -n "${QT_FONT_DPI:-}" ]; then
         dpi="$QT_FONT_DPI"
     fi
-    if [ -z "$dpi" ]; then
+    # Ganzzahl 72–288; Default 96 (vermeidet fraktionale Qt-Skalierung unter Wine).
+    case "$dpi" in
+        ''|*[!0-9]*) dpi=96 ;;
+    esac
+    if [ "$dpi" -lt 72 ] || [ "$dpi" -gt 288 ]; then
         dpi=96
     fi
-    wine reg add "HKCU\\Control Panel\\Desktop" /v LogPixels /t REG_DWORD /d "$dpi" /f \
-        >> "${LOG_FILE:-${SCR_PATH:-}/photoshop-runtime.log}" 2>&1 || true
+    mkdir -p "$(dirname "$log")" 2>/dev/null || true
+    if wine reg add "HKCU\\Control Panel\\Desktop" /v LogPixels /t REG_DWORD /d "$dpi" /f \
+        >>"$log" 2>&1; then
+        echo "[recipe_dpi] LogPixels=$dpi" >>"$log" 2>/dev/null || true
+    else
+        echo "[recipe_dpi] WARN: LogPixels=$dpi fehlgeschlagen" >>"$log" 2>/dev/null || true
+    fi
 }

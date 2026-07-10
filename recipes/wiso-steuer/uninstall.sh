@@ -3,18 +3,24 @@ set -eu
 (set -o pipefail 2>/dev/null) || true
 
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$RECIPE_DIR/../.." && pwd)"
-CORE_DIR="$PROJECT_ROOT/core"
-export PROJECT_ROOT RECIPE_DIR CORE_DIR
-
-source "$CORE_DIR/paths.sh"
-source "$CORE_DIR/recipe.sh"
-recipe_export_env "$RECIPE_DIR/recipe.yml"
-source "$CORE_DIR/env-file.sh" 2>/dev/null || true
+# shellcheck source=/dev/null
+source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+recipe_hooks::load kill
+recipe_hooks::_source env-file.sh
 
 export SCR_PATH="$DATA_ROOT"
-echo "Deinstalliere WISO Rezept …"
+
+output::section "WISO deinstallieren"
+output::progress_begin 3 "Deinstallation"
+
+output::progress_tick "Prozesse beenden"
 pkill -f "wiso.*${DATA_ROOT}" 2>/dev/null || true
+pkill -f "wiso-launch.sh" 2>/dev/null || true
+pkill -f "wiso-mit-wine.sh" 2>/dev/null || true
+
+output::progress_tick "Prefix & Launcher"
 [ -d "$DATA_ROOT/prefix" ] && rm -rf "$DATA_ROOT/prefix"
 rm -f "$DATA_ROOT/portable.env" "$DATA_ROOT/bin/wiso-launch.sh"
-echo "✓ WISO Rezept entfernt (Portable-Ordner bleibt unberührt)"
+
+output::progress_done "WISO deinstalliert"
+output::success "WISO Rezept entfernt (Portable-Ordner bleibt unberührt)"

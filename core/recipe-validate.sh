@@ -54,10 +54,26 @@ recipe_validate::vcrun_dll_ok() {
     return 0
 }
 
-# Portable-Ordner: WISO.2026.33.3.2920.Portable → 2026.33.3.2920
+# Portable-Version: wcrc32list26.txt → 33.05.3220, sonst Ordnername WISO.2026.….
 recipe_validate::wiso_portable_version() {
-    local root="$1" base ver
+    local root="$1" base ver sw wcrc
     [ -n "$root" ] && [ -d "$root" ] || return 1
+    if [ -d "$root/Steuersoftware 2026" ]; then
+        sw="$root/Steuersoftware 2026"
+    else
+        sw="$(find "$root" -maxdepth 1 -type d -name 'Steuersoftware*' 2>/dev/null | head -1 || true)"
+    fi
+    if [ -n "$sw" ] && [ -d "$sw" ]; then
+        for wcrc in "$sw"/wcrc32list*.txt; do
+            [ -f "$wcrc" ] || continue
+            ver="$(grep -E '^VERSION[[:space:]]*=' "$wcrc" 2>/dev/null | head -1 \
+                | sed 's/^VERSION[[:space:]]*=[[:space:]]*//' | tr -d '\r' | sed 's/[[:space:]]*$//')"
+            if [ -n "$ver" ]; then
+                echo "$ver"
+                return 0
+            fi
+        done
+    fi
     base="$(basename "$root")"
     if [[ "$base" =~ ^WISO\.([0-9]+(\.[0-9]+){0,3})\.Portable$ ]]; then
         echo "${BASH_REMATCH[1]}"
@@ -109,4 +125,38 @@ recipe_validate::version_guaranteed_check() {
         return 0
     fi
     recipe_validate::warn "$label: $detected — garantiert ist $guaranteed (eigene Version: kein Support)"
+}
+
+# ClearType / fontsmooth=rgb — ohne das wirkt UI-Text pixelig (Wine liest REG_SZ "2").
+recipe_validate::font_smoothing_ok() {
+    local prefix="$1"
+    [ -f "$prefix/user.reg" ] || return 1
+    grep -qE '"FontSmoothing"="2"' "$prefix/user.reg" 2>/dev/null && return 0
+    grep -qE '"FontSmoothing"=dword:00000002' "$prefix/user.reg" 2>/dev/null && return 0
+    grep -qE '"FontSmoothingType"=dword:00000002' "$prefix/user.reg" 2>/dev/null && return 0
+    return 1
+}
+
+# Segoe UI darf nicht auf Times New Roman gemappt sein (Wine-Default → unleserliche Qt-UI).
+recipe_validate::segoe_ui_ok() {
+    local prefix="$1"
+    local ureg="$prefix/user.reg"
+    [ -f "$ureg" ] || return 1
+    # Wine\\Fonts\\Replacements gewinnt — Times New Roman dort = FAIL
+    if awk '
+        BEGIN { inrep=0; bad=0; good=0 }
+        /^\[Software\\\\Wine\\\\Fonts\\\\Replacements\]/ { inrep=1; next }
+        /^\[/ { inrep=0 }
+        inrep && /"Segoe UI"="Times New Roman"/ { bad=1 }
+        inrep && (/"Segoe UI"="Tahoma"/ || /"Segoe UI"="Calibri"/) { good=1 }
+        END { exit (bad ? 1 : (good ? 0 : 1)) }
+    ' "$ureg"; then
+        return 0
+    fi
+    return 1
+}
+
+recipe_validate::winetricks_done() {
+    local prefix="$1" pkg="$2"
+    [ -f "$prefix/winetricks.log" ] && grep -q "$pkg" "$prefix/winetricks.log"
 }

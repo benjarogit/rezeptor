@@ -3,7 +3,7 @@
 # Photoshop CC Linux - i18n Module Tests
 #
 # Description:
-#   Unit tests for i18n.sh module functions using bats-core
+#   Unit tests for core/i18n.sh (Bash install-pipeline strings).
 #
 # Author:       benjarogit
 # Repository:   https://github.com/benjarogit/photoshopCClinux
@@ -11,18 +11,11 @@
 # Copyright:    (c) 2024 benjarogit
 ################################################################################
 
-# Load test helper
 load test_helper
 
-# Load i18n module
 setup() {
-    # Source the i18n module
-    source "$BATS_TEST_DIRNAME/../scripts/i18n.sh"
+    source "$BATS_TEST_DIRNAME/../core/i18n.sh"
 }
-
-# ============================================================================
-# Tests for i18n::get
-# ============================================================================
 
 @test "i18n::get returns German text when LANG_CODE is de" {
     export LANG_CODE="de"
@@ -44,4 +37,3 @@ setup() {
     [ "$status" -eq 0 ]
     [ "$output" = "nonexistent_key" ]
 }
-

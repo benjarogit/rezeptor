@@ -1,0 +1,10 @@
+openglEnabled=1
+nativeGPU=1
+GLCompute=1
+CLCompute=1
+openglD2SEnabled=1
+glAdvancedEnabled=1
+openglAdvAntiAliasEnabled=1
+openglBilerpEnabled=1
+openglVBLSyncEnabled=0
+expFeatureCompCoreGPU=1

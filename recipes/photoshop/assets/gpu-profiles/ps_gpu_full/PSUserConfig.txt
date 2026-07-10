@@ -1,0 +1,8 @@
+# Rezeptor GPU-Profil: ps_gpu_full (EXPERIMENT — Fail-Kandidat)
+# Bei Fail: bash scripts/photoshop-gpu-profile.sh stable
+WarnRunningScripts 0
+[GPU]
+GPUForce 1
+UseOpenCL 1
+AllowGPU 1
+DisableNativeCanvas 0

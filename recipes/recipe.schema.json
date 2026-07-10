@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/benjarogit/rezeptor/recipes/recipe.schema.json",
+  "title": "Rezeptor recipe.yml",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "data_root",
+    "runtime",
+    "install_type",
+    "source_kind",
+    "fix_kind",
+    "install",
+    "launch",
+    "validate",
+    "repair",
+    "kill",
+    "install_steps"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "name": { "type": "string", "minLength": 1 },
+    "icon": { "type": "string" },
+    "category": { "type": "string" },
+    "version_guaranteed": { "type": "string" },
+    "version_label": { "type": "string" },
+    "data_root": { "type": "string", "minLength": 1 },
+    "prefix": { "type": "string" },
+    "runtime": { "enum": ["proton-ge", "system"] },
+    "install_type": {
+      "enum": [
+        "installer_offline",
+        "portable_launch",
+        "portable_bootstrap",
+        "game_install",
+        "game_portable",
+        "adobe_offline",
+        "portable"
+      ]
+    },
+    "source_kind": {
+      "enum": ["folder", "installer", "archive", "fixed_path"]
+    },
+    "fix_kind": { "enum": ["none", "optional", "required"] },
+    "source_formats": { "type": "string" },
+    "source_label": { "type": "string" },
+    "installer_dir": { "type": "string" },
+    "deploy_mode": { "enum": ["copy", "link", "inplace"] },
+    "target_default": { "type": "string" },
+    "target_label": { "type": "string" },
+    "portable_root": { "type": "string" },
+    "exe_glob": { "type": "string" },
+    "winetricks": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "env": {
+      "type": "object",
+      "additionalProperties": { "type": "string" }
+    },
+    "rezeptor_min": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+"
+    },
+    "install": { "type": "string" },
+    "launch": { "type": "string" },
+    "validate": { "type": "string" },
+    "repair": { "type": "string" },
+    "kill": { "type": "string" },
+    "uninstall": { "type": "string" },
+    "install_steps": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": [
+              "prepare_source",
+              "require_portable",
+              "prefix",
+              "winetricks",
+              "deploy_graphics",
+              "run_installer",
+              "stabilize_prefix",
+              "win10",
+              "fonts_registry",
+              "emit_log_paths"
+            ]
+          },
+          {
+            "type": "object",
+            "minProperties": 1,
+            "maxProperties": 1,
+            "additionalProperties": true
+          }
+        ]
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "source_kind": { "const": "archive" } },
+        "required": ["source_kind"]
+      },
+      "then": { "required": ["source_formats"] }
+    },
+    {
+      "if": {
+        "properties": { "source_kind": { "const": "fixed_path" } },
+        "required": ["source_kind"]
+      },
+      "then": { "required": ["installer_dir"] }
+    }
+  ],
+  "additionalProperties": true
+}

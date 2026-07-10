@@ -8,7 +8,7 @@
 #
 # Author:       Sunny C.
 # Website:      https://sunnyc.de
-# Repository:   https://github.com/benjarogit/photoshopCClinux
+# Repository:   https://github.com/benjarogit/rezeptor
 # License:      GPL-2.0
 # Copyright:    (c) 2024-2026 Sunny C.
 #
@@ -1496,7 +1496,11 @@ function download_component() {
                 aria2c -c -x 8 -d "$CACHE_PATH" -o $4 "$url"
                 
                 if [ $? -eq 0 ];then
-                    notify-send "Photoshop" "$4 download completed" -i "download"
+                    if declare -F recipe_notify::send >/dev/null 2>&1; then
+                        recipe_notify::send "Photoshop" "$4 download completed" "" "download"
+                    else
+                        notify-send -a "Photoshop" "$4 download completed" -i "download" 2>/dev/null || true
+                    fi
                 fi
 
             elif [ "$curlpkg" = "true" ];then
@@ -1507,7 +1511,11 @@ function download_component() {
                 wget "$url" -P "$CACHE_PATH"
                 
                 if [ $? -eq 0 ];then
-                    notify-send "Photoshop" "$4 download completed" -i "download"
+                    if declare -F recipe_notify::send >/dev/null 2>&1; then
+                        recipe_notify::send "Photoshop" "$4 download completed" "" "download"
+                    else
+                        notify-send -a "Photoshop" "$4 download completed" -i "download" 2>/dev/null || true
+                    fi
                 fi
             fi
             ((tout++))

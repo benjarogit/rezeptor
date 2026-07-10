@@ -3,7 +3,7 @@
 # Photoshop CC Linux - Security Module Tests
 #
 # Description:
-#   Unit tests for security.sh module functions using bats-core
+#   Unit tests for core/security.sh module functions using bats-core
 #
 # Author:       benjarogit
 # Repository:   https://github.com/benjarogit/photoshopCClinux
@@ -11,18 +11,11 @@
 # Copyright:    (c) 2024 benjarogit
 ################################################################################
 
-# Load test helper
 load test_helper
 
-# Load security module
 setup() {
-    # Source the security module
-    source "$BATS_TEST_DIRNAME/../scripts/security.sh"
+    source "$BATS_TEST_DIRNAME/../core/security.sh"
 }
-
-# ============================================================================
-# Tests for security::validate_path
-# ============================================================================
 
 @test "security::validate_path accepts valid user paths" {
     run security::validate_path "$HOME/test"
@@ -50,10 +43,6 @@ setup() {
     [ "$status" -eq 1 ]
 }
 
-# ============================================================================
-# Tests for security::sanitize_input
-# ============================================================================
-
 @test "security::sanitize_input removes dangerous characters" {
     run security::sanitize_input "test<script>alert('xss')</script>"
     [ "$status" -eq 0 ]
@@ -65,4 +54,3 @@ setup() {
     [ "$status" -eq 0 ]
     [ "$output" = "test-path_123" ]
 }
-

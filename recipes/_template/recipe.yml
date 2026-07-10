@@ -1,4 +1,4 @@
-# Vorlage für neue Rezepte — nicht im offiziellen Manifest (Ordner _template).
+# Vorlage — nicht im offiziellen Manifest. Kopieren mit: ./scripts/new-recipe.sh meine-app
 id: example-app
 name: "Example App (Template)"
 category: "Vorlage"
@@ -7,12 +7,16 @@ version_label: "Example 1.0.0"
 data_root: "~/.local/share/wine-software/example-app"
 prefix: "{data_root}/prefix"
 runtime: proton-ge
-install_type: installer_offline
-source_kind: installer
-source_label: "Setup.exe wählen"
-fix_kind: none
+install_type: portable_launch
+deploy_mode: copy
+target_default: "~/Dokumente/Example App"
+target_label: "Zielordner (Portable wird dorthin installiert)"
+source_kind: folder
+source_label: "Quelle (Ordner oder Archiv)"
+source_formats: zip,tar.gz,tgz
+fix_kind: optional
 exe_glob: "**/*.exe"
-winetricks: [win10]
+winetricks: [win10, vcrun2019]
 env:
   WINEDEBUG: "-all"
 validate: validate.sh
@@ -20,3 +24,9 @@ launch: launch.sh
 install: install.sh
 repair: repair.sh
 kill: kill.sh
+uninstall: uninstall.sh
+install_steps:
+  - prepare_source
+  - require_portable
+  - prefix
+  - winetricks

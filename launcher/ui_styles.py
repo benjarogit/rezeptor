@@ -1,4 +1,4 @@
-"""QSS und Farben — einheitliches Dark-Theme für den Rezepte-Launcher."""
+"""QSS und Farben — einheitliches Dark-Theme für den Rezeptor-Launcher."""
 
 from __future__ import annotations
 

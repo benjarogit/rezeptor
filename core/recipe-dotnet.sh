@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Wine-Mono / .NET — still in den Prefix (msiexec /qn), ohne System-pacman und ohne Dialog.
+# Wine-Mono / .NET — zuerst still per msiexec; bei Dialog: User klickt Installieren.
 
 recipe_dotnet::_load_mono_lock() {
     local root="${PROJECT_ROOT:-}"
@@ -95,7 +95,9 @@ recipe_dotnet::_install_support_msi() {
     local log_file="${1:-${LOG_FILE:-/dev/null}}"
     local support_msi="${WINEPREFIX}/drive_c/windows/mono/mono-2.0/support/winemono-support.msi"
     [ -f "$support_msi" ] || return 0
-    wine msiexec /i "$support_msi" /qn >> "$log_file" 2>&1 || true
+    local wine_bin="${WINE:-$(command -v wine 2>/dev/null)}"
+    recipe_wine_silent::run env WINEDLLOVERRIDES="" "$wine_bin" msiexec /i "$support_msi" /qn \
+        >> "$log_file" 2>&1 || true
 }
 
 recipe_dotnet::install_wine_mono() {
@@ -113,14 +115,17 @@ recipe_dotnet::install_wine_mono() {
     fi
 
     msi="$(recipe_dotnet::_mono_msi_cache)" || return 1
-    mkdir -p "$HOME/.cache/wine"
-    cp -f "$msi" "$HOME/.cache/wine/" >> "$log_file" 2>&1 || true
-    msi="$(recipe_dotnet::_mono_msi_cache)" || return 1
+
+    wine_runtime::init || return 1
+    wine_runtime::export_env
+    local wine_bin="${WINE:-}"
+    [ -n "$wine_bin" ] || wine_bin="$(command -v wine 2>/dev/null || true)"
+    [ -n "$wine_bin" ] || return 1
 
     {
         echo "=== wine-mono msiexec ($(date -Iseconds)) ==="
         echo "MSI=$msi WINEPREFIX=$WINEPREFIX"
-        WINEDLLOVERRIDES="" wine msiexec /i "$msi" /qn /norestart
+        recipe_wine_silent::run env WINEDLLOVERRIDES="" "$wine_bin" msiexec /i "$msi" /qn /norestart
     } >> "$log_file" 2>&1
 
     recipe_dotnet::_install_support_msi "$log_file"
@@ -131,8 +136,8 @@ recipe_dotnet::install_wine_mono() {
     fi
 
     {
-        echo "=== wine-mono appwiz.cpl ($(date -Iseconds)) ==="
-        WINEDLLOVERRIDES="" wine control.exe appwiz.cpl install_mono
+        echo "=== wine-mono msiexec retry ($(date -Iseconds)) ==="
+        recipe_wine_silent::run env WINEDLLOVERRIDES="" "$wine_bin" msiexec /i "$msi" /passive /norestart
     } >> "$log_file" 2>&1 || true
 
     recipe_dotnet::_install_support_msi "$log_file"
@@ -145,8 +150,9 @@ recipe_dotnet::ensure() {
     recipe_winetricks::prepare || return 1
 
     if type output::step >/dev/null 2>&1; then
-        output::step "Wine-Mono (.NET) — still, kein Dialog"
+        output::step "Wine-Mono (.NET)"
     fi
+    type recipe_hooks::hint_wine_popup >/dev/null 2>&1 && recipe_hooks::hint_wine_popup
     if type output::progress >/dev/null 2>&1; then
         output::progress 45 "Wine-Mono"
     fi
@@ -156,12 +162,10 @@ recipe_dotnet::ensure() {
         return 0
     fi
 
-    type output::user_action >/dev/null 2>&1 && output::user_action \
-        "Falls „Wine-Mono-Installation“ erscheint: Abbrechen — Rezeptor installiert still"
-
     if type output::step >/dev/null 2>&1; then
         output::step ".NET 4.8 (dotnet48, Fallback)"
     fi
+    type recipe_hooks::hint_wine_popup >/dev/null 2>&1 && recipe_hooks::hint_wine_popup
     if recipe_winetricks::run "$log_file" dotnet48 && recipe_dotnet::installed; then
         type output::success >/dev/null 2>&1 && output::success "dotnet48 installiert"
         return 0
@@ -169,7 +173,7 @@ recipe_dotnet::ensure() {
     return 1
 }
 
-# Vor wineboot: MSI bereitstellen, mscoree blockieren → kein Install-Dialog.
+# Vor wineboot: MSI bereitstellen und still installieren; Dialog → User klickt Installieren.
 recipe_dotnet::prefix_bootstrap() {
     local log_file="${1:-${LOG_DIR:-/tmp}/wine_mono_prefix.log}"
     recipe_dotnet::_stage_mono_msi || return 0

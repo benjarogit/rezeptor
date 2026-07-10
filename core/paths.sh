@@ -29,9 +29,15 @@ paths_expand() {
 
 paths_init_recipe() {
     local id="${RECIPE_ID:?RECIPE_ID required}"
-    export DATA_ROOT="${DATA_ROOT:-$(recipe_data_root "$id")}"
+    # Immer aus recipe.yml (recipe_export_env setzt DATA_ROOT vorher) — Fallback nur wenn leer.
+    if [ -z "${DATA_ROOT:-}" ]; then
+        DATA_ROOT="$(recipe_data_root "$id")"
+    fi
+    export DATA_ROOT
     export SCR_PATH="$DATA_ROOT"
-    export WINE_PREFIX="${WINE_PREFIX:-$DATA_ROOT/prefix}"
+    # Immer kanonischer Prefix — kein ~/.wine, kein prefix-fresh o. Ä. aus der Shell
+    export WINE_PREFIX="$DATA_ROOT/prefix"
+    export WINEPREFIX="$DATA_ROOT/prefix"
     export RESOURCES_PATH="${RESOURCES_PATH:-$DATA_ROOT/resources}"
     export CACHE_PATH="${CACHE_PATH:-$(wine_software_cache_dir)}"
     export WINE_SOFTWARE_BASE="$(wine_software_base)"

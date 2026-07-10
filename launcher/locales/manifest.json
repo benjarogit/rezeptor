@@ -1,0 +1,6 @@
+{
+  "locales": [
+    {"id": "de", "name": "Deutsch"},
+    {"id": "en", "name": "English"}
+  ]
+}

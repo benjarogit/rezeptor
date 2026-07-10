@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QFrame,
@@ -27,6 +27,7 @@ from ui_fluent import (
     IconWidget,
     StrongBodyLabel,
 )
+from i18n import t
 
 ROOT = Path(__file__).resolve().parent.parent
 REZEPTOR_ICON = ROOT / "images" / "rezeptor-icon.svg"
@@ -37,7 +38,21 @@ STATE_DOT = {
     "partial": COLOR_EXPERIMENTAL,
     "not_installed": "#6b7280",
     "unknown": "#6b7280",
+    "untrusted": "#d9a441",
+    "running": "#3ddc84",
 }
+
+_STATE_TIP_KEYS = {
+    "installed": "state.installed_tip",
+    "partial": "state.partial_tip",
+    "not_installed": "state.not_installed_tip",
+    "untrusted": "state.untrusted_tip",
+}
+
+
+def _state_tip(state: str) -> str:
+    return t(_STATE_TIP_KEYS.get(state, "state.unknown"))
+
 
 SEGMENT_TAB_STYLES = f"""
 QFrame#segmentTabBar {{
@@ -112,6 +127,12 @@ class SegmentTabBar(QFrame):
         if btn is not None:
             btn.setChecked(True)
 
+    def set_labels(self, tabs: list[tuple[str, str]]) -> None:
+        for key, label in tabs:
+            btn = self._buttons.get(key)
+            if btn is not None:
+                btn.setText(label)
+
 
 class StatusPill(QLabel):
     """Inline Status-Badge (Getestet, Proton-GE, …)."""
@@ -140,7 +161,7 @@ class RecipeSidebarCard(CardWidget):
         self,
         name: str,
         state: str,
-        icon=None,
+        icon: QIcon | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
@@ -150,12 +171,13 @@ class RecipeSidebarCard(CardWidget):
         )
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self._selected = False
+        self._running = False
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(10, 6, 10, 6)
         layout.setSpacing(8)
 
-        if FLUENT_AVAILABLE and icon is not None:
+        if FLUENT_AVAILABLE and icon is not None and not icon.isNull():
             iw = IconWidget(icon, self)
             iw.setFixedSize(20, 20)
             layout.addWidget(iw)
@@ -168,20 +190,24 @@ class RecipeSidebarCard(CardWidget):
         title.setWordWrap(False)
         layout.addWidget(title, stretch=1)
 
-        state_dot = QLabel("●", self)
-        state_dot.setFixedWidth(12)
-        state_dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        state_dot.setStyleSheet(
+        self._run_dot = QLabel("●", self)
+        self._run_dot.setFixedWidth(12)
+        self._run_dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._run_dot.setStyleSheet(
+            f"color: {STATE_DOT['running']}; font-size: 10px;"
+        )
+        self._run_dot.setToolTip(t("state.running"))
+        self._run_dot.setVisible(False)
+        layout.addWidget(self._run_dot)
+
+        self._state_dot = QLabel("●", self)
+        self._state_dot.setFixedWidth(12)
+        self._state_dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._state_dot.setStyleSheet(
             f"color: {STATE_DOT.get(state, STATE_DOT['unknown'])}; font-size: 10px;"
         )
-        state_dot.setToolTip(
-            {
-                "installed": "Installiert",
-                "partial": "Teilweise",
-                "not_installed": "Nicht installiert",
-            }.get(state, "Unbekannt")
-        )
-        layout.addWidget(state_dot)
+        self._state_dot.setToolTip(_state_tip(state))
+        layout.addWidget(self._state_dot)
         self._apply_border()
 
     def mousePressEvent(self, event) -> None:  # type: ignore[no-untyped-def]
@@ -192,6 +218,19 @@ class RecipeSidebarCard(CardWidget):
     def set_selected(self, selected: bool) -> None:
         self._selected = selected
         self._apply_border()
+
+    def set_running(self, running: bool) -> None:
+        self._running = running
+        # Nur ein Punkt rechts: hellgrün = läuft; sonst Install-Status
+        self._run_dot.setVisible(running)
+        self._state_dot.setVisible(not running)
+
+    def set_install_state(self, state: str) -> None:
+        self._state_dot.setStyleSheet(
+            f"color: {STATE_DOT.get(state, STATE_DOT['unknown'])}; font-size: 10px;"
+        )
+        self._state_dot.setToolTip(_state_tip(state))
+        self._state_dot.setVisible(not self._running)
 
     def _apply_border(self) -> None:
         if self._selected:

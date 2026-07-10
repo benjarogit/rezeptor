@@ -328,5 +328,5 @@ msg_disable_gpu=Disabling GPU acceleration in Photoshop settings...
 post_install_tips_title=Next Steps & Tips
 tip_virtual_desktop=→ Enable Virtual Desktop: Menu → 5 (Configure Wine) → Graphics → Emulate a virtual desktop
 tip_gpu_glitches=→ If you experience graphics issues: Photoshop → Preferences → Performance → Disable Use Graphics Processor
-tip_documentation=→ More info: https://github.com/benjarogit/photoshopCClinux
+tip_documentation=→ More info: https://github.com/benjarogit/rezeptor
 
