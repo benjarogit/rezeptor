@@ -1,0 +1,50 @@
+# Vorlage Steam-/Proton-Spiel (Online-Fix / BYOS) — nicht im Manifest.
+# Anlegen: ./scripts/new-recipe.sh --type steam-game meine-app "Meine App"
+# Runtime: nur Proton-GE. Rezeptor kopiert kein Spiel — nur Wrapper + Checks.
+id: example-steam-game
+icon: "{repo}/images/rezeptor-icon.svg"
+name: "Example Steam Game (Template)"
+author: ""
+category: "Spiele"
+origin: official
+version_guaranteed: "Steam + OnlineFix (anpassen)"
+version_label: "Steam game — BYOS + Online-Fix"
+version_detect:
+  - kind: stack
+    identity_file: "Game.exe"
+    require_files:
+      - "path/to/OnlineFix64.dll"
+      - "path/to/OnlineFix.ini"
+    ini: "path/to/OnlineFix.ini"
+    require_ini:
+      FakeAppId: "480"
+      RealAppId: "0"
+    ok_label: "Steam + OnlineFix"
+    partial_label: "Game"
+notify_title: ""
+data_root: "~/.local/share/wine-software/example-steam-game"
+runtime: proton-ge
+install_type: game_portable
+deploy_mode: link
+source_kind: folder
+source_label: "Spielordner (EXE + Online-Fix)"
+source_formats: ""
+steam_appid: "0"
+steam_fake_appid: "480"
+fix_kind: none
+exe_glob: "Game.exe"
+# Relativ zum Spielordner — an euren Fix anpassen
+steam_fix_win64_rel: "Binaries/Win64"
+steam_fix_required:
+  - OnlineFix64.dll
+  - OnlineFix.ini
+steam_api_rel: ""
+env: {}
+validate: validate.sh
+launch: launch.sh
+install: install.sh
+repair: repair.sh
+kill: kill.sh
+uninstall: uninstall.sh
+install_steps:
+  - emit_log_paths

@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "recipes": [
+    {
+      "id": "photoshop",
+      "name": "Adobe Photoshop CC 2021",
+      "category": "Grafik & Design",
+      "trust": "official",
+      "path": "photoshop",
+      "summary": {
+        "de": "Adobe Photoshop CC 2021 unter Proton-GE — Installation läuft still im Hintergrund (Offline-Installer).",
+        "en": "Adobe Photoshop CC 2021 on Proton-GE — installation runs quietly in the background (offline installer)."
+      }
+    },
+    {
+      "id": "wiso-steuer",
+      "name": "WISO Steuer (Portable)",
+      "category": "Finanzen & Steuer",
+      "trust": "official",
+      "path": "wiso-steuer",
+      "summary": {
+        "de": "WISO Steuer als Portable unter Proton-GE — Quelle wählen, in den Zielordner kopieren, starten.",
+        "en": "WISO Steuer portable on Proton-GE — pick source, copy to target folder, launch."
+      }
+    },
+    {
+      "id": "house-of-ashes",
+      "name": "House of Ashes",
+      "category": "Spiele",
+      "trust": "official",
+      "path": "house-of-ashes",
+      "summary": {
+        "de": "The Dark Pictures Anthology: House of Ashes über Proton starten — mit Online-Fix für Steam.",
+        "en": "Launch The Dark Pictures Anthology: House of Ashes via Proton — with online fix for Steam."
+      }
+    },
+    {
+      "id": "za4-trainer",
+      "name": "Zombie Army 4 — Plus 14 Trainer",
+      "category": "Spiele",
+      "trust": "official",
+      "path": "za4-trainer",
+      "summary": {
+        "de": "Trainer für Zombie Army 4: Dead War (Steam) — kein Spiel-Installer, nur Trainer ablegen und starten.",
+        "en": "Trainer for Zombie Army 4: Dead War (Steam) — no game installer, only deploy and launch the trainer."
+      }
+    }
+  ]
+}

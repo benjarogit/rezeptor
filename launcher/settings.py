@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 SETTINGS_DIR = Path.home() / ".local/share/wine-software/rezeptor"
@@ -28,6 +28,10 @@ class RezeptorSettings:
     theme: str = "dark"  # nur dark — Light war unbrauchbar, kein Parallel-Theme
     last_recipe_id: str = ""
     developer_mode: bool = False
+    hidden_recipe_ids: list[str] = field(default_factory=list)
+    recipe_order: list[str] = field(default_factory=list)  # drag order of recipe ids
+    custom_category_order: list[str] = field(default_factory=list)  # DnD order for non-standard categories
+    recipe_sources: list[dict] = field(default_factory=list)  # [{id, url, label, trusted: bool}]
     # UI-Persistenz (Base64 von QWidget.saveGeometry / QSplitter.saveState)
     window_geometry: str = ""
     window_maximized: bool = False
@@ -36,6 +40,40 @@ class RezeptorSettings:
     recipe_view_geometry: str = ""
     docs_geometry: str = ""
     settings_geometry: str = ""
+
+
+def _parse_str_list(raw: object) -> list[str]:
+    if not isinstance(raw, list):
+        return []
+    out: list[str] = []
+    for item in raw:
+        s = str(item).strip()
+        if s:
+            out.append(s)
+    return out
+
+
+def _parse_recipe_sources(raw: object) -> list[dict]:
+    if not isinstance(raw, list):
+        return []
+    out: list[dict] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        rid = str(item.get("id", "")).strip()
+        url = str(item.get("url", "")).strip()
+        label = str(item.get("label", "")).strip()
+        if not rid or not url:
+            continue
+        out.append(
+            {
+                "id": rid,
+                "url": url,
+                "label": label or rid,
+                "trusted": bool(item.get("trusted", False)),
+            }
+        )
+    return out
 
 
 def recipe_edit_allowed(settings: RezeptorSettings | None = None) -> bool:
@@ -71,6 +109,10 @@ def load_settings() -> RezeptorSettings:
         theme=theme,
         last_recipe_id=str(data.get("last_recipe_id", "") or "").strip(),
         developer_mode=bool(data.get("developer_mode", False)),
+        hidden_recipe_ids=_parse_str_list(data.get("hidden_recipe_ids")),
+        recipe_order=_parse_str_list(data.get("recipe_order")),
+        custom_category_order=_parse_str_list(data.get("custom_category_order")),
+        recipe_sources=_parse_recipe_sources(data.get("recipe_sources")),
         window_geometry=str(data.get("window_geometry", "") or ""),
         window_maximized=bool(data.get("window_maximized", False)),
         splitter_state=str(data.get("splitter_state", "") or ""),

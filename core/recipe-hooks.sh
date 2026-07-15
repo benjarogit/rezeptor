@@ -29,7 +29,20 @@ recipe_hooks::_source() {
 
 recipe_hooks::init_dirs() {
     [ -n "${RECIPE_DIR:-}" ] || recipe_hooks::die "RECIPE_DIR setzen vor recipe_hooks::load"
-    PROJECT_ROOT="${PROJECT_ROOT:-$(cd "$RECIPE_DIR/../.." && pwd)}"
+    # PROJECT_ROOT: Env, sonst nach oben wandern bis core/ existiert
+    # (recipes/<id> und recipes/community/<id>).
+    if [ -z "${PROJECT_ROOT:-}" ]; then
+        local _walk="$RECIPE_DIR"
+        PROJECT_ROOT=""
+        while [ "$_walk" != "/" ]; do
+            if [ -d "$_walk/core" ] && [ -f "$_walk/core/recipe-hooks.sh" ]; then
+                PROJECT_ROOT="$_walk"
+                break
+            fi
+            _walk="$(cd "$_walk/.." && pwd)"
+        done
+        [ -n "$PROJECT_ROOT" ] || PROJECT_ROOT="$(cd "$RECIPE_DIR/../.." && pwd)"
+    fi
     CORE_DIR="${CORE_DIR:-$PROJECT_ROOT/core}"
     # Immer dieses Rezept — kein vererbtes RECIPE_YML von einem anderen Rezept.
     RECIPE_YML="$RECIPE_DIR/recipe.yml"

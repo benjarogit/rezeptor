@@ -6,6 +6,9 @@ contact_links:
   - name: 🇩🇪 Deutsche Dokumentation
     url: https://github.com/benjarogit/rezeptor/blob/main/README.de.md
     about: Deutsche Installations- und Fehlerbehebungsanleitung
+  - name: 📦 Recipe authoring guide
+    url: https://github.com/benjarogit/rezeptor/blob/main/docs/en/RECIPE-AUTHORING.md
+    about: Write a community recipe, then open a Recipe Submission issue
   - name: 🔧 Troubleshooting Script
     url: https://github.com/benjarogit/rezeptor/blob/main/core/troubleshoot.sh
     about: Run ./troubleshoot.sh for automatic diagnostics

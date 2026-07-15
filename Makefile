@@ -22,8 +22,9 @@ compile:
 	python3 -m compileall -q launcher/
 
 recipes-check:
-	@for f in recipes/*/recipe.yml; do \
-		case "$$f" in */_template/*|*/_template-installer/*) continue ;; esac; \
+	@for f in recipes/*/recipe.yml recipes/community/*/recipe.yml; do \
+		[ -f "$$f" ] || continue; \
+		case "$$f" in */_*) continue ;; esac; \
 		grep -q '^repair:' "$$f" || { echo "missing repair: in $$f"; exit 1; }; \
 		grep -q '^validate:' "$$f" || { echo "missing validate: in $$f"; exit 1; }; \
 		grep -q '^uninstall:' "$$f" || { echo "missing uninstall: in $$f"; exit 1; }; \

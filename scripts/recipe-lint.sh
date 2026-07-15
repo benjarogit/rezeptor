@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Lint official recipe directories (includes _template for CI).
+# Lint official and community recipe directories.
+# Skips _*-prefixed dirs and the recipes/community/ container itself.
 set -eu
 (set -o pipefail 2>/dev/null) || true
 
@@ -203,12 +204,23 @@ lint_recipe_dir() {
     done
 }
 
-for dir in "$RECIPES"/*/; do
-    [ -d "$dir" ] || continue
+should_lint_dir() {
+    local dir="$1" base
+    [ -d "$dir" ] || return 1
+    base="$(basename "$dir")"
+    case "$base" in
+        _*|community) return 1 ;;
+    esac
+    [ -f "$dir/recipe.yml" ] || return 1
+    return 0
+}
+
+for dir in "$RECIPES"/*/ "$RECIPES"/community/*/; do
+    should_lint_dir "$dir" || continue
     lint_recipe_dir "$dir"
 done
 
-# Schema / install_steps structure
+# Schema / install_steps structure (official + community)
 if [ -f "$ROOT/scripts/recipe-schema-check.py" ]; then
     if ! python3 "$ROOT/scripts/recipe-schema-check.py"; then
         errors=$((errors + 1))

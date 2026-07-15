@@ -212,13 +212,28 @@ def discover_recipes() -> list[RecipeInfo]:
     synced, sync_msg = sync_manifest_if_stale(RECIPES_DIR, MANIFEST_PATH, ROOT)
     if synced and sync_msg:
         os.environ["REZEPTOR_MANIFEST_SYNC"] = sync_msg
+
+    yml_paths: list[Path] = []
     for yml in sorted(RECIPES_DIR.glob("*/recipe.yml")):
         if yml.parent.name.startswith("_"):
             continue
+        if yml.parent.name == "community":
+            continue
+        yml_paths.append(yml)
+    community = RECIPES_DIR / "community"
+    if community.is_dir():
+        for yml in sorted(community.glob("*/recipe.yml")):
+            if yml.parent.name.startswith("_"):
+                continue
+            yml_paths.append(yml)
+
+    for yml in yml_paths:
         ok, reason = verify_recipe_trust(yml.parent, MANIFEST_PATH)
         meta = parse_recipe_yml(yml)
         rid = meta.get("id", yml.parent.name)
         meta["_dir"] = str(yml.parent)
+        if "community" in yml.parent.parts and meta.get("origin", "") != "official":
+            meta.setdefault("origin", "community")
         info = RecipeInfo(rid=rid, meta=meta, trust_ok=ok, trust_reason=reason or "")
         if not ok:
             info.state = RecipeState.UNTRUSTED

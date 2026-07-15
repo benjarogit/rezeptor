@@ -173,7 +173,11 @@ def main() -> int:
 
     paths = args.recipes
     if not paths:
-        paths = sorted((ROOT / "recipes").glob("*/recipe.yml"))
+        recipes_root = ROOT / "recipes"
+        paths = sorted(recipes_root.glob("*/recipe.yml"))
+        community = recipes_root / "community"
+        if community.is_dir():
+            paths.extend(sorted(community.glob("*/recipe.yml")))
 
     errors = 0
     warnings = 0
@@ -181,6 +185,10 @@ def main() -> int:
         if not yml.is_file():
             print(f"ERROR: fehlt {yml}", file=sys.stderr)
             errors += 1
+            continue
+        if yml.parent.name.startswith("_"):
+            continue
+        if yml.parent.name == "community":
             continue
         label = yml.parent.name
         try:
