@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QIcon
+from PyQt6.QtCore import QMimeData, QPoint, Qt, pyqtSignal
+from PyQt6.QtGui import QDrag, QFont, QIcon
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QComboBox,
@@ -17,6 +17,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+RECIPE_MIME = "application/x-rezeptor-recipe-id"
 
 from ui_fluent import (
     ACCENT_COPPER,
@@ -273,6 +275,7 @@ class RecipeSidebarCard(CardWidget):
 
     clicked = pyqtSignal()
     contextMenuRequested = pyqtSignal()
+    reorderRequested = pyqtSignal(str, str)  # source_id, target_id
 
     def __init__(
         self,
@@ -280,13 +283,18 @@ class RecipeSidebarCard(CardWidget):
         state: str,
         icon: QIcon | None = None,
         parent: QWidget | None = None,
+        *,
+        recipe_id: str = "",
     ) -> None:
         super().__init__(parent)
+        self._recipe_id = recipe_id
+        self._drag_start = QPoint()
         self.setFixedHeight(42)
         self.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAcceptDrops(True)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(lambda _pos: self.contextMenuRequested.emit())
         self._selected = False
@@ -334,10 +342,57 @@ class RecipeSidebarCard(CardWidget):
 
     def mousePressEvent(self, event) -> None:  # type: ignore[no-untyped-def]
         if event.button() == Qt.MouseButton.LeftButton:
+            self._drag_start = event.position().toPoint()
             self.clicked.emit()
         elif event.button() == Qt.MouseButton.RightButton:
             self.contextMenuRequested.emit()
         super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:  # type: ignore[no-untyped-def]
+        if (
+            event.buttons() & Qt.MouseButton.LeftButton
+            and self._recipe_id
+            and (event.position().toPoint() - self._drag_start).manhattanLength() >= 8
+        ):
+            mime = QMimeData()
+            mime.setData(RECIPE_MIME, self._recipe_id.encode("utf-8"))
+            drag = QDrag(self)
+            drag.setMimeData(mime)
+            drag.exec(Qt.DropAction.MoveAction)
+            return
+        super().mouseMoveEvent(event)
+
+    def dragEnterEvent(self, event) -> None:  # type: ignore[no-untyped-def]
+        if self._can_accept_recipe_drop(event):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event) -> None:  # type: ignore[no-untyped-def]
+        if self._can_accept_recipe_drop(event):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event) -> None:  # type: ignore[no-untyped-def]
+        src = self._drop_source_id(event)
+        if src and src != self._recipe_id:
+            self.reorderRequested.emit(src, self._recipe_id)
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def _can_accept_recipe_drop(self, event) -> bool:  # type: ignore[no-untyped-def]
+        src = self._drop_source_id(event)
+        return bool(src and src != self._recipe_id)
+
+    @staticmethod
+    def _drop_source_id(event) -> str:  # type: ignore[no-untyped-def]
+        mime = event.mimeData()
+        if mime is None or not mime.hasFormat(RECIPE_MIME):
+            return ""
+        raw = bytes(mime.data(RECIPE_MIME))
+        return raw.decode("utf-8", errors="replace").strip()
 
     def set_selected(self, selected: bool) -> None:
         self._selected = selected

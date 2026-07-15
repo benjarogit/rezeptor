@@ -84,6 +84,8 @@ CHANGELOG.md
 AppDir-build/
 *.AppImage
 .cache/proton-ge-build/
+site/
+.cache/
 
 # ============================================================
 # IDE/Editor Files

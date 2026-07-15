@@ -50,6 +50,9 @@
     "uninstall": "Deinstallieren",
     "view_recipe": "Rezept anzeigen…",
     "edit_recipe": "Rezept bearbeiten…",
+    "add_recipe_catalog": "Rezept hinzufügen…",
+    "hide_recipe": "Rezept ausblenden",
+    "show_hidden_recipes": "Ausgeblendete Rezepte einblenden…",
     "settings": "Einstellungen…",
     "cleanup_logs": "Logs aufräumen",
     "rollback": "Rollback…",
@@ -367,8 +370,10 @@
     "type": "Typ",
     "type_portable": "Portable (Ordner/Archiv)",
     "type_installer": "Offline-Installer",
+    "type_steam_game": "Steam-Spiel (Proton-GE + Wrapper)",
     "category": "Kategorie",
     "category_ph": "z. B. Grafik & Design",
+    "category_tip": "Vorschläge wählen oder eigenen Freitext eingeben",
     "create": "Anlegen",
     "manifest_again": "Manifest erneut aktualisieren",
     "running": "Rezept wird angelegt…",
@@ -387,5 +392,31 @@
   "docs": {
     "intro": "Rezeptor-Rezepte aufbauen — lokal aus dem Repository. Online-Version auf GitHub (Branch main).",
     "github": "Auf GitHub öffnen…"
+  },
+  "catalog": {
+    "title": "Rezept hinzufügen",
+    "intro": "Offizielle und Community-Rezepte aus dem Katalog laden (GitHub). Mitgelieferte Rezepte bleiben im Tool.",
+    "foreign_warn": "Fremde Quellen sind nicht offiziell geprüft — Sicherheitsrisiko. Nur vertrauenswürdige Repos hinzufügen.",
+    "foreign_warn_dialog": "Fremdquelle speichern? Rezepte daraus sind nicht von uns geprüft und können schädlich sein.",
+    "foreign_confirm": "Von Fremdquelle „{repo}“ installieren? Nicht offiziell geprüft.",
+    "source_ph": "GitHub-Repo (z. B. benjarogit/rezeptor)",
+    "refresh": "Aktualisieren",
+    "add_source": "Quelle merken",
+    "install": "Hinzufügen",
+    "close": "Schließen",
+    "loaded": "{n} Rezept(e) im Katalog",
+    "installing": "Installiere „{id}“…",
+    "installed": "Installiert: {path}",
+    "source_exists": "Quelle bereits gespeichert",
+    "source_saved": "Quelle gespeichert",
+    "trust_official": "offiziell",
+    "trust_community": "Community"
+  },
+  "hidden": {
+    "title": "Ausgeblendete Rezepte",
+    "intro": "Ausgeblendete Rezepte fehlen in der Sidebar — Installation und Daten bleiben erhalten. Deinstallieren ist getrennt.",
+    "unhide": "Wieder einblenden",
+    "empty": "Keine ausgeblendeten Rezepte.",
+    "hidden_ok": "Rezept „{id}“ ausgeblendet"
   }
 }

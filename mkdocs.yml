@@ -1,0 +1,104 @@
+site_name: Rezeptor Docs
+site_description: >-
+  Offizielles Rezeptor-Wiki — Rezepte, Autoren-Doku und Maintainer-Notizen für
+  Windows-Software unter Proton-GE auf Linux.
+site_url: https://benjarogit.github.io/rezeptor/
+repo_url: https://github.com/benjarogit/rezeptor
+repo_name: benjarogit/rezeptor
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: de
+  logo: assets/rezeptor-icon.svg
+  favicon: assets/rezeptor-icon.svg
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Dunkles Theme
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Helles Theme
+
+plugins:
+  - search:
+      lang:
+        - de
+        - en
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/benjarogit/rezeptor
+  alternate:
+    - name: Deutsch
+      link: /rezeptor/de/README/
+      lang: de
+    - name: English
+      link: /rezeptor/en/README/
+      lang: en
+
+extra_css:
+  - stylesheets/extra.css
+
+nav:
+  - Start: index.md
+  - Deutsch:
+      - Übersicht: de/README.md
+      - Rezept-Katalog: de/CATALOG.md
+      - Steam-Wrapper: de/STEAM-WRAPPER.md
+      - Für Autoren:
+          - Schnellstart: de/ENTWICKLER.md
+          - Rezept schreiben: de/RECIPE-AUTHORING.md
+          - Rezepte & Workflow: de/RECIPES.md
+          - Referenz WISO: de/WISO.md
+          - Internationalisierung: de/I18N.md
+          - Marke: de/BRAND.md
+  - English:
+      - Overview: en/README.md
+      - Recipe catalog: en/CATALOG.md
+      - Steam wrapper: en/STEAM-WRAPPER.md
+      - For authors:
+          - Quick start: en/ENTWICKLER.md
+          - Recipe authoring: en/RECIPE-AUTHORING.md
+          - Recipes & workflow: en/RECIPES.md
+          - WISO reference: en/WISO.md
+          - Internationalization: en/I18N.md
+          - Brand: en/BRAND.md
+  - Maintainer:
+      - Deutsch:
+          - QA-Handbuch: maintainer/de/MANUAL-QA.md
+          - Testplan: maintainer/de/TEST-PLAN.md
+          - Testing: maintainer/de/TESTING.md
+          - GPU-Experimente: maintainer/de/GPU-EXPERIMENTS.md
+          - Photoshop GPU Handoff: maintainer/de/HANDOFF-PHOTOSHOP-GPU.md
+      - English:
+          - GPU experiments: maintainer/en/GPU-EXPERIMENTS.md
+          - Photoshop GPU handoff: maintainer/en/HANDOFF-PHOTOSHOP-GPU.md
+          - Test plan: maintainer/en/TEST-PLAN.md
+          - Testing: maintainer/en/TESTING.md
+  - Übersetzungen: CONTRIBUTING-TRANSLATIONS.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight
+  - pymdownx.tabbed:
+      alternate_style: true
+  - tables
+  - toc:
+      permalink: true

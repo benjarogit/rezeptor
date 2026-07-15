@@ -116,6 +116,7 @@ from settings import RezeptorSettings, load_settings, recipe_edit_allowed, save_
 from ui_settings import SettingsDialog
 from ui_docs import DeveloperDocsDialog
 from ui_recipe_view import RecipeViewDialog
+from ui_catalog import CatalogDialog, HiddenRecipesDialog
 from ui_recipe_wizard import (
     RecipeWizardBlockedDialog,
     RecipeWizardDialog,
@@ -126,6 +127,7 @@ from ui_source import (
     needs_source_dialog,
     source_configure_label,
 )
+from recipe_categories import sort_categories, sort_recipes_in_category
 from recipe_trust import (
     friendly_trust_reason,
     generate_manifest,
@@ -820,9 +822,11 @@ class RezeptorWindow(QMainWindow):
         self.action_refresh.triggered.connect(self.refresh_statuses)
         rezeptor_menu.addAction(self.action_refresh)
         rezeptor_menu.addAction(t("menu.new_recipe"), self.show_recipe_wizard)
+        rezeptor_menu.addAction(t("menu.add_recipe_catalog"), self.show_catalog_dialog)
         self.action_view_recipe = QAction(self._view_recipe_label(), self)
         self.action_view_recipe.triggered.connect(self.show_recipe_view)
         rezeptor_menu.addAction(self.action_view_recipe)
+        rezeptor_menu.addAction(t("menu.show_hidden_recipes"), self.show_hidden_recipes_dialog)
         rezeptor_menu.addSeparator()
         rezeptor_menu.addAction(t("menu.cleanup_logs"), self.cleanup_logs_now)
         rezeptor_menu.addAction(t("menu.rollback"), self.show_rollback_dialog)
@@ -1395,6 +1399,9 @@ class RezeptorWindow(QMainWindow):
             )
         self._add_menu_action(menu, t("menu.open_folder"), self._open_data_root)
         self._add_menu_action(menu, self._view_recipe_label(), self.show_recipe_view)
+        self._add_menu_action(
+            menu, t("menu.hide_recipe"), lambda: self.hide_recipe(info.rid)
+        )
         if info.state in (RecipeState.INSTALLED, RecipeState.PARTIAL):
             self._add_menu_action(
                 menu, t("menu.shortcuts"), self.run_desktop_shortcuts
@@ -1867,8 +1874,11 @@ class RezeptorWindow(QMainWindow):
         if hasattr(self, "sidebar_search"):
             needle = (self.sidebar_search.text() or "").strip().lower()
 
+        hidden = set(self._settings.hidden_recipe_ids or [])
         matched: list[tuple[int, RecipeInfo]] = []
         for i, info in enumerate(self.recipes):
+            if info.rid in hidden:
+                continue
             name = (info.meta.get("name") or info.rid).lower()
             if needle and needle not in name and needle not in info.rid.lower():
                 continue
@@ -1879,21 +1889,25 @@ class RezeptorWindow(QMainWindow):
             cat = info.meta.get("category", "Sonstige").strip() or "Sonstige"
             grouped.setdefault(cat, []).append((i, info))
 
-        for cat in sorted(grouped.keys()):
+        order = list(self._settings.recipe_order or [])
+        custom_cat_order = list(self._settings.custom_category_order or [])
+        for cat in sort_categories(list(grouped.keys()), custom_cat_order):
             header = QLabel(cat.upper())
             header.setObjectName("sidebarCategory")
             self.recipe_cards_layout.addWidget(header)
-            for i, info in grouped[cat]:
+            for i, info in sort_recipes_in_category(grouped[cat], order):
                 card = RecipeSidebarCard(
                     info.meta.get("name", info.rid),
                     info.state.value,
                     recipe_icon(info.meta),
+                    recipe_id=info.rid,
                 )
                 card.apply_theme(getattr(self, "_theme", "dark"))
                 card.clicked.connect(lambda idx=i: self._select_recipe_index(idx))
                 card.contextMenuRequested.connect(
                     lambda info=info: self._show_card_context_menu(info)
                 )
+                card.reorderRequested.connect(self._on_recipe_reorder)
                 self.recipe_cards_layout.addWidget(
                     card, 0, Qt.AlignmentFlag.AlignTop
                 )
@@ -1909,15 +1923,26 @@ class RezeptorWindow(QMainWindow):
 
     def refresh_statuses(self) -> None:
         env = self._base_env()
-        # Re-verify trust + install state
+        # Re-verify trust + install state (official + community/)
         refreshed: list[RecipeInfo] = []
+        yml_paths: list[Path] = []
         for yml in sorted(RECIPES_DIR.glob("*/recipe.yml")):
-            if yml.parent.name.startswith("_"):
+            if yml.parent.name.startswith("_") or yml.parent.name == "community":
                 continue
+            yml_paths.append(yml)
+        community = RECIPES_DIR / "community"
+        if community.is_dir():
+            for yml in sorted(community.glob("*/recipe.yml")):
+                if yml.parent.name.startswith("_"):
+                    continue
+                yml_paths.append(yml)
+        for yml in yml_paths:
             ok, reason = verify_recipe_trust(yml.parent, MANIFEST_PATH)
             meta = parse_recipe_yml(yml)
             rid = meta.get("id", yml.parent.name)
             meta["_dir"] = str(yml.parent)
+            if "community" in yml.parent.parts and meta.get("origin", "") != "official":
+                meta.setdefault("origin", "community")
             info = RecipeInfo(rid=rid, meta=meta, trust_ok=ok, trust_reason=reason or "")
             if not ok:
                 info.state = RecipeState.UNTRUSTED
@@ -2643,6 +2668,81 @@ class RezeptorWindow(QMainWindow):
             t("dialog.wine_dialogs_title"),
             t("dialog.wine_dialogs_body"),
         )
+
+    def show_catalog_dialog(self) -> None:
+        installed = {info.rid for info in self.recipes}
+        dlg = CatalogDialog(
+            self,
+            recipes_dir=RECIPES_DIR,
+            settings=self._settings,
+            installed_ids=installed,
+        )
+        apply_tool_window(dlg, icon=self.windowIcon(), modal=True)
+        dlg.exec()
+        self._settings = load_settings()
+        self.recipes = discover_recipes()
+        self._populate_list()
+        self.refresh_statuses()
+
+    def show_hidden_recipes_dialog(self) -> None:
+        names = {
+            info.rid: str(info.meta.get("name") or info.rid) for info in self.recipes
+        }
+        for rid in self._settings.hidden_recipe_ids or []:
+            names.setdefault(rid, rid)
+        dlg = HiddenRecipesDialog(
+            self, settings=self._settings, recipe_names=names
+        )
+        apply_tool_window(dlg, icon=self.windowIcon(), modal=True)
+        dlg.exec()
+        self._settings = load_settings()
+        self._populate_list()
+
+    def hide_recipe(self, rid: str) -> None:
+        rid = (rid or "").strip()
+        if not rid:
+            return
+        hidden = list(self._settings.hidden_recipe_ids or [])
+        if rid not in hidden:
+            hidden.append(rid)
+            self._settings.hidden_recipe_ids = hidden
+            save_settings(self._settings)
+            self._activity("info", t("hidden.hidden_ok", id=rid))
+        if self._selected and self._selected.rid == rid:
+            self._selected = None
+            self._selected_index = -1
+        self._populate_list()
+        if self._recipe_cards:
+            first = self._recipe_cards[0][1]
+            for i, info in enumerate(self.recipes):
+                if info.rid == first.rid:
+                    self._select_recipe_index(i)
+                    break
+
+    def _on_recipe_reorder(self, source_id: str, target_id: str) -> None:
+        if not source_id or not target_id or source_id == target_id:
+            return
+        order = list(self._settings.recipe_order or [])
+        for info in self.recipes:
+            if info.rid not in order:
+                order.append(info.rid)
+        if source_id not in order:
+            order.append(source_id)
+        if target_id not in order:
+            order.append(target_id)
+        order.remove(source_id)
+        order.insert(order.index(target_id), source_id)
+        self._settings.recipe_order = order
+        save_settings(self._settings)
+        prev = self._selected.rid if self._selected else ""
+        self._populate_list()
+        if prev:
+            for i, info in enumerate(self.recipes):
+                if info.rid == prev and info.rid not in set(
+                    self._settings.hidden_recipe_ids or []
+                ):
+                    self._select_recipe_index(i)
+                    break
 
     def show_settings(self) -> None:
         dlg = SettingsDialog(self, self._settings)

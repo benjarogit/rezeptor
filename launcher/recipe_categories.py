@@ -16,23 +16,45 @@ def is_standard(category: str) -> bool:
 
 
 def sort_categories(categories: list[str], custom_order: list[str]) -> list[str]:
-    """Order categories: standard slots first, then custom_order, then remainder."""
+    """Standard categories first (alphabetical), then custom (DnD order), then rest."""
     seen: set[str] = set()
     ordered: list[str] = []
 
-    for cat in STANDARD_CATEGORIES:
-        if cat in categories and cat not in seen:
-            ordered.append(cat)
-            seen.add(cat)
+    present_standard = sorted(c for c in categories if is_standard(c))
+    for cat in present_standard:
+        ordered.append(cat)
+        seen.add(cat)
 
     for cat in custom_order:
-        if cat in categories and cat not in seen:
+        if cat in categories and cat not in seen and not is_standard(cat):
             ordered.append(cat)
             seen.add(cat)
 
-    for cat in sorted(categories):
-        if cat not in seen:
-            ordered.append(cat)
-            seen.add(cat)
+    for cat in sorted(c for c in categories if c not in seen):
+        ordered.append(cat)
+        seen.add(cat)
 
     return ordered
+
+
+def sort_recipes_in_category(
+    recipes: list[tuple[int, object]],
+    recipe_order: list[str],
+    *,
+    rid_attr: str = "rid",
+) -> list[tuple[int, object]]:
+    """Stable sort by settings recipe_order, then by name."""
+    order_index = {rid: i for i, rid in enumerate(recipe_order)}
+
+    def key(item: tuple[int, object]) -> tuple[int, str]:
+        _i, info = item
+        rid = str(getattr(info, rid_attr, "") or "")
+        name = ""
+        meta = getattr(info, "meta", None)
+        if isinstance(meta, dict):
+            name = str(meta.get("name") or rid)
+        else:
+            name = rid
+        return (order_index.get(rid, 10_000), name.lower())
+
+    return sorted(recipes, key=key)

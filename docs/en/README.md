@@ -1,5 +1,7 @@
 # Rezeptor — Documentation
 
+> Wiki view: [Rezeptor Docs](https://benjarogit.github.io/rezeptor/) (MkDocs on GitHub Pages)
+
 | Audience | What |
 |----------|------|
 | **User** | README / README.de.md, recipe info in the GUI |

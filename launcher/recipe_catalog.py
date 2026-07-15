@@ -1,11 +1,7 @@
 """Recipe catalog: local index, GitHub fetch, and community recipe install.
 
 Official recipes live under ``recipes/<id>``; community recipes under
-``recipes/community/<id>``.
-
-**Integration note:** ``launcher.discover_recipes`` must also scan
-``recipes/community/*/recipe.yml`` (in addition to ``recipes/*/recipe.yml``).
-That wiring is not done in this module — only documented here for a follow-up.
+``recipes/community/<id>``. The launcher discovers both trees.
 """
 
 from __future__ import annotations

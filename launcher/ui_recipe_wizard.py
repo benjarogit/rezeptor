@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
 )
 
 from i18n import t
+from recipe_categories import STANDARD_CATEGORIES
 from ui_rezeptor import LimitedComboBox
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -61,11 +62,16 @@ class RecipeWizardDialog(QDialog):
         self.type_combo = LimitedComboBox(max_visible=8)
         self.type_combo.addItem(t("wizard.type_portable"), "portable")
         self.type_combo.addItem(t("wizard.type_installer"), "installer")
+        self.type_combo.addItem(t("wizard.type_steam_game"), "steam-game")
         form.addRow(t("wizard.type"), self.type_combo)
 
-        self.category_edit = QLineEdit()
-        self.category_edit.setPlaceholderText(t("wizard.category_ph"))
-        form.addRow(t("wizard.category"), self.category_edit)
+        self.category_combo = LimitedComboBox(max_visible=12)
+        self.category_combo.setEditable(True)
+        for cat in STANDARD_CATEGORIES:
+            self.category_combo.addItem(cat, cat)
+        self.category_combo.setCurrentText(STANDARD_CATEGORIES[0])
+        self.category_combo.setToolTip(t("wizard.category_tip"))
+        form.addRow(t("wizard.category"), self.category_combo)
         layout.addLayout(form)
 
         self.status = QLabel("")
@@ -127,7 +133,7 @@ class RecipeWizardDialog(QDialog):
             )
             return
 
-        cat = self.category_edit.text().strip()
+        cat = self.category_combo.currentText().strip()
         if cat:
             yml = dest / "recipe.yml"
             try:

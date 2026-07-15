@@ -1,5 +1,7 @@
 # Rezeptor — Dokumentation
 
+> Wiki-Ansicht: [Rezeptor Docs](https://benjarogit.github.io/rezeptor/) (MkDocs auf GitHub Pages)
+
 | Zielgruppe | Was |
 |------------|-----|
 | **User** | README / README.de.md, Rezept-Infos in der GUI (`info.*.txt`) |

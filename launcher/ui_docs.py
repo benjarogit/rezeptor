@@ -31,6 +31,8 @@ DOC_CATALOG: list[tuple[str, str, str]] = [
     ("Entwickler — Schnellstart", "Developer — Quick start", "ENTWICKLER.md"),
     ("Rezept erstellen", "Recipe authoring", "RECIPE-AUTHORING.md"),
     ("Rezepte — Übersicht", "Recipes — Overview", "RECIPES.md"),
+    ("Rezept-Katalog", "Recipe catalog", "CATALOG.md"),
+    ("Steam-Wrapper", "Steam wrapper", "STEAM-WRAPPER.md"),
     ("Referenz-Rezept: WISO", "Reference recipe: WISO", "WISO.md"),
     ("Internationalisierung", "Internationalization", "I18N.md"),
     ("Markendesign", "Brand design", "BRAND.md"),

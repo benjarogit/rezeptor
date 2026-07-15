@@ -50,6 +50,9 @@
     "uninstall": "Uninstall",
     "view_recipe": "View recipe…",
     "edit_recipe": "Edit recipe…",
+    "add_recipe_catalog": "Add recipe…",
+    "hide_recipe": "Hide recipe",
+    "show_hidden_recipes": "Show hidden recipes…",
     "settings": "Settings…",
     "cleanup_logs": "Clean up logs",
     "rollback": "Rollback…",
@@ -367,8 +370,10 @@
     "type": "Type",
     "type_portable": "Portable (folder/archive)",
     "type_installer": "Offline installer",
+    "type_steam_game": "Steam game (Proton-GE + wrapper)",
     "category": "Category",
     "category_ph": "e.g. Graphics & Design",
+    "category_tip": "Pick a suggestion or type a custom category",
     "create": "Create",
     "manifest_again": "Update manifest again",
     "running": "Creating recipe…",
@@ -387,5 +392,31 @@
   "docs": {
     "intro": "Build Rezeptor recipes — local files from the repository. Online version on GitHub (branch main).",
     "github": "Open on GitHub…"
+  },
+  "catalog": {
+    "title": "Add recipe",
+    "intro": "Load official and community recipes from the catalog (GitHub). Bundled recipes stay in the app.",
+    "foreign_warn": "Third-party sources are not officially reviewed — security risk. Only add trusted repos.",
+    "foreign_warn_dialog": "Save third-party source? Recipes from it are not reviewed by us and may be harmful.",
+    "foreign_confirm": "Install from third-party “{repo}”? Not officially reviewed.",
+    "source_ph": "GitHub repo (e.g. benjarogit/rezeptor)",
+    "refresh": "Refresh",
+    "add_source": "Remember source",
+    "install": "Add",
+    "close": "Close",
+    "loaded": "{n} recipe(s) in catalog",
+    "installing": "Installing “{id}”…",
+    "installed": "Installed: {path}",
+    "source_exists": "Source already saved",
+    "source_saved": "Source saved",
+    "trust_official": "official",
+    "trust_community": "community"
+  },
+  "hidden": {
+    "title": "Hidden recipes",
+    "intro": "Hidden recipes are absent from the sidebar — install data stays. Uninstall is separate.",
+    "unhide": "Show again",
+    "empty": "No hidden recipes.",
+    "hidden_ok": "Recipe “{id}” hidden"
   }
 }
