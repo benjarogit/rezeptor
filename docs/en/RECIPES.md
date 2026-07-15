@@ -21,7 +21,14 @@ REZEPTOR_DEV=1 ./setup.sh
 
 Templates: `_template` (portable), `_template-installer` (offline installer).
 
-Reference recipes: `wiso-steuer` (full declarative `install_steps`), `photoshop` (`module:` field).
+Reference recipes:
+
+| ID | Pattern |
+|----|---------|
+| `wiso-steuer` | Portable, declarative `install_steps` |
+| `photoshop` | Offline installer (`module:`) |
+| `za4-trainer` | Steam trainer (EXE → game folder, Proton) |
+| `house-of-ashes` | Steam game + BYOS fix (`deploy_mode: link`, launch from Rezeptor) |
 
 ## User data
 

@@ -32,6 +32,7 @@ photoshop/*.idx
 *.psdata.txt
 logs/
 *.log
+config/
 *.backup
 *.bak
 wine-error.log
@@ -97,3 +98,4 @@ AppDir-build/
 # ============================================================
 __pycache__/
 squashfs-root/
+launcher/assets/ui/

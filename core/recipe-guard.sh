@@ -53,30 +53,69 @@ recipe_guard::kill_stale_winetricks() {
 }
 
 recipe_guard::notify_icon() {
+    # Rezept-Icon aus recipe.yml, sonst Photoshop-Fallback (Legacy).
     local project_root="${PROJECT_ROOT:-}"
+    local raw="" icon=""
+    if [ -n "${RECIPE_YML:-}" ] && [ -f "${RECIPE_YML}" ]; then
+        raw="$(recipe_get "$RECIPE_YML" icon 2>/dev/null || true)"
+        if [ -n "$raw" ]; then
+            icon="${raw//\{repo\}/${project_root}}"
+            icon="${icon/#\~/$HOME}"
+            if [ -f "$icon" ]; then
+                echo "$icon"
+                return 0
+            fi
+        fi
+    fi
     if [ -n "$project_root" ] && [ -f "$project_root/images/AdobePhotoshop-icon.png" ]; then
         echo "$project_root/images/AdobePhotoshop-icon.png"
     elif [ -n "$project_root" ] && [ -f "$project_root/images/AdobePhotoshop-icon.svg" ]; then
         echo "$project_root/images/AdobePhotoshop-icon.svg"
     else
-        echo "photoshop"
+        echo "dialog-information"
     fi
 }
 
 # Einheitliche Desktop-Benachrichtigung für alle Rezepte.
 # Syntax: recipe_notify::send <app-name> <summary> [body] [icon]
 # -a <app-name> ist Pflicht (sonst erbt KDE den Parent, z. B. „Cursor“).
+#
+# Titel-Quelle (Vorgabe):
+#   1. notify_title aus recipe.yml (manuell, optional)
+#   2. sonst name aus recipe.yml (Pflichtfeld — Anzeigename)
+#   3. Aufrufer kann app-name trotzdem explizit setzen
+# Kein Auto-Detect aus EXE-Dateinamen (unzuverlässig bei Trainern/Setups).
+recipe_notify::title() {
+    local t=""
+    if [ -n "${RECIPE_YML:-}" ] && [ -f "${RECIPE_YML}" ]; then
+        t="$(recipe_get "$RECIPE_YML" notify_title 2>/dev/null || true)"
+        [ -n "$t" ] || t="$(recipe_get "$RECIPE_YML" name 2>/dev/null || true)"
+    fi
+    echo "${t:-${RECIPE_NAME:-Rezeptor}}"
+}
+
 recipe_notify::send() {
     local app="${1:?app name}"
     local summary="${2:?summary}"
     local body="${3:-}"
     local icon="${4:-}"
     command -v notify-send >/dev/null 2>&1 || return 0
+    if [ -z "$icon" ]; then
+        icon="$(recipe_guard::notify_icon 2>/dev/null || true)"
+    fi
     if [ -n "$icon" ]; then
         notify-send -a "$app" -i "$icon" "$summary" "$body" 2>/dev/null || true
     else
         notify-send -a "$app" "$summary" "$body" 2>/dev/null || true
     fi
+}
+
+# Kurzform: Titel aus recipe.yml, Summary + optional Body/Icon
+recipe_notify::recipe() {
+    local summary="${1:?summary}"
+    local body="${2:-}"
+    local icon="${3:-}"
+    recipe_notify::send "$(recipe_notify::title)" "$summary" "$body" "$icon"
 }
 
 recipe_dpi::logpixels() {

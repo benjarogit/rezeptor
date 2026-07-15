@@ -1,0 +1,43 @@
+id: house-of-ashes
+icon: "{repo}/images/house-of-ashes-icon.png"
+name: "House of Ashes"
+author: "benjarogit"
+category: "Spiele"
+version_guaranteed: "Steam + TDPAHOA_Fix_Repair_Steam_Generic"
+version_label: "The Dark Pictures Anthology: House of Ashes (Steam)"
+version_detect:
+  - kind: stack
+    identity_file: "HouseOfAshes.exe"
+    require_files:
+      - "SMG025/Binaries/Win64/OnlineFix64.dll"
+      - "SMG025/Binaries/Win64/OnlineFix.ini"
+      - "SMG025/Binaries/Win64/winmm.dll"
+      - "SMG025/Binaries/Win64/StubDRM64.dll"
+      - "SMG025/Binaries/Win64/dlllist.txt"
+    ini: "SMG025/Binaries/Win64/OnlineFix.ini"
+    require_ini:
+      FakeAppId: "480"
+      RealAppId: "1281590"
+    ok_label: "Steam + TDPAHOA_Fix_Repair_Steam_Generic"
+    build_key: "BuildId"
+    partial_label: "House of Ashes"
+notify_title: "House of Ashes"
+data_root: "~/.local/share/wine-software/house-of-ashes"
+runtime: proton-ge
+install_type: game_portable
+deploy_mode: link
+source_kind: folder
+source_label: "Spielordner (HouseOfAshes.exe + Online-Fix)"
+source_formats: ""
+steam_appid: "1281590"
+fix_kind: none
+exe_glob: "HouseOfAshes.exe"
+env: {}
+validate: validate.sh
+launch: launch.sh
+install: install.sh
+repair: repair.sh
+kill: kill.sh
+uninstall: uninstall.sh
+install_steps:
+  - emit_log_paths

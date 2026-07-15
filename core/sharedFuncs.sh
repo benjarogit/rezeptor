@@ -2210,7 +2210,24 @@ photoshop::find_exe() {
 
 photoshop::resolve_installer_dir() {
     local project_root="${1:-${PROJECT_ROOT:-}}"
-    local candidate=""
+    local candidate="" parent=""
+
+    # GUI / prepare_source: gewählter Ordner oder Installer-Datei
+    if [ -n "${RECIPE_WORK_ROOT:-}" ] && [ -f "${RECIPE_WORK_ROOT}/Set-up.exe" ]; then
+        echo "$(cd "${RECIPE_WORK_ROOT}" && pwd)"
+        return 0
+    fi
+    if [ -n "${RECIPE_SOURCE_ROOT:-}" ] && [ -f "${RECIPE_SOURCE_ROOT}/Set-up.exe" ]; then
+        echo "$(cd "${RECIPE_SOURCE_ROOT}" && pwd)"
+        return 0
+    fi
+    if [ -n "${RECIPE_INSTALLER_PATH:-}" ] && [ -f "${RECIPE_INSTALLER_PATH}" ]; then
+        parent="$(cd "$(dirname "${RECIPE_INSTALLER_PATH}")" && pwd)"
+        if [ -f "$parent/Set-up.exe" ]; then
+            echo "$parent"
+            return 0
+        fi
+    fi
 
     if [ -n "${PHOTOSHOP_INSTALLER_DIR:-}" ] && [ -f "${PHOTOSHOP_INSTALLER_DIR}/Set-up.exe" ]; then
         echo "$(cd "${PHOTOSHOP_INSTALLER_DIR}" && pwd)"

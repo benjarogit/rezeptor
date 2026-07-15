@@ -179,11 +179,12 @@ Runtime: gepinntes [Proton-GE](https://github.com/GloriousEggroll/proton-ge-cust
 
 ### Tier 1: AppImage (empfohlen für immutable Distros)
 
-1. `photoshopCClinux-<version>-x86_64.AppImage` von [Releases](https://github.com/benjarogit/rezeptor/releases) laden
-2. `chmod +x photoshopCClinux-*.AppImage`
-3. AppImage starten und Ordner mit `Set-up.exe` wählen
+1. `rezeptor-<version>-x86_64.AppImage` von [Releases](https://github.com/benjarogit/rezeptor/releases) laden
+2. `chmod +x rezeptor-*.AppImage`
+3. Doppelklick (oder Terminal). Die Rezeptor-GUI startet sofort — kein Terminal-Prompt.
+4. In der GUI Photoshop installieren und den Ordner mit deiner `Set-up.exe` wählen (BYOS; Adobe-Dateien sind nicht gebündelt).
 
-Kein System-Wine-Paket nötig.
+PyQt6, Fluent-Widgets und Proton-GE sind im AppImage gebündelt. Kein System-Wine und kein Host-`python-pyqt6` für den AppImage-Pfad nötig. AppImage = derselbe Code wie Git-Clone + `./setup.sh` — nach Änderungen neu bauen mit `scripts/build-appimage.sh`.
 
 ### Tier 2: Git clone
 

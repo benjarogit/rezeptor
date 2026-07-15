@@ -41,7 +41,7 @@ The installer must contain `Set-up.exe` plus `packages/` and `products/`.
 
 ## Option 3: AppImage (immutable distros)
 
-Download the AppImage from [GitHub Releases](https://github.com/benjarogit/photoshopCClinux/releases). At first run you will be asked for the folder containing `Set-up.exe`.
+Download `rezeptor-<version>-x86_64.AppImage` from [GitHub Releases](https://github.com/benjarogit/rezeptor/releases). Double-click to open Rezeptor; pick the folder containing `Set-up.exe` in the GUI when installing Photoshop.
 
 ## Legal
 

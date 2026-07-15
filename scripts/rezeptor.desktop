@@ -11,5 +11,6 @@ Icon=rezeptor
 Categories=Utility;Settings;
 Terminal=false
 StartupNotify=true
+StartupWMClass=rezeptor
 Keywords=wine;proton;photoshop;wiso;rezept;launcher;
 Keywords[de]=wine;proton;photoshop;wiso;rezept;launcher;

@@ -86,11 +86,10 @@ recipe_fonts::ensure() {
     n="$(recipe_fonts::count)"
     if [ "$n" -lt 8 ]; then
         need=1
-        if type output::step >/dev/null 2>&1; then
-            output::step "Schriften (corefonts, tahoma, calibri, fontsmooth=rgb)"
-        fi
         if type output::progress >/dev/null 2>&1; then
-            output::progress 40 "Schriften installieren"
+            output::progress 40 "Schriften (corefonts, tahoma, calibri, fontsmooth=rgb)"
+        elif type output::step >/dev/null 2>&1; then
+            output::step "Schriften (corefonts, tahoma, calibri, fontsmooth=rgb)"
         fi
         recipe_winetricks::run "$log_file" corefonts tahoma calibri fontsmooth=rgb || return 1
     fi

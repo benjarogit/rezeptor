@@ -21,16 +21,22 @@ Reference: `wiso-steuer` (full declarative `install_steps`), `photoshop` (`modul
 
 ```
 recipes/<id>/
-  recipe.yml          ← metadata + install_steps
+  recipe.yml          ← metadata + install_steps + uninstall:
   install.sh          ← recipe_hooks::load + recipe_install_steps::run
-  launch.sh / validate.sh / repair.sh / kill.sh
+  launch.sh / validate.sh / repair.sh / kill.sh / uninstall.sh
 
 core/
-  recipe-hooks.sh           ← entry
+  recipe-hooks.sh           ← entry (+ purge_recipe_data)
   recipe-install-steps.sh   ← runs install_steps
   recipe-<id>.sh            ← app logic (module:)
 recipes/recipe.schema.json  ← contract
 ```
+
+### uninstall.sh (required — complete wipe)
+
+Always `recipe_hooks::load minimal` and **`recipe_hooks::purge_recipe_data`** (desktop + `DATA_ROOT` + canonical `data_root` including `data_root.path`).  
+Do not only delete `prefix/` or `recipe.env` — the GUI will still show “installed”.  
+No `load kill` in uninstall (Proton hang). Portable/game folders outside `DATA_ROOT` stay.
 
 ### Thin install.sh
 
@@ -78,7 +84,86 @@ Parser: `scripts/recipe-yaml-read.py` · Schema: `scripts/recipe-schema-check.py
 
 ## Required `recipe.yml` fields
 
-`id`, `name`, `data_root`, `runtime`, `install_type`, `source_kind`, `fix_kind`, hooks, **`install_steps`**.
+`id`, `name`, `icon`, `data_root`, `runtime`, `install_type`, `source_kind`, `fix_kind`, hooks (**including `uninstall`**), **`install_steps`**.
+
+### Icon (required)
+
+```yaml
+icon: "{repo}/images/<id>-icon.png"
+```
+
+- File under `images/` (PNG or SVG), recommended **256×256**
+- GUI: sidebar + header; notify may use the same icon
+- Lint checks: field set **and** file exists
+- Source e.g. EXE icon (`wrestool`/`icotool`) or Steam library art
+
+### Recommended
+
+| Field | Role |
+|------|------|
+| `author` | Shown in the overview |
+| `notify_title` | Desktop notify `-a` / title; else `name` |
+| `version_label` / `version_guaranteed` | Tested version (display + guarantee) |
+| `version_detect` | **Required with `version_guaranteed`** — declarative detection (see below) |
+| `steam_appid` | Steam AppID: trainer target folder **or** game folder when `deploy_mode: link` |
+| `steam_target_folder` | Subfolder under the game dir (default `Trainer`; trainer/copy only) |
+
+**Notify title:** manual (`notify_title`) **or** fallback `name` — no auto-detect from EXE filenames.
+
+### Version detection (`version_detect`)
+
+Rezeptor checks the chosen source against `version_guaranteed`. Rules live in the recipe — the launcher ships the engine.
+
+```yaml
+version_guaranteed: "22.0.0.35"
+version_detect:
+  - kind: json_key
+    glob: "products/PHSP/application.json"
+    key: ProductVersion
+  - kind: pe_field
+    glob: "*.exe"
+    field: FileVersion
+```
+
+| `kind` | Purpose |
+|--------|---------|
+| `json_key` | JSON file (`glob` + `key`) |
+| `text_regex` | Text line (`glob` + `regex` with group) |
+| `path_regex` | Folder/file name |
+| `pe_field` | PE `FileVersion` / `ProductVersion` |
+| `pe_contains` | Byte markers in EXE → `value` (e.g. trainer family) |
+| `filename_regex` | Filename → `value` |
+| `stack` | Multiple files + INI keys (Steam+fix) |
+
+Signals run **in order**; first hit wins. `stack` may return a partial-mismatch message.
+
+Lint: `version_guaranteed` without `version_detect` → **ERROR**.
+
+### Info layout (`info.de.txt` / `info.en.txt`)
+
+```
+# <Title>
+
+Author: …
+Version: …
+
+## Summary
+…
+
+## Requirements
+• …
+
+## Install
+1. …
+
+## Usage
+• …
+
+## Notes
+• …
+```
+
+**Writing style:** professional and clear, easy to read, business tone — accessible for beginners. Keep structure and meaning; only smooth wording. Use technical terms only when needed, with a short explanation. Do not expand the content.
 
 Schema: [`recipes/recipe.schema.json`](../../recipes/recipe.schema.json).
 
@@ -110,6 +195,35 @@ install_steps:
   - winetricks
   - run_installer
 ```
+
+**Steam title with external fix (BYOS, launch from Rezeptor):**
+
+For games that stay in the Steam folder and only need a user-supplied fix
+(e.g. `house-of-ashes`). Do not ship the fix in the repo — validate checks files
+read-only; launch sets Proton + `WINEDLLOVERRIDES` / `SteamAppId`.
+
+Note: no new Steam entry (start via Rezeptor only); FakeAppId is often **480/Spacewar**
+(must be installed in Steam); uninstall removes Rezeptor wrapper only, not game/fix.
+
+```yaml
+install_type: game_portable
+deploy_mode: link          # no copy; dialog without target folder
+source_kind: folder
+steam_appid: "1281590"     # real Steam AppID (compatdata)
+runtime: proton-ge          # Rezeptor Proton-GE (priority); Steam compatdata for fix/Spacewar
+fix_kind: none
+exe_glob: "HouseOfAshes.exe"
+install_steps:
+  - emit_log_paths         # logic in install.sh / validate.sh / launch.sh
+```
+
+| | Trainer (`za4-trainer`) | Steam+fix (`house-of-ashes`) |
+|--|-------------------------|------------------------------|
+| Source | single `.exe` | game folder |
+| Deploy | copy into target subfolder | `link` (remember path) |
+| Prefix | game Steam compatdata | same |
+| Validate | EXE + wrapper | EXE + fix files + INI AppIDs |
+| Uninstall | Rezeptor files only | Rezeptor state only; game/fix stay |
 
 Tokens: `{repo}`, `{data_root}`, `{recipe}`, `~`.
 

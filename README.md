@@ -156,7 +156,7 @@ You must:
 |------|----------|--------|
 | **1** | End users, Fedora Silverblue / Bazzite / immutable | [GitHub Release AppImage](https://github.com/benjarogit/rezeptor/releases) |
 | **2** | Arch / CachyOS / Pop!\_OS / developers | `git clone` + `python-pyqt6` + `./setup.sh` |
-| **3** | Immutable (Silverblue, Bazzite, Kinoite, Bluefin) | AppImage from Releases (Proton bundled; host needs PyQt6) |
+| **3** | Immutable (Silverblue, Bazzite, Kinoite, Bluefin) | AppImage from Releases (Proton + PyQt6 bundled; no host PyQt6) |
 
 Runtime: pinned [Proton-GE](https://github.com/GloriousEggroll/proton-ge-custom) (`core/runtime.lock`), under `~/.local/share/wine-software/runtime/proton-ge/`.
 
@@ -178,11 +178,12 @@ Runtime: pinned [Proton-GE](https://github.com/GloriousEggroll/proton-ge-custom)
 
 ### Tier 1: AppImage (recommended for immutable distros)
 
-1. Download `photoshopCClinux-<version>-x86_64.AppImage` from [Releases](https://github.com/benjarogit/rezeptor/releases)
-2. `chmod +x photoshopCClinux-*.AppImage`
-3. Run the AppImage and select your folder containing `Set-up.exe`
+1. Download `rezeptor-<version>-x86_64.AppImage` from [Releases](https://github.com/benjarogit/rezeptor/releases)
+2. `chmod +x rezeptor-*.AppImage`
+3. Double-click (or run from a terminal). The Rezeptor GUI opens immediately — no terminal prompt.
+4. In the GUI, install Photoshop and pick the folder that contains your `Set-up.exe` (BYOS; Adobe files are not bundled).
 
-No system Wine package required.
+PyQt6, Fluent Widgets, and Proton-GE are bundled in the AppImage. No system Wine or host `python-pyqt6` required for the AppImage path. The AppImage is the same code as a git checkout + `./setup.sh` — rebuild with `scripts/build-appimage.sh` after changes.
 
 ### Tier 2: Git clone
 

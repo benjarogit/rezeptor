@@ -240,6 +240,36 @@ wine_runtime::describe() {
     echo "Proton-GE ${PROTON_GE_TAG:-} ($_WINE_RUNTIME_ROOT)"
 }
 
+# Pfad zum Proton-Launcher-Skript (…/proton) — nur Rezeptor Proton-GE.
+wine_runtime::proton_script() {
+    wine_runtime::_load_lock
+    wine_runtime::ensure_proton_ge || return 1
+    local root=""
+    root="$(wine_runtime::_find_proton_dir)" || return 1
+    [ -x "$root/proton" ] || return 1
+    echo "$root/proton"
+}
+
+# Steam-/Spiel-Rezepte: Rezeptor Proton-GE zuerst, dann Steam-GE, zuletzt Valve-Proton.
+wine_runtime::resolve_proton_script() {
+    local steam_root="${1:-${STEAM_ROOT:-$HOME/.local/share/Steam}}"
+    local p=""
+    if p="$(wine_runtime::proton_script 2>/dev/null)" && [ -n "$p" ] && [ -f "$p" ]; then
+        echo "$p"
+        return 0
+    fi
+    [ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
+    if [ -d "$steam_root" ] && compgen -G "$steam_root/compatibilitytools.d/GE-Proton*/proton" >/dev/null 2>&1; then
+        ls -1d "$steam_root/compatibilitytools.d"/GE-Proton*/proton 2>/dev/null | sort -V | tail -1
+        return 0
+    fi
+    if [ -d "$steam_root" ] && compgen -G "$steam_root/steamapps/common/Proton"*/proton >/dev/null 2>&1; then
+        ls -1d "$steam_root/steamapps/common"/Proton*/proton 2>/dev/null | sort -V | tail -1
+        return 0
+    fi
+    return 1
+}
+
 wine_runtime::export_env() {
     wine_runtime::init || return 1
     export WINE="$_WINE_RUNTIME_BIN"

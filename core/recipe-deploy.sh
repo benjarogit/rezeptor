@@ -55,7 +55,7 @@ recipe_deploy::detect_installer() {
         base="${f##*/}"
         lc="${base,,}"
         [[ "$lc" == *uninstall* ]] && continue
-        [[ "$lc" == setup*.exe || "$lc" == install*.exe || "$lc" == *setup*.msi ]] && {
+        [[ "$lc" == set-up.exe || "$lc" == setup*.exe || "$lc" == install*.exe || "$lc" == *setup*.msi ]] && {
             echo "$f"
             return 0
         }

@@ -42,5 +42,5 @@ jobs:
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
-          files: photoshopCClinux-*-x86_64.AppImage
+          files: rezeptor-*-x86_64.AppImage
           generate_release_notes: true

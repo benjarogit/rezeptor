@@ -105,10 +105,6 @@ recipe_wiso::run_patch() {
     return 0
 }
 
-recipe_wiso::_desktop_escape() {
-    printf '%s' "$1" | sed 's/[\\"]/\\&/g'
-}
-
 recipe_wiso::notify_icon() {
     local portable_root="${1:-${WISO_PORTABLE_ROOT:-}}"
     local data_root="${2:-${DATA_ROOT:-}}"
@@ -181,8 +177,7 @@ recipe_wiso::apply_qt_network_fix() {
         output::success "Qt-Startfix bereits aktiv (Linux-Internet unverändert)"
         return 0
     fi
-    output::step "Qt-Startfix (qnetworklistmanager.dll)"
-    output::progress 28 "Qt-Startfix"
+    output::progress 28 "Qt-Startfix (qnetworklistmanager.dll)"
     if recipe_wiso::disable_qnetworklistmanager "$sw_dir"; then
         output::success "Qt-Plugin deaktiviert — WLAN/LAN bleibt aktiv"
         return 0
@@ -208,8 +203,7 @@ recipe_wiso::optional_vc_redist() {
     portable_root="$(recipe_wiso::portable_root)"
     vc_exe="$(recipe_wiso::portable_vc_redist "$portable_root" 2>/dev/null || true)"
     [ -n "$vc_exe" ] || return 0
-    output::step "VC_redist.x64.exe (Portable-Bundle)"
-    output::progress 90 "VC++ Redistributable"
+    output::progress 90 "VC_redist.x64.exe (Portable-Bundle)"
     if recipe_wiso::run_vc_redist "$vc_exe" "${LOG_FILE:-/dev/null}"; then
         output::success "VC_redist.x64.exe installiert"
     else
@@ -224,13 +218,12 @@ recipe_wiso::optional_patch_exe() {
     portable_root="$(recipe_wiso::portable_root)"
     patch_exe="$(recipe_wiso::portable_patch_exe "$portable_root" 2>/dev/null || true)"
     [ -n "$patch_exe" ] || return 0
-    output::step "Patch.exe (Portable ReadMe — Host-Block/Zähler)"
-    output::progress 92 "Patch.exe"
+    output::progress 92 "Optionaler Patch.exe (Windows-Host-Block — unter Linux oft ohne Wirkung)"
     if recipe_wiso::run_patch "$patch_exe" "${LOG_FILE:-/dev/null}"; then
         output::success "Patch.exe ausgeführt"
     else
-        output::warning "Patch.exe optional fehlgeschlagen (unter Linux oft nicht nötig)"
-        recipe_hooks::log_err "Patch.exe fehlgeschlagen — $patch_exe"
+        # Kein ERROR-Log: erwartet unter Proton/Wine, Installation läuft weiter
+        output::info "Patch.exe übersprungen — unter Linux meist nicht nötig (optionaler Windows-Patch)"
     fi
     return 0
 }
@@ -272,76 +265,12 @@ recipe_wiso::apply_ui_layout_fix() {
 }
 
 recipe_wiso::install_desktop() {
-    local portable_root
-    portable_root="$(recipe_wiso::portable_root)"
-    output::step "Desktop-Eintrag (start.exe via Wine)"
-    output::progress 96 "Desktop"
-    if recipe_wiso::install_desktop_entry "$portable_root" "$DATA_ROOT"; then
-        output::success "Menü/Schreibtisch: WISO Steuer 2026"
-        return 0
-    fi
-    recipe_hooks::log_err "Desktop-Eintrag fehlgeschlagen"
-    return 1
+    recipe_hooks::_source recipe-desktop.sh
+    recipe_desktop::install
 }
 
+# Kompatibilität für repair.sh (Argumente werden ignoriert — DATA_ROOT/RECIPE_* zählen)
 recipe_wiso::install_desktop_entry() {
-    local portable_root="$1" data_root="$2"
-    local launch="${data_root}/bin/wiso-launch.sh"
-    local prefix="${WINEPREFIX:-${data_root}/prefix}"
-    local app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-    local icon_dir="${XDG_DATA_HOME:-$HOME/.local/share}/icons"
-    local icon_src="" icon_line="Icon=wine" theme_name="wiso-steuer-wine"
-    local launch_esc prefix_esc root_esc exec_line desktop_dest
-
-    [ -x "$launch" ] || return 1
-    mkdir -p "$app_dir" "$icon_dir"
-
-    icon_src="$(find "$portable_root" -maxdepth 3 -name 'wisoakt.ico' -type f 2>/dev/null | head -1 || true)"
-    if [ -n "$icon_src" ] && command -v magick >/dev/null 2>&1; then
-        local hicolor="$icon_dir/hicolor" s=""
-        for s in 48 64 128 256; do
-            mkdir -p "$hicolor/${s}x${s}/apps"
-            magick "${icon_src}[0]" -resize "${s}x${s}" \
-                "$hicolor/${s}x${s}/apps/${theme_name}.png" 2>/dev/null || true
-        done
-        if [ -f "$hicolor/48x48/apps/${theme_name}.png" ]; then
-            icon_line="Icon=${theme_name}"
-            command -v gtk-update-icon-cache >/dev/null 2>&1 \
-                && gtk-update-icon-cache -f -t "$hicolor" 2>/dev/null || true
-        fi
-    fi
-
-    launch_esc="$(recipe_wiso::_desktop_escape "$launch")"
-    prefix_esc="$(recipe_wiso::_desktop_escape "$prefix")"
-    root_esc="$(recipe_wiso::_desktop_escape "$portable_root")"
-    exec_line="env WINEPREFIX=\"${prefix_esc}\" WISO_PORTABLE_ROOT=\"${root_esc}\" \"${launch_esc}\""
-
-    desktop_dest="$app_dir/wiso-steuer.desktop"
-    cat >"$desktop_dest" <<EOF
-[Desktop Entry]
-Type=Application
-Version=1.0
-Name=WISO Steuer 2026
-Comment=Portable WISO via Wine (Rezeptor)
-Exec=${exec_line}
-Path=${root_esc}
-Categories=Office;Finance;
-Terminal=false
-StartupNotify=true
-Keywords=tax;steuer;wiso;buhl;
-${icon_line}
-EOF
-    chmod 644 "$desktop_dest" 2>/dev/null || true
-    command -v update-desktop-database >/dev/null 2>&1 \
-        && update-desktop-database "$app_dir" 2>/dev/null || true
-
-    local desk=""
-    desk="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
-    for desk in "$desk" "$HOME/Schreibtisch" "$HOME/Desktop"; do
-        [ -n "$desk" ] && [ -d "$desk" ] || continue
-        cp -f "$desktop_dest" "$desk/wiso-steuer.desktop" 2>/dev/null || true
-        chmod +x "$desk/wiso-steuer.desktop" 2>/dev/null || true
-        break
-    done
-    return 0
+    recipe_hooks::_source recipe-desktop.sh
+    recipe_desktop::refresh_if_present
 }

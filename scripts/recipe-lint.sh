@@ -6,9 +6,9 @@ set -eu
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RECIPES="$ROOT/recipes"
 
-REQUIRED_KEYS=(id name data_root runtime install_type source_kind fix_kind)
-REQUIRED_HOOKS=(install launch validate repair kill)
-OPTIONAL_HOOKS=(uninstall)
+REQUIRED_KEYS=(id name icon data_root runtime install_type source_kind fix_kind)
+REQUIRED_HOOKS=(install launch validate repair kill uninstall)
+OPTIONAL_HOOKS=()
 INSTALL_TYPES=(installer_offline portable_launch portable_bootstrap game_install game_portable adobe_offline portable)
 SOURCE_KINDS=(folder installer archive fixed_path)
 FIX_KINDS=(none optional required)
@@ -59,6 +59,16 @@ lint_recipe_dir() {
         val="$(recipe_get "$yml" "$key" 2>/dev/null || true)"
         [ -n "$val" ] || lint_err "$base: Pflichtfeld fehlt: $key"
     done
+
+    # Icon-Datei muss existieren ({repo}/images/… oder relativ)
+    icon="$(recipe_get "$yml" icon 2>/dev/null || true)"
+    if [ -n "$icon" ]; then
+        icon_path="${icon//\{repo\}/$ROOT}"
+        icon_path="${icon_path/#\~/$HOME}"
+        if [ ! -f "$icon_path" ]; then
+            lint_err "$base: icon-Datei fehlt: $icon"
+        fi
+    fi
 
     id="$(recipe_get "$yml" id 2>/dev/null || true)"
     runtime="$(recipe_get "$yml" runtime 2>/dev/null || true)"
@@ -125,6 +135,14 @@ lint_recipe_dir() {
         lint_err "$base: install_steps fehlt (Pflicht)"
     fi
 
+    # version_guaranteed ohne version_detect → keine Quelle-Prüfung in der GUI
+    vg="$(recipe_get "$yml" version_guaranteed 2>/dev/null || true)"
+    if [ -n "$vg" ]; then
+        if ! grep -qE '^version_detect:' "$yml" 2>/dev/null; then
+            lint_err "$base: version_guaranteed gesetzt, aber version_detect fehlt (Versionserkennung Pflicht)"
+        fi
+    fi
+
     for hook in "${REQUIRED_HOOKS[@]}"; do
         val="$(recipe_get "$yml" "$hook" 2>/dev/null || true)"
         [ -n "$val" ] || { lint_err "$base: Hook fehlt in recipe.yml: $hook"; continue; }
@@ -152,12 +170,27 @@ lint_recipe_dir() {
     done
     shopt -u nullglob
 
-    for f in "$dir"/install.sh "$dir"/launch.sh "$dir"/validate.sh "$dir"/repair.sh "$dir"/kill.sh; do
+    for f in "$dir"/install.sh "$dir"/launch.sh "$dir"/validate.sh "$dir"/repair.sh "$dir"/kill.sh "$dir"/uninstall.sh; do
         [ -f "$f" ] || continue
         grep -q 'recipe-hooks\.sh' "$f" 2>/dev/null \
             || lint_err "$base: $(basename "$f") muss core/recipe-hooks.sh nutzen"
         lint_forbidden_patterns "$base" "$f"
     done
+
+    # Deinstallation muss vollständig sein (kein „teilweise weg → GUI denkt noch installiert“)
+    if [ -f "$dir/uninstall.sh" ]; then
+        if ! grep -qE 'recipe_hooks::purge_recipe_data' "$dir/uninstall.sh" 2>/dev/null; then
+            lint_err "$base: uninstall.sh muss recipe_hooks::purge_recipe_data aufrufen (kompletter Wipe inkl. data_root.path)"
+        fi
+        if grep -qE 'recipe_hooks::load[[:space:]]+kill' "$dir/uninstall.sh" 2>/dev/null; then
+            lint_err "$base: uninstall.sh darf nicht 'load kill' nutzen (Proton/wineserver-Hang) — load minimal + pkill"
+        fi
+        # Halbherziges Aufräumen ohne Purge: nur Prefix / nur recipe.env
+        if grep -qE 'rm[[:space:]]+-rf[[:space:]]+"\$\{?DATA_ROOT\}?/prefix"|rm[[:space:]]+-f.*"\$\(recipe_hooks::state_file' "$dir/uninstall.sh" 2>/dev/null \
+            && ! grep -qE 'recipe_hooks::purge_recipe_data' "$dir/uninstall.sh" 2>/dev/null; then
+            lint_err "$base: uninstall.sh räumt unvollständig auf — purge_recipe_data Pflicht"
+        fi
+    fi
 
     for f in "$dir"/install.sh "$dir"/launch.sh "$dir"/repair.sh; do
         [ -f "$f" ] || continue

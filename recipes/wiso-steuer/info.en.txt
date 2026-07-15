@@ -1,15 +1,24 @@
-WISO Steuer — Portable (ReadMe-compatible)
+# WISO Steuer (Portable)
 
-Installation (Rezeptor → Install):
-1. Choose source — e.g. Downloads/…Portable (extracted) or archive
-2. Choose target folder — where WISO will be installed (default: ~/Dokumente/WISO Steuer 2026)
-   Rezeptor copies the portable there (deploy_mode: copy).
-3. Automatic: Wine prefix, Patch.exe, VC_redist, Qt start fix, desktop icon
-4. Start via start.exe (as in ReadMe) — menu “WISO Steuer 2026” or Rezeptor → Launch
+Author: benjarogit
+Version: WISO Steuer 2026 (Portable 33.05 Build 3220)
 
-Patch.exe: started from the installed portable root (host block per ReadMe).
-CRC32 warning: confirm with Yes (ReadMe.txt).
+## Summary
+WISO Steuer as a portable app on Proton-GE — pick a source, copy it to the target folder, then launch.
 
-Archive: extract → detect → copy → same steps as above.
+## Requirements
+• Proton-GE (used automatically)
+• Portable folder or archive (with start.exe or Steuersoftware 20XX)
 
-Logs: Settings under the “Rezeptor” menu (retention, manual cleanup).
+## Install
+1. Choose Install
+2. Pick the source: folder or archive
+3. Choose the target folder (default: ~/Documents/WISO Steuer 2026)
+
+## Usage
+• Launch via start.exe, or click Launch in Rezeptor
+• Optional: Patch.exe and VC_redist as described in the ReadMe
+
+## Notes
+• If a CRC32 warning appears, confirm with Yes
+• Logs: Settings under the Rezeptor menu

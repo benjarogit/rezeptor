@@ -1,0 +1,27 @@
+# Zombie Army 4: Dead War — Plus 14 Trainer
+
+Author: benjarogit
+Version: v1.0–v3.21 (Plus 14 Trainer)
+
+## Summary
+Trainer (cheat tool) for **Zombie Army 4: Dead War** (Steam AppID 694280).
+This is not a game installer — only the trainer is stored and launched via Proton.
+
+## Requirements
+• Steam and Zombie Army 4: Dead War are installed
+• The game has been launched at least once with Proton / GE-Proton (this creates Steam’s “compatdata” folder)
+• The trainer file (Plus 14 / ZA4-Trainer.exe) is available locally
+
+## Install
+1. Choose Install
+2. Select the trainer **.exe** (file filter: *.exe)
+3. Check the target folder — default: Steam game folder/ZA4-Trainer (detected automatically, always overridable)
+
+## Usage
+• Start the game first
+• Then click Launch in Rezeptor — the trainer opens via Proton
+• Use the trainer only after the game has started
+
+## Notes
+• Desktop notifications use the recipe name (or an optional notify title)
+• Logs: ~/.local/share/wine-software/logs/

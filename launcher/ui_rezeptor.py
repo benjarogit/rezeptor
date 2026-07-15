@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtWidgets import (
     QButtonGroup,
+    QComboBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -20,13 +21,16 @@ from PyQt6.QtWidgets import (
 from ui_fluent import (
     ACCENT_COPPER,
     COLOR_EXPERIMENTAL,
+    COLOR_PARCHMENT,
     COLOR_TESTED,
     FLUENT_AVAILABLE,
+    MUTED,
     CaptionLabel,
     CardWidget,
     IconWidget,
     StrongBodyLabel,
 )
+from ui_icons import ensure_chevron_png
 from i18n import t
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -54,6 +58,84 @@ def _state_tip(state: str) -> str:
     return t(_STATE_TIP_KEYS.get(state, "state.unknown"))
 
 
+class LimitedComboBox(QComboBox):
+    """QComboBox mit harter Popup-Höhe.
+
+    setMaxVisibleItems allein greift unter Fusion+QSS oft nicht — deshalb
+    View + Container in showPopup() begrenzen.
+    """
+
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        *,
+        max_visible: int = 12,
+    ) -> None:
+        super().__init__(parent)
+        self._max_visible = max(1, int(max_visible))
+        self.setMaxVisibleItems(self._max_visible)
+        view = self.view()
+        view.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        view.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._apply_arrow_style()
+
+    def _apply_arrow_style(self) -> None:
+        """Pfeil explizit setzen — App-QSS allein reicht unter Fusion oft nicht."""
+        arrow = ensure_chevron_png("down", COLOR_PARCHMENT).resolve().as_posix()
+        self.setStyleSheet(
+            f"""
+            QComboBox {{
+                background-color: rgba(255, 255, 255, 0.06);
+                border: 1px solid #3A3A3A;
+                border-radius: 4px;
+                padding: 6px 28px 6px 10px;
+                color: {COLOR_PARCHMENT};
+                min-height: 20px;
+            }}
+            QComboBox:hover {{
+                border-color: rgba(184, 115, 51, 0.55);
+            }}
+            QComboBox:focus, QComboBox:on {{
+                border-color: {ACCENT_COPPER};
+            }}
+            QComboBox::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: center right;
+                width: 22px;
+                border: none;
+                background: transparent;
+            }}
+            QComboBox::down-arrow {{
+                image: url("{arrow}");
+                width: 12px;
+                height: 12px;
+            }}
+            """
+        )
+
+    def showPopup(self) -> None:
+        n = min(self._max_visible, max(self.count(), 1))
+        view = self.view()
+        row = view.sizeHintForRow(0)
+        if row <= 0:
+            fm = self.fontMetrics()
+            row = max(28, fm.height() + 10)
+        # Exakte Höhe der sichtbaren Zeilen
+        height = n * row + 8
+        view.setMinimumHeight(0)
+        view.setMaximumHeight(height)
+        super().showPopup()
+        # Popup-Frame (QComboBoxPrivateContainer) nach Shrink
+        parent = view.parentWidget()
+        if parent is not None:
+            margins = parent.contentsMargins()
+            extra = margins.top() + margins.bottom() + 4
+            cap = height + extra
+            parent.setMaximumHeight(cap)
+            if parent.height() > cap:
+                parent.resize(parent.width(), cap)
+
+
 SEGMENT_TAB_STYLES = f"""
 QFrame#segmentTabBar {{
     background-color: rgba(255, 255, 255, 0.03);
@@ -63,7 +145,7 @@ QPushButton#segmentTab {{
     background-color: transparent;
     border: 1px solid transparent;
     border-radius: 6px;
-    color: #a1a1aa;
+    color: {MUTED};
     font-size: 13px;
     font-weight: 500;
     padding: 6px 16px;
@@ -71,17 +153,17 @@ QPushButton#segmentTab {{
 }}
 QPushButton#segmentTab:hover {{
     background-color: rgba(255, 255, 255, 0.06);
-    color: #e4e4e7;
+    color: {COLOR_PARCHMENT};
     border-color: rgba(255, 255, 255, 0.1);
 }}
 QPushButton#segmentTab:checked {{
     background-color: rgba(184, 115, 51, 0.18);
     border-color: {ACCENT_COPPER};
-    color: #f4f4f5;
+    color: {COLOR_PARCHMENT};
     font-weight: 600;
 }}
 QLabel#sidebarCategory {{
-    color: #71717a;
+    color: {MUTED};
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.08em;
@@ -133,20 +215,54 @@ class SegmentTabBar(QFrame):
             if btn is not None:
                 btn.setText(label)
 
+    def apply_theme(self, theme: str = "dark") -> None:
+        _ = theme
+        self.setStyleSheet(SEGMENT_TAB_STYLES)
+
 
 class StatusPill(QLabel):
-    """Inline Status-Badge (Getestet, Proton-GE, …)."""
+    """Inline Status-Badge (Getestet, Status, Autor, Runtime, …)."""
+
+    clicked = pyqtSignal()
 
     def __init__(self, text: str, color: str, parent: QWidget | None = None) -> None:
         super().__init__(text, parent)
+        self._color = color
+        self.setVisible(bool(text.strip()))
+        self.apply_theme("dark")
+
+    def set_content(self, text: str, color: str | None = None) -> None:
+        if color is not None:
+            self._color = color
+        self.setText(text)
+        self.setVisible(bool((text or "").strip()))
+        self.apply_theme("dark")
+
+    def mouseReleaseEvent(self, event) -> None:  # noqa: ANN001
+        if (
+            event.button() == Qt.MouseButton.LeftButton
+            and self.isVisible()
+            and bool(self.text().strip())
+        ):
+            self.clicked.emit()
+        super().mouseReleaseEvent(event)
+
+    def apply_theme(self, theme: str = "dark") -> None:
+        _ = theme
+        # Fluent-ähnliche Surface: 6% Weiß-Overlay; Text Brand/Status
+        color = (self._color or "").strip() or MUTED
+        low = color.lower()
+        if low in ("#9d9da6", "#a1a1aa", "#6b6b6b", "#6b7280", "#71717a", "#888888", "#c4c4cc", "#d4d4d8"):
+            color = MUTED
         self.setStyleSheet(
             f"""
             QLabel {{
                 color: {color};
-                background-color: rgba(255, 255, 255, 0.06);
+                background-color: rgba(255, 255, 255, 0.0605);
                 padding: 4px 10px;
                 border-radius: 6px;
                 font-size: 12px;
+                font-weight: 500;
             }}
             """
         )
@@ -156,6 +272,7 @@ class RecipeSidebarCard(CardWidget):
     """Kompakter Rezept-Eintrag — Details im Hauptbereich."""
 
     clicked = pyqtSignal()
+    contextMenuRequested = pyqtSignal()
 
     def __init__(
         self,
@@ -170,6 +287,8 @@ class RecipeSidebarCard(CardWidget):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
         self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(lambda _pos: self.contextMenuRequested.emit())
         self._selected = False
         self._running = False
 
@@ -188,6 +307,8 @@ class RecipeSidebarCard(CardWidget):
 
         title = StrongBodyLabel(name, self) if FLUENT_AVAILABLE else QLabel(name, self)
         title.setWordWrap(False)
+        title.setObjectName("sidebarCardTitle")
+        self._title = title
         layout.addWidget(title, stretch=1)
 
         self._run_dot = QLabel("●", self)
@@ -208,11 +329,14 @@ class RecipeSidebarCard(CardWidget):
         )
         self._state_dot.setToolTip(_state_tip(state))
         layout.addWidget(self._state_dot)
+        self._theme: str = "dark"
         self._apply_border()
 
     def mousePressEvent(self, event) -> None:  # type: ignore[no-untyped-def]
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
+        elif event.button() == Qt.MouseButton.RightButton:
+            self.contextMenuRequested.emit()
         super().mousePressEvent(event)
 
     def set_selected(self, selected: bool) -> None:
@@ -231,6 +355,10 @@ class RecipeSidebarCard(CardWidget):
         )
         self._state_dot.setToolTip(_state_tip(state))
         self._state_dot.setVisible(not self._running)
+
+    def apply_theme(self, theme: str = "dark") -> None:
+        self._theme = theme
+        self._apply_border()
 
     def _apply_border(self) -> None:
         if self._selected:

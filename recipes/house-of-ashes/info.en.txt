@@ -1,0 +1,45 @@
+# House of Ashes
+
+Author: benjarogit
+Version: Steam + TDPAHOA_Fix_Repair_Steam_Generic
+
+## Summary
+Launch The Dark Pictures Anthology: **House of Ashes** via Proton with an online fix
+so the game can talk to Steam.
+
+Rezeptor **does not distribute the game or the fix**. You place the fix yourself;
+we only verify expected files and launch with the correct overrides.
+
+## How Steam is used (important)
+• House of Ashes stays in your normal Steam library (AppID **1281590**).
+• Rezeptor does **not** add a Steam library entry or modify Steam.
+• “Start” in Rezeptor runs the EXE **outside** the Steam UI via **Rezeptor Proton-GE**
+  (priority; Steam GE fallback) with `SteamAppId=480` (**Spacewar**) so the online fix can use the Steam API.
+• The game’s Steam **compatdata** remains the prefix (no new Rezeptor prefix).
+• While playing, Steam often shows **Spacewar**, not House of Ashes as the running title.
+• **Uninstall** in Rezeptor only removes the Rezeptor wrapper/entry —
+  **not** the Steam game, **not** the fix, **not** Spacewar.
+
+## Requirements
+• Steam installed and signed in
+• **Spacewar** (AppID **480**, free Valve tool) installed in the library
+  → Steam: search “Spacewar” / Tools, or `steam steam://install/480`
+• House of Ashes (AppID 1281590) installed
+• Game launched **at least once** with Proton / GE-Proton via Steam (compatdata)
+• Fix stack **TDPAHOA_Fix_Repair_Steam_Generic** in the game folder
+  (incl. `SMG025/Binaries/Win64/OnlineFix64.dll`, `OnlineFix.ini`, …)
+
+## Install (in Rezeptor)
+1. Choose “Install”
+2. Select the **game folder** with `HouseOfAshes.exe` (often auto-detected)
+3. Rezeptor checks Spacewar + fix files and writes a launch wrapper
+   → only **a few seconds** (no game copy)
+
+## Usage
+• Steam should be running and signed in
+• Use “Start” in Rezeptor — not Steam “Play” for the fix path
+
+## Notes
+• Uninstall = Rezeptor entry only
+• Tested fix: TDPAHOA_Fix_Repair_Steam_Generic (FakeAppId 480 / RealAppId 1281590)
+• Logs: ~/.local/share/wine-software/logs/

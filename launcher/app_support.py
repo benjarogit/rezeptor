@@ -89,27 +89,29 @@ VERSION_OK_RE = re.compile(
 )
 
 
-def parse_wiso_portable_version(path: str) -> str:
-    root = Path(path)
-    for sw in sorted(root.glob("Steuersoftware*")):
-        if not sw.is_dir():
-            continue
-        for wcrc in sorted(sw.glob("wcrc32list*.txt")):
-            for line in wcrc.read_text(encoding="utf-8", errors="replace").splitlines():
-                line = line.strip()
-                if line.upper().startswith("VERSION"):
-                    ver = line.split("=", 1)[-1].strip()
-                    if ver:
-                        return ver
-    name = root.name
-    m = re.match(r"^WISO\.([0-9]+(?:\.[0-9]+){0,3})\.Portable$", name)
-    return m.group(1) if m else ""
+def detect_source_version(
+    rid: str,
+    path: str,
+    *,
+    recipe_dir: str | Path | None = None,
+    guaranteed: str = "",
+) -> str:
+    """Versionserkennung über recipe.yml version_detect (Rezeptor-Kern)."""
+    from version_detect import detect_recipe_version
 
-
-def detect_source_version(rid: str, path: str) -> str:
-    if rid == "wiso-steuer":
-        return parse_wiso_portable_version(path)
-    return ""
+    yml: Path | None = None
+    if recipe_dir:
+        yml = Path(recipe_dir) / "recipe.yml"
+    elif rid:
+        cand = ROOT / "recipes" / rid / "recipe.yml"
+        if cand.is_file():
+            yml = cand
+    try:
+        return detect_recipe_version(
+            path, yml, rid=rid, guaranteed=guaranteed
+        )
+    except (OSError, ValueError, TypeError):
+        return ""
 
 
 def parse_validate_version_fields(output: str) -> tuple[str, str]:
@@ -128,7 +130,13 @@ def parse_validate_version_fields(output: str) -> tuple[str, str]:
 def version_guarantee_mismatch(guaranteed: str, detected: str) -> bool:
     if not guaranteed or not detected:
         return False
-    return guaranteed.strip() != detected.strip()
+    g, d = guaranteed.strip(), detected.strip()
+    if g == d:
+        return False
+    # Detail-Suffix erlaubt: "… (Build 7575778)"
+    if d.startswith(g + " ") or d.startswith(g + " ("):
+        return False
+    return True
 
 
 def prune_old_logs(
@@ -137,18 +145,25 @@ def prune_old_logs(
     retention_days: int | None = None,
     max_files: int | None = None,
 ) -> int:
-    """Alte Log-Dateien entfernen (Retention). Returns count deleted."""
+    """Alte Log-Dateien entfernen (Retention). Returns count deleted.
+
+    Berücksichtigt alle regulären Dateien unter log_root (auch Unterordner).
+    Neueste max_files bleiben; ältere als retention_days fliegen raus.
+    """
     if not log_root.is_dir():
         return 0
 
     days = LOG_RETENTION_DAYS if retention_days is None else retention_days
     cap = LOG_MAX_FILES if max_files is None else max_files
     cutoff = time.time() - days * 86400
-    files = sorted(
-        (p for p in log_root.iterdir() if p.is_file()),
-        key=lambda p: p.stat().st_mtime,
-        reverse=True,
-    )
+    files: list[Path] = []
+    for path in log_root.rglob("*"):
+        try:
+            if path.is_file():
+                files.append(path)
+        except OSError:
+            continue
+    files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     removed = 0
     for i, path in enumerate(files):
         try:
@@ -161,7 +176,48 @@ def prune_old_logs(
                 removed += 1
             except OSError:
                 pass
+    # Leere Unterordner aufräumen (z. B. full-qa-*)
+    for path in sorted(log_root.rglob("*"), reverse=True):
+        if not path.is_dir() or path == log_root:
+            continue
+        try:
+            next(path.iterdir())
+        except StopIteration:
+            try:
+                path.rmdir()
+            except OSError:
+                pass
+        except OSError:
+            pass
     return removed
+
+
+def log_dir_stats(log_root: Path = LOG_ROOT) -> tuple[int, str]:
+    """Anzahl + menschenlesbare Größe aller Log-Dateien (rekursiv)."""
+    if not log_root.is_dir():
+        return 0, "0 B"
+    total = 0
+    count = 0
+    for path in log_root.rglob("*"):
+        try:
+            if path.is_file():
+                total += path.stat().st_size
+                count += 1
+        except OSError:
+            continue
+    units = ("B", "KB", "MB", "GB")
+    size = float(total)
+    unit = units[0]
+    for u in units:
+        unit = u
+        if size < 1024 or u == units[-1]:
+            break
+        size /= 1024
+    if unit == "B":
+        human = f"{int(size)} {unit}"
+    else:
+        human = f"{size:.1f} {unit}"
+    return count, human
 
 
 def sanitize_log_text(text: str) -> str:

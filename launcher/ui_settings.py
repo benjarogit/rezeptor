@@ -6,7 +6,6 @@ from pathlib import Path
 
 from PyQt6.QtWidgets import (
     QCheckBox,
-    QComboBox,
     QDialog,
     QDialogButtonBox,
     QFormLayout,
@@ -19,23 +18,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from app_support import LOG_ROOT, prune_old_logs
+from app_support import LOG_ROOT, log_dir_stats, prune_old_logs
 from i18n import available_locales, t
 from settings import RezeptorSettings, save_settings
-
-
-def log_dir_stats() -> tuple[int, str]:
-    if not LOG_ROOT.is_dir():
-        return 0, "0 B"
-    files = [p for p in LOG_ROOT.iterdir() if p.is_file()]
-    total = sum(p.stat().st_size for p in files if p.exists())
-    if total >= 1_000_000:
-        size = f"{total / 1_000_000:.1f} MB"
-    elif total >= 1000:
-        size = f"{total / 1000:.0f} KB"
-    else:
-        size = f"{total} B"
-    return len(files), size
+from ui_rezeptor import LimitedComboBox
 
 
 class SettingsDialog(QDialog):
@@ -44,6 +30,7 @@ class SettingsDialog(QDialog):
         self._settings = settings
         self.setWindowTitle(t("settings.title"))
         self.resize(440, 300)
+        self.setMinimumSize(360, 260)
 
         layout = QVBoxLayout(self)
         intro = QLabel(t("settings.intro"))
@@ -52,7 +39,7 @@ class SettingsDialog(QDialog):
         layout.addWidget(intro)
 
         form = QFormLayout()
-        self.lang_combo = QComboBox()
+        self.lang_combo = LimitedComboBox(max_visible=12)
         for lid, name in available_locales():
             self.lang_combo.addItem(name, lid)
         idx = self.lang_combo.findData(settings.locale)
@@ -76,6 +63,11 @@ class SettingsDialog(QDialog):
         self.prune_startup.setChecked(settings.prune_logs_on_startup)
         layout.addLayout(form)
         layout.addWidget(self.prune_startup)
+
+        self.dev_mode = QCheckBox(t("settings.developer_mode"))
+        self.dev_mode.setChecked(settings.developer_mode)
+        self.dev_mode.setToolTip(t("settings.developer_mode_tip"))
+        layout.addWidget(self.dev_mode)
 
         count, size = log_dir_stats()
         self.stats_label = QLabel(t("settings.stats", count=count, size=size))
@@ -113,9 +105,11 @@ class SettingsDialog(QDialog):
         self._settings.log_retention_days = self.retention_spin.value()
         self._settings.log_max_files = self.max_files_spin.value()
         self._settings.prune_logs_on_startup = self.prune_startup.isChecked()
+        self._settings.developer_mode = self.dev_mode.isChecked()
         lid = self.lang_combo.currentData()
         if lid:
             self._settings.locale = str(lid)
+        self._settings.theme = "dark"
         save_settings(self._settings)
         self.accept()
 

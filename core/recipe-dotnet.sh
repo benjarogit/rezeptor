@@ -149,12 +149,11 @@ recipe_dotnet::ensure() {
     recipe_dotnet::installed && return 0
     recipe_winetricks::prepare || return 1
 
-    if type output::step >/dev/null 2>&1; then
-        output::step "Wine-Mono (.NET)"
-    fi
     type recipe_hooks::hint_wine_popup >/dev/null 2>&1 && recipe_hooks::hint_wine_popup
     if type output::progress >/dev/null 2>&1; then
-        output::progress 45 "Wine-Mono"
+        output::progress 45 "Wine-Mono (.NET)"
+    elif type output::step >/dev/null 2>&1; then
+        output::step "Wine-Mono (.NET)"
     fi
 
     if recipe_dotnet::install_wine_mono "$log_file"; then

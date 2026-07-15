@@ -108,6 +108,7 @@ recipe_hooks::load_app_module() {
     local launch_mod="recipe-${RECIPE_ID}-launch.sh"
     local install_mod="recipe-${RECIPE_ID}-install.sh"
     local loaded=0
+    local runtime=""
 
     case "${RECIPE_HOOK_PROFILE:-}" in
         launch)
@@ -118,7 +119,14 @@ recipe_hooks::load_app_module() {
                 recipe_hooks::_source "$mod"
                 loaded=1
             fi
-            [ "$loaded" -eq 1 ] || recipe_hooks::die "Launch-Modul fehlt: $launch_mod oder $mod"
+            # Mini-Rezepte (z. B. runtime: system / Trainer): launch.sh ist selbstständig
+            if [ "$loaded" -eq 0 ]; then
+                runtime="$(recipe_get "$RECIPE_YML" runtime 2>/dev/null || true)"
+                if [ "$runtime" = "system" ]; then
+                    return 0
+                fi
+                recipe_hooks::die "Launch-Modul fehlt: $launch_mod oder $mod"
+            fi
             ;;
         install|repair)
             if [ -f "$CORE_DIR/$install_mod" ]; then
@@ -161,7 +169,7 @@ recipe_hooks::_mono_missing() {
 
 recipe_hooks::hint_wine_popup() {
     type output::user_action >/dev/null 2>&1 && output::user_action \
-        "Wine-Fenster möglich — „Wine-Mono-Installation“: Installieren klicken; „Konfiguration wird aktualisiert“: OK/warten"
+        "Es können Wine-Fenster erscheinen — bei „Wine-Mono-Installation“ auf Installieren klicken; bei „Konfiguration wird aktualisiert“ OK wählen oder kurz warten"
 }
 
 recipe_hooks::_with_mscoree_blocked() {
@@ -289,7 +297,6 @@ recipe_hooks::install_winetricks_from_recipe() {
         pct=$((pct + 10))
         [ "$pct" -gt 90 ] && pct=90
         output::progress "$pct" "winetricks: $pkg"
-        output::step "winetricks: $pkg"
         if recipe_winetricks::run "${LOG_DIR}/winetricks_${pkg}_${TIMESTAMP_ISO}.log" "$pkg"; then
             output::success "$pkg"
         else
@@ -354,4 +361,48 @@ recipe_hooks::validate_work_root() {
         failures=$((failures + 1))
     fi
     return "$failures"
+}
+
+# Deinstallation: Desktop + gewählter DATA_ROOT + kanonischer data_root (data_root.path).
+# Portable-/Spielordner außerhalb von DATA_ROOT bleiben unberührt (z. B. WISO-Portable).
+recipe_hooks::purge_recipe_data() {
+    local canonical="" chosen="${DATA_ROOT:-}"
+    local raw=""
+
+    recipe_hooks::_source recipe-desktop.sh 2>/dev/null || true
+    if type recipe_desktop::remove >/dev/null 2>&1; then
+        recipe_desktop::remove || true
+    fi
+
+    raw="$(recipe_get "$RECIPE_YML" data_root 2>/dev/null || true)"
+    if [ -n "$raw" ]; then
+        if type paths_expand >/dev/null 2>&1; then
+            canonical="$(paths_expand "$raw")"
+        else
+            canonical="$(recipe_hooks::paths_expand_tokens "$raw" 2>/dev/null || true)"
+        fi
+    fi
+    [ -n "$canonical" ] || canonical="$(recipe_data_root "${RECIPE_ID:-}")"
+
+    recipe_hooks::_purge_dir_safe() {
+        local d="${1:-}"
+        [ -n "$d" ] && [ -d "$d" ] || return 0
+        # Nur offensichtlich fatale Ziele blockieren
+        if [ "$d" = "/" ] || [ "$d" = "$HOME" ] || [ "$d" = "/home" ] || [ "$d" = "/usr" ] || [ "$d" = "/etc" ]; then
+            echo "ERROR: unsicherer Löschpfad: $d" >&2
+            return 1
+        fi
+        rm -rf "$d"
+        return 0
+    }
+
+    if [ -n "$chosen" ] && [ -d "$chosen" ]; then
+        recipe_hooks::_purge_dir_safe "$chosen" || true
+    fi
+    if [ -n "$canonical" ] && [ -d "$canonical" ]; then
+        if [ -z "$chosen" ] || [ "$canonical" != "$chosen" ]; then
+            recipe_hooks::_purge_dir_safe "$canonical" || true
+        fi
+    fi
+    return 0
 }

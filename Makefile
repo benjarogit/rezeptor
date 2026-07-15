@@ -23,9 +23,15 @@ compile:
 
 recipes-check:
 	@for f in recipes/*/recipe.yml; do \
-		case "$$f" in */_template/*) continue ;; esac; \
+		case "$$f" in */_template/*|*/_template-installer/*) continue ;; esac; \
 		grep -q '^repair:' "$$f" || { echo "missing repair: in $$f"; exit 1; }; \
 		grep -q '^validate:' "$$f" || { echo "missing validate: in $$f"; exit 1; }; \
+		grep -q '^uninstall:' "$$f" || { echo "missing uninstall: in $$f"; exit 1; }; \
+		u=$$(grep -E '^uninstall:' "$$f" | head -1 | sed 's/^uninstall:[[:space:]]*//;s/[\"'\'']//g'); \
+		d=$$(dirname "$$f"); \
+		[ -f "$$d/$$u" ] || { echo "missing uninstall file $$d/$$u"; exit 1; }; \
+		grep -q 'recipe_hooks::purge_recipe_data' "$$d/$$u" \
+			|| { echo "$$d/$$u must call recipe_hooks::purge_recipe_data"; exit 1; }; \
 	done
 
 recipe-lint:

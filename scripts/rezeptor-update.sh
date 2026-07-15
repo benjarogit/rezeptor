@@ -192,11 +192,21 @@ apply_appimage() {
     asset_url="$(printf '%s' "$json" | python3 -c '
 import json,sys,re
 d=json.load(sys.stdin)
-for a in d.get("assets") or []:
+assets=d.get("assets") or []
+# Prefer rezeptor-*.AppImage; fall back to any AppImage (legacy photoshopCClinux-*)
+picked=""
+for a in assets:
     name=a.get("name") or ""
-    if re.search(r"AppImage$", name, re.I):
-        print(a.get("browser_download_url",""))
+    if re.search(r"(?i)^rezeptor-.*\.AppImage$", name):
+        picked=a.get("browser_download_url","")
         break
+if not picked:
+    for a in assets:
+        name=a.get("name") or ""
+        if re.search(r"AppImage$", name, re.I):
+            picked=a.get("browser_download_url","")
+            break
+print(picked)
 ')"
     [ -n "$asset_url" ] || die "Kein AppImage-Asset in Release $tag"
     dest="${APPIMAGE}"

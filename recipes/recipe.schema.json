@@ -6,6 +6,7 @@
   "required": [
     "id",
     "name",
+    "icon",
     "data_root",
     "runtime",
     "install_type",
@@ -16,6 +17,7 @@
     "validate",
     "repair",
     "kill",
+    "uninstall",
     "install_steps"
   ],
   "properties": {
@@ -24,10 +26,42 @@
       "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
     },
     "name": { "type": "string", "minLength": 1 },
-    "icon": { "type": "string" },
+    "icon": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Pfad zum Rezept-Icon, z. B. {repo}/images/<id>-icon.png (PNG/SVG, empfohlen 256²)"
+    },
     "category": { "type": "string" },
     "version_guaranteed": { "type": "string" },
     "version_label": { "type": "string" },
+    "version_detect": {
+      "type": "array",
+      "description": "Deklarative Versionserkennung (Rezeptor-Kern). Pflicht wenn version_guaranteed gesetzt.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["kind"],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "json_key",
+              "text_regex",
+              "path_regex",
+              "pe_field",
+              "pe_contains",
+              "filename_regex",
+              "stack"
+            ]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "author": { "type": "string" },
+    "notify_title": { "type": "string" },
+    "steam_appid": { "type": "string" },
+    "steam_target_folder": { "type": "string" },
     "data_root": { "type": "string", "minLength": 1 },
     "prefix": { "type": "string" },
     "runtime": { "enum": ["proton-ge", "system"] },

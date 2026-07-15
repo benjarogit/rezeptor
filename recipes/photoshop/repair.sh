@@ -68,10 +68,11 @@ if _ps_exe="$(photoshop::find_exe "$WINEPREFIX" 2>/dev/null)" && [ -n "$_ps_exe"
     fi
 fi
 
-output::step "Desktop-Eintrag & Icon"
+output::step "Desktop-Eintrag & Icon (falls bereits angelegt)"
 export SCR_PATH="$DATA_ROOT"
 export WINE_PREFIX="$WINEPREFIX"
-recipe_photoshop::install_desktop >> "$LOG_FILE" 2>&1 || true
+recipe_hooks::_source recipe-desktop.sh
+recipe_desktop::refresh_if_present >> "$LOG_FILE" 2>&1 || true
 
 if [ "$_validate_ok" -eq 1 ]; then
     output::progress_tick "Erneut prüfen"

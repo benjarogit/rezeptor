@@ -208,6 +208,7 @@ class DeveloperDocsDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(t("menu.docs").rstrip("…"))
         self.resize(960, 680)
+        self.setMinimumSize(640, 420)
         self._locale = get_locale()
 
         layout = QVBoxLayout(self)

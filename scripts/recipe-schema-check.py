@@ -15,6 +15,7 @@ SCHEMA_PATH = ROOT / "recipes" / "recipe.schema.json"
 REQUIRED = (
     "id",
     "name",
+    "icon",
     "data_root",
     "runtime",
     "install_type",

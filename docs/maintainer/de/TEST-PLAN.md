@@ -51,7 +51,7 @@ Jedem Bug-Report beifügen:
 | ID | Schritt | Erfolgskriterium |
 |----|---------|------------------|
 | B1 | Build | `scripts/build-appimage.sh` | SHA256 OK, AppImage erstellt |
-| B2 | AppImage starten | `./photoshopCClinux-*-x86_64.AppImage` | Launcher oder Setup startet |
+| B2 | AppImage starten | `./rezeptor-*-x86_64.AppImage` | Launcher oder Setup startet |
 | B3 | Kein System-Wine | `which wine` leer oder ungenutzt im Install-Log | Proton aus Bundle oder User-Runtime |
 
 Test auf: Bazzite, Silverblue, Kinoite oder Bluefin, falls verfügbar.

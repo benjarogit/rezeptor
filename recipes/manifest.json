@@ -1,42 +1,70 @@
 {
   "recipes": {
+    "house-of-ashes": {
+      "files": {
+        "info.de.txt": "sha256:ed927c88c215af25b57fd52cf1f000889d44d62c5406216e41d1d3fb3a537fc4",
+        "info.en.txt": "sha256:a37480ec4cf79186cffbcdfb59aaf8887e1a1e83fa53caf723793390bbd58974",
+        "install.sh": "sha256:8e730224f8ef37103662e76f365b44b679cb2833ca29851dfc0a2de00d7a0684",
+        "kill.sh": "sha256:677664cf550c9f27fcf4c100563320dfa55e725c4ed026f4e843783c2af7ca29",
+        "launch.sh": "sha256:6166c13b08d84e37154ff7192277bff4ca8c297a7b06a8e452af964509384b36",
+        "recipe.yml": "sha256:78870e21afd7b9826ebb112e2540074df8d17693db2db2832ca5bb6978d655af",
+        "repair.sh": "sha256:34dc5c66e51cf9717b5fe59885a890cd5b4ad0918e7ea033e17647d192afd005",
+        "uninstall.sh": "sha256:7e8047e698bff41199d1cbfb5bdaa860f7953e0527e8b0f52a602aa37a61a120",
+        "validate.sh": "sha256:7c587cbd2287b19bf6e97c6c1893f4c52ddbbe32c8ee2cd87f8efa990d753a20"
+      }
+    },
     "photoshop": {
       "files": {
-        "assets/Rezeptor-Register-Startup.jsx": "sha256:078f30d1e66578de85b6a275a3e5dd06e410cc5c178c6c729706a35eacbe8ba6",
+        "assets/Rezeptor-Register-Startup.jsx": "sha256:95cde7cb401646bccca9af94d58b7bb400802ccba0603c66d23ff4852c1888bd",
         "assets/Rezeptor-Text-Glatt-Silent.jsx": "sha256:c84d50353ba8f1a329c9060bc5aaf73f34f9ea1253459c71e746d087598183ee",
-        "assets/Rezeptor-Text-Glatt.jsx": "sha256:30c30f0264bd89119b3155d5934dc342ff6d5db0b75f0034b6d122159838d823",
+        "assets/Rezeptor-Text-Glatt.jsx": "sha256:e07a65c969cab57cfd67932469d7d1dc1cb962a8180d4c06f886063c24713bc8",
         "assets/gpu-profiles/dxvk_ui_only/PSUserConfig.txt": "sha256:3e2a8500347a602f2411ffc7a08ce2f23f01fdc15656f62abd7b89a8d1a795aa",
         "assets/gpu-profiles/dxvk_ui_only/machine.prefs": "sha256:2c8692414d3a6299a3328746ca63bb6088f936873511b6196630d404110e9a0d",
         "assets/gpu-profiles/ps_gpu_full/PSUserConfig.txt": "sha256:1392b953464012427e9f54bbc13ccf93321c89c37e7bad81e88cb59259c7a248",
         "assets/gpu-profiles/ps_gpu_full/machine.prefs": "sha256:9dbf3156a4fd19103db6125729c4d081326029c6b8e8df1150d390e3e56faa78",
         "assets/gpu-profiles/ps_gpu_no_opencl/PSUserConfig.txt": "sha256:fe841bd78beb15a0ae721f4534f41c2adc8e7b2d5cf737d98edfcf6d686c4e72",
         "assets/gpu-profiles/ps_gpu_no_opencl/machine.prefs": "sha256:f1d78f838057c4378e33e79175da522fd45006fc66da234c4299489117f7600b",
+        "assets/gpu-profiles/stable/MachinePrefs.psp": "sha256:4578eb447d82a418862d90b2afda9c58abd69dcee97538488fb8b74a0e488c98",
         "assets/gpu-profiles/stable/PSUserConfig.txt": "sha256:7f9e20eb8c4e5f2ffc5e968311f4873a53b29298f69847b131dce50ec2e420e5",
+        "assets/gpu-profiles/stable/UIPrefs.psp": "sha256:294da81d32902cfbff0f8d46e0d6dba604bc7f81cfa4bd3056177518075b22b8",
         "assets/gpu-profiles/stable/machine.prefs": "sha256:429dd0aba09f31c81c3ff6b95c813171031e014a6e134bf1a4f862a35967eb68",
-        "info.de.txt": "sha256:9057dc2b7efa77bced4b8e24f80595982af3a4d5ba740dbaa4004ac2812c433e",
-        "info.en.txt": "sha256:f2615222c739921b549c7ec5a43245dcf02ec3c21e046624c546f9d4af72eeb5",
+        "info.de.txt": "sha256:e7158162efe0568466b758f595603223bea3f9242a8247d6f203f923a38eab34",
+        "info.en.txt": "sha256:07062b28cb4633fda455d4d8773b265a05b8a222567a50e56d4d8c2997cb6799",
         "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
         "kill.sh": "sha256:8bb102767ac30c240e662585e13e8735caa5d93b20e7ba722be91c4423c7da52",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
         "optional/cameraRawInstaller.sh": "sha256:b3877f81ae1720bbe3284e68bee38298cea546beff6a434e11d7350fcb80cf06",
-        "recipe.yml": "sha256:331ba69199c1ae9cf2dae9e07656d5a6d97b22399020cfbdd4aa413f380131a2",
-        "repair.sh": "sha256:207b6ad05f57fe54a5075cadaa46b91f44b97e243ed1bb90310b75af03316650",
-        "uninstall.sh": "sha256:6bde80bf2cd173d0e70e00de2b7610472e5ed9762b240b3e63221877b7f4fbe8",
-        "validate.sh": "sha256:b202356dcabd5b93c262d58390b05caca9d0517da256e7011a9d2376500911eb"
+        "recipe.yml": "sha256:76df35394adf4102c6f9a5a3c6738a26fadd8d622228c5f51f894640981d7cc9",
+        "repair.sh": "sha256:f1362b1ea8545118e9a54c74ffec72eb867775161f749897e9a09571535a14e8",
+        "uninstall.sh": "sha256:4dd23e1814e426203305b5fa160939d62e68b00c85178ec6cca724e022df9925",
+        "validate.sh": "sha256:148296253f190121b7b478a18fe37b8bd3829ca73d2ac9fd14f51149ad1924a5"
       }
     },
     "wiso-steuer": {
       "files": {
         "assets/wiso-mit-wine.sh": "sha256:58680ec338709d5a8006b64255cd51f4765ca4b1ba8dd558e5b02a32ae19af15",
-        "info.de.txt": "sha256:603f5f3aea01a2aca4221a53e512152482be2624729c267c698b0e75e4a4a955",
-        "info.en.txt": "sha256:951dd8ea7bb769a28a98b453a5c4300f5a9969ea1b3d99d1d59db32ff94d7fca",
+        "info.de.txt": "sha256:fbc9c91f47630e5834085f8fa3fd7f51f9b05487775ab9b72607e2d66e4a5f39",
+        "info.en.txt": "sha256:1b3681cda2a53f06372acef35528c50181c04f6f3cf24acc7778169c07c8e416",
         "install.sh": "sha256:3496986f2c925e149d6997a2f0c26ec0f0daf6e02b5b0fc08d96b40882177f47",
         "kill.sh": "sha256:45cd86774ab92681a70cc7069460e96d54baec3567292f8073ce571350a06ef8",
         "launch.sh": "sha256:39454c8de38dfa1007da2424a37d591d9999ee270aacf53893d033268deea716",
-        "recipe.yml": "sha256:4ec734326fe796bbc264ef2f2dff43f7b93cfa53288d02b1fbf5662b21351e5e",
+        "recipe.yml": "sha256:fd5828c54d5143eb54ab4d7318ca490084580701c24dcc77037e0727de16e6c2",
         "repair.sh": "sha256:b33937ad49655bd63835cb492a9bcb650fb4d96052aa317a54a9d8a7b36e44b3",
-        "uninstall.sh": "sha256:ddd359b474ec19e8cf267c15fbaa724c4ac6b902148a547830e03cb9fd563d6e",
+        "uninstall.sh": "sha256:81327d97a234ad2b34ab7ff6d9e56f8e163feed1739a89ebb70f417e22f8e793",
         "validate.sh": "sha256:db5bf9235de2713625f1667048d35516b9202109e344debf42500c5f52a2965c"
+      }
+    },
+    "za4-trainer": {
+      "files": {
+        "info.de.txt": "sha256:7b98ff90641cd68e2838f2919601965790515e47b9ecadfc09bb02a8a1f2760b",
+        "info.en.txt": "sha256:934adc5008630d06fa764041b32b1f9528db13ebca046ab6a1d523fecb2a94f9",
+        "install.sh": "sha256:70e6e16c1ddd8b229a08f24f36af30878fac8b448e9147ba3a9cd0ad43fc3c68",
+        "kill.sh": "sha256:404f06a0ec6ade0fcde6210475683ba3fd6c2415b3001a61d211dd60eea0dd08",
+        "launch.sh": "sha256:508bb7bea3b27027c82c026cd8dc0a393cc8ecf84f4c2302af5f6034866b9a86",
+        "recipe.yml": "sha256:c87a5ba4a5c2980e86f5eb3be17cb3eedf43d0725ea9b88ed22a9490670134a9",
+        "repair.sh": "sha256:6e30cc3ba685b3116af5aa85c12130b5aa5047456497cc87e6857c0f6052634e",
+        "uninstall.sh": "sha256:9433543eb8284be1f562e0c125c55bdcf534c8a97e1b470c3f772bcaace840e8",
+        "validate.sh": "sha256:bbb18bb49499ea64161dfa03693dd1296bc43bf9317dc45d4411d5b4c3512902"
       }
     }
   },

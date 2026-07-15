@@ -137,8 +137,16 @@ try {
     }
 } catch (eN) {}
 
-var toolMode = setTypeToolAntiAlias();
-var toolOk = toolMode !== "";
+var toolMode = "";
+var toolOk = false;
+// Auf leerer Startseite (Notifier „Start Application“) kein Type-Tool anfassen —
+// unter Wine → oft Dialog „Programmfehler“.
+try {
+    if (!_rezeptorFromNotifier || app.documents.length > 0) {
+        toolMode = setTypeToolAntiAlias();
+        toolOk = toolMode !== "";
+    }
+} catch (eTool) {}
 var fixed = 0;
 if (app.documents.length > 0) {
     fixed = fixTextLayersInDoc(app.activeDocument);

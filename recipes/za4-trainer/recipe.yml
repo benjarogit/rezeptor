@@ -1,0 +1,42 @@
+id: za4-trainer
+icon: "{repo}/images/za4-trainer-icon.png"
+name: "Zombie Army 4 — Plus 14 Trainer"
+author: "benjarogit"
+category: "Spiele"
+version_guaranteed: "v1.0-v3.21"
+version_label: "Zombie Army 4: Dead War — Plus 14 Trainer (v1.0–v3.21)"
+version_detect:
+  - kind: pe_contains
+    glob: "*.exe"
+    contains: ["FLiNG", "TrSpeedHack"]
+    value: "v1.0-v3.21"
+  - kind: pe_contains
+    glob: "*.exe"
+    contains: ["FLiNG"]
+    value: "v1.0-v3.21"
+  - kind: filename_regex
+    regex: "(?i)(ZA4|Plus.?14).*Trainer|Trainer.*(ZA4|Plus)"
+    value: "v1.0-v3.21"
+notify_title: "ZA4 Trainer"
+data_root: "~/.local/share/wine-software/za4-trainer"
+runtime: proton-ge
+install_type: portable_launch
+deploy_mode: copy
+source_kind: installer
+source_label: "Trainer-EXE (ZA4-Trainer.exe / Plus 14 Trainer)"
+source_formats: exe
+steam_appid: "694280"
+steam_target_folder: "ZA4-Trainer"
+target_default: "~/.local/share/wine-software/za4-trainer/ZA4-Trainer"
+target_label: "Zielordner (Steam-Spielordner wird automatisch erkannt)"
+fix_kind: none
+exe_glob: "ZA4-Trainer.exe"
+env: {}
+validate: validate.sh
+launch: launch.sh
+install: install.sh
+repair: repair.sh
+kill: kill.sh
+uninstall: uninstall.sh
+install_steps:
+  - emit_log_paths

@@ -1,16 +1,30 @@
 # Vorlage installer_offline — Kopie via: ./scripts/new-recipe.sh meine-app --type installer
 id: example-app
+icon: "{repo}/images/rezeptor-icon.svg"
 name: "Example App (Template)"
+author: ""
 category: "Vorlage"
 version_guaranteed: "1.0.0"
 version_label: "Example 1.0.0"
+version_detect:
+  - kind: pe_field
+    glob: "Set-up.exe"
+    field: ProductVersion
+  - kind: pe_field
+    glob: "**/setup.exe"
+    field: FileVersion
+  - kind: json_key
+    glob: "**/application.json"
+    key: ProductVersion
+notify_title: ""
 data_root: "~/.local/share/wine-software/example-app"
 prefix: "{data_root}/prefix"
 runtime: proton-ge
 install_type: installer_offline
-source_kind: fixed_path
-installer_dir: "{repo}/installer"
-source_label: "Offline-Installer (Ordner mit setup.exe)"
+source_kind: folder
+source_label: "Ordner mit Offline-Installer (setup.exe / Set-up.exe)"
+target_default: "~/.local/share/wine-software/example-app"
+target_label: "Datenordner (Wine-Prefix wird hier angelegt)"
 fix_kind: none
 exe_glob: "**/*.exe"
 winetricks: [win10, vcrun2015]

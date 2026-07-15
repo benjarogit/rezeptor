@@ -13,9 +13,22 @@ def rezeptor_dev_mode() -> bool:
 
 
 def manifest_auto_sync_enabled(project_root: Path) -> bool:
-    """Only explicit REZEPTOR_DEV — never auto-rewrite hashes just because .git exists."""
-    _ = project_root  # kept for call-site compatibility
-    return rezeptor_dev_mode()
+    """Auto-sync hashes in git checkouts / REZEPTOR_DEV — not in packaged releases."""
+    if rezeptor_dev_mode():
+        return True
+    return (project_root / ".git").is_dir()
+
+
+def friendly_trust_reason(reason: str) -> str:
+    """Map technical hash errors to a short user-facing phrase (i18n key suffix)."""
+    r = (reason or "").strip()
+    if not r:
+        return "changed"
+    if r.startswith("Hash mismatch:") or r.startswith("Nicht im Manifest:") or r.startswith("Fehlt:"):
+        return "changed"
+    if "fehlt" in r.lower() or "missing" in r.lower() or "unlesbar" in r.lower():
+        return "missing"
+    return "changed"
 
 
 def _recipe_id(recipe_dir: Path) -> str:

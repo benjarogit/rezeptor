@@ -61,8 +61,6 @@ var REZEPTOR_TEXT_SILENT = true;
         marker.close();
     } catch (eMark) {}
 
-    var main = mainJsx();
-    if (main.exists) {
-        $.evalFile(main);
-    }
+    // Kein $.evalFile(Text-Glatt) hier: setTypeToolAntiAlias auf der Startseite
+    // löst unter Wine oft „Programmfehler“ aus. AA kommt über Notifier „Mk  “.
 })();

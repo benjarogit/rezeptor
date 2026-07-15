@@ -1,0 +1,45 @@
+# House of Ashes
+
+Autor: benjarogit
+Version: Steam + TDPAHOA_Fix_Repair_Steam_Generic
+
+## Kurzbeschreibung
+The Dark Pictures Anthology: **House of Ashes** über Proton starten — mit Online-Fix,
+damit das Spiel mit Steam sprechen kann.
+
+Rezeptor **verteilt weder Spiel noch Fix**. Du legst den Fix selbst in den Ordner;
+wir prüfen nur die erwarteten Dateien und starten mit den richtigen Overrides.
+
+## So hängt das mit Steam zusammen (wichtig)
+• House of Ashes bleibt **ganz normal** in deiner Steam-Bibliothek (AppID **1281590**).
+• Rezeptor legt **keinen** neuen Steam-Eintrag an und ändert Steam nicht.
+• „Starten“ in Rezeptor startet die EXE **außerhalb** der Steam-UI über **Rezeptor Proton-GE**
+  (Prio; Fallback Steam-GE) — mit `SteamAppId=480` (**Spacewar**). So spricht der Online-Fix die Steam-API an.
+• Steam-**compatdata** des Spiels bleibt der Prefix (kein neuer Rezeptor-Prefix).
+• In Steam siehst du beim Spielen oft **Spacewar**, nicht „House of Ashes als laufendes Spiel“.
+• **Deinstallieren** in Rezeptor entfernt nur den Rezeptor-Wrapper/Eintrag —
+  **nicht** das Steam-Spiel, **nicht** den Fix, **nicht** Spacewar.
+
+## Voraussetzungen
+• Steam installiert und angemeldet
+• **Spacewar** (AppID **480**, kostenloses Valve-Tool) in der Bibliothek installiert
+  → Steam: Suche „Spacewar“ / Tools, oder `steam steam://install/480`
+• House of Ashes (AppID 1281590) installiert
+• Spiel **mindestens einmal** mit Proton / GE-Proton über Steam gestartet (compatdata)
+• Fix-Stack **TDPAHOA_Fix_Repair_Steam_Generic** im Spielordner
+  (u. a. `SMG025/Binaries/Win64/OnlineFix64.dll`, `OnlineFix.ini`, …)
+
+## Installation (in Rezeptor)
+1. „Installieren“ wählen
+2. Den **Spielordner** mit `HouseOfAshes.exe` wählen (oft automatisch erkannt)
+3. Rezeptor prüft Spacewar + Fix-Dateien und schreibt einen Launch-Wrapper
+   → dauert nur **wenige Sekunden** (kein Kopieren des Spiels)
+
+## Nutzung
+• Steam sollte laufen und eingeloggt sein
+• In Rezeptor „Starten“ — nicht „Play“ in Steam für den Fix-Pfad
+
+## Hinweise
+• Deinstallieren = nur Rezeptor-Eintrag weg
+• Getesteter Fix: TDPAHOA_Fix_Repair_Steam_Generic (FakeAppId 480 / RealAppId 1281590)
+• Logs: ~/.local/share/wine-software/logs/

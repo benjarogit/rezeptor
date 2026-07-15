@@ -54,10 +54,14 @@ Referenz:
 |-----|---------|----------|
 | Portable | `recipes/_template/` | `wiso-steuer` (volle `install_steps`-Zerlegung) |
 | Offline-Installer | `recipes/_template-installer/` | `photoshop` (`module: recipe_photoshop::install`) |
+| Steam-Trainer | (wie `za4-trainer`) | EXE + Steam compatdata |
+| Steam + BYOS-Fix | (wie `house-of-ashes`) | Spielordner `link`, Fix validate, Proton-Launch — siehe [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) |
+
+**Versionserkennung:** jedes Rezept mit `version_guaranteed` braucht `version_detect` (Lint ERROR sonst). Engine: `launcher/version_detect.py`.
 
 ## Pflicht-Checkliste
 
-- [ ] `recipe.yml`: Pflichtfelder + **`install_steps`**
+- [ ] `recipe.yml`: Pflichtfelder + **`install_steps`** + **`version_detect`** (wenn Garantie-Version gesetzt)
 - [ ] Alle `*.sh` nutzen `core/recipe-hooks.sh`
 - [ ] `./scripts/recipe-lint.sh` ohne Fehler (inkl. Schema-Check)
 - [ ] Mit `REZEPTOR_DEV=1 ./setup.sh` getestet

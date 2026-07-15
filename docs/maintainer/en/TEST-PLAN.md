@@ -49,7 +49,7 @@ Attach to every bug report:
 | ID | Step | Pass criteria |
 |----|------|---------------|
 | B1 | Build | `scripts/build-appimage.sh` | SHA256 OK, AppImage created |
-| B2 | Run AppImage | `./photoshopCClinux-*-x86_64.AppImage` | Launcher or setup starts |
+| B2 | Run AppImage | `./rezeptor-*-x86_64.AppImage` | Launcher or setup starts |
 | B3 | No system wine | `which wine` empty or unused in install log | Proton from bundle or user runtime |
 
 Test on: Bazzite, Silverblue, Kinoite, or Bluefin if available.

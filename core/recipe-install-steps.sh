@@ -24,15 +24,24 @@ recipe_install_steps::_expand() {
     echo "$p"
 }
 
+recipe_install_steps::_python() {
+    # AppImage sets PYTHON to bundled venv; install_steps must not require host python-pyqt6.
+    if [ -n "${PYTHON:-}" ] && command -v "$PYTHON" >/dev/null 2>&1; then
+        echo "$PYTHON"
+    else
+        echo "python3"
+    fi
+}
+
 recipe_install_steps::_json_get() {
     # Usage: _json_get '{"type":"a","x":"y"}' x
     local json="$1" key="$2"
-    python3 -c 'import json,sys; d=json.loads(sys.argv[1]); v=d.get(sys.argv[2],""); print(v if not isinstance(v, (dict,list)) else json.dumps(v))' "$json" "$key"
+    "$(recipe_install_steps::_python)" -c 'import json,sys; d=json.loads(sys.argv[1]); v=d.get(sys.argv[2],""); print(v if not isinstance(v, (dict,list)) else json.dumps(v))' "$json" "$key"
 }
 
 recipe_install_steps::_json_get_list() {
     local json="$1" key="$2"
-    python3 -c '
+    "$(recipe_install_steps::_python)" -c '
 import json,sys
 d=json.loads(sys.argv[1])
 v=d.get(sys.argv[2], [])
@@ -80,13 +89,15 @@ recipe_install_steps::copy_asset() {
 }
 
 recipe_install_steps::run_winetricks_list() {
-    local pkg pct=20 wt_ok=0
+    local pkg pct=15 wt_ok=0
     recipe_winetricks::stabilize_prefix
     while IFS= read -r pkg; do
         [ -n "$pkg" ] || continue
         case "$pkg" in
             vcrun2019|vcrun2015)
-                output::step "Visual C++ Runtime ($pkg)"
+                pct=$((pct + 5))
+                [ "$pct" -gt 90 ] && pct=90
+                output::progress "$pct" "Visual C++ Runtime ($pkg)"
                 if recipe_vcrun::ensure "${LOG_DIR}/winetricks_${pkg}_${TIMESTAMP_ISO}.log"; then
                     output::success "$pkg"
                 else
@@ -96,7 +107,9 @@ recipe_install_steps::run_winetricks_list() {
                 continue
                 ;;
             dotnet48|dotnet40)
-                output::step "Wine-Mono / .NET ($pkg)"
+                pct=$((pct + 5))
+                [ "$pct" -gt 90 ] && pct=90
+                output::progress "$pct" "Wine-Mono / .NET ($pkg)"
                 if recipe_dotnet::ensure "${LOG_DIR}/winetricks_${pkg}_${TIMESTAMP_ISO}.log"; then
                     output::success "$pkg"
                 else
@@ -106,7 +119,9 @@ recipe_install_steps::run_winetricks_list() {
                 continue
                 ;;
             win10)
-                output::step "Windows 10 (Registry)"
+                pct=$((pct + 5))
+                [ "$pct" -gt 90 ] && pct=90
+                output::progress "$pct" "Windows 10 (Registry)"
                 if recipe_win10::ensure; then
                     output::success "win10"
                 else
@@ -116,10 +131,9 @@ recipe_install_steps::run_winetricks_list() {
                 continue
                 ;;
         esac
-        pct=$((pct + 8))
+        pct=$((pct + 5))
         [ "$pct" -gt 90 ] && pct=90
         output::progress "$pct" "winetricks: $pkg"
-        output::step "winetricks: $pkg"
         if recipe_winetricks::run "${LOG_DIR}/winetricks_${pkg}_${TIMESTAMP_ISO}.log" "$pkg"; then
             output::success "$pkg"
         else
@@ -138,14 +152,17 @@ recipe_install_steps::step() {
         prepare_source)
             output::progress 5 "Quelle vorbereiten"
             recipe_hooks::install_prepare_source || return 1
+            output::progress 12 "Quelle bereit"
             ;;
         require_portable)
+            output::progress 18 "Portable prüfen"
             recipe_hooks::require_portable_source || return 1
             if [ -n "${RECIPE_WORK_ROOT:-}" ]; then
                 recipe_hooks::state_set WORK_ROOT "$RECIPE_WORK_ROOT"
             fi
             ;;
         prefix)
+            output::progress 22 "Wine-Prefix"
             recipe_hooks::install_prefix || return 1
             if [ -n "${RECIPE_WORK_ROOT:-}" ]; then
                 recipe_hooks::state_set WORK_ROOT "$RECIPE_WORK_ROOT"
@@ -162,21 +179,24 @@ recipe_install_steps::step() {
             fi
             ;;
         deploy_graphics)
-            output::step "Proton-GE Grafik-DLLs"
+            output::progress 72 "Proton-GE Grafik-DLLs"
             wine_runtime::deploy_proton_graphics_dlls || return 1
             ;;
         run_installer)
+            output::progress 80 "Installer ausführen"
             recipe_hooks::run_exe_installer || return 1
             ;;
         stabilize_prefix)
+            output::progress 74 "Prefix stabilisieren"
             recipe_winetricks::stabilize_prefix
             ;;
         win10)
-            output::step "Windows 10 (Registry)"
+            output::progress 28 "Windows 10 (Registry)"
             recipe_win10::ensure || return 1
             output::success "win10"
             ;;
         fonts_registry)
+            output::progress 76 "Schriften-Registry"
             recipe_hooks::_source recipe-fonts.sh
             recipe_fonts::registry || true
             ;;
@@ -186,6 +206,8 @@ recipe_install_steps::step() {
         module)
             local name
             name="$(recipe_install_steps::_json_get "$json" name)"
+            # Kein fester 30%-Sprung — Modul besitzt die eigene Progress-Leiter (sonst UI bei 30% klebt).
+            output::progress 1 "Modul: $name"
             recipe_install_steps::call_module "$name" || return 1
             ;;
         copy_asset)
@@ -214,12 +236,12 @@ recipe_install_steps::step() {
             output::progress "${pct:-0}" "${label:-}"
             ;;
         vcrun)
-            output::step "Visual C++ Runtime"
+            output::progress 50 "Visual C++ Runtime"
             recipe_vcrun::ensure "${LOG_DIR}/winetricks_vcrun_${TIMESTAMP_ISO}.log" || return 1
             output::success "vcrun"
             ;;
         dotnet)
-            output::step "Wine-Mono / .NET"
+            output::progress 55 "Wine-Mono / .NET"
             recipe_dotnet::ensure "${LOG_DIR}/winetricks_dotnet48_${TIMESTAMP_ISO}.log" || return 1
             output::success "dotnet"
             ;;
@@ -255,7 +277,7 @@ recipe_install_steps::run() {
             rc=1
             break
         fi
-    done < <(python3 "$reader" "$yml" --install-steps-lines)
+    done < <("$(recipe_install_steps::_python)" "$reader" "$yml" --install-steps-lines)
 
     if [ "$rc" -ne 0 ]; then
         output::error "Installation unvollständig — Rezeptor → Reparieren"

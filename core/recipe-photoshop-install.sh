@@ -203,8 +203,7 @@ recipe_photoshop::_run_adobe_installer() {
         output::info "Silent-Installation (Adobe ESD) — ca. 2–4 Minuten"
     fi
 
-    output::step "Adobe Set-up.exe"
-    output::progress 70 "Adobe-Installer"
+    output::progress 70 "Adobe Set-up.exe"
     (
         cd "$setup_dir" || exit 1
         wine "./Set-up.exe" "${installer_args[@]}" 2>&1 | tee -a "${LOG_FILE:-/dev/null}" | while IFS= read -r _line; do
@@ -236,47 +235,62 @@ recipe_photoshop::_run_adobe_installer() {
 }
 
 # Adobe-Prefs sind binär (key + "bool" + u32 LE). ASCII-Dateien dort ignoriert Photoshop.
-recipe_photoshop::_prefs_set_bool() {
-    local file="$1" key="$2" value="$3"
+# Wichtig: kurzen Key nicht als Substring längerer Keys treffen (ToolTips ⊂ useRichToolTips).
+recipe_photoshop::_prefs_find_bool_val() {
+    # stdout: Byte-Offset des u32-Werts; Exit 1 = Key fehlt
+    local file="$1" key="$2"
     [ -f "$file" ] || return 1
-    command -v python3 >/dev/null 2>&1 || return 1
-    python3 - "$file" "$key" "$value" <<'PY'
+    python3 - "$file" "$key" <<'PY'
 import sys
 from pathlib import Path
-path, key, value = Path(sys.argv[1]), sys.argv[2].encode(), int(sys.argv[3])
-data = bytearray(path.read_bytes())
+data = Path(sys.argv[1]).read_bytes()
+key = sys.argv[2].encode()
 needle = key + b"bool"
-i = data.find(needle)
-if i < 0:
-    sys.exit(1)
-val_at = i + len(needle)
-data[val_at : val_at + 4] = bytes([value & 1, 0, 0, 0])
+start = 0
+while True:
+    j = data.find(needle, start)
+    if j < 0:
+        sys.exit(1)
+    if j == 0 or not (0x30 <= data[j - 1] <= 0x7A and chr(data[j - 1]).isalnum()):
+        print(j + len(needle))
+        sys.exit(0)
+    start = j + 1
+PY
+}
+
+recipe_photoshop::_prefs_set_bool() {
+    local file="$1" key="$2" value="$3" off
+    [ -f "$file" ] || return 1
+    command -v python3 >/dev/null 2>&1 || return 1
+    off="$(recipe_photoshop::_prefs_find_bool_val "$file" "$key" 2>/dev/null)" || return 1
+    python3 - "$file" "$off" "$value" <<'PY'
+import sys
+from pathlib import Path
+path, off, value = Path(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
+data = bytearray(path.read_bytes())
+data[off : off + 4] = bytes([value & 1, 0, 0, 0])
 path.write_bytes(data)
 PY
 }
 
 recipe_photoshop::_prefs_get_bool() {
-    local file="$1" key="$2"
+    local file="$1" key="$2" off
     [ -f "$file" ] || return 1
     command -v python3 >/dev/null 2>&1 || return 1
-    python3 - "$file" "$key" <<'PY'
+    off="$(recipe_photoshop::_prefs_find_bool_val "$file" "$key" 2>/dev/null)" || return 2
+    python3 - "$file" "$off" <<'PY'
 import sys
 from pathlib import Path
-path, key = Path(sys.argv[1]), sys.argv[2].encode()
-data = path.read_bytes()
-needle = key + b"bool"
-i = data.find(needle)
-if i < 0:
-    sys.exit(2)
-sys.exit(0 if data[i + len(needle)] == 1 else 1)
+data = Path(sys.argv[1]).read_bytes()
+off = int(sys.argv[2])
+sys.exit(0 if data[off] == 1 else 1)
 PY
 }
 
 recipe_photoshop::configure_post_install() {
     local ps_path="" version="2021" prefs_path settings_dir ui_prefs machine_prefs
     local _err=0
-    output::progress 96 "Photoshop konfigurieren"
-    output::step "Post-Install (GPU aus, Tooltips aus, Legacy-Neu, CEP)"
+    output::progress 96 "Post-Install (GPU aus, Tooltips aus, Legacy-Neu, CEP)"
 
     ps_path="$(recipe_photoshop::_install_path "$version")"
     [ -d "$ps_path" ] || ps_path="$(photoshop::find_exe "$WINEPREFIX" | xargs -r dirname 2>/dev/null || true)"
@@ -324,7 +338,9 @@ recipe_photoshop::configure_post_install() {
     fi
 
     # Legacy-Neu (CEP unter Wine kaputt). ToolTips aus = Text-Tool/Plugins nutzbar.
+    # Prefs entstehen oft erst beim ersten PS-Start — deshalb Template seeden, dann patchen.
     ui_prefs="$settings_dir/UIPrefs.psp"
+    recipe_photoshop::_seed_ui_prefs "$settings_dir" || true
     if [ -f "$ui_prefs" ]; then
         recipe_photoshop::_prefs_set_bool "$ui_prefs" useClassicFileNewDialog 1 || true
         recipe_photoshop::_prefs_set_bool "$ui_prefs" honorUseOldFileNewDialogPref 1 || true
@@ -402,6 +418,10 @@ recipe_photoshop::apply_gpu_profile() {
     cp -f "$profile_dir/PSUserConfig.txt" "$settings_dir/PSUserConfig.txt" || return 1
 
     machine_prefs="$settings_dir/MachinePrefs.psp"
+    # Frischinstallation: Prefs fehlen bis zum 1. Start → Template mit OpenGL=aus seeden
+    if [ ! -f "$machine_prefs" ] && [ -f "$profile_dir/MachinePrefs.psp" ]; then
+        cp -f "$profile_dir/MachinePrefs.psp" "$machine_prefs" || true
+    fi
     if [ -f "$machine_prefs" ] && [ -f "$profile_dir/machine.prefs" ]; then
         while IFS='=' read -r key val || [ -n "$key" ]; do
             key="${key%%#*}"
@@ -438,6 +458,17 @@ recipe_photoshop::apply_gpu_profile() {
         echo "GPU-Profil: $name"
     fi
     return 0
+}
+
+# UIPrefs-Template (Legacy-Neu, ToolTips aus) — sonst Programmfehler bei „Neu erstellen“.
+recipe_photoshop::_seed_ui_prefs() {
+    local settings_dir="${1:?}" ui_prefs src
+    ui_prefs="$settings_dir/UIPrefs.psp"
+    [ -f "$ui_prefs" ] && return 0
+    src="$(recipe_photoshop::_gpu_profile_dir stable)/UIPrefs.psp"
+    [ -f "$src" ] || return 1
+    mkdir -p "$settings_dir"
+    cp -f "$src" "$ui_prefs"
 }
 
 # ScriptingSupport.8li aus Offline-Installer wiederherstellen (früher fälschlich gelöscht).
@@ -539,46 +570,8 @@ recipe_photoshop::ensure_post_install_config() {
 }
 
 recipe_photoshop::install_desktop() {
-    local launch="${RECIPE_DIR}/launch.sh"
-    local app_dir="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
-    local icon_dir="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor"
-    local icon_src="${PROJECT_ROOT}/images/AdobePhotoshop-icon.png"
-    local launch_esc icon_line="Icon=photoshop" theme_name="photoshop"
-
-    [ -x "$launch" ] || recipe_hooks::die "launch.sh fehlt: $launch"
-    mkdir -p "$app_dir"
-
-    if [ -f "$icon_src" ] && command -v magick >/dev/null 2>&1; then
-        local s=""
-        for s in 48 64 128 256; do
-            mkdir -p "$icon_dir/${s}x${s}/apps"
-            magick "$icon_src" -resize "${s}x${s}" "$icon_dir/${s}x${s}/apps/${theme_name}.png" 2>/dev/null || true
-        done
-        [ -f "$icon_dir/48x48/apps/${theme_name}.png" ] && icon_line="Icon=${theme_name}"
-        command -v gtk-update-icon-cache >/dev/null 2>&1 \
-            && gtk-update-icon-cache -f -t "$icon_dir" 2>/dev/null || true
-    fi
-
-    launch_esc="$(printf '%s' "$launch" | sed 's/[\\"]/\\&/g')"
-    cat >"$app_dir/photoshop.desktop" <<EOF
-[Desktop Entry]
-Type=Application
-Version=1.0
-Name=Adobe Photoshop CC 2021
-Comment=Adobe Photoshop via Rezeptor (Proton-GE)
-Exec=env WINEPREFIX="${DATA_ROOT}/prefix" DATA_ROOT="${DATA_ROOT}" SCR_PATH="${DATA_ROOT}" bash "${launch_esc}" %F
-Path=${DATA_ROOT}
-StartupNotify=true
-StartupWMClass=Photoshop.exe
-MimeType=image/vnd.adobe.photoshop;image/x-photoshop;application/x-photoshop;image/psd;application/psd;
-Categories=Graphics;2DGraphics;RasterGraphics;
-Terminal=false
-${icon_line}
-EOF
-    chmod 644 "$app_dir/photoshop.desktop"
-    command -v update-desktop-database >/dev/null 2>&1 \
-        && update-desktop-database "$app_dir" 2>/dev/null || true
-    return 0
+    recipe_hooks::_source recipe-desktop.sh
+    recipe_desktop::install
 }
 
 recipe_photoshop::install() {
@@ -592,9 +585,10 @@ recipe_photoshop::install() {
     output::progress 2 "Vorbereitung"
 
     if ! installer_dir="$(photoshop::resolve_installer_dir "$PROJECT_ROOT")"; then
-        recipe_hooks::die "Set-up.exe fehlt — nach ${PROJECT_ROOT}/photoshop/ kopieren oder PHOTOSHOP_INSTALLER_DIR setzen"
+        recipe_hooks::die "Set-up.exe fehlt — im Install-Dialog den Ordner mit Set-up.exe wählen (oder nach ${PROJECT_ROOT}/photoshop/ kopieren)"
     fi
     output::info "Installer: $installer_dir/Set-up.exe"
+    output::info "Datenordner: $DATA_ROOT"
 
     export SCR_PATH="$DATA_ROOT"
     export WINE_PREFIX="$DATA_ROOT/prefix"
@@ -603,29 +597,35 @@ recipe_photoshop::install() {
     recipe_hooks::install_prefix || exit 1
 
     if ! recipe_photoshop::_prefix_runtime_ready; then
-        output::step "Wine-Komponenten"
-        output::progress 15 "Windows 10"
+        output::progress 15 "Windows 10 (Registry)"
         recipe_win10::ensure || _err=1
 
-        for pkg in atmlib corefonts fontsmooth=rgb gdiplus; do
-            output::step "winetricks: $pkg"
+        _pkgs=(atmlib corefonts fontsmooth=rgb gdiplus)
+        _n="${#_pkgs[@]}"
+        _i=0
+        for pkg in "${_pkgs[@]}"; do
+            _i=$((_i + 1))
+            # 15% → ~55% über die Winetricks-Pakete (monoton, kein Sprung zurück)
+            output::progress $((15 + _i * 40 / _n)) "winetricks: $pkg"
             recipe_winetricks::run "${LOG_DIR}/winetricks_${pkg}_${TIMESTAMP_ISO}.log" "$pkg" \
                 || _err=1
         done
 
         recipe_photoshop::_ensure_native_msxml || _err=1
 
-        output::step "Visual C++ Runtime (Microsoft)"
+        output::progress 58 "Visual C++ Runtime (Microsoft)"
         recipe_vcrun::ensure "${LOG_DIR}/vcrun_${TIMESTAMP_ISO}.log" || _err=1
     else
         output::success "Prefix-Komponenten bereits vorhanden"
     fi
 
-    output::step "Proton-GE Grafik-DLLs (DXVK)"
+    output::progress 62 "Proton-GE Grafik-DLLs (DXVK)"
     wine_runtime::deploy_proton_graphics_dlls || _err=1
     recipe_photoshop::_apply_graphics_registry
 
+    output::progress 64 "Installer nach C: kopieren"
     photoshop_setup::deploy_installer_to_c_drive "$installer_dir" || _err=1
+    output::progress 66 "IE8 (Adobe-Installer)"
     recipe_photoshop::_configure_ie8 || _err=1
 
     if [ "$_err" -ne 0 ]; then
@@ -634,20 +634,23 @@ recipe_photoshop::install() {
         exit 11
     fi
 
+    output::progress 69 "Adobe Set-up vorbereiten"
     if ! recipe_photoshop::_run_adobe_installer; then
         output::error "Adobe-Installation fehlgeschlagen — Log: $LOG_FILE"
         recipe_hooks::emit_log_paths
         exit 11
     fi
 
+    output::progress 95 "Post-Install starten"
     recipe_photoshop::configure_post_install || _err=1
+    output::progress 97 "gdiplus / Schriften"
     recipe_photoshop::ensure_gdiplus || _err=1
     recipe_fonts::ensure "${LOG_DIR}/winetricks_fonts_${TIMESTAMP_ISO}.log" >>"${LOG_FILE:-/dev/null}" 2>&1 || _err=1
     recipe_fonts::registry >>"${LOG_FILE:-/dev/null}" 2>&1 || _err=1
 
-    output::step "Desktop-Eintrag"
-    recipe_photoshop::install_desktop || _err=1
+    # Desktop/Menü: nach Install in der GUI abgefragt (recipe_desktop::install)
 
+    output::progress 99 "Validieren"
     if ! bash "${RECIPE_DIR}/validate.sh" >>"${LOG_FILE:-/dev/null}" 2>&1; then
         _err=1
     fi

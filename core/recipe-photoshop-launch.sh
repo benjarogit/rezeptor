@@ -251,25 +251,22 @@ recipe_photoshop::launch() {
     echo "⏳ Initialisiere Wine-Umgebung..."
     recipe_photoshop::_runtime_log "Starte Photoshop: $photoshop_exe"
 
-    # Jeder Start: Text-AA setzen. Ohne Marker zusätzlich Notifier registrieren.
+    # Nur einmal Notifier registrieren. Kein -script bei jedem Start —
+    # Text-Glatt auf der Startseite → „Programmfehler“ unter Wine.
     local script_args=() jsx wine_script
     if ! recipe_photoshop::startup_event_registered; then
         jsx="$(dirname "$photoshop_exe")/Presets/Scripts/Rezeptor-Register-Startup.jsx"
         echo "📝 Text-Glatt Autostart registrieren…"
         recipe_photoshop::_runtime_log "Launch mit -script Register-Startup"
-    else
-        jsx="$(dirname "$photoshop_exe")/Presets/Scripts/Rezeptor-Text-Glatt-Silent.jsx"
-        echo "📝 Text-Anti-Alias (Scharf) setzen…"
-        recipe_photoshop::_runtime_log "Launch mit -script Text-Glatt-Silent"
-    fi
-    if [ -f "$jsx" ]; then
-        if type wine_runtime::winepath >/dev/null 2>&1; then
-            wine_script="$(wine_runtime::winepath -w "$jsx" 2>/dev/null || true)"
-        else
-            wine_script=""
+        if [ -f "$jsx" ]; then
+            if type wine_runtime::winepath >/dev/null 2>&1; then
+                wine_script="$(wine_runtime::winepath -w "$jsx" 2>/dev/null || true)"
+            else
+                wine_script=""
+            fi
+            [ -n "$wine_script" ] || wine_script="$(echo "$jsx" | sed 's|^/|Z:/|' | sed 's|/|\\|g')"
+            script_args=(-script "$wine_script")
         fi
-        [ -n "$wine_script" ] || wine_script="$(echo "$jsx" | sed 's|^/|Z:/|' | sed 's|/|\\|g')"
-        script_args=(-script "$wine_script")
     fi
 
     if [ ${#wine_args[@]} -gt 0 ]; then

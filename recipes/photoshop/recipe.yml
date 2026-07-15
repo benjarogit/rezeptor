@@ -1,17 +1,30 @@
 id: photoshop
 icon: "{repo}/images/AdobePhotoshop-icon.png"
 name: "Adobe Photoshop CC 2021"
+author: "benjarogit"
 category: "Grafik & Design"
 version_guaranteed: "22.0.0.35"
 version_label: "Adobe Photoshop CC 2021 (22.0.0.35)"
+version_detect:
+  - kind: json_key
+    glob: "products/PHSP/application.json"
+    key: ProductVersion
+  - kind: json_key
+    glob: "products/PHSP/Application.json"
+    key: ProductVersion
+  - kind: json_key
+    glob: "**/PHSP/application.json"
+    key: ProductVersion
+notify_title: "Photoshop CC 2021"
 data_root: "~/.local/share/wine-software/photoshop"
 prefix: "{data_root}/prefix"
 runtime: proton-ge
 install_type: installer_offline
-source_kind: fixed_path
-source_label: "Adobe Offline-Installer (Set-up.exe + packages/)"
+source_kind: folder
+source_label: "Ordner mit Adobe Offline-Installer (Set-up.exe + packages/)"
+target_default: "~/.local/share/wine-software/photoshop"
+target_label: "Datenordner (Wine-Prefix wird hier angelegt)"
 fix_kind: none
-installer_dir: "{repo}/photoshop"
 exe_glob: "**/Photoshop.exe"
 # win10 via recipe_win10::ensure; VC++ via recipe_vcrun::ensure (nicht winetricks)
 winetricks: [atmlib, corefonts, "fontsmooth=rgb", gdiplus, msxml3, msxml6, ie8]
@@ -22,5 +35,6 @@ launch: launch.sh
 install: install.sh
 repair: repair.sh
 kill: kill.sh
+uninstall: uninstall.sh
 install_steps:
   - module: recipe_photoshop::install

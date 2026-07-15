@@ -1,9 +1,21 @@
 # Vorlage — nicht im offiziellen Manifest. Kopieren mit: ./scripts/new-recipe.sh meine-app
 id: example-app
+icon: "{repo}/images/rezeptor-icon.svg"
 name: "Example App (Template)"
+author: ""
 category: "Vorlage"
 version_guaranteed: "1.0.0"
 version_label: "Example 1.0.0"
+version_detect:
+  - kind: pe_field
+    glob: "*.exe"
+    field: FileVersion
+  - kind: pe_field
+    glob: "**/*.exe"
+    field: ProductVersion
+  - kind: path_regex
+    regex: "(?i)[_-]v?([0-9]+(?:\\.[0-9]+){1,3})"
+notify_title: ""
 data_root: "~/.local/share/wine-software/example-app"
 prefix: "{data_root}/prefix"
 runtime: proton-ge

@@ -128,6 +128,10 @@ if exe="$(photoshop::find_exe "$WINEPREFIX" 2>/dev/null || true)" && [ -n "$exe"
     machine_prefs=""
     [ -n "$settings_dir" ] && ui_prefs="$settings_dir/UIPrefs.psp"
     [ -n "$settings_dir" ] && machine_prefs="$settings_dir/MachinePrefs.psp"
+    # PS überschreibt Prefs beim ersten Start — einmal sanft nachziehen (sonst Dauer-„Teilweise“).
+    if [ -f "$ui_prefs" ] || [ -f "$machine_prefs" ]; then
+        recipe_photoshop::ensure_post_install_config >/dev/null 2>&1 || true
+    fi
     if [ -f "$ui_prefs" ] && recipe_photoshop::_prefs_get_bool "$ui_prefs" useClassicFileNewDialog 2>/dev/null; then
         recipe_validate::ok "Legacy-Neu-Dialog (useClassicFileNewDialog)"
     elif [ ! -f "$ui_prefs" ]; then
@@ -136,11 +140,26 @@ if exe="$(photoshop::find_exe "$WINEPREFIX" 2>/dev/null || true)" && [ -n "$exe"
         recipe_validate::fail "Legacy-Neu-Dialog aus — Reparieren (schwarze Felder / Programmfehler)"
         failures=$((failures + 1))
     fi
-    if [ -f "$ui_prefs" ] && ! recipe_photoshop::_prefs_get_bool "$ui_prefs" ToolTips 2>/dev/null; then
+    # Tooltips: Template hat useRichToolTips; manchen Builds zusätzlich ToolTips.
+    # Fehlender Key ≠ „aus“ vortäuschen — useRichToolTips ist die Pflichtprüfung.
+    _tips_bad=0
+    if [ -f "$ui_prefs" ]; then
+        if recipe_photoshop::_prefs_find_bool_val "$ui_prefs" useRichToolTips >/dev/null 2>&1; then
+            if recipe_photoshop::_prefs_get_bool "$ui_prefs" useRichToolTips 2>/dev/null; then
+                _tips_bad=1
+            fi
+        else
+            recipe_validate::warn "useRichToolTips fehlt in UIPrefs — Reparieren"
+        fi
+        if recipe_photoshop::_prefs_find_bool_val "$ui_prefs" ToolTips >/dev/null 2>&1; then
+            if recipe_photoshop::_prefs_get_bool "$ui_prefs" ToolTips 2>/dev/null; then
+                _tips_bad=1
+            fi
+        fi
+    fi
+    if [ -f "$ui_prefs" ] && [ "$_tips_bad" -eq 0 ]; then
         recipe_validate::ok "ToolTips aus (sonst Text-Tool/Plugins kaputt)"
-    elif [ ! -f "$ui_prefs" ]; then
-        :
-    else
+    elif [ -f "$ui_prefs" ]; then
         recipe_validate::fail "ToolTips noch an — Reparieren"
         failures=$((failures + 1))
     fi

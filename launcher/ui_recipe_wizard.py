@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import os
-import shutil
 import subprocess
 from pathlib import Path
 
+from PyQt6.QtCore import QUrl
+from PyQt6.QtGui import QDesktopServices
 from PyQt6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -15,13 +16,13 @@ from PyQt6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMessageBox,
-    QComboBox,
     QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
 from i18n import t
+from ui_rezeptor import LimitedComboBox
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -57,7 +58,7 @@ class RecipeWizardDialog(QDialog):
         self.name_edit.setPlaceholderText("Meine App")
         form.addRow(t("wizard.name"), self.name_edit)
 
-        self.type_combo = QComboBox()
+        self.type_combo = LimitedComboBox(max_visible=8)
         self.type_combo.addItem(t("wizard.type_portable"), "portable")
         self.type_combo.addItem(t("wizard.type_installer"), "installer")
         form.addRow(t("wizard.type"), self.type_combo)
@@ -164,9 +165,8 @@ class RecipeWizardDialog(QDialog):
         self.manifest_btn.setEnabled(True)
         self.status.setText(t("wizard.done", id=rid))
 
-        # Open folder
-        if shutil.which("xdg-open"):
-            subprocess.Popen(["xdg-open", str(dest)], start_new_session=True)  # noqa: S603
+        # Ordner im System-Dateimanager öffnen
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(dest.resolve())))
 
         if lint_ok:
             QMessageBox.information(self, t("wizard.title"), t("wizard.done", id=rid))
@@ -228,8 +228,6 @@ class RecipeWizardBlockedDialog(QDialog):
         DeveloperDocsDialog(self).exec()
 
     def _github(self) -> None:
-        from PyQt6.QtCore import QUrl
-        from PyQt6.QtGui import QDesktopServices
         from app_support import GITHUB_REPO
 
         QDesktopServices.openUrl(QUrl(f"https://github.com/{GITHUB_REPO}"))
