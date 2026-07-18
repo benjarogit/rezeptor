@@ -4,7 +4,6 @@
 |------------|----------|
 | **Nutzer** | [Schnellstart](GETTING-STARTED.md) · [Benutzerhandbuch](USER-GUIDE.md) · [Katalog](CATALOG.md) |
 | **Rezept-Entwickler** | [ENTWICKLER.md](ENTWICKLER.md) → [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) · [Core-API](CORE-API.md) |
-| **Maintainer** | [maintainer/](maintainer/RELEASE.md) |
 
 ## Dateien
 

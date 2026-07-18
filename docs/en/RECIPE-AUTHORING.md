@@ -263,7 +263,6 @@ API details: [CORE-API.md](CORE-API.md).
 
 ## GPU graphics apps
 
-See [GPU-EXPERIMENTS.md](maintainer/GPU-EXPERIMENTS.md), [HANDOFF-PHOTOSHOP-GPU.md](maintainer/HANDOFF-PHOTOSHOP-GPU.md).  
 DXVK only via `wine_runtime::deploy_proton_graphics_dlls` — **no** winetricks-dxvk.
 
 ---

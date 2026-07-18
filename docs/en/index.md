@@ -12,7 +12,7 @@ hide:
 
 # Rezeptor Documentation
 
-Official **handbook** for Rezeptor — install, validate, launch, and cleanly remove Windows software under **Proton-GE** on Linux. Users, authors, and maintainers from one source (`docs/`), no wiki double-maintenance.
+Official **handbook** for Rezeptor — install, validate, launch, and cleanly remove Windows software under **Proton-GE** on Linux. For users and recipe authors.
 
 </div>
 

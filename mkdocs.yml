@@ -6,8 +6,8 @@
 
 site_name: Rezeptor · Dokumentation
 site_description: >-
-  Offizielles Handbuch für Rezeptor — Rezepte, Autoren-Doku und Maintainer-Notizen
-  für Windows-Software unter Proton-GE auf Linux.
+  Offizielles Handbuch für Rezeptor — Nutzer- und Autoren-Doku für Windows-Software
+  unter Proton-GE auf Linux.
 site_url: https://benjarogit.github.io/rezeptor/
 site_author: SunnyCueq
 repo_url: https://github.com/benjarogit/rezeptor
@@ -89,15 +89,15 @@ plugins:
           build: true
           site_name: Rezeptor · Dokumentation
           site_description: >-
-            Offizielles Handbuch für Rezeptor — Rezepte, Autoren-Doku und
-            Maintainer-Notizen für Windows-Software unter Proton-GE auf Linux.
+            Offizielles Handbuch für Rezeptor — Nutzer- und Autoren-Doku für
+            Windows-Software unter Proton-GE auf Linux.
         - locale: en
           name: English
           build: true
           site_name: Rezeptor · Documentation
           site_description: >-
-            Official handbook for Rezeptor — recipes, author docs and maintainer
-            notes for Windows software under Proton-GE on Linux.
+            Official handbook for Rezeptor — user and author docs for Windows
+            software under Proton-GE on Linux.
           nav_translations:
             Start: Home
             Benutzer: User
@@ -125,14 +125,6 @@ plugins:
             Übersetzungen: Translations
             Internationalisierung: Internationalization
             Marke: Brand
-            Maintainer: Maintainer
-            Release & AppImage: Release & AppImage
-            Release-QA: Release QA
-            Manual QA: Manual QA
-            Testplan: Test plan
-            Testing: Testing
-            GPU-Experimente: GPU experiments
-            Photoshop GPU Handoff: Photoshop GPU handoff
 
 nav:
   - Start: index.md
@@ -161,14 +153,6 @@ nav:
       - Übersetzungen: CONTRIBUTING-TRANSLATIONS.md
       - Internationalisierung: I18N.md
       - Marke: BRAND.md
-  - Maintainer:
-      - Release & AppImage: maintainer/RELEASE.md
-      - Release-QA: maintainer/RELEASE-QA.md
-      - Manual QA: maintainer/MANUAL-QA.md
-      - Testplan: maintainer/TEST-PLAN.md
-      - Testing: maintainer/TESTING.md
-      - GPU-Experimente: maintainer/GPU-EXPERIMENTS.md
-      - Photoshop GPU Handoff: maintainer/HANDOFF-PHOTOSHOP-GPU.md
 
 markdown_extensions:
   - admonition
@@ -217,3 +201,6 @@ exclude_docs: |
   README.md
   de/README.md
   en/README.md
+  de/maintainer/**
+  en/maintainer/**
+  maintainer/**

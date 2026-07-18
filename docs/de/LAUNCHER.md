@@ -57,7 +57,7 @@ Die GUI setzt u. a.:
 
 ## In-App-Doku
 
-`ui_docs.py` → `DOC_CATALOG` listet Autoren-Seiten unter `docs/{locale}/` (keine Maintainer-Handoffs unter `docs/{locale}/maintainer/`). Hilfe-Menü öffnet die lokale Markdown-Ansicht; GitHub-Links über `github_doc_url`.
+`ui_docs.py` → `DOC_CATALOG` listet Autoren-/Nutzer-Seiten unter `docs/{locale}/`. Hilfe-Menü öffnet die lokale Markdown-Ansicht; GitHub-Links über `github_doc_url`.
 
 ## Bug-Report (GitHub)
 

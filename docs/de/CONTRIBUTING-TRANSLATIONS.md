@@ -20,18 +20,16 @@ Fallback: aktive Locale → `en` → Schlüsselname.
 |--------|------|
 | Deutsch (Standard) | `docs/de/*.md` |
 | Englisch | `docs/en/*.md` |
-| Maintainer-Notizen | `docs/de/maintainer/`, `docs/en/maintainer/` |
 
 - **Gleiche Dateinamen** in beiden Locale-Ordnern (`ENTWICKLER.md`, `RECIPE-AUTHORING.md`, …).
 - Links zwischen Docs **relativ im gleichen Ordner** (`[text](RECIPE-AUTHORING.md)`).
-- Maintainer-Docs liegen unter `docs/{locale}/maintainer/` und erscheinen in der MkDocs-Navigation **Maintainer**.
-- Die GUI wählt `docs/{locale}/` anhand der Launcher-Sprache (nur Autoren-Docs).
+- Die GUI wählt `docs/{locale}/` anhand der Launcher-Sprache.
 
 ### Neue Sprache für Docs (z. B. Französisch)
 
 1. `docs/fr/` anlegen und von `docs/en/` kopieren.
 2. Dateien übersetzen.
-3. Katalog-Auflösung in `launcher/ui_docs.py` erweitern (oder Issue für Maintainer).
+3. Katalog-Auflösung in `launcher/ui_docs.py` erweitern (oder Issue öffnen).
 4. Pull Request öffnen.
 
 ## Rezept-Infotexte

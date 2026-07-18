@@ -22,7 +22,7 @@ Windows liefert einen **Offline-Installer** (Ordner mit `Set-up.exe` / `Setup.ex
 
 | Falle | Hinweis |
 |-------|---------|
-| GPU/OpenGL in Adobe-Apps | Rezept setzt Prefs; siehe Maintainer-Notizen nur bei Bedarf |
+| GPU/OpenGL in Adobe-Apps | Rezept setzt Prefs über Proton-Graphics-DLLs |
 | Quelle ≠ Repo-Pfad | Nutzer bringt Offline-Medium mit; Heuristik: `Downloads/` mit `Set-up.exe` |
 | Ziel leer lassen | Default aus `target_default` / Datenordner |
 

@@ -4,7 +4,6 @@
 |----------|------------|
 | **Users** | [Quick start](GETTING-STARTED.md) · [User guide](USER-GUIDE.md) · [Catalog](CATALOG.md) |
 | **Recipe developers** | [ENTWICKLER.md](ENTWICKLER.md) → [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) · [Core API](CORE-API.md) |
-| **Maintainers** | [maintainer/](maintainer/RELEASE.md) |
 
 ## Files
 

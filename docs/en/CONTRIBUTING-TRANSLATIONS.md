@@ -20,18 +20,16 @@ Fallback: active locale → `en` → key name.
 |--------|------|
 | German (default) | `docs/de/*.md` |
 | English | `docs/en/*.md` |
-| Maintainer notes | `docs/de/maintainer/`, `docs/en/maintainer/` |
 
 - Keep the **same filenames** in both locale folders (`ENTWICKLER.md`, `RECIPE-AUTHORING.md`, …).
 - Links between docs stay **same-folder relative** (`[text](RECIPE-AUTHORING.md)`).
-- Maintainer docs live under `docs/{locale}/maintainer/` and appear in the MkDocs **Maintainer** nav.
-- The GUI viewer picks `docs/{locale}/` from the launcher language setting (author docs only).
+- The GUI viewer picks `docs/{locale}/` from the launcher language setting.
 
 ### New language for docs (e.g. French)
 
 1. Create `docs/fr/` and copy from `docs/en/`.
 2. Translate files.
-3. Extend `launcher/ui_docs.py` catalog resolution (or open an issue asking maintainers to wire `fr`).
+3. Extend `launcher/ui_docs.py` catalog resolution (or open an issue).
 4. Open a pull request.
 
 ## Recipe info texts

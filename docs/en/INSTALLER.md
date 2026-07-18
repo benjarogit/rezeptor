@@ -22,7 +22,7 @@ Windows ships an **offline installer** (folder with `Set-up.exe` / `Setup.exe` +
 
 | Pitfall | Note |
 |---------|------|
-| GPU/OpenGL in Adobe apps | Recipe sets prefs; maintainer notes only if needed |
+| GPU/OpenGL in Adobe apps | Recipe sets prefs via Proton graphics DLLs |
 | Source ≠ repo path | User brings the offline media; heuristic: `Downloads/` with `Set-up.exe` |
 | Empty target | Default from `target_default` / data folder |
 

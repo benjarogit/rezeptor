@@ -57,8 +57,12 @@ Ideen: [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?tem
 - Keine Co-Author-Trailer von Editor-Agenten in Commits
 - Keine Secrets (Tokens, private Installer) committen
 
+## Releases
+
+- SemVer in `VERSION` bumpen und auf `main` pushen → GitHub Actions baut AppImage/`tar.gz` und veröffentlicht das Release
+- Assets: https://github.com/benjarogit/rezeptor/releases
+
 ## Weiter
 
 - [Projektstruktur](PROJECT-LAYOUT.md)
 - [Trust & Manifest](TRUST.md)
-- [Release & AppImage](maintainer/RELEASE.md)

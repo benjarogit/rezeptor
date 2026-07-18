@@ -47,10 +47,6 @@ DOC_CATALOG: list[tuple[str, str, str]] = [
     ("Dokumentations-Index", "Documentation index", "README.md"),
 ]
 
-# Maintainer-only (nicht im GUI-Katalog): GPU-EXPERIMENTS, HANDOFF, TEST-PLAN, TESTING, RELEASE*
-# → unter docs/{locale}/maintainer/, nicht in DOC_CATALOG / github_doc_url-Pfaden der GUI.
-
-
 def _locale_docs_dir(locale: str | None = None) -> Path:
     loc = (locale or get_locale() or "de").split("-")[0].lower()
     if loc.startswith("de"):

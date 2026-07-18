@@ -12,7 +12,7 @@ hide:
 
 # Rezeptor Dokumentation
 
-Offizielles **Handbuch** für Rezeptor — Windows-Software unter **Proton-GE** auf Linux installieren, prüfen, starten und sauber entfernen. Nutzer, Autoren und Maintainer aus einer Quelle (`docs/`), ohne Wiki-Doppelpflege.
+Offizielles **Handbuch** für Rezeptor — Windows-Software unter **Proton-GE** auf Linux installieren, prüfen, starten und sauber entfernen. Für Nutzer und Rezept-Autoren.
 
 </div>
 

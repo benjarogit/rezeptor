@@ -57,7 +57,7 @@ The GUI sets among others:
 
 ## In-app docs
 
-`ui_docs.py` → `DOC_CATALOG` lists author pages under `docs/{locale}/` (no maintainer handoffs under `docs/{locale}/maintainer/`). The Help menu opens the local markdown view; GitHub links via `github_doc_url`.
+`ui_docs.py` → `DOC_CATALOG` lists author/user pages under `docs/{locale}/`. The Help menu opens the local markdown view; GitHub links via `github_doc_url`.
 
 ## Bug report (GitHub)
 
