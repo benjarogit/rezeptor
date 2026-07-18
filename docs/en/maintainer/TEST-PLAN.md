@@ -11,7 +11,7 @@
 ## Before you start
 
 ```bash
-cd /path/to/photoshopCClinux
+cd /path/to/rezeptor
 ./pre-check.sh          # must pass (incl. PyQt6)
 bash -n recipes/photoshop/install.sh
 bash -n recipes/photoshop/launch.sh

@@ -57,7 +57,15 @@ The GUI sets among others:
 
 ## In-app docs
 
-`ui_docs.py` → `DOC_CATALOG` reads author pages under `docs/{locale}/` only (no maintainer handoffs). The Help menu opens the local markdown view; GitHub links via `github_doc_url`.
+`ui_docs.py` → `DOC_CATALOG` lists author pages under `docs/{locale}/` (no maintainer handoffs under `docs/{locale}/maintainer/`). The Help menu opens the local markdown view; GitHub links via `github_doc_url`.
+
+## Bug report (GitHub)
+
+In `app_support.py`:
+
+- **Clipboard** = full body from `bug_report.md` (`report_clipboard_text` / `build_issue_body`)
+- **URL** short + `?template=bug_report.md` (+ label/title); paste supplies the long text
+- **Session ID** (`LAUNCHER_SESSION_ID`) only in the report file, not in the status bar
 
 ## Error codes
 

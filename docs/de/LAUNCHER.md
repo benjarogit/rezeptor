@@ -57,7 +57,15 @@ Die GUI setzt u. a.:
 
 ## In-App-Doku
 
-`ui_docs.py` → `DOC_CATALOG` liest nur Autoren-Seiten unter `docs/{locale}/` (keine Maintainer-Handoffs). Hilfe-Menü öffnet die lokale Markdown-Ansicht; GitHub-Links über `github_doc_url`.
+`ui_docs.py` → `DOC_CATALOG` listet Autoren-Seiten unter `docs/{locale}/` (keine Maintainer-Handoffs unter `docs/{locale}/maintainer/`). Hilfe-Menü öffnet die lokale Markdown-Ansicht; GitHub-Links über `github_doc_url`.
+
+## Bug-Report (GitHub)
+
+In `app_support.py`:
+
+- **Zwischenablage** = voller Body aus `bug_report.md` (`report_clipboard_text` / `build_issue_body`)
+- **URL** kurz + `?template=bug_report.md` (+ Label/Titel); der lange Text kommt per Einfügen
+- **Session-ID** (`LAUNCHER_SESSION_ID`) nur in der Report-Datei, nicht in der Statusleiste
 
 ## Fehlercodes
 

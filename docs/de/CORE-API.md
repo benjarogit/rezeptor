@@ -163,8 +163,10 @@ Marker: `$DATA_ROOT/.rezeptor-desktop`.
 
 | Funktion | Rolle |
 |----------|--------|
-| `recipe_deploy::sync_portable <src> <dst> <mode>` | `copy` (Default), `move`, `link` |
+| `recipe_deploy::sync_portable <src> <dst> <mode>` | Runtime: `copy` (Default), `move`, `link` |
 | `recipe_deploy::detect_installer <dir>` | Setup-/größte EXE finden |
+
+`recipe.yml` / Schema erlauben `deploy_mode: copy|link|inplace`; der Deploy-Code kennt **`move`** statt `inplace`. Für Portable üblich: `copy` oder `link` (Steam).
 
 ---
 
