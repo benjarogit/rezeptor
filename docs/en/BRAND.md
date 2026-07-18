@@ -6,6 +6,8 @@ Recipe card + verification seal: stands for “tested, guaranteed recipes” ins
 trial-and-error. The checkmark in the seal is the same one that later returns as the
 “tested” status icon in the GUI — logo and UI share one symbol.
 
+Product UI, README, and docs stay bilingual (English + German).
+
 ## Colors
 
 | Role              | Hex       | Usage                                    |

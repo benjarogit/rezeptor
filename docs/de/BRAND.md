@@ -6,6 +6,8 @@ Trial-and-Error. Der Haken im Siegel ist derselbe, der später als
 Status-Icon für "getestet" im GUI wiederkehrt — Logo und UI teilen sich
 ein Symbol.
 
+Produkt-UI, README und Dokumentation bleiben zweisprachig (Deutsch + Englisch).
+
 ## Farben
 
 | Rolle              | Hex       | Verwendung                              |
