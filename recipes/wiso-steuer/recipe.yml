@@ -30,7 +30,7 @@ target_default: "~/Dokumente/WISO Steuer 2026"
 target_label: "Zielordner (Portable wird dorthin installiert)"
 source_kind: folder
 source_label: "Quelle (Ordner oder Archiv mit start.exe / Steuersoftware 20XX)"
-source_formats: zip,tar.gz,tgz
+source_formats: zip,tar.gz,tgz,7z,rar
 fix_kind: none
 portable_root: ""
 exe_glob: "**/wiso*.exe"

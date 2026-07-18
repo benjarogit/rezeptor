@@ -32,11 +32,6 @@ if [ -f "$PROJECT_ROOT/core/wine-runtime.sh" ]; then
     source "$PROJECT_ROOT/core/wine-runtime.sh"
 fi
 
-echo "═══════════════════════════════════════════════════════════════"
-echo "    Photoshop CC - Pre-Installation Check"
-echo "═══════════════════════════════════════════════════════════════"
-echo ""
-
 # Farben
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -69,6 +64,24 @@ check_warning() {
     echo -e "${YELLOW}[⚠]${NC} $1"
     ((CHECKS_WARNING++))
 }
+
+# GUI-Start (./setup.sh): nur PyQt6 — Rest prüft die GUI (host_deps). Max. schnell.
+if [ "$REZEPTOR_MODE" -eq 1 ]; then
+    if [ "$(uname -m)" != "x86_64" ]; then
+        echo -e "${RED}[✗]${NC} Rezeptor benötigt x86_64" >&2
+        exit 1
+    fi
+    if ! python3 -c "import PyQt6" 2>/dev/null; then
+        echo -e "${RED}[✗]${NC} PyQt6 fehlt — sudo pacman -S python-pyqt6" >&2
+        exit 1
+    fi
+    exit 0
+fi
+
+echo "═══════════════════════════════════════════════════════════════"
+echo "    Photoshop CC - Pre-Installation Check"
+echo "═══════════════════════════════════════════════════════════════"
+echo ""
 
 echo "Überprüfe System-Voraussetzungen..."
 echo ""
@@ -116,6 +129,31 @@ elif [ "$RUNTIME_OK" -eq 1 ]; then
 else
     check_error "winetricks nicht installiert"
     echo "   Installiere mit: sudo pacman -S winetricks"
+fi
+
+# Rezeptor host tools (align with launcher/host_deps.py)
+if command -v tar >/dev/null 2>&1; then
+    check_ok "tar verfügbar"
+else
+    check_error "tar fehlt"
+fi
+
+if command -v unzip >/dev/null 2>&1; then
+    check_ok "unzip verfügbar (ZIP-Archive)"
+else
+    if [ "$REZEPTOR_MODE" -eq 1 ]; then
+        check_error "unzip fehlt — ZIP-Quellen entpacken"
+        echo "   Arch: sudo pacman -S unzip  ·  Debian: sudo apt install unzip"
+    else
+        check_warning "unzip nicht gefunden (für ZIP-Quellen empfohlen)"
+    fi
+fi
+
+if command -v 7z >/dev/null 2>&1 || command -v 7za >/dev/null 2>&1; then
+    check_ok "7z verfügbar (7z/rar/Multipart/Passwort-Archive)"
+else
+    check_warning "7z fehlt — empfohlen für 7z/rar und mehrteilige Archive"
+    echo "   Arch: sudo pacman -S p7zip  ·  Debian: sudo apt install p7zip-full"
 fi
 
 if command -v md5sum &> /dev/null; then
@@ -277,20 +315,20 @@ NEW_PATH="$HOME/.local/share/wine-software/photoshop"
 LEGACY_PATH="$HOME/.photoshop"
 FOUND_INSTALLATION=""
 
-if [ -d "$NEW_PATH/prefix" ] || [ -d "$NEW_PATH" ]; then
+if [ -d "$NEW_PATH/prefix" ] || [ -f "$NEW_PATH/.rezeptor-installed" ]; then
     FOUND_INSTALLATION="$NEW_PATH"
     check_warning "Vorherige Installation gefunden in $NEW_PATH"
-    echo "   ${YELLOW}Die Installation kann das Prefix überschreiben!${NC}"
+    echo -e "   ${YELLOW}Die Installation kann das Prefix überschreiben!${NC}"
 elif [ -d "$LEGACY_PATH" ]; then
     FOUND_INSTALLATION="$LEGACY_PATH"
     check_warning "Legacy-Installation in ~/.photoshop (nicht mehr verwendet)"
-    echo "   ${BLUE}Neue Daten liegen unter ~/.local/share/wine-software/photoshop${NC}"
+    echo -e "   ${BLUE}Neue Daten liegen unter ~/.local/share/wine-software/photoshop${NC}"
 elif [ -d "$OLD_PATH" ]; then
     FOUND_INSTALLATION="$OLD_PATH"
     check_warning "Vorherige Installation gefunden in ~/.photoshopCCV19 (alte Version)"
-    echo "   ${YELLOW}Die Installation wird das Verzeichnis überschreiben!${NC}"
+    echo -e "   ${YELLOW}Die Installation wird das Verzeichnis überschreiben!${NC}"
     echo "   Backup erstellen? Befehl: mv ~/.photoshopCCV19 ~/.photoshopCCV19.backup"
-    echo "   ${BLUE}Hinweis: Neue Installationen liegen unter ~/.local/share/wine-software/photoshop${NC}"
+    echo -e "   ${BLUE}Hinweis: Neue Installationen liegen unter ~/.local/share/wine-software/photoshop${NC}"
 else
     check_ok "Keine vorherige Installation gefunden"
 fi
@@ -399,8 +437,7 @@ if [ $CHECKS_FAILED -eq 0 ]; then
     
     echo "═══════════════════════════════════════════════════════════════"
     echo ""
-    echo "📖 Vollständige Anleitung: README.de.md"
-    echo "🚀 Schnellstart: SCHNELLSTART.md"
+    echo "📖 Anleitung: README.de.md  ·  Docs: docs/de/README.md"
     echo ""
     
     exit 0

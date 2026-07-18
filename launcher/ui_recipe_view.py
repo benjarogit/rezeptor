@@ -10,6 +10,7 @@ from typing import Any
 from PyQt6.QtCore import Qt, QUrl
 from PyQt6.QtGui import QCloseEvent, QDesktopServices, QFont, QIcon
 from PyQt6.QtWidgets import (
+    QComboBox,
     QDialog,
     QFrame,
     QHBoxLayout,
@@ -26,7 +27,7 @@ from PyQt6.QtWidgets import (
 )
 
 from i18n import t
-from ui_rezeptor import LimitedComboBox
+from ui_window import confirm_unsaved_changes
 from version_detect import load_recipe_mapping
 
 HOOK_NAMES = (
@@ -191,9 +192,42 @@ class RecipeViewDialog(QDialog):
         """Quelltext-Tab (nach Entwicklermodus-Aktivierung)."""
         self.tabs.setCurrentIndex(2)
 
+    def is_dirty(self) -> bool:
+        return bool(self._dirty)
+
+    def force_close(self) -> None:
+        """Hauptfenster-Quit: Dirty bereits behandelt — ohne zweite Nachfrage."""
+        self._dirty = False
+        self.setProperty("rezeptor_force_close", True)
+        self.close()
+
+    def prompt_and_save_or_discard(self) -> bool:
+        """True = weiter (gespeichert oder verworfen), False = Abbruch."""
+        if not self._dirty:
+            return True
+        choice = confirm_unsaved_changes(
+            self,
+            title=t("dialog.unsaved_title"),
+            body=t("recipe_view.unsaved_body"),
+        )
+        if choice == "cancel":
+            return False
+        if choice == "save":
+            if not self._save_current(silent=True):
+                return False
+            return True
+        self._dirty = False
+        self.save_btn.setEnabled(False)
+        return True
+
     def closeEvent(self, event: QCloseEvent) -> None:
-        """Taskleisten-/Fenster-Schließen: bei Dirty nachfragen."""
-        if self._dirty and not self._confirm_discard():
+        """Taskleisten-/Fenster-Schließen: Speichern / Verwerfen / Abbrechen."""
+        if self.property("rezeptor_force_close"):
+            self._dirty = False
+            event.accept()
+            super().closeEvent(event)
+            return
+        if self._dirty and not self.prompt_and_save_or_discard():
             event.ignore()
             return
         self._dirty = False
@@ -314,7 +348,9 @@ class RecipeViewDialog(QDialog):
     def _build_source(self) -> QWidget:
         w = QWidget()
         lay = QVBoxLayout(w)
-        self.file_combo = LimitedComboBox(max_visible=12)
+        # Plain QComboBox: LimitedComboBox+QSS hat unter Wayland zu Crashes geführt.
+        self.file_combo = QComboBox()
+        self.file_combo.setMaxVisibleItems(12)
         for rel in list_recipe_files(self._recipe_dir):
             self.file_combo.addItem(rel)
         lay.addWidget(self.file_combo)
@@ -419,9 +455,9 @@ class RecipeViewDialog(QDialog):
     def _open_folder(self) -> None:
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(self._recipe_dir)))
 
-    def _save_current(self) -> None:
+    def _save_current(self, *, silent: bool = False) -> bool:
         if not self._editable or not self._current_rel:
-            return
+            return True
         path = self._recipe_dir / self._current_rel
         try:
             path.write_text(self.editor.toPlainText(), encoding="utf-8")
@@ -429,13 +465,15 @@ class RecipeViewDialog(QDialog):
             QMessageBox.warning(
                 self, t("dialog.error"), t("recipe_view.save_fail", err=str(exc))
             )
-            return
+            return False
         self._dirty = False
         self.save_btn.setEnabled(False)
         self._run_manifest()
-        QMessageBox.information(
-            self, t("recipe_view.title", name=self._rid), t("recipe_view.save_ok")
-        )
+        if not silent:
+            QMessageBox.information(
+                self, t("recipe_view.title", name=self._rid), t("recipe_view.save_ok")
+            )
+        return True
 
     def _run_manifest(self) -> None:
         script = self._project_root / "scripts" / "recipe-manifest.sh"

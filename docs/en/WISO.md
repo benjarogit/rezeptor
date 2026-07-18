@@ -58,4 +58,4 @@ bash recipes/wiso-steuer/launch.sh
 
 Logs: `~/.local/share/wine-software/logs/wiso-steuer_*`
 
-See also: [ENTWICKLER.md](ENTWICKLER.md) · [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) · [RECIPES.md](RECIPES.md)
+See also: [ENTWICKLER.md](ENTWICKLER.md) · [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)

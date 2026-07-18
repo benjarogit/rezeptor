@@ -41,6 +41,7 @@ if [ -z "$game_exe" ] || [ ! -f "$game_exe" ]; then
 fi
 
 if [ -n "$script" ] && [ -x "$script" ]; then
+    recipe_notify::starting 2>/dev/null || true
     exec "$script" "$@"
 fi
 
@@ -54,5 +55,6 @@ export SteamGameId="$fake_id"
 export STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_root"
 export STEAM_COMPAT_DATA_PATH="$compat"
 unset PROTON_ENABLE_WAYLAND || true
+recipe_notify::starting 2>/dev/null || true
 cd "$(dirname "$game_exe")"
 exec "$proton" run "$game_exe" "$@"

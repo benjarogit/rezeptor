@@ -58,4 +58,4 @@ bash recipes/wiso-steuer/launch.sh   # dann Beenden in der GUI
 
 Logs: `~/.local/share/wine-software/logs/wiso-steuer_*`
 
-Weiter: [ENTWICKLER.md](ENTWICKLER.md) · [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) · [RECIPES.md](RECIPES.md)
+Weiter: [ENTWICKLER.md](ENTWICKLER.md) · [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)

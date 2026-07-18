@@ -15,6 +15,21 @@ def is_standard(category: str) -> bool:
     return category in STANDARD_CATEGORIES
 
 
+def default_category(meta: dict | None) -> str:
+    """Category from recipe.yml (shipping default)."""
+    if not isinstance(meta, dict):
+        return "Sonstige"
+    return (meta.get("category") or "Sonstige").strip() or "Sonstige"
+
+
+def effective_category(rid: str, meta: dict | None, overrides: dict[str, str] | None) -> str:
+    """Sidebar category: user override wins, else recipe.yml."""
+    ov = (overrides or {}).get(rid, "").strip()
+    if ov:
+        return ov
+    return default_category(meta)
+
+
 def sort_categories(categories: list[str], custom_order: list[str]) -> list[str]:
     """Standard categories first (alphabetical), then custom (DnD order), then rest."""
     seen: set[str] = set()

@@ -25,7 +25,7 @@ target_default: "~/Dokumente/Example App"
 target_label: "Zielordner (Portable wird dorthin installiert)"
 source_kind: folder
 source_label: "Quelle (Ordner oder Archiv)"
-source_formats: zip,tar.gz,tgz
+source_formats: zip,tar.gz,tgz,7z,rar
 fix_kind: optional
 exe_glob: "**/*.exe"
 winetricks: [win10, vcrun2019]

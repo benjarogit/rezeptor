@@ -59,7 +59,24 @@ if [ "$FAKE_APPID" = "480" ]; then
     if spacewar_present "$steam_root"; then
         output::success "Spacewar (480) gefunden"
     else
-        recipe_hooks::die "Spacewar (480) installieren (steam://install/480), dann erneut"
+        output::info "Spacewar (480) fehlt — Steam-Install öffnen, warte bis fertig…"
+        if command -v steam >/dev/null 2>&1; then
+            steam steam://install/480 >/dev/null 2>&1 &
+        elif [ -x "$steam_root/steam.sh" ]; then
+            "$steam_root/steam.sh" steam://install/480 >/dev/null 2>&1 &
+        fi
+        _sw_ok=0
+        for _i in $(seq 1 120); do
+            if spacewar_present "$steam_root"; then
+                output::success "Spacewar (480) installiert"
+                _sw_ok=1
+                break
+            fi
+            [ $((_i % 6)) -eq 1 ] && output::info "Warte auf Spacewar… (${_i}/120)"
+            sleep 5
+        done
+        [ "$_sw_ok" -eq 1 ] || recipe_hooks::die \
+            "Spacewar (480) nicht fertig — steam://install/480, dann erneut"
     fi
 fi
 

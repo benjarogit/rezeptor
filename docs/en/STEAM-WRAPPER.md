@@ -23,7 +23,7 @@ Many online fixes expect `SteamAppId=480` (**Spacewar**, free Valve tool).
 Typical requirements:
 
 - Steam running and signed in
-- Spacewar installed: `steam steam://install/480`
+- Spacewar for **launch** (not for setup alone): `steam steam://install/480` — setup opens the Steam dialog and does not block installation
 - Game launched at least once via Steam with Proton/GE (compatdata present)
 - Fix stack in the game folder (BYOS — Rezeptor does not ship a fix)
 

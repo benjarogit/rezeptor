@@ -99,21 +99,36 @@ class CatalogDialog(QDialog):
         self.list.clear()
         self._entries = []
         repo = self._repo()
+        local: list[CatalogEntry] = []
         try:
-            if repo == DEFAULT_GITHUB_REPO or not repo:
-                try:
-                    self._entries = fetch_catalog_from_github(repo or DEFAULT_GITHUB_REPO)
-                except CatalogError:
-                    self._entries = load_local_catalog(self._recipes_dir)
-            else:
-                self._entries = fetch_catalog_from_github(repo)
-        except CatalogError as exc:
-            self.status.setText(str(exc))
+            local = load_local_catalog(self._recipes_dir)
+        except CatalogError:
+            local = []
+
+        # Official repo is often private → raw.githubusercontent 404. Prefer local then.
+        if repo == DEFAULT_GITHUB_REPO or not repo:
             try:
-                self._entries = load_local_catalog(self._recipes_dir)
+                self._entries = fetch_catalog_from_github(repo or DEFAULT_GITHUB_REPO)
+                self.status.setText(t("catalog.loaded_github", n=len(self._entries)))
             except CatalogError:
-                return
-        self.status.setText(t("catalog.loaded", n=len(self._entries)))
+                self._entries = local
+                if self._entries:
+                    self.status.setText(t("catalog.loaded_local", n=len(self._entries)))
+                else:
+                    self.status.setText(t("catalog.empty"))
+                    return
+        else:
+            try:
+                self._entries = fetch_catalog_from_github(repo)
+                self.status.setText(t("catalog.loaded_github", n=len(self._entries)))
+            except CatalogError as exc:
+                self._entries = local
+                if self._entries:
+                    self.status.setText(t("catalog.foreign_fail_local", err=str(exc), n=len(self._entries)))
+                else:
+                    self.status.setText(str(exc))
+                    return
+
         for entry in self._entries:
             badge = t("catalog.trust_official") if entry.is_official else t("catalog.trust_community")
             mark = " ✓" if entry.id in self._installed else ""
@@ -131,7 +146,16 @@ class CatalogDialog(QDialog):
         if any(s.get("url") == repo or s.get("id") == repo for s in sources):
             self.status.setText(t("catalog.source_exists"))
             return
-        QMessageBox.warning(self, t("catalog.title"), t("catalog.foreign_warn_dialog"))
+        if (
+            QMessageBox.warning(
+                self,
+                t("catalog.title"),
+                t("catalog.foreign_warn_dialog"),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            != QMessageBox.StandardButton.Yes
+        ):
+            return
         sources.append(
             {
                 "id": repo.replace("/", "-"),

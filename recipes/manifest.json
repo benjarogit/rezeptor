@@ -4,13 +4,13 @@
       "files": {
         "info.de.txt": "sha256:ed927c88c215af25b57fd52cf1f000889d44d62c5406216e41d1d3fb3a537fc4",
         "info.en.txt": "sha256:a37480ec4cf79186cffbcdfb59aaf8887e1a1e83fa53caf723793390bbd58974",
-        "install.sh": "sha256:8e730224f8ef37103662e76f365b44b679cb2833ca29851dfc0a2de00d7a0684",
+        "install.sh": "sha256:1f65fb6ab460a98cb5142b1a1246f6c2a1f9cac7ab7c03e7d106d9eb6ef92e23",
         "kill.sh": "sha256:677664cf550c9f27fcf4c100563320dfa55e725c4ed026f4e843783c2af7ca29",
-        "launch.sh": "sha256:6166c13b08d84e37154ff7192277bff4ca8c297a7b06a8e452af964509384b36",
+        "launch.sh": "sha256:a5e49b73219795af649791d01a32b11f0d08855899e86807158444c99847f2c4",
         "recipe.yml": "sha256:78870e21afd7b9826ebb112e2540074df8d17693db2db2832ca5bb6978d655af",
         "repair.sh": "sha256:34dc5c66e51cf9717b5fe59885a890cd5b4ad0918e7ea033e17647d192afd005",
         "uninstall.sh": "sha256:7e8047e698bff41199d1cbfb5bdaa860f7953e0527e8b0f52a602aa37a61a120",
-        "validate.sh": "sha256:7c587cbd2287b19bf6e97c6c1893f4c52ddbbe32c8ee2cd87f8efa990d753a20"
+        "validate.sh": "sha256:63afe0bf6c049c5570d58ee26a777700938c6fcf01eafb846e0587e59d24ee52"
       }
     },
     "photoshop": {
@@ -42,13 +42,13 @@
     },
     "wiso-steuer": {
       "files": {
-        "assets/wiso-mit-wine.sh": "sha256:58680ec338709d5a8006b64255cd51f4765ca4b1ba8dd558e5b02a32ae19af15",
+        "assets/wiso-mit-wine.sh": "sha256:a829a5923d8e61168431bc445bf013ee6d0d65ce02d0bbc897f954383f08de00",
         "info.de.txt": "sha256:fbc9c91f47630e5834085f8fa3fd7f51f9b05487775ab9b72607e2d66e4a5f39",
         "info.en.txt": "sha256:1b3681cda2a53f06372acef35528c50181c04f6f3cf24acc7778169c07c8e416",
         "install.sh": "sha256:3496986f2c925e149d6997a2f0c26ec0f0daf6e02b5b0fc08d96b40882177f47",
         "kill.sh": "sha256:45cd86774ab92681a70cc7069460e96d54baec3567292f8073ce571350a06ef8",
-        "launch.sh": "sha256:39454c8de38dfa1007da2424a37d591d9999ee270aacf53893d033268deea716",
-        "recipe.yml": "sha256:fd5828c54d5143eb54ab4d7318ca490084580701c24dcc77037e0727de16e6c2",
+        "launch.sh": "sha256:2fc1b57e79f5c1aeac3962920a43d197281df4976bee361b585303994c713414",
+        "recipe.yml": "sha256:6c25e6b85b6bf3130e3bcc3d5f540bbac276da9d48c80b7ed70f2ced1c43b219",
         "repair.sh": "sha256:b33937ad49655bd63835cb492a9bcb650fb4d96052aa317a54a9d8a7b36e44b3",
         "uninstall.sh": "sha256:81327d97a234ad2b34ab7ff6d9e56f8e163feed1739a89ebb70f417e22f8e793",
         "validate.sh": "sha256:db5bf9235de2713625f1667048d35516b9202109e344debf42500c5f52a2965c"
@@ -60,7 +60,7 @@
         "info.en.txt": "sha256:934adc5008630d06fa764041b32b1f9528db13ebca046ab6a1d523fecb2a94f9",
         "install.sh": "sha256:70e6e16c1ddd8b229a08f24f36af30878fac8b448e9147ba3a9cd0ad43fc3c68",
         "kill.sh": "sha256:404f06a0ec6ade0fcde6210475683ba3fd6c2415b3001a61d211dd60eea0dd08",
-        "launch.sh": "sha256:508bb7bea3b27027c82c026cd8dc0a393cc8ecf84f4c2302af5f6034866b9a86",
+        "launch.sh": "sha256:8558b0f4546da0ee7fd5a99d4228d802c044cda28c31853b18c490669a561ca8",
         "recipe.yml": "sha256:c87a5ba4a5c2980e86f5eb3be17cb3eedf43d0725ea9b88ed22a9490670134a9",
         "repair.sh": "sha256:6e30cc3ba685b3116af5aa85c12130b5aa5047456497cc87e6857c0f6052634e",
         "uninstall.sh": "sha256:9433543eb8284be1f562e0c125c55bdcf534c8a97e1b470c3f772bcaace840e8",

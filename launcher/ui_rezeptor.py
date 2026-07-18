@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PyQt6.QtCore import QMimeData, QPoint, Qt, pyqtSignal
-from PyQt6.QtGui import QDrag, QFont, QIcon
+from PyQt6.QtCore import QPoint, Qt, pyqtSignal
+from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtWidgets import (
+    QApplication,
     QButtonGroup,
     QComboBox,
     QFrame,
@@ -18,8 +19,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-RECIPE_MIME = "application/x-rezeptor-recipe-id"
-
 from ui_fluent import (
     ACCENT_COPPER,
     COLOR_EXPERIMENTAL,
@@ -28,7 +27,6 @@ from ui_fluent import (
     FLUENT_AVAILABLE,
     MUTED,
     CaptionLabel,
-    CardWidget,
     IconWidget,
     StrongBodyLabel,
 )
@@ -118,13 +116,19 @@ class LimitedComboBox(QComboBox):
     def showPopup(self) -> None:
         n = min(self._max_visible, max(self.count(), 1))
         view = self.view()
+        # Reset caps from a previous open (otherwise popup can glue/clip oddly)
+        view.setMinimumHeight(0)
+        view.setMaximumHeight(16777215)
+        parent = view.parentWidget()
+        if parent is not None:
+            parent.setMinimumHeight(0)
+            parent.setMaximumHeight(16777215)
         row = view.sizeHintForRow(0)
         if row <= 0:
             fm = self.fontMetrics()
             row = max(28, fm.height() + 10)
         # Exakte Höhe der sichtbaren Zeilen
         height = n * row + 8
-        view.setMinimumHeight(0)
         view.setMaximumHeight(height)
         super().showPopup()
         # Popup-Frame (QComboBoxPrivateContainer) nach Shrink
@@ -136,6 +140,16 @@ class LimitedComboBox(QComboBox):
             parent.setMaximumHeight(cap)
             if parent.height() > cap:
                 parent.resize(parent.width(), cap)
+
+    def hidePopup(self) -> None:
+        view = self.view()
+        view.setMinimumHeight(0)
+        view.setMaximumHeight(16777215)
+        parent = view.parentWidget()
+        if parent is not None:
+            parent.setMinimumHeight(0)
+            parent.setMaximumHeight(16777215)
+        super().hidePopup()
 
 
 SEGMENT_TAB_STYLES = f"""
@@ -270,12 +284,40 @@ class StatusPill(QLabel):
         )
 
 
-class RecipeSidebarCard(CardWidget):
-    """Kompakter Rezept-Eintrag — Details im Hauptbereich."""
+class SidebarCategoryHeader(QLabel):
+    """Category label in the sidebar — drop target for cross-category moves."""
+
+    def __init__(self, category: str, parent: QWidget | None = None) -> None:
+        super().__init__(category.upper(), parent)
+        self.category = category
+        self.setObjectName("sidebarCategory")
+        self.setProperty("dropInsert", "")
+
+    def set_drop_highlight(self, on: bool) -> None:
+        self.setProperty("dropInsert", "header" if on else "")
+        if on:
+            self.setStyleSheet(
+                f"QLabel#sidebarCategory {{ color: {ACCENT_COPPER};"
+                f" border-bottom: 2px solid {ACCENT_COPPER}; padding-bottom: 2px; }}"
+            )
+        else:
+            self.setStyleSheet("")
+
+
+class RecipeSidebarCard(QFrame):
+    """Kompakter Rezept-Eintrag — Details im Hauptbereich.
+
+    Reorder uses grabMouse (not QDrag): Wayland/Plasma often drops
+    in-window QDrag silently; context menu Nach oben/unten remains fallback.
+    Cross-category drop sets a user override (settings), not recipe.yml.
+    """
 
     clicked = pyqtSignal()
     contextMenuRequested = pyqtSignal()
-    reorderRequested = pyqtSignal(str, str)  # source_id, target_id
+    # source_id, target_id, place ("before" | "after")
+    reorderRequested = pyqtSignal(str, str, str)
+    # source_id, category_name — drop on category header
+    categoryDropRequested = pyqtSignal(str, str)
 
     def __init__(
         self,
@@ -288,13 +330,19 @@ class RecipeSidebarCard(CardWidget):
     ) -> None:
         super().__init__(parent)
         self._recipe_id = recipe_id
-        self._drag_start = QPoint()
+        self._press_pos = QPoint()
+        self._press_armed = False
+        self._dragging = False
+        self._hover_target: RecipeSidebarCard | None = None
+        self._hover_header: SidebarCategoryHeader | None = None
+        self._insert_place: str = ""  # before | after
+        self.setObjectName("RecipeSidebarCard")
         self.setFixedHeight(42)
         self.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setAcceptDrops(True)
+        self.setMouseTracking(True)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(lambda _pos: self.contextMenuRequested.emit())
         self._selected = False
@@ -304,22 +352,27 @@ class RecipeSidebarCard(CardWidget):
         layout.setContentsMargins(10, 6, 10, 6)
         layout.setSpacing(8)
 
+        def _pass_mouse(w: QWidget) -> QWidget:
+            w.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+            return w
+
         if FLUENT_AVAILABLE and icon is not None and not icon.isNull():
-            iw = IconWidget(icon, self)
+            iw = _pass_mouse(IconWidget(icon, self))
             iw.setFixedSize(20, 20)
             layout.addWidget(iw)
         else:
-            dot = QLabel("●", self)
+            dot = _pass_mouse(QLabel("●", self))
             dot.setFixedWidth(16)
             layout.addWidget(dot)
 
         title = StrongBodyLabel(name, self) if FLUENT_AVAILABLE else QLabel(name, self)
+        title = _pass_mouse(title)
         title.setWordWrap(False)
         title.setObjectName("sidebarCardTitle")
         self._title = title
         layout.addWidget(title, stretch=1)
 
-        self._run_dot = QLabel("●", self)
+        self._run_dot = _pass_mouse(QLabel("●", self))
         self._run_dot.setFixedWidth(12)
         self._run_dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._run_dot.setStyleSheet(
@@ -329,7 +382,7 @@ class RecipeSidebarCard(CardWidget):
         self._run_dot.setVisible(False)
         layout.addWidget(self._run_dot)
 
-        self._state_dot = QLabel("●", self)
+        self._state_dot = _pass_mouse(QLabel("●", self))
         self._state_dot.setFixedWidth(12)
         self._state_dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._state_dot.setStyleSheet(
@@ -342,57 +395,110 @@ class RecipeSidebarCard(CardWidget):
 
     def mousePressEvent(self, event) -> None:  # type: ignore[no-untyped-def]
         if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_start = event.position().toPoint()
-            self.clicked.emit()
+            self._press_pos = event.position().toPoint()
+            self._press_armed = True
+            self._dragging = False
+            self._clear_hover_target()
         elif event.button() == Qt.MouseButton.RightButton:
             self.contextMenuRequested.emit()
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:  # type: ignore[no-untyped-def]
-        if (
-            event.buttons() & Qt.MouseButton.LeftButton
-            and self._recipe_id
-            and (event.position().toPoint() - self._drag_start).manhattanLength() >= 8
-        ):
-            mime = QMimeData()
-            mime.setData(RECIPE_MIME, self._recipe_id.encode("utf-8"))
-            drag = QDrag(self)
-            drag.setMimeData(mime)
-            drag.exec(Qt.DropAction.MoveAction)
-            return
+        if self._press_armed and event.buttons() & Qt.MouseButton.LeftButton:
+            dist = (event.position().toPoint() - self._press_pos).manhattanLength()
+            threshold = max(8, QApplication.startDragDistance())
+            if not self._dragging and dist >= threshold and self._recipe_id:
+                self._dragging = True
+                self.grabMouse()
+                self.setCursor(Qt.CursorShape.ClosedHandCursor)
+                self.setProperty("dragging", True)
+                self._apply_border()
+            if self._dragging:
+                self._update_hover_target(event.globalPosition().toPoint())
+                return
         super().mouseMoveEvent(event)
 
-    def dragEnterEvent(self, event) -> None:  # type: ignore[no-untyped-def]
-        if self._can_accept_recipe_drop(event):
-            event.acceptProposedAction()
-        else:
-            event.ignore()
+    def mouseReleaseEvent(self, event) -> None:  # type: ignore[no-untyped-def]
+        if event.button() == Qt.MouseButton.LeftButton:
+            was_dragging = self._dragging
+            target = self._hover_target
+            header = self._hover_header
+            place = self._insert_place or "before"
+            self._clear_hover_target()
+            if self._dragging:
+                self.releaseMouse()
+                self.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.setProperty("dragging", False)
+            self._dragging = False
+            self._press_armed = False
+            self._apply_border()
+            if was_dragging:
+                if header is not None and header.category:
+                    self.categoryDropRequested.emit(self._recipe_id, header.category)
+                elif (
+                    target is not None
+                    and target is not self
+                    and target._recipe_id
+                    and target._recipe_id != self._recipe_id
+                    and place in ("before", "after")
+                ):
+                    self.reorderRequested.emit(
+                        self._recipe_id, target._recipe_id, place
+                    )
+            else:
+                self.clicked.emit()
+        super().mouseReleaseEvent(event)
 
-    def dragMoveEvent(self, event) -> None:  # type: ignore[no-untyped-def]
-        if self._can_accept_recipe_drop(event):
-            event.acceptProposedAction()
-        else:
-            event.ignore()
+    def _update_hover_target(self, global_pos: QPoint) -> None:
+        widget = QApplication.widgetAt(global_pos)
+        card: RecipeSidebarCard | None = None
+        header: SidebarCategoryHeader | None = None
+        walk = widget
+        while walk is not None:
+            if isinstance(walk, RecipeSidebarCard):
+                card = walk
+                break
+            if isinstance(walk, SidebarCategoryHeader):
+                header = walk
+                break
+            walk = walk.parentWidget()
 
-    def dropEvent(self, event) -> None:  # type: ignore[no-untyped-def]
-        src = self._drop_source_id(event)
-        if src and src != self._recipe_id:
-            self.reorderRequested.emit(src, self._recipe_id)
-            event.acceptProposedAction()
-        else:
-            event.ignore()
+        place = ""
+        if card is self:
+            card = None
+        elif card is not None:
+            local_y = card.mapFromGlobal(global_pos).y()
+            place = "before" if local_y < card.height() / 2 else "after"
+            header = None
+        elif header is not None:
+            place = "header"
 
-    def _can_accept_recipe_drop(self, event) -> bool:  # type: ignore[no-untyped-def]
-        src = self._drop_source_id(event)
-        return bool(src and src != self._recipe_id)
+        if (
+            card is self._hover_target
+            and header is self._hover_header
+            and place == self._insert_place
+        ):
+            return
 
-    @staticmethod
-    def _drop_source_id(event) -> str:  # type: ignore[no-untyped-def]
-        mime = event.mimeData()
-        if mime is None or not mime.hasFormat(RECIPE_MIME):
-            return ""
-        raw = bytes(mime.data(RECIPE_MIME))
-        return raw.decode("utf-8", errors="replace").strip()
+        self._clear_hover_target()
+        self._hover_target = card
+        self._hover_header = header
+        self._insert_place = place
+        if card is not None and place in ("before", "after"):
+            card.setProperty("dropInsert", place)
+            card._apply_border()
+        elif header is not None:
+            header.set_drop_highlight(True)
+
+    def _clear_hover_target(self) -> None:
+        if self._hover_target is not None:
+            self._hover_target.setProperty("dropInsert", "")
+            self._hover_target._apply_border()
+            self._hover_target = None
+        if self._hover_header is not None:
+            self._hover_header.set_drop_highlight(False)
+            self._hover_header = None
+        self._insert_place = ""
 
     def set_selected(self, selected: bool) -> None:
         self._selected = selected
@@ -400,7 +506,6 @@ class RecipeSidebarCard(CardWidget):
 
     def set_running(self, running: bool) -> None:
         self._running = running
-        # Nur ein Punkt rechts: hellgrün = läuft; sonst Install-Status
         self._run_dot.setVisible(running)
         self._state_dot.setVisible(not running)
 
@@ -416,11 +521,32 @@ class RecipeSidebarCard(CardWidget):
         self._apply_border()
 
     def _apply_border(self) -> None:
-        if self._selected:
+        insert = str(self.property("dropInsert") or "")
+        dragging = bool(self.property("dragging"))
+        if insert == "before":
             self.setStyleSheet(
-                f"RecipeSidebarCard {{ border: 2px solid {ACCENT_COPPER}; border-radius: 6px; }}"
+                f"#RecipeSidebarCard {{ background: rgba(255,255,255,0.06);"
+                f" border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;"
+                f" border-top: 3px solid {ACCENT_COPPER}; }}"
+            )
+        elif insert == "after":
+            self.setStyleSheet(
+                f"#RecipeSidebarCard {{ background: rgba(255,255,255,0.06);"
+                f" border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;"
+                f" border-bottom: 3px solid {ACCENT_COPPER}; }}"
+            )
+        elif dragging:
+            self.setStyleSheet(
+                "#RecipeSidebarCard { background: rgba(255,255,255,0.02);"
+                " border: 1px dashed rgba(255,255,255,0.35); border-radius: 6px; }"
+            )
+        elif self._selected:
+            self.setStyleSheet(
+                f"#RecipeSidebarCard {{ background: rgba(255,255,255,0.06);"
+                f" border: 2px solid {ACCENT_COPPER}; border-radius: 6px; }}"
             )
         else:
             self.setStyleSheet(
-                "RecipeSidebarCard { border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; }"
+                "#RecipeSidebarCard { background: rgba(255,255,255,0.04);"
+                " border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; }"
             )

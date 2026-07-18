@@ -24,6 +24,37 @@ fake_id="$(recipe_hooks::state_get FAKE_STEAM_APPID 2>/dev/null || true)"
 steam_root="${STEAM_ROOT:-$HOME/.local/share/Steam}"
 [ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
 
+# Spacewar (FakeAppId) — ohne 480 startet der Online-Fix nicht zuverlässig.
+hoa_spacewar_ok() {
+    local lib p
+    for lib in "$steam_root" "$HOME/.local/share/Steam" "$HOME/.steam/steam"; do
+        [ -d "$lib" ] || continue
+        [ -f "$lib/steamapps/appmanifest_480.acf" ] && return 0
+        [ -d "$lib/steamapps/common/Spacewar" ] && return 0
+        if [ -f "$lib/steamapps/libraryfolders.vdf" ]; then
+            while IFS= read -r p; do
+                [ -f "$p/steamapps/appmanifest_480.acf" ] && return 0
+                [ -d "$p/steamapps/common/Spacewar" ] && return 0
+            done < <(grep -oE '"path"[[:space:]]+"[^"]+"' "$lib/steamapps/libraryfolders.vdf" \
+                | sed -E 's/.*"([^"]+)"/\1/' || true)
+        fi
+    done
+    for p in /mnt/*/SteamLibrary /mnt/*/*/SteamLibrary; do
+        [ -f "$p/steamapps/appmanifest_480.acf" ] && return 0
+        [ -d "$p/steamapps/common/Spacewar" ] && return 0
+    done 2>/dev/null || true
+    return 1
+}
+if [ "$fake_id" = "480" ] && ! hoa_spacewar_ok; then
+    if command -v steam >/dev/null 2>&1; then
+        steam steam://install/480 >/dev/null 2>&1 &
+    elif [ -x "$steam_root/steam.sh" ]; then
+        "$steam_root/steam.sh" steam://install/480 >/dev/null 2>&1 &
+    fi
+    recipe_hooks::die \
+        "Spacewar (480) fehlt — in Steam installieren (steam://install/480), dann erneut Starten"
+fi
+
 if [ -z "$compat" ] || [ ! -d "$compat" ]; then
     compat="$steam_root/steamapps/compatdata/${appid}"
 fi
@@ -43,13 +74,8 @@ if [ -z "$game_exe" ] || [ ! -f "$game_exe" ]; then
     fi
 fi
 
-notify_title="$(recipe_get "$RECIPE_YML" notify_title 2>/dev/null || true)"
-[ -n "$notify_title" ] || notify_title="$(recipe_get "$RECIPE_YML" name)"
-
 if [ -n "$script" ] && [ -x "$script" ]; then
-    if type recipe_notify::send >/dev/null 2>&1; then
-        recipe_notify::send "$notify_title" "Wird gestartet…" "${game_exe:-}"
-    fi
+    recipe_notify::starting
     exec "$script" "$@"
 fi
 
@@ -67,9 +93,6 @@ export STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_root"
 export STEAM_COMPAT_DATA_PATH="$compat"
 unset PROTON_ENABLE_WAYLAND || true
 
-if type recipe_notify::send >/dev/null 2>&1; then
-    recipe_notify::send "$notify_title" "Wird gestartet…" "$game_exe"
-fi
-
+recipe_notify::starting
 cd "$(dirname "$game_exe")"
 exec "$proton" run "$game_exe" "$@"

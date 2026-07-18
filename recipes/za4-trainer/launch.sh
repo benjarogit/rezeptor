@@ -47,11 +47,7 @@ fi
 
 # Bevorzugt den bei Install geschriebenen Wrapper (identisch zur Referenz-Logik)
 if [ -n "$script" ] && [ -x "$script" ]; then
-    notify_title="$(recipe_get "$RECIPE_YML" notify_title 2>/dev/null || true)"
-    [ -n "$notify_title" ] || notify_title="$(recipe_get "$RECIPE_YML" name)"
-    if type recipe_notify::send >/dev/null 2>&1; then
-        recipe_notify::send "$notify_title" "Trainer wird gestartet…" "${trainer:-}"
-    fi
+    recipe_notify::starting
     exec "$script" "$@"
 fi
 
@@ -70,10 +66,5 @@ export STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_root"
 export STEAM_COMPAT_DATA_PATH="$compat"
 unset PROTON_ENABLE_WAYLAND || true
 
-notify_title="$(recipe_get "$RECIPE_YML" notify_title 2>/dev/null || true)"
-[ -n "$notify_title" ] || notify_title="$(recipe_get "$RECIPE_YML" name)"
-if type recipe_notify::send >/dev/null 2>&1; then
-    recipe_notify::send "$notify_title" "Trainer wird gestartet…" "$trainer"
-fi
-
+recipe_notify::starting
 exec "$proton" run "$trainer" "$@"

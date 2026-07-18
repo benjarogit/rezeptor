@@ -50,8 +50,8 @@ output::progress_tick "Steam / Spacewar (480)"
 if hoa_spacewar_ok; then
     recipe_validate::ok "Spacewar (AppID 480) in Steam"
 else
-    recipe_validate::fail "Spacewar (480) fehlt — in Steam installieren (steam://install/480), dann Reparieren"
-    failures=$((failures + 1))
+    # Warnung statt Fail: Einrichtung/Wrapper OK; Start braucht 480.
+    recipe_validate::warn "Spacewar (480) fehlt — steam://install/480, dann Starten"
 fi
 
 output::progress_tick "Spielordner"

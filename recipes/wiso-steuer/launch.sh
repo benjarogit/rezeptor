@@ -47,4 +47,5 @@ if [ ! -x "$DATA_ROOT/bin/wiso-launch.sh" ]; then
     recipe_hooks::die "Fehlt $DATA_ROOT/bin/wiso-launch.sh — Installation wiederholen"
 fi
 
+# Notice kommt aus wiso-mit-wine.sh (Titel = WISO Steuer, Body = Wird gestartet…)
 exec bash "$DATA_ROOT/bin/wiso-launch.sh" "$@"

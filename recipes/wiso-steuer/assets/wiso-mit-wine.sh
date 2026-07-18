@@ -99,6 +99,7 @@ if [ -n "${WISO_VIRTUAL_DESKTOP:-}" ] && [ -z "${WISO_NO_VIRTUAL_DESKTOP:-}" ]; 
     echo "WISO: Virtual Desktop ${_wiso_vdesktop} (explizit). Abschalten: unset WISO_VIRTUAL_DESKTOP" >&2
 fi
 
+# Einheitlich wie recipe_notify::starting: Titel = App-Name, Body = Start-Hinweis.
 if command -v notify-send >/dev/null 2>&1; then
     _notify_icon="wiso-steuer-wine"
     _png="${XDG_DATA_HOME:-$HOME/.local/share}/icons/hicolor/48x48/apps/wiso-steuer-wine.png"
@@ -110,10 +111,9 @@ if command -v notify-send >/dev/null 2>&1; then
         _found="$(find "$ROOT_DIR" -maxdepth 3 -name 'wisoakt.ico' -type f 2>/dev/null | head -1 || true)"
         [ -n "$_found" ] && _notify_icon="$_found"
     fi
-    # Einheitlich: -a = App-Name (wie recipe_notify::send). Nie Parent erben.
     notify-send -a "WISO Steuer" -i "$_notify_icon" \
         "WISO Steuer" \
-        "Wird gestartet — der erste Start kann einen Moment dauern." \
+        "Wird gestartet…" \
         2>/dev/null || true
 fi
 

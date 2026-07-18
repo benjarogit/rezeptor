@@ -1,79 +1,91 @@
-# Entwickler — Rezeptor Rezepte
+# Entwickler — Rezeptor-Rezepte
 
-Du willst eine Anwendung unter Linux per Wine/Rezeptor anbieten? **Ein Muster für alle Rezepte** — Photoshop, WISO und Community-Rezepte nutzen dieselbe Architektur.
+**Ein Muster für alle Rezepte.** Portable, Offline-Installer, Steam-Spiele (mit Online-Fix), Trainer — dieselbe Architektur.
 
-## Schnellstart (5 Minuten)
+| Dokument | Rolle |
+|----------|--------|
+| **Diese Seite** | Schnellstart, Struktur, Rezept-Typen |
+| [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | Tiefenreferenz: Felder, `install_steps`, `version_detect`, API |
+| **Muster-Referenzen** (mitgeliefert) | [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) |
+
+---
+
+## Schnellstart
 
 ```bash
 cd photoshopCClinux   # oder dein Clone
 
-# 1. Rezept anlegen (CLI oder GUI: Rezeptor → Neues Rezept…)
 ./scripts/new-recipe.sh meine-app "Meine App"
-# oder Offline-Installer:
+# Offline-Installer / Trainer-EXE:
 ./scripts/new-recipe.sh mein-setup "Mein Setup" --type installer
 
-# 2. Anpassen
 $EDITOR recipes/meine-app/recipe.yml   # inkl. install_steps
 # Optional: core/recipe-meine-app.sh für module:-Schritte
 
-# 3. Prüfen & testen
-./scripts/recipe-lint.sh               # Schema + Hook-Vertrag
-REZEPTOR_DEV=1 ./setup.sh
-# Im GUI: dein Rezept → Installieren
+./scripts/recipe-lint.sh
+REZEPTOR_DEV=1 ./setup.sh             # GUI: Rezept → Quelle → Installieren
 
-# 4. Vor Pull Request
-./scripts/recipe-manifest.sh
+./scripts/recipe-manifest.sh          # vor PR
 git add recipes/manifest.json recipes/meine-app/
 ```
 
-## Wie das Rezept-System funktioniert
+GUI-Alternative: **Rezeptor → Neues Rezept…**
+
+---
+
+## Architektur (kurz)
 
 ```
 recipe.yml          → Vertrag (Metadaten + install_steps)
-install.sh          → dünn: recipe_hooks::load + recipe_install_steps::run
+install.sh …        → dünne Hooks → core/recipe-hooks.sh
 core/recipe-install-steps.sh → führt install_steps aus
-core/recipe-<id>.sh → App-Logik (module: recipe_foo::bar)
-recipes/recipe.schema.json + recipe-lint.sh → Regeln (CI)
+core/recipe-<id>.sh → App-Logik (module:)
 manifest.json       → SHA256-Trust im Launcher
 ```
 
-**Merksatz:** `recipe.yml` = Vertrag. Hooks = Lifecycle. Core = Ausführung. Lint/Schema/CI = Regeln. Manifest = Integrität.
+**Merksatz:** `recipe.yml` = Vertrag. Hooks = Lifecycle. Core = Ausführung. Lint/CI = Regeln. Manifest = Integrität.
 
-Jedes Hook-Skript **beginnt identisch**:
+Jedes Hook-Skript beginnt gleich:
 
 ```bash
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$RECIPE_DIR/../../core/recipe-hooks.sh"
-recipe_hooks::load install   # launch | validate | repair | kill
-recipe_install_steps::run    # nur bei install.sh
+recipe_hooks::load install   # launch | validate | repair | kill | minimal
+recipe_install_steps::run    # nur install.sh
 ```
 
-Referenz:
+User-Daten liegen unter `~/.local/share/wine-software/<id>/` (Prefix, `recipe.env`, …) — getrennt von **Quelle** (mitgebrachte Dateien) und oft auch vom **Ziel** (Portable-/Spielordner).
 
-| Typ | Vorlage | Beispiel |
-|-----|---------|----------|
-| Portable | `recipes/_template/` | `wiso-steuer` (volle `install_steps`-Zerlegung) |
-| Offline-Installer | `recipes/_template-installer/` | `photoshop` (`module: recipe_photoshop::install`) |
-| Steam-Trainer | (wie `za4-trainer`) | EXE + Steam compatdata |
-| Steam + BYOS-Fix | (wie `house-of-ashes`) | Spielordner `link`, Fix validate, Proton-Launch — siehe [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) |
+---
 
-**Versionserkennung:** jedes Rezept mit `version_guaranteed` braucht `version_detect` (Lint ERROR sonst). Engine: `launcher/version_detect.py`.
+## Rezept-Typen (Quelle / Ziel)
+
+In der GUI immer **Quelle** und ggf. **Ziel** — unabhängig vom App-Typ.
+
+| Typ | Mitgeliefert | Quelle | Ziel | Referenz |
+|-----|--------------|--------|------|----------|
+| **Offline-Installer** | `photoshop` | Setup-Ordner / `.exe` | Datenordner (Prefix) | [INSTALLER.md](INSTALLER.md) |
+| **Portable** (Ordner/Archiv) | `wiso-steuer` | Ordner oder zip/7z/… | Installationsordner | [WISO.md](WISO.md) |
+| **Steam + Online-Fix** | `house-of-ashes` | Fix BYOS; Spiel in Steam | Spielordner (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
+| **Einzel-EXE / Trainer** | `za4-trainer` | eine `.exe` | oft Steam-Unterordner | [TRAINER.md](TRAINER.md) |
+
+Vorlagen: `recipes/_template/` (Portable), `recipes/_template-installer/`, ggf. `_template-steam-game/`.
+
+---
 
 ## Pflicht-Checkliste
 
-- [ ] `recipe.yml`: Pflichtfelder + **`install_steps`** + **`version_detect`** (wenn Garantie-Version gesetzt)
-- [ ] Alle `*.sh` nutzen `core/recipe-hooks.sh`
-- [ ] `./scripts/recipe-lint.sh` ohne Fehler (inkl. Schema-Check)
-- [ ] Mit `REZEPTOR_DEV=1 ./setup.sh` getestet
+- [ ] `recipe.yml`: Pflichtfelder + **`install_steps`** + **`uninstall`**; bei `version_guaranteed` auch **`version_detect`**
+- [ ] Alle `*.sh` nutzen `core/recipe-hooks.sh`; `uninstall.sh` → `purge_recipe_data`
+- [ ] `./scripts/recipe-lint.sh` ohne Fehler
+- [ ] Mit `REZEPTOR_DEV=1 ./setup.sh` getestet (Quelle speichern → Installieren)
 - [ ] `recipe-manifest.sh` nach Datei-Änderungen
-- [ ] Keine Binaries im Repo (BYOS)
+- [ ] Keine App-Binaries im Repo (BYOS)
 
-## Vollständige Spezifikation
+---
 
-→ **[RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)** (Felder, `install_steps`, API, GPU)
+## Weiter
 
-## Hilfe
+Vollständige Spezifikation → **[RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)**
 
-- GUI: **Hilfe → Entwickler-Dokumentation…**
-- Übersetzungen: [CONTRIBUTING-TRANSLATIONS.md](../CONTRIBUTING-TRANSLATIONS.md)
-- Issues: [github.com/benjarogit/rezeptor/issues](https://github.com/benjarogit/rezeptor/issues)
+Hilfe in der App: **Hilfe → Entwickler-Dokumentation…** · Übersetzungen: [CONTRIBUTING-TRANSLATIONS.md](../CONTRIBUTING-TRANSLATIONS.md)

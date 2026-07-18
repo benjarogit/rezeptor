@@ -1,28 +1,24 @@
-# Rezeptor — Dokumentation
+# Dokumentation (Deutsch)
 
-> Wiki-Ansicht: [Rezeptor Docs](https://benjarogit.github.io/rezeptor/) (MkDocs auf GitHub Pages)
+| Zielgruppe | Einstieg |
+|------------|----------|
+| **Nutzer** | App-Hilfe, [CATALOG.md](CATALOG.md) |
+| **Rezept-Entwickler** | [ENTWICKLER.md](ENTWICKLER.md) → [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md); Muster: [INSTALLER.md](INSTALLER.md), [WISO.md](WISO.md), [STEAM-WRAPPER.md](STEAM-WRAPPER.md), [TRAINER.md](TRAINER.md) |
+| **Maintainer** | [maintainer/](../maintainer/) |
 
-| Zielgruppe | Was |
-|------------|-----|
-| **User** | README / README.de.md, Rezept-Infos in der GUI (`info.*.txt`) |
-| **Rezept-Entwickler** | [ENTWICKLER.md](ENTWICKLER.md), [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md), [RECIPES.md](RECIPES.md), [I18N.md](I18N.md), [BRAND.md](BRAND.md), [WISO.md](WISO.md) (Referenz-Rezept) |
-| **Maintainer** | [MANUAL-QA.md](../maintainer/de/MANUAL-QA.md), [TEST-PLAN.md](../maintainer/de/TEST-PLAN.md), [TESTING.md](../maintainer/de/TESTING.md), GPU/Handoff unter `maintainer/de/` |
+## Dateien
 
-Englische Versionen: [`docs/en/`](../en/README.md).
+| Datei | Inhalt |
+|-------|--------|
+| [ENTWICKLER.md](ENTWICKLER.md) | Schnellstart, Struktur, Rezept-Typen (Portable/Installer/Steam/Trainer) |
+| [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | Tiefenreferenz `recipe.yml` / `install_steps` |
+| [RECIPES.md](RECIPES.md) | Verweis → ENTWICKLER.md |
+| [INSTALLER.md](INSTALLER.md) | Muster: Offline-Installer (`photoshop`) |
+| [WISO.md](WISO.md) | Muster: Portable |
+| [STEAM-WRAPPER.md](STEAM-WRAPPER.md) | Muster: Steam + Online-Fix |
+| [TRAINER.md](TRAINER.md) | Muster: Einzel-EXE / Trainer |
+| [I18N.md](I18N.md) | Übersetzungen |
+| [BRAND.md](BRAND.md) | Marke / UI-Tokens |
+| [CATALOG.md](CATALOG.md) | Katalog / Quellen |
 
-## Für Rezept-Autoren (GUI: Hilfe → Entwickler-Dokumentation)
-
-| Dokument | Inhalt |
-|----------|--------|
-| [ENTWICKLER.md](ENTWICKLER.md) | Schnellstart: Wizard / `new-recipe.sh` |
-| [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | `recipe.yml`, `install_steps`, Hooks |
-| [RECIPES.md](RECIPES.md) | Layout & Workflow |
-| [I18N.md](I18N.md) | Sprachen (Launcher + Docs) |
-| [WISO.md](WISO.md) | Referenz-Rezept (Portable-Muster für Autoren) |
-| [BRAND.md](BRAND.md) | Marke (optional) |
-
-## Maintainer (nicht im GUI-Katalog)
-
-Interne Notizen unter [`docs/maintainer/de/`](../maintainer/de/): GPU-Experimente, Photoshop-Handoff, QA-Pläne. Für Community-Rezept-Autoren nicht nötig.
-
-Übersetzungen: [CONTRIBUTING-TRANSLATIONS.md](../CONTRIBUTING-TRANSLATIONS.md)
+Englisch: [../en/README.md](../en/README.md)

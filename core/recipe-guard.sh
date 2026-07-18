@@ -118,6 +118,35 @@ recipe_notify::recipe() {
     recipe_notify::send "$(recipe_notify::title)" "$summary" "$body" "$icon"
 }
 
+# Einheitlicher Start-Hinweis für alle Rezepte (Photoshop/WISO/HOA/Trainer):
+#   App + Titel = Rezeptname, Body = „Wird gestartet…“
+# Optionaler Body-Text z. B. für ersten Start / längere Hinweise.
+recipe_notify::starting() {
+    local body="${1:-Wird gestartet…}"
+    local title
+    title="$(recipe_notify::title)"
+    recipe_notify::send "$title" "$title" "$body"
+}
+
+# Einheitliches Layout (Photoshop/WISO/HOA/Trainer):
+#   App (-a)  = Rezeptname
+#   Titel     = Rezeptname  (KDE-fett)
+#   Text      = Statuszeile (z. B. „Wird gestartet…“)
+recipe_notify::status() {
+    local body="${1:?body}"
+    local icon="${2:-}"
+    local title
+    title="$(recipe_notify::title)"
+    [ -n "$icon" ] || icon="$(recipe_guard::notify_icon 2>/dev/null || true)"
+    recipe_notify::send "$title" "$title" "$body" "$icon"
+}
+
+# Start-Hinweis — alle launch.sh / Wrapper nutzen das.
+recipe_notify::starting() {
+    local body="${1:-Wird gestartet…}"
+    recipe_notify::status "$body"
+}
+
 recipe_dpi::logpixels() {
     # Wine-DPI für UI-Layout. Qt-Apps (WISO): bei Host-DPI>96 oft Header/Sidebar-Versatz —
     # dann WINE_LOGPIXELS=96 oder WISO_FORCE_DPI=96 erzwingen.

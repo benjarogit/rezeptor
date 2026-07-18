@@ -28,12 +28,13 @@ DOCS_DIR = Path(__file__).resolve().parent.parent / "docs"
 
 # Entwickler-GUI: nur Rezept-Autoren-Doku (kein Maintainer-Handoff/GPU-Labor)
 DOC_CATALOG: list[tuple[str, str, str]] = [
-    ("Entwickler — Schnellstart", "Developer — Quick start", "ENTWICKLER.md"),
-    ("Rezept erstellen", "Recipe authoring", "RECIPE-AUTHORING.md"),
-    ("Rezepte — Übersicht", "Recipes — Overview", "RECIPES.md"),
+    ("Entwickler — Einstieg", "Developer — Getting started", "ENTWICKLER.md"),
+    ("Rezept erstellen (Referenz)", "Recipe authoring (reference)", "RECIPE-AUTHORING.md"),
+    ("Muster: Offline-Installer", "Pattern: offline installer", "INSTALLER.md"),
+    ("Muster: Portable (WISO)", "Pattern: portable (WISO)", "WISO.md"),
+    ("Muster: Steam + Online-Fix", "Pattern: Steam + online fix", "STEAM-WRAPPER.md"),
+    ("Muster: Einzel-EXE / Trainer", "Pattern: single EXE / trainer", "TRAINER.md"),
     ("Rezept-Katalog", "Recipe catalog", "CATALOG.md"),
-    ("Steam-Wrapper", "Steam wrapper", "STEAM-WRAPPER.md"),
-    ("Referenz-Rezept: WISO", "Reference recipe: WISO", "WISO.md"),
     ("Internationalisierung", "Internationalization", "I18N.md"),
     ("Markendesign", "Brand design", "BRAND.md"),
     ("Dokumentations-Index", "Documentation index", "README.md"),

@@ -244,8 +244,12 @@ recipe_photoshop::launch() {
     echo ""
     echo "🔄 Photoshop wird gestartet..."
 
-    notify_icon="$(recipe_guard::notify_icon 2>/dev/null || true)"
-    recipe_photoshop::_notify "Adobe Photoshop CC 2021" "Wird gestartet…" "$notify_icon"
+    if type recipe_notify::starting >/dev/null 2>&1; then
+        recipe_notify::starting
+    else
+        notify_icon="$(recipe_guard::notify_icon 2>/dev/null || true)"
+        recipe_photoshop::_notify "Adobe Photoshop CC 2021" "Wird gestartet…" "$notify_icon"
+    fi
 
     recipe_photoshop::_wine_args wine_args "$@"
     echo "⏳ Initialisiere Wine-Umgebung..."

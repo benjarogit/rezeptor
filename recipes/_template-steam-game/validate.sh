@@ -36,8 +36,7 @@ output::progress_tick "Spacewar / FakeAppId"
 if [ "$FAKE_APPID" != "480" ] || spacewar_ok; then
     recipe_validate::ok "FakeAppId $FAKE_APPID / Spacewar"
 else
-    recipe_validate::fail "Spacewar (480) fehlt"
-    failures=$((failures + 1))
+    recipe_validate::warn "Spacewar (480) fehlt — steam://install/480 vor dem Start"
 fi
 
 output::progress_tick "Spielordner"

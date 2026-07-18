@@ -1,19 +1,9 @@
 # Rezept-Authoring (Rezeptor)
 
-Jedes Programm ist ein Rezept — **gleiches Muster**, kein Sonderfall.
+Tiefenreferenz für `recipe.yml`, `install_steps` und Hooks.  
+**Schnellstart & Muster** (Portable, Installer, Steam, Trainer): **[ENTWICKLER.md](ENTWICKLER.md)**.
 
-## Community: Rezept in 4 Schritten
-
-```bash
-./scripts/new-recipe.sh meine-app "Meine App"
-./scripts/new-recipe.sh adobe-tool "Mein Tool" --type installer
-./scripts/recipe-lint.sh
-REZEPTOR_DEV=1 ./setup.sh
-./scripts/recipe-manifest.sh
-```
-
-Vorlagen: `recipes/_template/`, `recipes/_template-installer/`.  
-Referenz: `wiso-steuer` (deklarative `install_steps`), `photoshop` (`module:`).
+Vorlagen: `recipes/_template/`, `recipes/_template-installer/`.
 
 ---
 
@@ -56,7 +46,7 @@ install_steps:
   - prefix
   - winetricks         # aus winetricks: in yml
   - winetricks: [corefonts, gdiplus]
-  - module: recipe_wiso::apply_wined3d
+  - module: recipe_meine_app::post_deploy
   - copy_asset:
       src: assets/foo.sh
       dest: "{data_root}/bin/foo.sh"
@@ -67,7 +57,7 @@ install_steps:
 
 | Schritt | Rolle |
 |---------|--------|
-| `prepare_source` | Quelle → `RECIPE_WORK_ROOT` |
+| `prepare_source` | Quelle → `RECIPE_WORK_ROOT` (Ordner/Archiv/Installer) |
 | `require_portable` | erwartet `portable_folder` |
 | `prefix` | Proton + Prefix |
 | `winetricks` | Pakete (yml oder Liste); `vcrun*`/`dotnet*`/`win10` speziell |
@@ -173,7 +163,7 @@ Schema: [`recipes/recipe.schema.json`](../../recipes/recipe.schema.json).
 install_type: portable_launch
 deploy_mode: copy
 source_kind: folder
-source_formats: zip,tar.gz,tgz
+source_formats: zip,tar.gz,tgz,7z,rar
 target_default: "~/Dokumente/Meine App"
 winetricks: [win10, vcrun2019]
 install_steps:

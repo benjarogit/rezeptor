@@ -1,18 +1,25 @@
+<p align="center">
+  <img src="images/rezeptor-icon.png" alt="Rezeptor" width="128" height="128">
+</p>
+
 # Rezeptor
 
-Linux-Launcher für Windows-Software über **Proton-GE** — modulare Rezepte (Photoshop, WISO Steuer, Steam-Wrapper, …).
+**Windows-Software unter Linux installieren und starten** — mit getesteten Rezepten, **Proton-GE** und einer einfachen Desktop-Oberfläche.
 
-[![Docs](https://img.shields.io/badge/Doku-Rezeptor%20Docs-B87333)](https://benjarogit.github.io/rezeptor/)
+Photoshop, Steuerprogramme (WISO), Steam-Spiele mit Online-Fix, Trainer und mehr: Jedes Rezept weiß, wie Installation, Reparatur, Prüfung, Start und saubere Deinstallation funktionieren.
+
+[![Doku](https://img.shields.io/badge/Doku-Rezeptor%20Docs-B87333)](https://benjarogit.github.io/rezeptor/)
 [![Lizenz](https://img.shields.io/badge/Lizenz-GPL--2.0-blue)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=Release)](https://github.com/benjarogit/rezeptor/releases)
 
-## Dokumentation (Wiki)
+## Was du bekommst
 
-**Die ausführliche Anleitung steht im Wiki:**
-
-### → [Rezeptor Docs](https://benjarogit.github.io/rezeptor/)
-
-- [Deutsch](https://benjarogit.github.io/rezeptor/de/README/) · [English](https://benjarogit.github.io/rezeptor/en/README/)
-- Lokal: `docs/` · bauen mit `pip install -r requirements-docs.txt && mkdocs serve`
+- **GUI-Launcher** — Rezept wählen, installieren, starten, reparieren oder entfernen
+- **Nur Proton-GE** — kein System-Wine-Fallback in Rezepten
+- **Statusprüfung** — optional beim Start; jederzeit neu prüfen (F5)
+- **System-Tools** — fehlende Pakete (z. B. `cabextract`, `7z`) einmalig vorschlagen
+- **Katalog & Quellen** — offizielle Rezepte plus Community-Pfad
+- **Daten unter** `~/.local/share/wine-software/`
 
 ## Schnellstart
 
@@ -22,13 +29,27 @@ cd rezeptor
 ./setup.sh
 ```
 
-Benötigt PyQt6 (`python-pyqt6` / Distro-Äquivalent). Daten: `~/.local/share/wine-software/`.
+Benötigt **PyQt6** (`python-pyqt6` unter Arch/CachyOS bzw. Distro-Paket).
 
-Oder ein **[Release-AppImage](https://github.com/benjarogit/rezeptor/releases)**, sobald veröffentlicht.
+Oder ein **[Release-AppImage](https://github.com/benjarogit/rezeptor/releases)**, sobald verfügbar.
+
+## Dokumentation
+
+Ausführliche Anleitungen (Installationsmuster, Rezept-Autorenschaft, Marke):
+
+### → [Rezeptor Docs](https://benjarogit.github.io/rezeptor/)
+
+- [Deutsch](https://benjarogit.github.io/rezeptor/de/README/) · [English](https://benjarogit.github.io/rezeptor/en/README/)
+- Lokal: `docs/` — `pip install -r requirements-docs.txt && mkdocs serve`
 
 ## Rezepte
 
-Mitgeliefert unter `recipes/<id>/`. Community: `recipes/community/<id>/` (Einreichung über [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?template=recipe_submission.md)).
+| Ort | Rolle |
+|-----|--------|
+| `recipes/<id>/` | Mitgeliefert / offiziell |
+| `recipes/community/<id>/` | Community |
+
+Ideen einreichen über [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?template=recipe_submission.md).
 
 ## English
 

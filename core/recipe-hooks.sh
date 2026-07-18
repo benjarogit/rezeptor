@@ -84,6 +84,7 @@ recipe_hooks::load() {
             recipe_hooks::_source wine-runtime.sh
             recipe_hooks::_source recipe-dotnet.sh
             recipe_hooks::_source recipe-wine-silent.sh
+            recipe_hooks::_source recipe-guard.sh
             recipe_hooks::wine_wrappers
             recipe_hooks::force_prefix
             ;;
@@ -132,14 +133,9 @@ recipe_hooks::load_app_module() {
                 recipe_hooks::_source "$mod"
                 loaded=1
             fi
-            # Mini-Rezepte (z. B. runtime: system / Trainer): launch.sh ist selbstständig
-            if [ "$loaded" -eq 0 ]; then
-                runtime="$(recipe_get "$RECIPE_YML" runtime 2>/dev/null || true)"
-                if [ "$runtime" = "system" ]; then
-                    return 0
-                fi
-                recipe_hooks::die "Launch-Modul fehlt: $launch_mod oder $mod"
-            fi
+            # launch.sh ist der Einstieg — Core-Modul nur optional (Photoshop/WISO).
+            # Steam/Trainer/Portable brauchen keines (sonst: „Launch-Modul fehlt“).
+            return 0
             ;;
         install|repair)
             if [ -f "$CORE_DIR/$install_mod" ]; then

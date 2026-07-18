@@ -66,10 +66,32 @@ fi
 if hoa_spacewar_present "$steam_root"; then
     output::success "Spacewar (AppID 480) in Steam gefunden"
 else
-    output::error "Spacewar (AppID 480) fehlt in der Steam-Bibliothek"
-    output::error "Der Online-Fix meldet sich bei Steam als Spacewar — ohne 480 kein korrektes Online/Steam-API."
-    output::error "In Steam: Bibliothek → Tools / Suche „Spacewar“ → Installieren (kostenlos), oder: steam steam://install/480"
-    recipe_hooks::die "Spacewar (480) installieren, dann House of Ashes in Rezeptor erneut einrichten"
+    output::warning "Spacewar (AppID 480) fehlt — Online-Fix meldet sich als Spacewar"
+    output::info "Steam-Installationsdialog wird geöffnet — warte bis Spacewar fertig ist…"
+    if command -v steam >/dev/null 2>&1; then
+        steam steam://install/480 >/dev/null 2>&1 &
+    elif [ -x "$steam_root/steam.sh" ]; then
+        "$steam_root/steam.sh" steam://install/480 >/dev/null 2>&1 &
+    else
+        output::warning "Steam-CLI nicht gefunden — manuell: Bibliothek → Tools → Spacewar"
+    fi
+    # Bis 10 Min pollen — nicht „fertig“ melden während Steam noch lädt.
+    _sw_ok=0
+    for _i in $(seq 1 120); do
+        if hoa_spacewar_present "$steam_root"; then
+            output::success "Spacewar (AppID 480) installiert"
+            _sw_ok=1
+            break
+        fi
+        if [ $((_i % 6)) -eq 1 ]; then
+            output::info "Warte auf Spacewar… (${_i}/120, je ~5s) — in Steam bestätigen falls nötig"
+        fi
+        sleep 5
+    done
+    if [ "$_sw_ok" -eq 0 ]; then
+        recipe_hooks::die \
+            "Spacewar (480) nicht rechtzeitig fertig — in Steam installieren, dann erneut Installieren/Reparieren"
+    fi
 fi
 
 output::progress 30 "Online-Fix prüfen"

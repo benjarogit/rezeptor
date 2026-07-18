@@ -6,8 +6,10 @@ from __future__ import annotations
 import os
 import re
 import shutil
+import signal
 import subprocess
 import sys
+import threading
 import time
 import uuid
 from collections.abc import Callable
@@ -31,6 +33,7 @@ try:
     )
     from PyQt6.QtWidgets import (
         QApplication,
+        QCheckBox,
         QDialog,
         QDialogButtonBox,
         QFormLayout,
@@ -109,10 +112,23 @@ from ui_rezeptor import (
     LimitedComboBox,
     RecipeSidebarCard,
     SegmentTabBar,
+    SidebarCategoryHeader,
     StatusPill,
     STATE_DOT,
 )
-from settings import RezeptorSettings, load_settings, recipe_edit_allowed, save_settings
+from host_deps import has_gaps
+from settings import (
+    RezeptorSettings,
+    clear_recipe_install_env,
+    has_recipe_install_source,
+    load_recipe_install_env,
+    load_settings,
+    prepend_archive_password,
+    recipe_edit_allowed,
+    save_recipe_install_env,
+    save_settings,
+)
+from ui_host_deps import HostDepsDialog, mark_host_deps_prompt_done
 from ui_settings import SettingsDialog
 from ui_docs import DeveloperDocsDialog
 from ui_recipe_view import RecipeViewDialog
@@ -122,12 +138,19 @@ from ui_recipe_wizard import (
     RecipeWizardDialog,
     can_create_recipes,
 )
+from archive_passwords import ensure_archive_passwords
 from ui_source import (
     RecipeSourceDialog,
+    attach_archive_password_files,
     needs_source_dialog,
     source_configure_label,
 )
-from recipe_categories import sort_categories, sort_recipes_in_category
+from recipe_categories import (
+    default_category,
+    effective_category,
+    sort_categories,
+    sort_recipes_in_category,
+)
 from recipe_trust import (
     friendly_trust_reason,
     generate_manifest,
@@ -140,6 +163,8 @@ from ui_icons import ensure_fa_font, fa_color, fa_icon
 from ui_progress import WaitingSpinner
 from ui_window import (
     apply_tool_window,
+    clamp_restored_geometry,
+    ensure_on_screen,
     geometry_to_b64,
     restore_geometry,
 )
@@ -297,6 +322,89 @@ def resolve_data_root(meta: dict[str, str], rid: str) -> Path:
             if override.is_dir():
                 return override
     return Path(canonical)
+
+
+def _parse_env_file_values(path: Path) -> dict[str, str]:
+    """recipe.env / portable.env — Werte mit Shell-Quoting (%q) lesen."""
+    out: dict[str, str] = {}
+    if not path.is_file():
+        return out
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return out
+    for line in text.splitlines():
+        raw = line.strip()
+        if not raw or raw.startswith("#") or "=" not in raw:
+            continue
+        key, _, val = raw.partition("=")
+        key = key.strip()
+        val = val.strip()
+        if not key:
+            continue
+        # printf %q: backslash-escapes; einfache Anführungszeichen möglich
+        if len(val) >= 2 and val[0] == val[-1] and val[0] in "'\"":
+            val = val[1:-1]
+        else:
+            val = (
+                val.replace("\\ ", " ")
+                .replace("\\'", "'")
+                .replace('\\"', '"')
+                .replace("\\\\", "\\")
+            )
+        out[key] = val
+    return out
+
+
+def installed_paths_text(meta: dict[str, str], rid: str, dr: Path) -> str:
+    """Mehrzeilig: Daten + Quelle/Ziel aus recipe.env / portable.env."""
+    lines = [f"{t('tooltip.path_data')}: {dr}"]
+    env: dict[str, str] = {}
+    env.update(_parse_env_file_values(dr / "recipe.env"))
+    env.update(_parse_env_file_values(dr / "portable.env"))
+
+    source = (
+        (env.get("GAME_DIR") or "").strip()
+        or (env.get("WORK_ROOT") or "").strip()
+        or (env.get("RECIPE_SOURCE_ROOT") or "").strip()
+        or (env.get("RECIPE_INSTALLER_PATH") or "").strip()
+        or (env.get("RECIPE_ARCHIVE_PATH") or "").strip()
+    )
+    target = (
+        (env.get("WISO_PORTABLE_ROOT") or "").strip()
+        or (env.get("RECIPE_TARGET_DIR") or "").strip()
+        or (env.get("TRAINER_EXE") or "").strip()
+    )
+    # Trainer: EXE ist Zielkopie — als Ziel zeigen, nicht als Quelle
+    if rid == "za4-trainer" or meta.get("install_type") == "portable_launch":
+        trainer = (env.get("TRAINER_EXE") or "").strip()
+        if trainer:
+            target = trainer
+            source = source if source and source != trainer else ""
+
+    dr_s = str(dr)
+    if source and source not in (dr_s, target):
+        lines.append(f"{t('tooltip.path_source')}: {source}")
+    if target and target not in (dr_s, source):
+        lines.append(f"{t('tooltip.path_target')}: {target}")
+    return "\n".join(lines)
+
+
+def data_root_browsable(dr: Path) -> bool:
+    """True when opening the folder helps the user (not only internal pointer files)."""
+    if not dr.is_dir():
+        return False
+    if (dr / "prefix").is_dir():
+        return True
+    ignore = {"data_root.path"}
+    try:
+        for entry in dr.iterdir():
+            if entry.name in ignore:
+                continue
+            return True
+    except OSError:
+        return False
+    return False
 
 
 def recipe_wine_prefix(meta: dict[str, str], rid: str) -> Path:
@@ -605,6 +713,24 @@ class InfoConfirmDialog(QDialog):
         lay.addWidget(buttons)
 
 
+def _recipe_has_install_marker(meta: dict[str, str], rid: str) -> bool:
+    dr = resolve_data_root(meta, rid)
+    prefix = dr / "prefix"
+    if prefix.is_dir() and (prefix / "user.reg").is_file():
+        return True
+    return (dr / "recipe.env").is_file() or (dr / "portable.env").is_file()
+
+
+def query_recipe_state_quick(
+    rid: str, meta: dict[str, str]
+) -> tuple[RecipeState, str, str, str, list[str]]:
+    """Ohne validate.sh — nur Marker. Für sofortigen GUI-Start."""
+    empty = ("", "")
+    if _recipe_has_install_marker(meta, rid):
+        return RecipeState.INSTALLED, "", *empty, []
+    return RecipeState.NOT_INSTALLED, t("state.not_installed"), *empty, []
+
+
 def query_recipe_state(
     rid: str, meta: dict[str, str], env: dict[str, str]
 ) -> tuple[RecipeState, str, str, str, list[str]]:
@@ -622,9 +748,7 @@ def query_recipe_state(
     env["WINE_PREFIX"] = str(prefix)
 
     def _has_marker() -> bool:
-        if prefix.is_dir() and (prefix / "user.reg").is_file():
-            return True
-        return (dr / "recipe.env").is_file() or (dr / "portable.env").is_file()
+        return _recipe_has_install_marker(meta, rid)
 
     def _version_fallback(detected: str) -> str:
         if detected:
@@ -667,13 +791,27 @@ def query_recipe_state(
         return ""
 
     if validate.is_file():
-        proc = subprocess.run(
-            ["bash", str(validate)],
-            cwd=ROOT,
-            env=env,
-            capture_output=True,
-            text=True,
-        )
+        try:
+            proc = subprocess.run(
+                ["bash", str(validate)],
+                cwd=ROOT,
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=25,
+            )
+        except subprocess.TimeoutExpired:
+            detected = _version_fallback("")
+            detail = t("state.validate_timeout")
+            if _has_marker():
+                return RecipeState.PARTIAL, detail, detected, detail, [detail]
+            return (
+                RecipeState.NOT_INSTALLED,
+                t("state.not_installed"),
+                detected,
+                detail,
+                [detail],
+            )
         out = (proc.stdout or "") + (proc.stderr or "")
         detected, version_warn = parse_validate_version_fields(out)
         detected = _version_fallback(detected)
@@ -749,6 +887,9 @@ class RezeptorWindow(QMainWindow):
         self._recipe_cards: list[tuple[RecipeSidebarCard, RecipeInfo]] = []
         self._process: QProcess | None = None
         self._busy = False
+        self._current_op = ""  # install | repair | …
+        self._cancel_requested = False
+        self._install_recipe_dir: Path | None = None
         self._theme = "dark"
         self._raw_log_buffer: list[str] = []
         self._latest_release = ""
@@ -768,8 +909,10 @@ class RezeptorWindow(QMainWindow):
         self._progress_stall_timer.setInterval(400)
         self._progress_stall_timer.timeout.connect(self._on_progress_stall_tick)
         self._running_poll = QTimer(self)
-        self._running_poll.setInterval(3000)
+        self._running_poll.setInterval(1500)
         self._running_poll.timeout.connect(self._refresh_running_indicators)
+        self._running_prev: dict[str, bool] = {}
+        self._watched_launch_rid: str | None = None
 
         self._build_menus()
         self._build_status_bar()
@@ -777,6 +920,8 @@ class RezeptorWindow(QMainWindow):
         self._apply_theme()
 
         self._install_shortcuts()
+        # Schneller Erststatus (nur Marker) — volle validate.sh später, sonst Start-Freeze.
+        self._apply_quick_recipe_states()
         self._populate_list()
         self._running_poll.start()
         removed = 0
@@ -810,7 +955,8 @@ class RezeptorWindow(QMainWindow):
                         start = i
                         break
             self._select_recipe_index(start)
-        QTimer.singleShot(500, self.check_updates_background)
+        # Netzwerk nicht auf dem UI-Thread — verzögert + Hintergrund.
+        QTimer.singleShot(2500, self.check_updates_background)
 
     def _build_menus(self) -> None:
         self.menuBar().clear()
@@ -819,11 +965,27 @@ class RezeptorWindow(QMainWindow):
         rezeptor_menu.addSeparator()
         self.action_refresh = QAction(t("menu.refresh"), self)
         self.action_refresh.setToolTip(t("menu.refresh_tip"))
+        self.action_refresh.setStatusTip(t("menu.refresh_tip"))
         self.action_refresh.triggered.connect(self.refresh_statuses)
         rezeptor_menu.addAction(self.action_refresh)
-        rezeptor_menu.addAction(t("menu.new_recipe"), self.show_recipe_wizard)
-        rezeptor_menu.addAction(t("menu.add_recipe_catalog"), self.show_catalog_dialog)
+        act_sys = QAction(t("menu.system_check"), self)
+        act_sys.setToolTip(t("menu.system_check_tip"))
+        act_sys.setStatusTip(t("menu.system_check_tip"))
+        act_sys.triggered.connect(self.show_host_deps_check)
+        rezeptor_menu.addAction(act_sys)
+        act_new = QAction(t("menu.new_recipe"), self)
+        act_new.setToolTip(t("menu.new_recipe_tip"))
+        act_new.setStatusTip(t("menu.new_recipe_tip"))
+        act_new.triggered.connect(self.show_recipe_wizard)
+        rezeptor_menu.addAction(act_new)
+        act_cat = QAction(t("menu.add_recipe_catalog"), self)
+        act_cat.setToolTip(t("menu.add_recipe_catalog_tip"))
+        act_cat.setStatusTip(t("menu.add_recipe_catalog_tip"))
+        act_cat.triggered.connect(self.show_catalog_dialog)
+        rezeptor_menu.addAction(act_cat)
         self.action_view_recipe = QAction(self._view_recipe_label(), self)
+        self.action_view_recipe.setToolTip(self._view_recipe_tip())
+        self.action_view_recipe.setStatusTip(self._view_recipe_tip())
         self.action_view_recipe.triggered.connect(self.show_recipe_view)
         rezeptor_menu.addAction(self.action_view_recipe)
         rezeptor_menu.addAction(t("menu.show_hidden_recipes"), self.show_hidden_recipes_dialog)
@@ -832,7 +994,11 @@ class RezeptorWindow(QMainWindow):
         rezeptor_menu.addAction(t("menu.rollback"), self.show_rollback_dialog)
 
         help_menu = self.menuBar().addMenu(t("menu.help"))
-        help_menu.addAction(t("menu.docs"), self.show_developer_docs)
+        act_docs = QAction(t("menu.docs"), self)
+        act_docs.setToolTip(t("menu.docs_tip"))
+        act_docs.setStatusTip(t("menu.docs_tip"))
+        act_docs.triggered.connect(self.show_developer_docs)
+        help_menu.addAction(act_docs)
         help_menu.addSeparator()
         help_menu.addAction(t("menu.check_update"), self.check_updates)
         help_menu.addSeparator()
@@ -844,6 +1010,11 @@ class RezeptorWindow(QMainWindow):
         if recipe_edit_allowed(self._settings):
             return t("menu.edit_recipe")
         return t("menu.view_recipe")
+
+    def _view_recipe_tip(self) -> str:
+        if recipe_edit_allowed(self._settings):
+            return t("menu.edit_recipe_tip")
+        return t("menu.view_recipe_tip")
 
     def _build_status_bar(self) -> None:
         sb = QStatusBar()
@@ -1032,6 +1203,7 @@ class RezeptorWindow(QMainWindow):
         self.open_path_btn.setAutoRaise(True)
         self.open_path_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         self.open_path_btn.setToolTip(t("tooltip.open_data_root"))
+        self.open_path_btn.setAccessibleName(t("menu.open_folder"))
         self.open_path_btn.setFixedSize(26, 26)
         folder_ic = fa_icon("folder", 14, color=COLOR_PARCHMENT)
         if folder_ic is not None:
@@ -1125,6 +1297,7 @@ class RezeptorWindow(QMainWindow):
         self.trust_btn = PushButton(t("btn.update_rezeptor"))
         self.trust_btn.setCursor(hand)
         self.trust_btn.setVisible(False)
+        self.trust_btn.setToolTip(t("tooltip.regen_manifest"))
         self.trust_btn.clicked.connect(self._on_trust_action)
 
         # Fluent PushButton + RoundMenu (same family as secondary buttons; no DropDown chrome)
@@ -1164,41 +1337,90 @@ class RezeptorWindow(QMainWindow):
         return action
 
     def _popup_more_menu(self) -> None:
+        self._rebuild_more_menu()
+        # Defer exec so the click is finished — otherwise RoundMenu closes on first move.
         btn = self.more_btn
         pos = btn.mapToGlobal(btn.rect().bottomLeft())
-        self._more_menu.exec(pos)
+        QTimer.singleShot(0, lambda p=pos: self._exec_more_menu(p))
+
+    def _exec_more_menu(self, pos) -> None:  # type: ignore[no-untyped-def]
+        menu = getattr(self, "_more_menu", None)
+        if menu is None:
+            return
+        menu.exec(pos)
 
     def _rebuild_more_menu(self) -> None:
+        """Full Mehr-menu; unavailable items stay visible but disabled (no hide)."""
+        # Always a fresh RoundMenu: clear() leaves separator rows in the list view.
+        self._more_menu = (
+            RoundMenu(parent=self) if FLUENT_AVAILABLE else QMenu(self)
+        )
         menu = self._more_menu
-        menu.clear()
-        self._more_validate = self._add_menu_action(
-            menu, t("menu.validate"), self.run_validate
+        info = self._selected
+        busy = bool(getattr(self, "_busy", False))
+        mode = getattr(self, "_cta_mode", "none")
+        if info is None:
+            self._add_menu_action(menu, self._view_recipe_label(), self.show_recipe_view)
+            return
+
+        dr = resolve_data_root(info.meta, info.rid)
+        can_launch = self._can_launch_recipe(info, dr)
+        running = recipe_process_running(info.rid, info.meta)
+        repair_ok = (Path(info.meta["_dir"]) / "repair.sh").is_file() and info.state in (
+            RecipeState.INSTALLED,
+            RecipeState.PARTIAL,
         )
-        self._more_repair = self._add_menu_action(
-            menu, t("menu.repair"), self.run_repair
+        kill_ok = (Path(info.meta["_dir"]) / "kill.sh").is_file()
+        untrusted = info.state == RecipeState.UNTRUSTED or not info.trust_ok
+        installed_ish = info.state in (
+            RecipeState.INSTALLED,
+            RecipeState.PARTIAL,
         )
-        self._more_launch = self._add_menu_action(
-            menu, t("menu.launch"), self.run_launch
+
+        def _add(label: str, slot: object, *, enabled: bool) -> None:
+            act = self._add_menu_action(menu, label, slot)
+            act.setEnabled(bool(enabled) and not busy and not untrusted)
+
+        _add(t("menu.validate"), self.run_validate, enabled=True)
+        _add(
+            t("menu.repair"),
+            self.run_repair,
+            enabled=repair_ok and mode != "repair",
         )
-        self._more_kill = self._add_menu_action(menu, t("menu.kill"), self.run_kill)
+        _add(
+            t("menu.launch"),
+            self.run_launch,
+            enabled=can_launch and mode != "launch",
+        )
+        _add(
+            t("menu.kill"),
+            self.run_kill,
+            enabled=kill_ok and running and mode != "kill",
+        )
+
         menu.addSeparator()
-        self._source_configure_action = self._add_menu_action(
-            menu, t("menu.source"), self.run_source_configure
-        )
-        self._more_open_path = self._add_menu_action(
-            menu, t("menu.open_folder"), self._open_data_root
-        )
-        self._more_shortcuts = self._add_menu_action(
+        if needs_source_dialog(info.meta):
+            act = self._add_menu_action(
+                menu, source_configure_label(info.meta), self.run_source_configure
+            )
+            act.setToolTip(t("menu.source_tip"))
+            act.setEnabled(not busy and not untrusted)
+        # Installationsdaten: nur am Pfad-Icon neben dem Pfad (klarer als im Mehr-Menü)
+        act = self._add_menu_action(
             menu, t("menu.shortcuts"), self.run_desktop_shortcuts
         )
+        act.setEnabled(installed_ish and not busy and not untrusted)
+
         menu.addSeparator()
-        self._more_view_recipe = self._add_menu_action(
+        act = self._add_menu_action(
             menu, self._view_recipe_label(), self.show_recipe_view
         )
+        act.setToolTip(self._view_recipe_tip())
+        act.setEnabled(not busy)
+
         menu.addSeparator()
-        self._more_uninstall = self._add_menu_action(
-            menu, t("menu.uninstall"), self.run_uninstall
-        )
+        act = self._add_menu_action(menu, t("menu.uninstall"), self.run_uninstall)
+        act.setEnabled(installed_ish and not busy and not untrusted)
 
     def _on_primary_cta(self) -> None:
         w = QApplication.focusWidget()
@@ -1285,41 +1507,8 @@ class RezeptorWindow(QMainWindow):
                 btn.setText(t("btn.launch"))
                 btn.setToolTip("")
 
-        # Mehr-Menü: Sekundäraktionen, Primäraktion nicht verdoppeln
-        if hasattr(self, "_more_validate"):
-            self._more_validate.setEnabled(not busy and not untrusted)
-            self._more_repair.setEnabled(repair_ok and not busy and not untrusted)
-            self._more_repair.setVisible(mode != "repair")
-            self._more_launch.setEnabled(can_launch and not busy and not untrusted)
-            self._more_launch.setVisible(mode != "launch" and can_launch)
-            self._more_kill.setEnabled(kill_ok and not busy and not untrusted)
-            self._more_kill.setVisible(mode != "kill" and kill_ok)
-            if hasattr(self, "_source_configure_action"):
-                self._source_configure_action.setVisible(
-                    needs_source_dialog(info.meta) and not untrusted
-                )
-                self._source_configure_action.setText(source_configure_label(info.meta))
-            if hasattr(self, "_more_open_path"):
-                dr = getattr(self, "_current_data_root", None)
-                self._more_open_path.setEnabled(bool(dr and Path(dr).is_dir()))
-            if hasattr(self, "_more_shortcuts"):
-                can_shortcuts = (
-                    info.state
-                    in (RecipeState.INSTALLED, RecipeState.PARTIAL)
-                    and not busy
-                    and not untrusted
-                )
-                self._more_shortcuts.setVisible(can_shortcuts)
-                self._more_shortcuts.setEnabled(can_shortcuts)
-            if hasattr(self, "_more_view_recipe"):
-                self._more_view_recipe.setEnabled(not busy)
-            if hasattr(self, "_more_uninstall"):
-                self._more_uninstall.setEnabled(
-                    info.state
-                    in (RecipeState.INSTALLED, RecipeState.PARTIAL)
-                    and not busy
-                    and not untrusted
-                )
+        # Mehr-Menü wird bei jedem Öffnen neu gebaut (_popup_more_menu) —
+        # kein setVisible(False) auf RoundMenu-Actions (erzeugt Leerzellen).
 
     def _on_sidebar_search(self, _text: str = "") -> None:
         self._populate_list()
@@ -1397,11 +1586,33 @@ class RezeptorWindow(QMainWindow):
             self._add_menu_action(
                 menu, source_configure_label(info.meta), self.run_source_configure
             )
-        self._add_menu_action(menu, t("menu.open_folder"), self._open_data_root)
+        act_open = self._add_menu_action(
+            menu, t("menu.open_folder"), self._open_data_root
+        )
+        act_open.setEnabled(data_root_browsable(dr))
         self._add_menu_action(menu, self._view_recipe_label(), self.show_recipe_view)
+        menu.addSeparator()
+        self._add_menu_action(
+            menu, t("menu.move_up"), lambda: self._move_recipe(info.rid, -1)
+        )
+        self._add_menu_action(
+            menu, t("menu.move_down"), lambda: self._move_recipe(info.rid, 1)
+        )
+        if (self._settings.recipe_category_overrides or {}).get(info.rid):
+            self._add_menu_action(
+                menu,
+                t("menu.reset_category"),
+                lambda: self.reset_recipe_category(info.rid),
+            )
         self._add_menu_action(
             menu, t("menu.hide_recipe"), lambda: self.hide_recipe(info.rid)
         )
+        if not self._is_official_bundled_recipe(info.rid):
+            self._add_menu_action(
+                menu,
+                t("recipe_remove.menu"),
+                lambda: self.remove_recipe_definition(info.rid),
+            )
         if info.state in (RecipeState.INSTALLED, RecipeState.PARTIAL):
             self._add_menu_action(
                 menu, t("menu.shortcuts"), self.run_desktop_shortcuts
@@ -1516,6 +1727,16 @@ class RezeptorWindow(QMainWindow):
         self.progress.setFixedHeight(10)
         self.progress.setVisible(False)
         status_row.addWidget(self.progress, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        self.cancel_install_btn = QPushButton(t("btn.cancel_install"))
+        self.cancel_install_btn.setObjectName("cancelInstallBtn")
+        self.cancel_install_btn.setToolTip(t("tooltip.cancel_install"))
+        self.cancel_install_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.cancel_install_btn.setVisible(False)
+        self.cancel_install_btn.clicked.connect(self._cancel_current_install)
+        status_row.addWidget(
+            self.cancel_install_btn, 0, Qt.AlignmentFlag.AlignVCenter
+        )
         lay.addLayout(status_row)
 
         act_label = QLabel(t("progress.steps"))
@@ -1576,16 +1797,25 @@ class RezeptorWindow(QMainWindow):
         return t("app.title", version=ver)
 
     def check_updates_background(self) -> None:
-        latest, url = fetch_latest_release()
-        self._latest_release = latest
-        self._release_url = url
-        cur = read_version()
-        if latest and version_compare(cur, latest):
-            self._refresh_status_footer(latest)
-            self.setWindowTitle(self._window_title(cur, latest))
-        else:
-            self._refresh_status_footer()
-            self.setWindowTitle(self._window_title(cur))
+        """GitHub-Check im Hintergrund — blockiert den Start nicht."""
+
+        def work() -> None:
+            latest, url = fetch_latest_release()
+            cur = read_version()
+
+            def apply() -> None:
+                self._latest_release = latest
+                self._release_url = url
+                if latest and version_compare(cur, latest):
+                    self._refresh_status_footer(latest)
+                    self.setWindowTitle(self._window_title(cur, latest))
+                else:
+                    self._refresh_status_footer()
+                    self.setWindowTitle(self._window_title(cur))
+
+            QTimer.singleShot(0, apply)
+
+        threading.Thread(target=work, daemon=True, name="rezeptor-update-check").start()
 
     def check_updates(self) -> None:
         latest, url = fetch_latest_release()
@@ -1791,6 +2021,7 @@ class RezeptorWindow(QMainWindow):
         dlg = DeveloperDocsDialog(self)
         apply_tool_window(dlg, icon=self.windowIcon(), modal=False)
         restore_geometry(dlg, self._settings.docs_geometry)
+        clamp_restored_geometry(dlg, min_w=720, min_h=480)
         dlg.finished.connect(self._on_docs_closed)
         self._docs_dlg = dlg
         dlg.show()
@@ -1884,16 +2115,16 @@ class RezeptorWindow(QMainWindow):
                 continue
             matched.append((i, info))
 
+        overrides = dict(self._settings.recipe_category_overrides or {})
         grouped: dict[str, list[tuple[int, RecipeInfo]]] = {}
         for i, info in matched:
-            cat = info.meta.get("category", "Sonstige").strip() or "Sonstige"
+            cat = effective_category(info.rid, info.meta, overrides)
             grouped.setdefault(cat, []).append((i, info))
 
         order = list(self._settings.recipe_order or [])
         custom_cat_order = list(self._settings.custom_category_order or [])
         for cat in sort_categories(list(grouped.keys()), custom_cat_order):
-            header = QLabel(cat.upper())
-            header.setObjectName("sidebarCategory")
+            header = SidebarCategoryHeader(cat)
             self.recipe_cards_layout.addWidget(header)
             for i, info in sort_recipes_in_category(grouped[cat], order):
                 card = RecipeSidebarCard(
@@ -1908,6 +2139,7 @@ class RezeptorWindow(QMainWindow):
                     lambda info=info: self._show_card_context_menu(info)
                 )
                 card.reorderRequested.connect(self._on_recipe_reorder)
+                card.categoryDropRequested.connect(self._on_category_drop)
                 self.recipe_cards_layout.addWidget(
                     card, 0, Qt.AlignmentFlag.AlignTop
                 )
@@ -1921,7 +2153,25 @@ class RezeptorWindow(QMainWindow):
             card.set_selected(info.rid == self.recipes[row].rid)
         self._on_select(row)
 
+    def _apply_quick_recipe_states(self) -> None:
+        """Marker-only Status — kein validate.sh (Start bleibt flüssig)."""
+        for info in self.recipes:
+            if not info.trust_ok:
+                continue
+            try:
+                (
+                    info.state,
+                    info.status_detail,
+                    info.version_detected,
+                    info.version_warning,
+                    info.validate_fails,
+                ) = query_recipe_state_quick(info.rid, info.meta)
+            except Exception:  # noqa: BLE001
+                pass
+
     def refresh_statuses(self) -> None:
+        self._activity("info", t("menu.refresh_busy"))
+        QApplication.processEvents()
         env = self._base_env()
         # Re-verify trust + install state (official + community/)
         refreshed: list[RecipeInfo] = []
@@ -1964,11 +2214,14 @@ class RezeptorWindow(QMainWindow):
                     info.version_warning = str(exc)
                     info.validate_fails = [str(exc)]
             refreshed.append(info)
+            # Zwischen Rezepten UI atmen lassen (validate.sh sonst Start-Freeze).
+            QApplication.processEvents()
         self.recipes = refreshed
         prev = self._selected_index
         self._populate_list()
         if self.recipes:
             self._select_recipe_index(prev if 0 <= prev < len(self.recipes) else 0)
+        self._activity("info", t("menu.refresh_done", n=len(self.recipes)))
 
     def _on_select(self, row: int) -> None:
         if row < 0 or row >= len(self.recipes):
@@ -1991,7 +2244,7 @@ class RezeptorWindow(QMainWindow):
         self.name_label.setText(meta.get("name", info.rid))
         self._update_status_pills(info)
         self._update_version_header(info)
-        self._set_path_row(dr)
+        self._set_path_row(dr, info)
         self._update_workspace_chips(info, dr)
         self._update_health_chip(info)
         self._update_progress_chip()
@@ -2008,9 +2261,11 @@ class RezeptorWindow(QMainWindow):
             if (ROOT / ".git").is_dir():
                 detail = f"{detail}\n{t('trust.hint_dev')}"
                 self.trust_btn.setText(t("btn.regen_manifest"))
+                self.trust_btn.setToolTip(t("tooltip.regen_manifest"))
             else:
                 detail = f"{detail}\n{t('trust.hint_user')}"
                 self.trust_btn.setText(t("btn.update_rezeptor"))
+                self.trust_btn.setToolTip(t("tooltip.regen_manifest"))
             self.status_detail_label.setText(detail)
             self.status_detail_label.setVisible(True)
             self._status_detail_base = detail
@@ -2066,6 +2321,15 @@ class RezeptorWindow(QMainWindow):
     def _refresh_running_indicators(self) -> None:
         for card, info in self._recipe_cards:
             running = recipe_process_running(info.rid, info.meta)
+            was = self._running_prev.get(info.rid)
+            self._running_prev[info.rid] = running
+            # True→False: App beendet — unter Vorgang melden
+            if was is True and not running:
+                self._on_recipe_process_stopped(info)
+            elif was is False and running:
+                self._on_recipe_process_started(info)
+            elif was is None and running:
+                self._running_prev[info.rid] = True
             card.set_running(running)
             card.set_install_state(info.state.value)
             if not (self._selected and self._selected.rid == info.rid):
@@ -2084,6 +2348,31 @@ class RezeptorWindow(QMainWindow):
                     running=running,
                     busy=False,
                 )
+
+    def _on_recipe_process_started(self, info: RecipeInfo) -> None:
+        name = str(info.meta.get("name") or info.rid)
+        watched = self._watched_launch_rid == info.rid
+        selected = bool(self._selected and self._selected.rid == info.rid)
+        if not (watched or selected):
+            return
+        if not self._busy:
+            self.step_label.setText(t("status.app_running_step", name=name))
+            self.step_label.setStyleSheet("")
+        self._activity("ok", t("status.app_running_named", name=name))
+
+    def _on_recipe_process_stopped(self, info: RecipeInfo) -> None:
+        name = str(info.meta.get("name") or info.rid)
+        watched = self._watched_launch_rid == info.rid
+        selected = bool(self._selected and self._selected.rid == info.rid)
+        if watched:
+            self._watched_launch_rid = None
+        if not (watched or selected):
+            return
+        if not self._busy:
+            self.step_label.setText(t("status.app_stopped_step", name=name))
+            self.step_label.setStyleSheet("")
+        self._activity("info", t("status.app_stopped", name=name))
+        self._switch_to_progress_tab()
 
     def _update_status_pills(self, info: RecipeInfo) -> None:
         meta = info.meta
@@ -2148,7 +2437,8 @@ class RezeptorWindow(QMainWindow):
         else:
             self.proton_pill.set_content(t("badge.runtime_proton"), COLOR_EXPERIMENTAL)
             self.proton_pill.setToolTip(t("tooltip.runtime_proton"))
-        self.proton_pill.setCursor(Qt.CursorShape.WhatsThisCursor)
+        # Arrow + tooltip: WhatsThisCursor showed a stray "?" on some desktops.
+        self.proton_pill.setCursor(Qt.CursorShape.ArrowCursor)
 
         author = (meta.get("author") or "").strip()
         if author:
@@ -2158,15 +2448,23 @@ class RezeptorWindow(QMainWindow):
         else:
             self.author_pill.set_content("", MUTED)
 
-    def _set_path_row(self, dr: Path) -> None:
-        """HEADER-Pfad + Öffnen-Icon: nur aktiv, wenn Ordner wirklich da ist."""
+    def _set_path_row(self, dr: Path, info: RecipeInfo | None = None) -> None:
+        """HEADER: Daten + Quelle/Ziel (wenn installiert / in recipe.env)."""
         self._current_data_root = dr
-        self.path_label.setText(str(dr))
-        exists = dr.is_dir()
-        self.open_path_btn.setEnabled(exists)
+        usable = data_root_browsable(dr)
+        if info is not None and (
+            usable
+            or info.state in (RecipeState.INSTALLED, RecipeState.PARTIAL)
+            or (dr / "recipe.env").is_file()
+            or (dr / "portable.env").is_file()
+        ):
+            self.path_label.setText(installed_paths_text(info.meta, info.rid, dr))
+        else:
+            self.path_label.setText(str(dr) if usable else "")
+        self.open_path_btn.setEnabled(usable)
         self.open_path_btn.setToolTip(
             t("tooltip.open_data_root")
-            if exists
+            if usable
             else t("tooltip.open_data_root_missing")
         )
 
@@ -2220,9 +2518,10 @@ class RezeptorWindow(QMainWindow):
             if not path:
                 return
             dr = Path(path)
-        if not dr.is_dir():
+        if not data_root_browsable(dr):
             self.open_path_btn.setEnabled(False)
             self.open_path_btn.setToolTip(t("tooltip.open_data_root_missing"))
+            self._flash_status(t("tooltip.open_data_root_missing"))
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(dr.resolve())))
 
@@ -2361,6 +2660,15 @@ class RezeptorWindow(QMainWindow):
             self._raw_log_buffer.append(human)
             self.raw_log.append(human)
 
+    def _flash_status(self, text: str, ms: int = 4000) -> None:
+        """Visible on every tab (status bar). Activity list is Vorgang-only."""
+        text = (text or "").strip()
+        if not text:
+            return
+        sb = self.statusBar()
+        if sb is not None:
+            sb.showMessage(text, ms)
+
     def _activity(self, kind: str, text: str) -> None:
         text = (text or "").strip()
         if not text:
@@ -2396,6 +2704,8 @@ class RezeptorWindow(QMainWindow):
                 "warn": "color: #ffb86c; font-weight: 600;",
             }.get(kind)
             self._set_step_text(text, style=style)
+        if kind == "info":
+            self._flash_status(text)
 
     def _set_busy(self, busy: bool) -> None:
         self._busy = busy
@@ -2417,6 +2727,7 @@ class RezeptorWindow(QMainWindow):
             ):
                 b.setEnabled(False)
             self.action_refresh.setEnabled(False)
+            self._sync_cancel_install_btn()
             return
         self._progress_stall_timer.stop()
         if hasattr(self, "progress_busy"):
@@ -2429,8 +2740,24 @@ class RezeptorWindow(QMainWindow):
         self._update_progress_chip()
         self._set_step_text(t("status.done"))
         self.action_refresh.setEnabled(True)
+        # busy=True deaktiviert Mehr — hier wieder an (CTA folgt über _select_recipe_index).
+        if hasattr(self, "more_btn"):
+            self.more_btn.setEnabled(True)
+        self._sync_cancel_install_btn()
         if self._selected:
             self._select_recipe_index(self._selected_index)
+
+    def _sync_cancel_install_btn(self) -> None:
+        btn = getattr(self, "cancel_install_btn", None)
+        if btn is None:
+            return
+        show = bool(
+            self._busy
+            and self._current_op in ("install", "reinstall")
+            and not self._cancel_requested
+        )
+        btn.setVisible(show)
+        btn.setEnabled(show)
 
     def _set_content_tab(self, key: str) -> None:
         pages = {
@@ -2461,6 +2788,31 @@ class RezeptorWindow(QMainWindow):
             return None
         return Path(self._selected.meta["_dir"])
 
+    def _finish_archive_password_files(
+        self, extra: dict[str, str] | None, *, success: bool
+    ) -> None:
+        """Learn working archive password (JDownloader-style) and scrub temp files."""
+        if not extra:
+            return
+        used = (extra.get("RECIPE_ARCHIVE_PASSWORD_USED_FILE") or "").strip()
+        pw_list = (extra.get("RECIPE_ARCHIVE_PASSWORD_FILE") or "").strip()
+        if success and used:
+            try:
+                used_path = Path(used)
+                if used_path.is_file():
+                    pw = used_path.read_text(encoding="utf-8")
+                    if prepend_archive_password(self._settings, pw):
+                        save_settings(self._settings)
+            except OSError:
+                pass
+        for path in (used, pw_list):
+            if not path:
+                continue
+            try:
+                Path(path).unlink(missing_ok=True)
+            except OSError:
+                pass
+
     def _run_async(
         self,
         script: Path,
@@ -2468,6 +2820,9 @@ class RezeptorWindow(QMainWindow):
         done_label: str = "",
         dialog: bool = True,
         on_success: Callable[[], None] | None = None,
+        *,
+        op: str = "",
+        recipe_dir: Path | None = None,
     ) -> None:
         if not done_label:
             done_label = t("action.done")
@@ -2497,14 +2852,24 @@ class RezeptorWindow(QMainWindow):
         self._set_step_text(t("status.op_starting"))
         self.status_detail_label.setText(t("status.busy"))
         self._activity("step", f"{script.name} (Session {self.session_id[:8]})")
+        self._cancel_requested = False
+        self._current_op = op or script.stem
+        self._install_recipe_dir = (
+            recipe_dir if self._current_op in ("install", "reinstall") else None
+        )
         self._set_busy(True)
 
         proc = QProcess(self)
         self._process = proc
         proc.setProcessEnvironment(env)
         proc.setWorkingDirectory(str(ROOT))
-        proc.setProgram("bash")
-        proc.setArguments([str(script)])
+        # Neue Session → Cancel kann die Prozessgruppe inkl. Wine-Kinder killen.
+        if shutil.which("setsid"):
+            proc.setProgram("setsid")
+            proc.setArguments(["bash", str(script)])
+        else:
+            proc.setProgram("bash")
+            proc.setArguments([str(script)])
         proc.readyReadStandardOutput.connect(
             lambda: self._feed_line(bytes(proc.readAllStandardOutput()).decode("utf-8", errors="replace"))
         )
@@ -2513,12 +2878,26 @@ class RezeptorWindow(QMainWindow):
         )
 
         def done(code: int, _s: QProcess.ExitStatus) -> None:
+            cancelled = self._cancel_requested
+            op_kind = self._current_op
+            install_dir = self._install_recipe_dir
+            self._current_op = ""
+            self._install_recipe_dir = None
+            self._cancel_requested = False
             self._set_busy(False)
+            self.populate_log_files()
+            self._finish_archive_password_files(
+                extra, success=code == 0 and not cancelled
+            )
+            if cancelled and op_kind in ("install", "reinstall"):
+                self._activity("warn", t("status.install_cancelled"))
+                self._rollback_cancelled_install(install_dir)
+                self.refresh_statuses()
+                return
             self._activity(
                 "ok" if code == 0 else "error",
                 t("status.exit_code", label=done_label, code=code),
             )
-            self.populate_log_files()
             self.refresh_statuses()
             if code != 0 and dialog:
                 self._show_failure(done_label, code)
@@ -2533,6 +2912,76 @@ class RezeptorWindow(QMainWindow):
 
         proc.finished.connect(done)
         proc.start()
+
+    def _cancel_current_install(self) -> None:
+        if not self._busy or self._current_op not in ("install", "reinstall"):
+            return
+        if self._cancel_requested:
+            return
+        self._cancel_requested = True
+        self._sync_cancel_install_btn()
+        self._activity("warn", t("status.install_cancelled"))
+        self._set_step_text(t("status.install_cancelled"))
+        proc = self._process
+        if proc is None or proc.state() == QProcess.ProcessState.NotRunning:
+            return
+        pid = int(proc.processId())
+        if pid > 0:
+            try:
+                os.killpg(pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError, OSError):
+                proc.terminate()
+            QTimer.singleShot(2500, lambda p=proc, i=pid: self._force_kill_install(p, i))
+        else:
+            proc.terminate()
+
+    def _force_kill_install(self, proc: QProcess, pid: int) -> None:
+        if proc.state() == QProcess.ProcessState.NotRunning:
+            return
+        try:
+            os.killpg(pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            proc.kill()
+
+    def _rollback_cancelled_install(self, recipe_dir: Path | None) -> None:
+        """Nach Abbruch: uninstall.sh / Purge — Portable außerhalb DATA_ROOT bleibt."""
+        if recipe_dir is None or not recipe_dir.is_dir():
+            QMessageBox.information(
+                self, t("status.done"), t("status.install_cancelled")
+            )
+            return
+        uninstall = recipe_dir / "uninstall.sh"
+        ok = False
+        if uninstall.is_file():
+            env = {**os.environ, **self._base_env()}
+            try:
+                result = subprocess.run(
+                    ["bash", str(uninstall)],
+                    cwd=str(ROOT),
+                    env=env,
+                    capture_output=True,
+                    text=True,
+                    timeout=180,
+                    check=False,
+                )
+                ok = result.returncode == 0
+                if result.stdout:
+                    self._feed_line(result.stdout)
+                if result.stderr:
+                    self._feed_line(result.stderr)
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                self._activity("error", str(exc))
+                ok = False
+        if ok:
+            self._activity("ok", t("status.install_rolled_back"))
+            QMessageBox.information(
+                self, t("status.done"), t("status.install_rolled_back")
+            )
+        else:
+            self._activity("error", t("status.install_rollback_fail"))
+            QMessageBox.warning(
+                self, t("dialog.error"), t("status.install_rollback_fail")
+            )
 
     def _desktop_cli(self) -> Path:
         return ROOT / "scripts" / "recipe-desktop.sh"
@@ -2678,6 +3127,7 @@ class RezeptorWindow(QMainWindow):
             installed_ids=installed,
         )
         apply_tool_window(dlg, icon=self.windowIcon(), modal=True)
+        clamp_restored_geometry(dlg, min_w=560, min_h=420)
         dlg.exec()
         self._settings = load_settings()
         self.recipes = discover_recipes()
@@ -2694,9 +3144,87 @@ class RezeptorWindow(QMainWindow):
             self, settings=self._settings, recipe_names=names
         )
         apply_tool_window(dlg, icon=self.windowIcon(), modal=True)
+        clamp_restored_geometry(dlg, min_w=420, min_h=360)
         dlg.exec()
         self._settings = load_settings()
         self._populate_list()
+
+    def _official_catalog_ids(self) -> set[str]:
+        try:
+            from recipe_catalog import load_local_catalog
+
+            return {
+                e.id
+                for e in load_local_catalog(RECIPES_DIR)
+                if e.is_official and e.path and "community" not in e.path
+            }
+        except Exception:  # noqa: BLE001
+            return {"photoshop", "wiso-steuer", "house-of-ashes", "za4-trainer"}
+
+    def _is_official_bundled_recipe(self, rid: str) -> bool:
+        return rid in self._official_catalog_ids()
+
+    def remove_recipe_definition(self, rid: str) -> None:
+        """Delete a non-official recipe folder under recipes/ (QA / local drafts)."""
+        rid = (rid or "").strip()
+        if not rid:
+            return
+        if self._is_official_bundled_recipe(rid):
+            QMessageBox.warning(
+                self,
+                t("recipe_remove.title"),
+                t("recipe_remove.blocked_official", id=rid),
+            )
+            return
+        meta_dir = next(
+            (str(i.meta.get("_dir", "")) for i in self.recipes if i.rid == rid),
+            "",
+        )
+        recipe_dir = Path(meta_dir) if meta_dir else RECIPES_DIR / rid
+        try:
+            recipe_dir.resolve().relative_to(RECIPES_DIR.resolve())
+        except ValueError:
+            QMessageBox.warning(
+                self,
+                t("recipe_remove.title"),
+                t("recipe_remove.fail", err="invalid path"),
+            )
+            return
+        if not recipe_dir.is_dir():
+            QMessageBox.warning(
+                self,
+                t("recipe_remove.title"),
+                t("recipe_remove.fail", err="missing folder"),
+            )
+            return
+        if (
+            QMessageBox.question(
+                self,
+                t("recipe_remove.title"),
+                t("recipe_remove.confirm", path=str(recipe_dir)),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            != QMessageBox.StandardButton.Yes
+        ):
+            return
+        try:
+            shutil.rmtree(recipe_dir)
+            generate_manifest(RECIPES_DIR, MANIFEST_PATH)
+        except OSError as exc:
+            QMessageBox.critical(
+                self,
+                t("recipe_remove.title"),
+                t("recipe_remove.fail", err=str(exc)),
+            )
+            return
+        hidden = [h for h in (self._settings.hidden_recipe_ids or []) if h != rid]
+        if hidden != list(self._settings.hidden_recipe_ids or []):
+            self._settings.hidden_recipe_ids = hidden
+            save_settings(self._settings)
+        self._activity("ok", t("recipe_remove.ok", id=rid))
+        self.recipes = discover_recipes()
+        self._populate_list()
+        self.refresh_statuses()
 
     def hide_recipe(self, rid: str) -> None:
         rid = (rid or "").strip()
@@ -2719,19 +3247,45 @@ class RezeptorWindow(QMainWindow):
                     self._select_recipe_index(i)
                     break
 
-    def _on_recipe_reorder(self, source_id: str, target_id: str) -> None:
-        if not source_id or not target_id or source_id == target_id:
-            return
-        order = list(self._settings.recipe_order or [])
+    def _recipe_category(self, rid: str) -> str:
+        overrides = dict(self._settings.recipe_category_overrides or {})
         for info in self.recipes:
-            if info.rid not in order:
-                order.append(info.rid)
-        if source_id not in order:
-            order.append(source_id)
-        if target_id not in order:
-            order.append(target_id)
-        order.remove(source_id)
-        order.insert(order.index(target_id), source_id)
+            if info.rid == rid:
+                return effective_category(info.rid, info.meta, overrides)
+        return ""
+
+    def _ids_in_category(self, category: str) -> list[str]:
+        """Visible recipe ids in sidebar order for one category."""
+        overrides = dict(self._settings.recipe_category_overrides or {})
+        out: list[str] = []
+        for _card, info in self._recipe_cards:
+            if effective_category(info.rid, info.meta, overrides) == category:
+                out.append(info.rid)
+        return out
+
+    def _set_category_override(self, rid: str, category: str) -> None:
+        """Persist user category; clear override when it matches recipe.yml default."""
+        overrides = dict(self._settings.recipe_category_overrides or {})
+        meta = next((i.meta for i in self.recipes if i.rid == rid), None)
+        default = default_category(meta)
+        category = (category or "").strip() or "Sonstige"
+        if category == default:
+            overrides.pop(rid, None)
+        else:
+            overrides[rid] = category
+        self._settings.recipe_category_overrides = overrides
+
+    def reset_recipe_category(self, rid: str) -> None:
+        overrides = dict(self._settings.recipe_category_overrides or {})
+        if rid not in overrides:
+            return
+        overrides.pop(rid, None)
+        self._settings.recipe_category_overrides = overrides
+        save_settings(self._settings)
+        self._populate_list()
+        self._activity("info", t("menu.category_reset", id=rid))
+
+    def _persist_recipe_order(self, order: list[str]) -> None:
         self._settings.recipe_order = order
         save_settings(self._settings)
         prev = self._selected.rid if self._selected else ""
@@ -2743,11 +3297,77 @@ class RezeptorWindow(QMainWindow):
                 ):
                     self._select_recipe_index(i)
                     break
+        self._activity("info", t("menu.reorder_saved"))
+
+    def _move_recipe(self, rid: str, delta: int) -> None:
+        """Move up/down within the same category only (sidebar groups are fixed)."""
+        cat = self._recipe_category(rid)
+        if not cat:
+            return
+        siblings = self._ids_in_category(cat)
+        if rid not in siblings or len(siblings) < 2:
+            self._flash_status(t("menu.reorder_need_siblings"))
+            return
+        idx = siblings.index(rid)
+        new_idx = idx + delta
+        if new_idx < 0 or new_idx >= len(siblings):
+            return
+        siblings[idx], siblings[new_idx] = siblings[new_idx], siblings[idx]
+        order = list(self._settings.recipe_order or [])
+        for other in siblings:
+            if other not in order:
+                order.append(other)
+        remaining = [r for r in order if r not in siblings]
+        self._persist_recipe_order(siblings + remaining)
+
+    def _on_category_drop(self, source_id: str, category: str) -> None:
+        """Drop onto a category header → move recipe into that category (override)."""
+        category = (category or "").strip()
+        if not source_id or not category:
+            return
+        if self._recipe_category(source_id) == category:
+            return
+        self._set_category_override(source_id, category)
+        siblings = [r for r in self._ids_in_category(category) if r != source_id]
+        siblings.insert(0, source_id)
+        order = list(self._settings.recipe_order or [])
+        remaining = [r for r in order if r not in siblings]
+        save_settings(self._settings)
+        self._persist_recipe_order(siblings + remaining)
+        self._flash_status(t("menu.category_moved", id=source_id, cat=category))
+
+    def _on_recipe_reorder(
+        self, source_id: str, target_id: str, place: str = "before"
+    ) -> None:
+        if not source_id or not target_id or source_id == target_id:
+            return
+        if place not in ("before", "after"):
+            place = "before"
+        target_cat = self._recipe_category(target_id)
+        if not target_cat:
+            return
+        # Cross-category: user override (recipe.yml stays default until reset)
+        if self._recipe_category(source_id) != target_cat:
+            self._set_category_override(source_id, target_cat)
+            save_settings(self._settings)
+        siblings = [
+            r for r in self._ids_in_category(target_cat) if r != source_id
+        ]
+        if target_id not in siblings:
+            siblings.append(target_id)
+        idx = siblings.index(target_id)
+        if place == "after":
+            idx += 1
+        siblings.insert(idx, source_id)
+        order = list(self._settings.recipe_order or [])
+        remaining = [r for r in order if r not in siblings]
+        self._persist_recipe_order(siblings + remaining)
 
     def show_settings(self) -> None:
         dlg = SettingsDialog(self, self._settings)
         apply_tool_window(dlg, icon=self.windowIcon(), modal=True)
         restore_geometry(dlg, self._settings.settings_geometry)
+        clamp_restored_geometry(dlg, min_w=520, min_h=520)
         accepted = dlg.exec() == QDialog.DialogCode.Accepted
         geo = geometry_to_b64(dlg)
         if accepted:
@@ -2783,22 +3403,33 @@ class RezeptorWindow(QMainWindow):
         recipe_dir = Path(info.meta["_dir"])
         editable = recipe_edit_allowed(self._settings)
         icon = recipe_icon(info.meta)
-        dlg = RecipeViewDialog(
-            self,
-            recipe_dir=recipe_dir,
-            project_root=ROOT,
-            editable=editable,
-            icon=icon,
-        )
-        apply_tool_window(dlg, icon=icon if not icon.isNull() else self.windowIcon())
-        restore_geometry(dlg, self._settings.recipe_view_geometry)
-        if editable:
-            dlg.focus_source_tab()
-        dlg.finished.connect(self._on_recipe_view_closed)
-        self._recipe_view_dlg = dlg
-        dlg.show()
-        dlg.raise_()
-        dlg.activateWindow()
+        try:
+            dlg = RecipeViewDialog(
+                self,
+                recipe_dir=recipe_dir,
+                project_root=ROOT,
+                editable=editable,
+                icon=icon,
+            )
+            apply_tool_window(
+                dlg, icon=icon if not icon.isNull() else self.windowIcon()
+            )
+            restore_geometry(dlg, self._settings.recipe_view_geometry)
+            clamp_restored_geometry(dlg, min_w=560, min_h=420)
+            if editable:
+                dlg.focus_source_tab()
+            dlg.finished.connect(self._on_recipe_view_closed)
+            self._recipe_view_dlg = dlg
+            dlg.show()
+            dlg.raise_()
+            dlg.activateWindow()
+        except Exception as exc:
+            self._recipe_view_dlg = None
+            QMessageBox.critical(
+                self,
+                t("dialog.error"),
+                t("recipe_view.open_fail", err=str(exc)),
+            )
 
     def _on_recipe_view_closed(self, _result: int = 0) -> None:
         dlg = self._recipe_view_dlg
@@ -2818,7 +3449,13 @@ class RezeptorWindow(QMainWindow):
         s = self._settings
         restored = restore_geometry(self, s.window_geometry)
         if not restored:
+            # Kaputte Geometrie verwerfen — sonst „startet nicht“ / Offscreen.
+            if (s.window_geometry or "").strip():
+                s.window_geometry = ""
+                save_settings(s)
             self.resize(1080, 680)
+        clamp_restored_geometry(self, min_w=880, min_h=520)
+        ensure_on_screen(self)
         if s.window_maximized:
             self.showMaximized()
         self._suppress_tab_persist = True
@@ -2833,13 +3470,149 @@ class RezeptorWindow(QMainWindow):
             self._ui_restored = True
             # Nach erstem Show — sonst speichert der WM falsche Größen
             QTimer.singleShot(0, self._restore_ui_layout)
+            QTimer.singleShot(200, self._startup_prompts)
+
+    def _startup_prompts(self) -> None:
+        self._maybe_host_deps_first_run()
+        self._maybe_startup_validate()
+
+    def _maybe_host_deps_first_run(self) -> None:
+        if self._settings.host_deps_prompt_done:
+            return
+        if not has_gaps():
+            mark_host_deps_prompt_done(self._settings)
+            return
+        dlg = HostDepsDialog(self, first_run=True)
+        dlg.exec()
+        mark_host_deps_prompt_done(self._settings)
+
+    def _maybe_startup_validate(self) -> None:
+        """Hinweisdialog + optionale validate.sh-Runde beim Start."""
+        if not self._settings.validate_on_startup:
+            return
+        dlg = QDialog(self)
+        dlg.setWindowTitle(t("settings.startup_check_title"))
+        dlg.setModal(True)
+        # Nicht windowIcon() vom Hauptfenster — das wechselt mit dem Rezept.
+        if REZEPTOR_ICON.is_file():
+            dlg.setWindowIcon(QIcon(str(REZEPTOR_ICON)))
+        root = QVBoxLayout(dlg)
+        root.setContentsMargins(20, 16, 20, 16)
+        root.setSpacing(12)
+        body = QLabel(t("settings.startup_check_body"))
+        body.setWordWrap(True)
+        body.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        root.addWidget(body)
+        skip_next = QCheckBox(t("settings.startup_check_skip_next"))
+        root.addWidget(skip_next)
+        buttons = QDialogButtonBox()
+        run_btn = buttons.addButton(
+            t("settings.startup_check_run"),
+            QDialogButtonBox.ButtonRole.AcceptRole,
+        )
+        skip_btn = buttons.addButton(
+            t("settings.startup_check_skip_once"),
+            QDialogButtonBox.ButtonRole.RejectRole,
+        )
+        root.addWidget(buttons)
+        run_btn.clicked.connect(dlg.accept)
+        skip_btn.clicked.connect(dlg.reject)
+        dlg.setMinimumWidth(420)
+        accepted = dlg.exec() == QDialog.DialogCode.Accepted
+        if skip_next.isChecked():
+            self._settings.validate_on_startup = False
+            save_settings(self._settings)
+        if accepted:
+            self.refresh_statuses()
+
+    def show_host_deps_check(self) -> None:
+        dlg = HostDepsDialog(self, first_run=False)
+        dlg.exec()
+        mark_host_deps_prompt_done(self._settings)
+
+    def _visible_tool_windows(self) -> list[QWidget]:
+        out: list[QWidget] = []
+        for dlg in (self._recipe_view_dlg, self._docs_dlg):
+            if dlg is not None and dlg.isVisible():
+                out.append(dlg)
+        return out
+
+    def _bring_app_to_front(self) -> None:
+        """Taskleiste/WM: Fenster sichtbar machen bevor wir nachfragen."""
+        self.showNormal()
+        self.raise_()
+        self.activateWindow()
+        for dlg in self._visible_tool_windows():
+            dlg.raise_()
+        self.raise_()
+        self.activateWindow()
+
+    def _confirm_app_quit(self) -> bool:
+        """Vorgang/Nebenfenster: App nach vorne, dann eine klare Beenden-Frage."""
+        self._bring_app_to_front()
+        busy = bool(
+            self._busy
+            and self._process is not None
+            and self._process.state() != QProcess.ProcessState.NotRunning
+        )
+        tools = self._visible_tool_windows()
+        dirty = any(
+            hasattr(w, "is_dirty") and w.is_dirty()  # type: ignore[misc]
+            for w in tools
+        )
+        if busy:
+            body = t("dialog.quit_busy_body")
+        elif tools:
+            body = t("dialog.quit_windows_body")
+            if dirty:
+                body = f"{body}\n\n{t('dialog.quit_dirty_extra')}"
+        else:
+            return True
+        return (
+            QMessageBox.question(
+                self,
+                t("dialog.quit_title"),
+                body,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            == QMessageBox.StandardButton.Yes
+        )
+
+    def _force_close_tool_windows(self) -> None:
+        for dlg in (self._recipe_view_dlg, self._docs_dlg):
+            if dlg is None:
+                continue
+            if hasattr(dlg, "force_close"):
+                dlg.force_close()
+            else:
+                dlg.close()
+        # Modale Restfenster (Settings o. Ä.), die Taskleisten-Close blockieren.
+        for w in list(self.findChildren(QDialog)):
+            if w is self or not w.isVisible():
+                continue
+            w.setProperty("rezeptor_force_close", True)
+            w.reject()
+            w.close()
 
     def closeEvent(self, event) -> None:  # type: ignore[no-untyped-def]
+        # Taskleiste / WM: bei zwei Fenstern sonst oft „Schließen“ wirkungslos.
+        if getattr(self, "_force_quitting", False):
+            event.accept()
+            super().closeEvent(event)
+            return
+        if not self._confirm_app_quit():
+            event.ignore()
+            self._bring_app_to_front()
+            return
+        self._force_quitting = True
         self._persist_ui_layout()
-        for dlg in (self._recipe_view_dlg, self._docs_dlg):
-            if dlg is not None:
-                dlg.close()
+        self._force_close_tool_windows()
+        event.accept()
         super().closeEvent(event)
+        app = QApplication.instance()
+        if app is not None:
+            app.quit()
 
     @staticmethod
     def _style_secondary_label(
@@ -2917,6 +3690,9 @@ class RezeptorWindow(QMainWindow):
             self._logs_refresh_btn.setText(t("logs.refresh"))
         self.more_btn.setText(t("btn.more"))
         self.more_btn.setToolTip(t("tooltip.more"))
+        if hasattr(self, "cancel_install_btn"):
+            self.cancel_install_btn.setText(t("btn.cancel_install"))
+            self.cancel_install_btn.setToolTip(t("tooltip.cancel_install"))
         if hasattr(self, "_rebuild_more_menu"):
             self._rebuild_more_menu()
         if not self._selected:
@@ -2945,6 +3721,56 @@ class RezeptorWindow(QMainWindow):
             t("settings.cleanup_short", removed=removed),
         )
 
+    def _prompt_and_save_source(self, *, title_key: str = "dialog.source_pick_title") -> dict[str, str] | None:
+        """Quelle/Ziel-Dialog → pending Env speichern. None = Abbruch."""
+        if self._selected is None:
+            return None
+        meta = self._selected.meta
+        rid = self._selected.rid
+        pending = load_recipe_install_env(self._settings, rid)
+        dlg = RecipeSourceDialog(
+            self,
+            rid=rid,
+            meta=meta,
+            root=ROOT,
+            title=t(title_key, name=meta.get("name", rid)),
+            pending_env=pending,
+        )
+        # Parent-modaler Dialog (kein Window-Flag): Wayland/KDE ignoriert sonst oft
+        # MinimumSize — nach Ordnerwahl überlappen Wählen/OK.
+        dlg._fit_to_content()
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return None
+        dr = resolve_data_root(meta, rid)
+        try:
+            extra = dlg.build_env(dr)
+        except OSError as exc:
+            QMessageBox.critical(
+                self,
+                t("dialog.source_label"),
+                t("dialog.source_invalid", error=exc),
+            )
+            return None
+        if not has_recipe_install_source(extra):
+            clear_recipe_install_env(self._settings, rid)
+            self._activity("info", t("source.cleared"))
+            return None
+        save_recipe_install_env(self._settings, rid, extra)
+        self._activity("info", t("source.saved_ready"))
+        return dict(extra)
+
+    def _prepare_install_env(self, extra: dict[str, str]) -> bool:
+        """Archiv-Passwort-Tempdateien für den Install-Lauf nachziehen."""
+        archive = (extra.get("RECIPE_ARCHIVE_PATH") or "").strip()
+        if not archive:
+            return True
+        path = Path(archive)
+        passwords = ensure_archive_passwords(self, path)
+        if passwords is None:
+            return False
+        attach_archive_password_files(extra, passwords)
+        return True
+
     def run_install(self) -> None:
         rd = self._require_recipe()
         if rd is None:
@@ -2955,40 +3781,21 @@ class RezeptorWindow(QMainWindow):
             return
 
         meta = self._selected.meta
+        rid = self._selected.rid
         extra: dict[str, str] = {}
 
         if needs_source_dialog(meta):
-            dlg = RecipeSourceDialog(
-                self,
-                rid=self._selected.rid,
-                meta=meta,
-                root=ROOT,
-                title=t(
-                    "dialog.source_pick_title",
-                    name=meta.get("name", self._selected.rid),
-                ),
-            )
-            if dlg.exec() != QDialog.DialogCode.Accepted:
+            pending = load_recipe_install_env(self._settings, rid)
+            if not has_recipe_install_source(pending):
+                # Keine Quelle (oder bewusst geleert) → Dialog speichert nur.
+                self._prompt_and_save_source()
                 return
-            dr = expand_home(
-                meta.get("data_root", f"~/.local/share/wine-software/{self._selected.rid}")
-            )
-            try:
-                extra = dlg.build_env(dr)
-            except OSError as exc:
-                QMessageBox.critical(
-                    self,
-                    t("dialog.source_label"),
-                    t("dialog.source_invalid", error=exc),
-                )
-                return
-            if meta.get("source_kind") == "folder" and not (
-                extra.get("RECIPE_SOURCE_ROOT") or extra.get("RECIPE_ARCHIVE_PATH")
-            ):
+            extra = dict(pending or {})
+            if not self._prepare_install_env(extra):
                 return
 
-        info = recipe_info_text(self._selected.rid, rd)
-        name = meta.get("name", self._selected.rid)
+        info = recipe_info_text(rid, rd)
+        name = meta.get("name", rid)
         if self._selected.state == RecipeState.INSTALLED:
             if QMessageBox.question(
                 self,
@@ -3013,50 +3820,31 @@ class RezeptorWindow(QMainWindow):
                 return
 
         self._maybe_wine_dialog_hint("install")
-        label = (
-            t("action.reinstall")
-            if self._selected.state == RecipeState.INSTALLED
-            else t("action.install")
-        )
+        is_reinstall = self._selected.state == RecipeState.INSTALLED
+        label = t("action.reinstall") if is_reinstall else t("action.install")
+        op = "reinstall" if is_reinstall else "install"
+
+        def _after_ok() -> None:
+            clear_recipe_install_env(self._settings, rid)
+            self._offer_desktop_shortcuts(label)
+
         self._run_async(
             install,
             extra,
             label,
-            on_success=lambda: self._offer_desktop_shortcuts(label),
+            on_success=_after_ok,
+            op=op,
+            recipe_dir=rd,
         )
 
     def run_source_configure(self) -> None:
-        rd = self._require_recipe()
-        if rd is None or not self._selected:
+        """Nur Quelle/Ziel speichern — startet keine Installation."""
+        if self._require_recipe() is None or not self._selected:
             return
         meta = self._selected.meta
         if not needs_source_dialog(meta):
             return
-        dlg = RecipeSourceDialog(
-            self,
-            rid=self._selected.rid,
-            meta=meta,
-            root=ROOT,
-            title=t(
-                "dialog.source_title",
-                name=meta.get("name", self._selected.rid),
-            ),
-        )
-        if dlg.exec() != QDialog.DialogCode.Accepted:
-            return
-        dr = resolve_data_root(meta, self._selected.rid)
-        extra = dlg.build_env(dr)
-        if not (
-            extra.get("RECIPE_SOURCE_ROOT")
-            or extra.get("RECIPE_ARCHIVE_PATH")
-            or extra.get("RECIPE_INSTALLER_PATH")
-        ):
-            return
-        install = rd / "install.sh"
-        if not install.is_file():
-            QMessageBox.critical(self, t("dialog.missing"), str(install))
-            return
-        self._run_async(install, extra, t("action.source_config"))
+        self._prompt_and_save_source(title_key="dialog.source_title")
 
     def run_repair(self) -> None:
         rd = self._require_recipe()
@@ -3126,9 +3914,9 @@ class RezeptorWindow(QMainWindow):
         if not LAUNCH_PROCESS_PATTERNS.get(rid):
             return
         if recipe_process_running(rid, meta):
-            if not getattr(self, "_launch_alive_reported", False):
-                self._launch_alive_reported = True
-                self._activity("ok", t("status.app_running"))
+            # „läuft“ / später „beendet“ meldet _refresh_running_indicators unter Vorgang.
+            self._launch_alive_reported = True
+            self._running_prev[rid] = True
             return
         if attempt < 7:
             QTimer.singleShot(
@@ -3195,11 +3983,13 @@ class RezeptorWindow(QMainWindow):
         self.raw_log.clear()
         self._launch_alive_reported = False
         name = meta.get("name", self._selected.rid)
+        rid = self._selected.rid
+        self._watched_launch_rid = rid
+        self._running_prev[rid] = False
         self.step_label.setText(t("status.starting", name=name))
         self.step_label.setStyleSheet("")
         self._activity("step", t("status.start_triggered", name=name))
         self._activity("info", t("status.window_soon"))
-        rid = self._selected.rid
         if rid in LAUNCH_PROCESS_PATTERNS:
             QTimer.singleShot(
                 2500, lambda: self._check_launch_alive(rid, log_path, 0)
@@ -3211,7 +4001,8 @@ class RezeptorWindow(QMainWindow):
             return
         v = rd / "validate.sh"
         if v.is_file():
-            self._run_async(v, done_label=t("action.validate"), dialog=True)
+            # No error dialog: FAIL lines belong in Vorgang (e.g. not installed → expected).
+            self._run_async(v, done_label=t("action.validate"), dialog=False)
 
     def run_kill(self) -> None:
         rd = self._require_recipe()
@@ -3264,6 +4055,7 @@ def main() -> int:
     app.setApplicationDisplayName("")
     app.setOrganizationName("Rezeptor")
     app.setDesktopFileName("rezeptor")
+    app.setQuitOnLastWindowClosed(True)
     ensure_fa_font()
     # Fusion für Host-Widgets (Combo/Listen) — sonst KDE-Blau statt Kupfer
     app.setStyle("Fusion")
@@ -3273,7 +4065,7 @@ def main() -> int:
     w = RezeptorWindow()
     w.show()
     QTimer.singleShot(0, w._apply_theme)
-    QTimer.singleShot(200, w.refresh_statuses)
+    # Volle validate.sh: Hinweisdialog in _startup_prompts (nach erstem Show).
     return app.exec()
 
 
