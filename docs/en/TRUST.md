@@ -9,11 +9,11 @@ GUI index: `id`, name, category, `path`, summaries, and a **`trust`** field.
 | Value | Meaning |
 |-------|---------|
 | `official` | Bundled / officially maintained |
-| Community / external | Not automatically reviewed |
+| `community` | Community / external — not automatically reviewed |
 
 Community recipes under `recipes/community/<id>/` do **not** appear in the official catalog by default and typically have **no** manifest entry → GUI “untrusted”.
 
-Multi-source: Settings → recipe sources. External recipes run scripts — review before install.
+Multi-source: Settings → recipe sources (`trusted` flags there are separate). External recipes run scripts — review before install.
 
 ## Manifest (`recipes/manifest.json`)
 
@@ -44,7 +44,8 @@ SHA256 over all files per official recipe:
 
 Before a PR after file changes, always run `./scripts/recipe-manifest.sh` and commit `recipes/manifest.json`.
 
-Templates `_template*` and community are excluded from the manifest generator (`_` prefix / community path).
+The generator hashes only **top-level** dirs `recipes/<id>/` that contain `recipe.yml`, and skips names with a `_` prefix (`_template*`).  
+`recipes/community/<id>/` is one level deeper, so it is also out of the manifest (there is no separate community-path skip branch).
 
 ## Release assets
 

@@ -173,12 +173,13 @@ install_steps:
   - winetricks
 ```
 
-**Installer:**
+**Installer** (matches `recipes/_template-installer/`):
 
 ```yaml
 install_type: installer_offline
-source_kind: fixed_path
-installer_dir: "{repo}/installer"
+source_kind: folder          # GUI picks setup folder / .exe
+source_label: "Folder with offline installer (setup.exe / Set-up.exe)"
+winetricks: [win10, vcrun2015]
 install_steps:
   - prepare_source
   - prefix
@@ -186,11 +187,13 @@ install_steps:
   - run_installer
 ```
 
+Optional (rare): `source_kind: fixed_path` + `installer_dir: "{repo}/installer"` for hard-wired repo paths — the shipped template does **not** use that.
+
 **Steam title with external fix (BYOS, launch from Rezeptor):**
 
 For games that stay in the Steam folder and only need a user-supplied fix
 (e.g. `house-of-ashes`). Do not ship the fix in the repo — validate checks files
-read-only; launch sets Proton + `WINEDLLOVERRIDES` / `SteamAppId`.
+read-only; launch sets Proton + `WINEDLLOVERRIDES` / `SteamAppId`. Template: `_template-steam-game/`.
 
 Note: no new Steam entry (start via Rezeptor only); FakeAppId is often **480/Spacewar**
 (must be installed in Steam); uninstall removes Rezeptor wrapper only, not game/fix.
@@ -200,12 +203,28 @@ install_type: game_portable
 deploy_mode: link          # no copy; dialog without target folder
 source_kind: folder
 steam_appid: "1281590"     # real Steam AppID (compatdata)
-runtime: proton-ge          # Rezeptor Proton-GE (priority); Steam compatdata for fix/Spacewar
+steam_fake_appid: "480"    # often Spacewar — must be installed in Steam
+steam_fix_win64_rel: "Binaries/Win64"   # relative to game folder
+steam_fix_required:
+  - OnlineFix64.dll
+  - OnlineFix.ini
+steam_api_rel: ""          # optional, relative to game folder
+runtime: proton-ge
 fix_kind: none
 exe_glob: "HouseOfAshes.exe"
 install_steps:
   - emit_log_paths         # logic in install.sh / validate.sh / launch.sh
 ```
+
+| Field | Role |
+|-------|------|
+| `steam_appid` | Real AppID → Steam game folder / compatdata |
+| `steam_fake_appid` | FakeAppId in online-fix INI (often `480`) |
+| `steam_fix_win64_rel` | Subfolder with fix DLLs/INI |
+| `steam_fix_required` | Required filenames for validate |
+| `steam_api_rel` | Optional `steam_api64.dll` path |
+
+Details: [STEAM-WRAPPER.md](STEAM-WRAPPER.md).
 
 | | Trainer (`za4-trainer`) | Steam+fix (`house-of-ashes`) |
 |--|-------------------------|------------------------------|
@@ -228,7 +247,17 @@ make recipe-lint              # CI
 REZEPTOR_DEV=1 ./setup.sh
 ```
 
-Forbidden (lint ERROR): `winetricks dxvk`, system-Wine fallback, duplicate win10.
+### Runtime helpers (required in custom/repair code)
+
+| Task | Only via | Never |
+|------|----------|-------|
+| Winetricks | `recipe_winetricks::run` (retry **only** exit 139) | Direct `winetricks`, subshell hacks |
+| Windows 10 | `recipe_win10::ensure` (registry) | `winetricks winecfg` / duplicate `win10`+`settings win10` |
+| Graphics/DXVK | `wine_runtime::deploy_proton_graphics_dlls` | `winetricks dxvk` |
+| Prefix | `recipe_prefix::ensure` | System Wine fallback |
+
+Forbidden (lint ERROR): `winetricks dxvk`, system-Wine fallback, duplicate win10.  
+API details: [CORE-API.md](CORE-API.md).
 
 ---
 

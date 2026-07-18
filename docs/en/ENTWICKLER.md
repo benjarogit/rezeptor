@@ -17,11 +17,12 @@
 ## Quick start
 
 ```bash
-cd photoshopCClinux   # or your clone
+cd rezeptor   # clone https://github.com/benjarogit/rezeptor
 
-./scripts/new-recipe.sh my-app "My App"
-# Offline installer / trainer EXE:
-./scripts/new-recipe.sh my-setup "My Setup" --type installer
+./scripts/new-recipe.sh my-app "My App"                          # portable
+./scripts/new-recipe.sh my-setup "My Setup" --type installer     # offline installer
+./scripts/new-recipe.sh my-game "My Game" --type steam-game      # Steam + online fix
+./scripts/new-recipe.sh --community my-app "My App"              # → recipes/community/<id>/
 
 $EDITOR recipes/my-app/recipe.yml   # including install_steps
 # Optional: core/recipe-my-app.sh for module: steps
@@ -29,11 +30,11 @@ $EDITOR recipes/my-app/recipe.yml   # including install_steps
 ./scripts/recipe-lint.sh
 REZEPTOR_DEV=1 ./setup.sh             # GUI: recipe → source → Install
 
-./scripts/recipe-manifest.sh          # before PR
+./scripts/recipe-manifest.sh          # before PR (top-level recipes/<id>/ only)
 git add recipes/manifest.json recipes/my-app/
 ```
 
-GUI alternative: **Rezeptor → New recipe…**
+GUI alternative: **Rezeptor → New recipe…** (dev mode)
 
 ---
 
@@ -73,7 +74,8 @@ In the GUI always **Source** and optionally **Target** — same labels for every
 | **Steam + online fix** | `house-of-ashes` | Fix BYOS; game in Steam | Game folder (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
 | **Single EXE / trainer** | `za4-trainer` | one `.exe` | often Steam subfolder | [TRAINER.md](TRAINER.md) |
 
-Templates: `recipes/_template/` (portable), `recipes/_template-installer/`, `_template-steam-game/` if present.
+Templates: `recipes/_template/` (portable), `recipes/_template-installer/`, `recipes/_template-steam-game/`.  
+Community: `recipes/community/<id>/` (hooks load core via `../../../core/`; not in the official manifest).
 
 ---
 

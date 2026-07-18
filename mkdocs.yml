@@ -211,6 +211,9 @@ extra:
       link: https://github.com/benjarogit/rezeptor/releases
       name: Releases
 
+# README.md in locale folders conflicts with index.md (both map to site root)
 exclude_docs: |
   Archiv.zip
   README.md
+  de/README.md
+  en/README.md

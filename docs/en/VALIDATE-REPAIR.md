@@ -7,12 +7,12 @@ Contract between `validate.sh`, `repair.sh`, and the GUI. **Repair ≠ reinstall
 ### Required behavior
 
 1. `recipe_hooks::load validate`
-2. Structured lines:
+2. Structured lines (`core/recipe-validate.sh`):
    - `OK: …` (stdout)
+   - `WARN: …` (stdout) — **does not** fail the exit code
    - `FAIL: …` (stderr) — counts as failure
-   - `WARN: …` (stderr) — **does not** fail the exit code
 3. Optional GUI progress: `output::progress_begin` / `tick` / `done`
-4. Exit **0** when there is no `FAIL`; exit **1** when there is at least one `FAIL`
+4. Exit **0** when there is no `FAIL`; exit **1** when there is at least one `FAIL` (the recipe counts failures itself)
 
 ### Recommended checks
 

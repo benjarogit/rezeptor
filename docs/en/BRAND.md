@@ -18,11 +18,13 @@ Product UI, README, and docs stay bilingual (English + German).
 | Amber (warning)   | `#d9a441` | “Experimental” status                    |
 | Parchment (text)  | `#EDE6D6` | Text on dark background                  |
 
-In `setThemeColor()` (see code example), `#B87333` is set as the theme accent —
-that is enough for Fluent widgets to stay consistent automatically.
+## GUI (required)
+
+Product UI is always **Fluent Dark** + copper — no system-light hybrid, no PyQtDarkTheme.
+Implementation: `launcher/ui_fluent.py` (`Theme.DARK`, `setThemeColor("#B87333")`) and host QSS in `ui_styles.py`.
+Do not override Fluent widgets with host QSS. Details: [LAUNCHER.md](LAUNCHER.md).
 
 ## Files
 
-- `rezeptor-icon.svg` — square, for window icon / app icon
-  (convert to .ico/.png per platform)
-- `rezeptor-wordmark.svg` — icon + wordmark, for title bar, README, website
+- `images/rezeptor-icon.svg` / `docs/assets/rezeptor-icon.svg` — square, window/app icon
+- `docs/assets/rezeptor-wordmark.svg` — icon + wordmark, title bar, README, website

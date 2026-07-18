@@ -18,10 +18,12 @@ Produkt-UI, README und Dokumentation bleiben zweisprachig (Deutsch + Englisch).
 | Amber (Warnung)     | `#d9a441` | "Experimentell"-Status                  |
 | Pergament (Text)    | `#EDE6D6` | Text auf dunklem Grund                  |
 
-In `setThemeColor()` (siehe Code-Beispiel) wird `#B87333` als Theme-Akzent
-gesetzt — das reicht, damit Fluent-Widgets automatisch konsistent bleibt.
+## GUI (verbindlich)
+
+Produkt-UI immer **Fluent Dark** + Kupfer — kein System-Light-Hybrid, kein PyQtDarkTheme.
+Umsetzung: `launcher/ui_fluent.py` (`Theme.DARK`, `setThemeColor("#B87333")`) und Host-QSS in `ui_styles.py`.
+Fluent-Widgets nicht mit Host-QSS „übermalen“. Details: [LAUNCHER.md](LAUNCHER.md).
 
 ## Dateien
-- `rezeptor-icon.svg` — quadratisch, für Fenster-Icon / App-Icon
-  (in .ico/.png konvertieren je nach Plattform)
-- `rezeptor-wordmark.svg` — Icon + Schriftzug, für Titelleiste, README, Website
+- `images/rezeptor-icon.svg` / `docs/assets/rezeptor-icon.svg` — quadratisch, Fenster-/App-Icon
+- `docs/assets/rezeptor-wordmark.svg` — Icon + Schriftzug, Titelleiste, README, Website

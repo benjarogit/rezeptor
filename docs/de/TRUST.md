@@ -9,11 +9,11 @@ Index für die GUI: `id`, Name, Kategorie, `path`, Kurzbeschreibungen, Feld **`t
 | Wert | Bedeutung |
 |------|-----------|
 | `official` | Mitgeliefert / offiziell gepflegt |
-| Community / extern | Nicht automatisch geprüft |
+| `community` | Community / extern — nicht automatisch geprüft |
 
 Community-Rezepte unter `recipes/community/<id>/` erscheinen **nicht** automatisch im offiziellen Katalog und haben typischerweise **keinen** Manifest-Eintrag → GUI „untrusted“.
 
-Mehrquellen: Einstellungen → Rezept-Quellen. Externe Rezepte führen Skripte aus — vor Install prüfen.
+Mehrquellen: Einstellungen → Rezept-Quellen (`trusted`-Flags dort separat). Externe Rezepte führen Skripte aus — vor Install prüfen.
 
 ## Manifest (`recipes/manifest.json`)
 
@@ -44,7 +44,8 @@ SHA256 über alle Dateien pro offiziellem Rezept:
 
 Vor PR nach Dateiänderungen immer `./scripts/recipe-manifest.sh` und Commit von `recipes/manifest.json`.
 
-Vorlagen `_template*` und Community sind vom Manifest-Generator ausgeschlossen (`_`-Prefix / Community-Pfad).
+Der Generator hasht nur **Top-Level**-Ordner `recipes/<id>/` mit `recipe.yml` und überspringt Namen mit `_`-Prefix (`_template*`).  
+`recipes/community/<id>/` liegt eine Ebene tiefer und fällt daher ebenfalls aus dem Manifest (kein eigener Community-Skip-Zweig).
 
 ## Release-Assets
 

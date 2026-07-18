@@ -7,12 +7,12 @@ Vertrag zwischen `validate.sh`, `repair.sh` und der GUI. **Reparieren ≠ neu in
 ### Pflichtverhalten
 
 1. `recipe_hooks::load validate`
-2. Strukturierte Zeilen:
+2. Strukturierte Zeilen (`core/recipe-validate.sh`):
    - `OK: …` (stdout)
+   - `WARN: …` (stdout) — **kein** Exit-Fehler
    - `FAIL: …` (stderr) — zählt als Fehler
-   - `WARN: …` (stderr) — **kein** Exit-Fehler
 3. Optional GUI-Fortschritt: `output::progress_begin` / `tick` / `done`
-4. Exit **0** wenn keine `FAIL`; Exit **1** bei mindestens einem `FAIL`
+4. Exit **0** wenn keine `FAIL`; Exit **1** bei mindestens einem `FAIL` (Rezept zählt Failures selbst)
 
 ### Empfohlene Checks
 

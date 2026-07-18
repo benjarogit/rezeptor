@@ -1,4 +1,4 @@
-# Test plan — wine-software launcher
+# Test plan — Rezeptor
 
 **Principle (Mythos verify):** *Done = proof.* Each step has an expected artifact. If proof is missing, the step failed — open a GitHub issue.
 

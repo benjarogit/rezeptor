@@ -1,4 +1,4 @@
-# Testplan — wine-software Launcher
+# Testplan — Rezeptor
 
 **Prinzip (Mythos verify):** *Done = proof.* Jeder Schritt braucht ein nachprüfbares Artefakt. Fehlt der Beweis, ist der Schritt fehlgeschlagen — GitHub-Issue öffnen.
 
@@ -13,7 +13,7 @@ Englisch: Sprachumschalter oben rechts (**EN**).
 ## Vorbereitung
 
 ```bash
-cd /path/to/photoshopCClinux
+cd /path/to/rezeptor
 ./pre-check.sh          # muss durchlaufen (inkl. PyQt6)
 bash -n recipes/photoshop/install.sh
 bash -n recipes/photoshop/launch.sh

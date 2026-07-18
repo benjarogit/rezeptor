@@ -17,11 +17,12 @@
 ## Schnellstart
 
 ```bash
-cd photoshopCClinux   # oder dein Clone
+cd rezeptor   # Clone von https://github.com/benjarogit/rezeptor
 
-./scripts/new-recipe.sh meine-app "Meine App"
-# Offline-Installer / Trainer-EXE:
-./scripts/new-recipe.sh mein-setup "Mein Setup" --type installer
+./scripts/new-recipe.sh meine-app "Meine App"                          # portable
+./scripts/new-recipe.sh mein-setup "Mein Setup" --type installer       # Offline-Installer
+./scripts/new-recipe.sh mein-spiel "Mein Spiel" --type steam-game      # Steam + Online-Fix
+./scripts/new-recipe.sh --community meine-app "Meine App"              # → recipes/community/<id>/
 
 $EDITOR recipes/meine-app/recipe.yml   # inkl. install_steps
 # Optional: core/recipe-meine-app.sh für module:-Schritte
@@ -29,11 +30,11 @@ $EDITOR recipes/meine-app/recipe.yml   # inkl. install_steps
 ./scripts/recipe-lint.sh
 REZEPTOR_DEV=1 ./setup.sh             # GUI: Rezept → Quelle → Installieren
 
-./scripts/recipe-manifest.sh          # vor PR
+./scripts/recipe-manifest.sh          # vor PR (nur Top-Level recipes/<id>/)
 git add recipes/manifest.json recipes/meine-app/
 ```
 
-GUI-Alternative: **Rezeptor → Neues Rezept…**
+GUI-Alternative: **Rezeptor → Neues Rezept…** (Dev-Modus)
 
 ---
 
@@ -73,7 +74,8 @@ In der GUI immer **Quelle** und ggf. **Ziel** — unabhängig vom App-Typ.
 | **Steam + Online-Fix** | `house-of-ashes` | Fix BYOS; Spiel in Steam | Spielordner (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
 | **Einzel-EXE / Trainer** | `za4-trainer` | eine `.exe` | oft Steam-Unterordner | [TRAINER.md](TRAINER.md) |
 
-Vorlagen: `recipes/_template/` (Portable), `recipes/_template-installer/`, ggf. `_template-steam-game/`.
+Vorlagen: `recipes/_template/` (Portable), `recipes/_template-installer/`, `recipes/_template-steam-game/`.  
+Community: `recipes/community/<id>/` (Hooks laden Core über `../../../core/`; nicht im offiziellen Manifest).
 
 ---
 
