@@ -227,9 +227,9 @@ jobs:
           fi
 
           notes+=$'\n\n## Downloads\n\n'
-          notes+='- `rezeptor-'"${VER}"'.tar.gz` — Quellpaket (`tar xf` → `./setup.sh`)'$'\n'
-          notes+='- `rezeptor-'"${VER}"'-x86_64.AppImage` — portable App'$'\n'
-          notes+='- `SHA256SUMS` — Integrität prüfen: `sha256sum -c SHA256SUMS`'$'\n'
+          notes+='- `rezeptor-'"${VER}"'.tar.gz` — source package (`tar xf` → `./setup.sh`)'$'\n'
+          notes+='- `rezeptor-'"${VER}"'-x86_64.AppImage` — portable app'$'\n'
+          notes+='- `SHA256SUMS` — verify with: `sha256sum -c SHA256SUMS`'$'\n'
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "${assets[@]}" --clobber

@@ -12,13 +12,19 @@ Photoshop, tax software (WISO), Steam games with online fixes, trainers, and mor
 [![License](https://img.shields.io/badge/license-GPL--2.0-blue)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=release)](https://github.com/benjarogit/rezeptor/releases)
 
+> **This is the successor project.**  
+> Development continues here only. The older repositories
+> [photoshopCClinux](https://github.com/benjarogit/photoshopCClinux) and
+> [wiso-steuer-portable-linux](https://github.com/benjarogit/wiso-steuer-portable-linux)
+> are archived — please open new issues and pull requests in **this** repo.
+
 ## What you get
 
 - **GUI launcher** — pick a recipe, install, start, repair, or remove
 - **Proton-GE only** — no system Wine fallback in recipes
 - **Status checks** — optional validate on startup; refresh anytime (F5)
-- **Host tools check** — missing packages (e.g. `cabextract`, `7z`) suggested once
-- **Catalog & sources** — official recipes plus community path
+- **Host tools check** — missing packages suggested once
+- **Catalog & sources** — official recipes plus a community path
 - **Data under** `~/.local/share/wine-software/`
 
 ## Quick start
@@ -31,11 +37,9 @@ cd rezeptor
 
 Needs **PyQt6** (`python-pyqt6` on Arch/CachyOS, or your distro’s package).
 
-Or download a **[release AppImage](https://github.com/benjarogit/rezeptor/releases)** when available.
+Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz` package or AppImage). Verify with `sha256sum -c SHA256SUMS`.
 
 ## Documentation
-
-Full guides (install patterns, recipe authoring, brand):
 
 ### → [Rezeptor Docs](https://benjarogit.github.io/rezeptor/)
 
@@ -50,6 +54,10 @@ Full guides (install patterns, recipe authoring, brand):
 | `recipes/community/<id>/` | Community |
 
 Submit ideas via [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?template=recipe_submission.md).
+
+## Versioning
+
+Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current line starts at **1.0.0**.
 
 ## Deutsch
 

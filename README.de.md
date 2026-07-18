@@ -12,12 +12,18 @@ Photoshop, Steuerprogramme (WISO), Steam-Spiele mit Online-Fix, Trainer und mehr
 [![Lizenz](https://img.shields.io/badge/Lizenz-GPL--2.0-blue)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=Release)](https://github.com/benjarogit/rezeptor/releases)
 
+> **Nachfolgeprojekt.**  
+> Weiterentwicklung nur noch hier. Die älteren Repositories
+> [photoshopCClinux](https://github.com/benjarogit/photoshopCClinux) und
+> [wiso-steuer-portable-linux](https://github.com/benjarogit/wiso-steuer-portable-linux)
+> sind archiviert — Issues und PRs bitte in **diesem** Repo öffnen.
+
 ## Was du bekommst
 
 - **GUI-Launcher** — Rezept wählen, installieren, starten, reparieren oder entfernen
 - **Nur Proton-GE** — kein System-Wine-Fallback in Rezepten
 - **Statusprüfung** — optional beim Start; jederzeit neu prüfen (F5)
-- **System-Tools** — fehlende Pakete (z. B. `cabextract`, `7z`) einmalig vorschlagen
+- **System-Tools** — fehlende Pakete einmalig vorschlagen
 - **Katalog & Quellen** — offizielle Rezepte plus Community-Pfad
 - **Daten unter** `~/.local/share/wine-software/`
 
@@ -31,11 +37,9 @@ cd rezeptor
 
 Benötigt **PyQt6** (`python-pyqt6` unter Arch/CachyOS bzw. Distro-Paket).
 
-Oder ein **[Release-AppImage](https://github.com/benjarogit/rezeptor/releases)**, sobald verfügbar.
+Oder ein **[Release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz` oder AppImage). Prüfen mit `sha256sum -c SHA256SUMS`.
 
 ## Dokumentation
-
-Ausführliche Anleitungen (Installationsmuster, Rezept-Autorenschaft, Marke):
 
 ### → [Rezeptor Docs](https://benjarogit.github.io/rezeptor/)
 
@@ -50,6 +54,10 @@ Ausführliche Anleitungen (Installationsmuster, Rezept-Autorenschaft, Marke):
 | `recipes/community/<id>/` | Community |
 
 Ideen einreichen über [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?template=recipe_submission.md).
+
+## Versionierung
+
+Releases folgen **SemVer** (`MAJOR.MINOR.PATCH`). Aktuelle Linie ab **1.0.0**.
 
 ## English
 
