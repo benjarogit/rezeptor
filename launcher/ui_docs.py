@@ -29,7 +29,14 @@ DOCS_DIR = Path(__file__).resolve().parent.parent / "docs"
 # Entwickler-GUI: nur Rezept-Autoren-Doku (kein Maintainer-Handoff/GPU-Labor)
 DOC_CATALOG: list[tuple[str, str, str]] = [
     ("Entwickler — Einstieg", "Developer — Getting started", "ENTWICKLER.md"),
+    ("Projektstruktur", "Project layout", "PROJECT-LAYOUT.md"),
     ("Rezept erstellen (Referenz)", "Recipe authoring (reference)", "RECIPE-AUTHORING.md"),
+    ("Core-API", "Core API", "CORE-API.md"),
+    ("Validate & Repair", "Validate & repair", "VALIDATE-REPAIR.md"),
+    ("Deinstallation", "Uninstall", "UNINSTALL.md"),
+    ("Trust & Manifest", "Trust & manifest", "TRUST.md"),
+    ("GUI-Launcher", "GUI launcher", "LAUNCHER.md"),
+    ("Log-Protokoll", "Log protocol", "LOG-PROTOCOL.md"),
     ("Muster: Offline-Installer", "Pattern: offline installer", "INSTALLER.md"),
     ("Muster: Portable (WISO)", "Pattern: portable (WISO)", "WISO.md"),
     ("Muster: Steam + Online-Fix", "Pattern: Steam + online fix", "STEAM-WRAPPER.md"),
@@ -40,8 +47,8 @@ DOC_CATALOG: list[tuple[str, str, str]] = [
     ("Dokumentations-Index", "Documentation index", "README.md"),
 ]
 
-# Maintainer-only (nicht im GUI-Katalog): GPU-EXPERIMENTS, HANDOFF-PHOTOSHOP-GPU, TEST-PLAN, TESTING
-# → unter docs/maintainer/{locale}/, nicht in DOC_CATALOG / github_doc_url-Pfaden der GUI.
+# Maintainer-only (nicht im GUI-Katalog): GPU-EXPERIMENTS, HANDOFF, TEST-PLAN, TESTING, RELEASE*
+# → unter docs/{locale}/maintainer/, nicht in DOC_CATALOG / github_doc_url-Pfaden der GUI.
 
 
 def _locale_docs_dir(locale: str | None = None) -> Path:

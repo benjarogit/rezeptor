@@ -94,6 +94,8 @@ make test        # bats
 ./scripts/recipe-manifest.sh
 ```
 
+`shellcheck` in `make validate` covers only `core/`, `photoshop`, `wiso-steuer`, `launcher/`, `scripts/` — not every recipe. `bash -n` checks all `recipes/*/*.sh`.
+
 Workflows: `.github/workflows/ci.yml`, `docs.yml`, `release.yml`.
 
 ## Next

@@ -32,6 +32,9 @@ make test              # bats
 ./scripts/recipe-manifest.sh   # nach Rezept-Dateiänderungen → commit
 ```
 
+`make validate` → `shellcheck` prüft nur `core/`, `recipes/photoshop`, `recipes/wiso-steuer`, `launcher/`, `scripts/`.  
+`bash -n` (Target `syntax`) deckt alle `recipes/*/*.sh` ab; für andere Rezepte zusätzlich `./scripts/recipe-lint.sh`.
+
 ## Rezepte
 
 1. `./scripts/new-recipe.sh …` oder GUI **Neues Rezept…**
