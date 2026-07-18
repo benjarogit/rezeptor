@@ -105,8 +105,10 @@ echo "Creating AppImage venv with PyQt6 + Fluent Widgets..."
 python3 -m venv "$APPDIR/venv"
 "$APPDIR/venv/bin/pip" install -q --upgrade pip
 "$APPDIR/venv/bin/pip" install -q PyQt6 "PyQt6-Fluent-Widgets"
-if ! "$APPDIR/venv/bin/python" -c "import PyQt6; from qfluentwidgets import PrimaryPushButton"; then
-    echo "AppImage venv missing PyQt6 or qfluentwidgets" >&2
+# Metadata-Check (kein GUI-Import): CI-Runner haben oft kein libEGL.
+if ! "$APPDIR/venv/bin/python" -c \
+    "import importlib.metadata as m; m.version('PyQt6'); m.version('PyQt6-Fluent-Widgets')"; then
+    echo "AppImage venv missing PyQt6 or PyQt6-Fluent-Widgets" >&2
     exit 1
 fi
 
