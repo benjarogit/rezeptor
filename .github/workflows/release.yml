@@ -9,18 +9,40 @@ permissions:
   contents: write
 
 jobs:
-  shellcheck:
+  # Gleiche Checks wie CI — nicht ein zweites, strengeres Shellcheck über alle .sh
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Shellcheck
+
+      - name: Install tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y shellcheck
-          find . -name '*.sh' -not -path './AppDir-build/*' -print0 | xargs -0 shellcheck -e SC1091,SC2034,SC2155,SC2207
+          sudo apt-get install -y shellcheck bats python3-yaml
+
+      - name: Shellcheck
+        run: make shellcheck
+
+      - name: Bash syntax
+        run: make syntax
+
+      - name: Python compile
+        run: make compile
+
+      - name: Recipe structure
+        run: make recipes-check
+
+      - name: Recipe lint
+        run: make recipe-lint
+
+      - name: Recipe manifest
+        run: make recipe-manifest-check
+
+      - name: Bats tests
+        run: make test
 
   release:
-    needs: shellcheck
+    needs: validate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,18 +51,31 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y curl tar rsync fuse libfuse2
-          curl -fsSL -o /tmp/appimagetool \
+          mkdir -p .cache/appimagetool
+          curl -fsSL -o .cache/appimagetool/appimagetool-x86_64.AppImage \
             https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
-          chmod +x /tmp/appimagetool
-          sudo mv /tmp/appimagetool /usr/local/bin/appimagetool
+          chmod +x .cache/appimagetool/appimagetool-x86_64.AppImage
 
       - name: Build AppImage
+        env:
+          # GitHub-Runner: oft kein nutzbares FUSE → AppImage extrahieren statt mounten
+          APPIMAGE_EXTRACT_AND_RUN: "1"
         run: |
+          set -euo pipefail
           chmod +x scripts/build-appimage.sh AppDir/AppRun
           scripts/build-appimage.sh
+          shopt -s nullglob
+          files=(rezeptor-*-x86_64.AppImage)
+          if [ "${#files[@]}" -ne 1 ]; then
+            echo "Expected exactly one AppImage, got: ${#files[@]}" >&2
+            ls -la rezeptor-*.AppImage 2>/dev/null || true
+            exit 1
+          fi
+          ls -lh "${files[0]}"
 
       - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           files: rezeptor-*-x86_64.AppImage
           generate_release_notes: true
+          fail_on_unmatched_files: true
