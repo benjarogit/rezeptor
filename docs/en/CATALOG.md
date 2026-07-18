@@ -50,4 +50,4 @@ Portable folders or Steam games **outside** `data_root` are left untouched on un
 All recipes require **Proton-GE** (`core/runtime.lock`). No system-Wine fallback in recipe scripts.
 Graphics DLLs come from `wine_runtime::deploy_proton_graphics_dlls()` — no winetricks-dxvk.
 
-More: [ENTWICKLER.md](ENTWICKLER.md) · [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)
+More: [ENTWICKLER.md](ENTWICKLER.md) · [TRUST.md](TRUST.md) · [UNINSTALL.md](UNINSTALL.md)

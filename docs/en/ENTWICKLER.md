@@ -5,8 +5,12 @@
 | Document | Role |
 |----------|------|
 | **This page** | Quick start, layout, recipe types |
-| [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | Deep reference: fields, `install_steps`, `version_detect`, API |
-| **Pattern references** (shipped) | [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) |
+| [PROJECT-LAYOUT.md](PROJECT-LAYOUT.md) | Repo, `recipes/`, and `core/` layout |
+| [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | Deep reference: fields, `install_steps`, `version_detect` |
+| [CORE-API.md](CORE-API.md) | Precise `core/` APIs (hooks, prefix, winetricks, …) |
+| [VALIDATE-REPAIR.md](VALIDATE-REPAIR.md) · [UNINSTALL.md](UNINSTALL.md) | Lifecycle contracts |
+| [TRUST.md](TRUST.md) · [LOG-PROTOCOL.md](LOG-PROTOCOL.md) · [LAUNCHER.md](LAUNCHER.md) | Manifest, logs, GUI |
+| **Pattern references** | [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) |
 
 ---
 
@@ -88,4 +92,4 @@ Templates: `recipes/_template/` (portable), `recipes/_template-installer/`, `_te
 
 Full specification → **[RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)**
 
-In-app help: **Help → Developer documentation…** · Translations: [CONTRIBUTING-TRANSLATIONS.md](../CONTRIBUTING-TRANSLATIONS.md)
+In-app help: **Help → Developer documentation…** · Translations: [CONTRIBUTING-TRANSLATIONS.md](CONTRIBUTING-TRANSLATIONS.md)

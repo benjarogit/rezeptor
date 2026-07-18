@@ -2,23 +2,26 @@
 
 | Audience | Start here |
 |----------|------------|
-| **Users** | In-app help, [CATALOG.md](CATALOG.md) |
-| **Recipe developers** | [ENTWICKLER.md](ENTWICKLER.md) → [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md); patterns: [INSTALLER.md](INSTALLER.md), [WISO.md](WISO.md), [STEAM-WRAPPER.md](STEAM-WRAPPER.md), [TRAINER.md](TRAINER.md) |
-| **Maintainers** | [maintainer/](../maintainer/) |
+| **Users** | [Quick start](GETTING-STARTED.md) · [User guide](USER-GUIDE.md) · [Catalog](CATALOG.md) |
+| **Recipe developers** | [ENTWICKLER.md](ENTWICKLER.md) → [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) · [Core API](CORE-API.md) |
+| **Maintainers** | [maintainer/](maintainer/RELEASE.md) |
 
 ## Files
 
 | File | Contents |
 |------|----------|
-| [ENTWICKLER.md](ENTWICKLER.md) | Quick start, layout, recipe types (portable/installer/Steam/trainer) |
-| [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | Deep reference `recipe.yml` / `install_steps` |
-| [RECIPES.md](RECIPES.md) | Points to ENTWICKLER.md |
-| [INSTALLER.md](INSTALLER.md) | Pattern: offline installer (`photoshop`) |
-| [WISO.md](WISO.md) | Pattern: portable |
-| [STEAM-WRAPPER.md](STEAM-WRAPPER.md) | Pattern: Steam + online fix |
-| [TRAINER.md](TRAINER.md) | Pattern: single EXE / trainer |
-| [I18N.md](I18N.md) | Translations |
-| [BRAND.md](BRAND.md) | Brand / UI tokens |
-| [CATALOG.md](CATALOG.md) | Catalog / sources |
+| [GETTING-STARTED.md](GETTING-STARTED.md) | Install, first steps |
+| [USER-GUIDE.md](USER-GUIDE.md) | GUI, settings, lifecycle |
+| [ENTWICKLER.md](ENTWICKLER.md) | Author quick start, recipe types |
+| [PROJECT-LAYOUT.md](PROJECT-LAYOUT.md) | Repo & recipe layout |
+| [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | `recipe.yml` / `install_steps` |
+| [CORE-API.md](CORE-API.md) | Precise `core/` modules |
+| [VALIDATE-REPAIR.md](VALIDATE-REPAIR.md) | Validate/repair contract |
+| [UNINSTALL.md](UNINSTALL.md) | Purge / uninstall |
+| [TRUST.md](TRUST.md) | Catalog + manifest |
+| [LAUNCHER.md](LAUNCHER.md) | GUI architecture |
+| [LOG-PROTOCOL.md](LOG-PROTOCOL.md) | `@step:` / error codes |
+| [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) | Patterns |
+| [I18N.md](I18N.md) · [BRAND.md](BRAND.md) · [CONTRIBUTING.md](CONTRIBUTING.md) | i18n, brand, contributing |
 
-German: [../de/README.md](../de/README.md)
+Site home: [index.md](index.md) · German: matching files under `docs/de/`.

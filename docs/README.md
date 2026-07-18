@@ -1,16 +1,14 @@
-# Rezeptor — Dokumentation
+# Rezeptor documentation source
 
-Dokumentation ist **zweisprachig** und nach Zielgruppe getrennt:
+Bilingual MkDocs Material site (`docs/de/`, `docs/en/`).
 
-| Pfad | Inhalt |
-|------|--------|
-| [de/](de/) | Autor-/User-Doku (Deutsch) |
-| [en/](en/) | Author/user docs (English) |
-| [maintainer/de/](maintainer/de/) | Interne Maintainer-Notizen (DE) |
-| [maintainer/en/](maintainer/en/) | Internal maintainer notes (EN) |
+- Config: `/mkdocs.yml`
+- Deps: `/requirements-docs.txt`
+- Deploy: `.github/workflows/docs.yml` → https://benjarogit.github.io/rezeptor/
 
-Einstieg Autoren: [de/ENTWICKLER.md](de/ENTWICKLER.md) · [en/ENTWICKLER.md](en/ENTWICKLER.md)
+```bash
+pip install -r requirements-docs.txt
+mkdocs serve
+```
 
-Übersetzungen beitragen: [CONTRIBUTING-TRANSLATIONS.md](CONTRIBUTING-TRANSLATIONS.md)
-
-Im **Rezeptor-GUI**: Hilfe → Entwickler-Dokumentation… listet nur Autor-Doku unter `docs/{locale}/` (kein Maintainer-Katalog).
+Author docs are also available in-app via **Help → Developer documentation…** (`launcher/ui_docs.py`).

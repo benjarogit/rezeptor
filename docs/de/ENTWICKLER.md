@@ -5,8 +5,12 @@
 | Dokument | Rolle |
 |----------|--------|
 | **Diese Seite** | Schnellstart, Struktur, Rezept-Typen |
-| [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | Tiefenreferenz: Felder, `install_steps`, `version_detect`, API |
-| **Muster-Referenzen** (mitgeliefert) | [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) |
+| [PROJECT-LAYOUT.md](PROJECT-LAYOUT.md) | Repo-, `recipes/`- und `core/`-Layout |
+| [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | Tiefenreferenz: Felder, `install_steps`, `version_detect` |
+| [CORE-API.md](CORE-API.md) | Präzise `core/`-APIs (Hooks, Prefix, Winetricks, …) |
+| [VALIDATE-REPAIR.md](VALIDATE-REPAIR.md) · [UNINSTALL.md](UNINSTALL.md) | Lifecycle-Verträge |
+| [TRUST.md](TRUST.md) · [LOG-PROTOCOL.md](LOG-PROTOCOL.md) · [LAUNCHER.md](LAUNCHER.md) | Manifest, Logs, GUI |
+| **Muster-Referenzen** | [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) |
 
 ---
 
@@ -88,4 +92,4 @@ Vorlagen: `recipes/_template/` (Portable), `recipes/_template-installer/`, ggf. 
 
 Vollständige Spezifikation → **[RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)**
 
-Hilfe in der App: **Hilfe → Entwickler-Dokumentation…** · Übersetzungen: [CONTRIBUTING-TRANSLATIONS.md](../CONTRIBUTING-TRANSLATIONS.md)
+Hilfe in der App: **Hilfe → Entwickler-Dokumentation…** · Übersetzungen: [CONTRIBUTING-TRANSLATIONS.md](CONTRIBUTING-TRANSLATIONS.md)

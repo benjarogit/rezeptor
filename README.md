@@ -43,8 +43,8 @@ Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`t
 
 ### → [Rezeptor Docs](https://benjarogit.github.io/rezeptor/)
 
-- [English](https://benjarogit.github.io/rezeptor/en/README/) · [Deutsch](https://benjarogit.github.io/rezeptor/de/README/)
-- Local: `docs/` — `pip install -r requirements-docs.txt && mkdocs serve`
+- [Deutsch](https://benjarogit.github.io/rezeptor/) · [English](https://benjarogit.github.io/rezeptor/en/)
+- Local: `pip install -r requirements-docs.txt && mkdocs serve`
 
 ## Recipes
 

@@ -4,7 +4,7 @@
 
 **Data root:** `~/.local/share/wine-software/`  
 **Logs:** `~/.local/share/wine-software/logs/`  
-**Issue template:** [bug_report.md](../../.github/ISSUE_TEMPLATE/bug_report.md)
+**Issue template:** [bug_report.md](https://github.com/benjarogit/rezeptor/blob/main/.github/ISSUE_TEMPLATE/bug_report.md)
 
 ---
 

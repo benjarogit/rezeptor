@@ -155,7 +155,7 @@ Version: …
 
 **Writing style:** professional and clear, easy to read, business tone — accessible for beginners. Keep structure and meaning; only smooth wording. Use technical terms only when needed, with a short explanation. Do not expand the content.
 
-Schema: [`recipes/recipe.schema.json`](../../recipes/recipe.schema.json).
+Schema: [`recipes/recipe.schema.json`](https://github.com/benjarogit/rezeptor/blob/main/recipes/recipe.schema.json).
 
 **Portable:**
 
@@ -234,17 +234,23 @@ Forbidden (lint ERROR): `winetricks dxvk`, system-Wine fallback, duplicate win10
 
 ## GPU graphics apps
 
-See [GPU-EXPERIMENTS.md](../maintainer/en/GPU-EXPERIMENTS.md), [HANDOFF-PHOTOSHOP-GPU.md](../maintainer/en/HANDOFF-PHOTOSHOP-GPU.md).  
+See [GPU-EXPERIMENTS.md](maintainer/GPU-EXPERIMENTS.md), [HANDOFF-PHOTOSHOP-GPU.md](maintainer/HANDOFF-PHOTOSHOP-GPU.md).  
 DXVK only via `wine_runtime::deploy_proton_graphics_dlls` — **no** winetricks-dxvk.
 
 ---
 
 ## Core modules
 
+Full API: **[CORE-API.md](CORE-API.md)**. Short:
+
 | File | Role |
 |------|------|
-| `recipe-hooks.sh` | Hook entry |
+| `recipe-hooks.sh` | Hook entry + `purge_recipe_data` |
 | `recipe-install-steps.sh` | Declarative install |
 | `recipe-install.sh` | prepare_source / apply_fix |
+| `recipe-prefix.sh` / `recipe-winetricks.sh` / `recipe-win10.sh` | Prefix, winetricks (retry 139), Win10 |
+| `recipe-validate.sh` | OK/FAIL/WARN helpers |
 | `recipe-<id>.sh` | App logic |
-| `wine-runtime.sh` | Proton-GE |
+| `wine-runtime.sh` | Proton-GE + graphics DLLs |
+
+Lifecycle: [VALIDATE-REPAIR.md](VALIDATE-REPAIR.md) · [UNINSTALL.md](UNINSTALL.md) · [LOG-PROTOCOL.md](LOG-PROTOCOL.md)

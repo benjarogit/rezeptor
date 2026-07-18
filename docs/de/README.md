@@ -2,23 +2,26 @@
 
 | Zielgruppe | Einstieg |
 |------------|----------|
-| **Nutzer** | App-Hilfe, [CATALOG.md](CATALOG.md) |
-| **Rezept-Entwickler** | [ENTWICKLER.md](ENTWICKLER.md) → [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md); Muster: [INSTALLER.md](INSTALLER.md), [WISO.md](WISO.md), [STEAM-WRAPPER.md](STEAM-WRAPPER.md), [TRAINER.md](TRAINER.md) |
-| **Maintainer** | [maintainer/](../maintainer/) |
+| **Nutzer** | [Schnellstart](GETTING-STARTED.md) · [Benutzerhandbuch](USER-GUIDE.md) · [Katalog](CATALOG.md) |
+| **Rezept-Entwickler** | [ENTWICKLER.md](ENTWICKLER.md) → [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) · [Core-API](CORE-API.md) |
+| **Maintainer** | [maintainer/](maintainer/RELEASE.md) |
 
 ## Dateien
 
 | Datei | Inhalt |
 |-------|--------|
-| [ENTWICKLER.md](ENTWICKLER.md) | Schnellstart, Struktur, Rezept-Typen (Portable/Installer/Steam/Trainer) |
-| [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | Tiefenreferenz `recipe.yml` / `install_steps` |
-| [RECIPES.md](RECIPES.md) | Verweis → ENTWICKLER.md |
-| [INSTALLER.md](INSTALLER.md) | Muster: Offline-Installer (`photoshop`) |
-| [WISO.md](WISO.md) | Muster: Portable |
-| [STEAM-WRAPPER.md](STEAM-WRAPPER.md) | Muster: Steam + Online-Fix |
-| [TRAINER.md](TRAINER.md) | Muster: Einzel-EXE / Trainer |
-| [I18N.md](I18N.md) | Übersetzungen |
-| [BRAND.md](BRAND.md) | Marke / UI-Tokens |
-| [CATALOG.md](CATALOG.md) | Katalog / Quellen |
+| [GETTING-STARTED.md](GETTING-STARTED.md) | Installation, erste Schritte |
+| [USER-GUIDE.md](USER-GUIDE.md) | GUI, Einstellungen, Lifecycle |
+| [ENTWICKLER.md](ENTWICKLER.md) | Schnellstart Autoren, Rezept-Typen |
+| [PROJECT-LAYOUT.md](PROJECT-LAYOUT.md) | Repo- & Rezeptstruktur |
+| [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | `recipe.yml` / `install_steps` |
+| [CORE-API.md](CORE-API.md) | `core/`-Module präzise |
+| [VALIDATE-REPAIR.md](VALIDATE-REPAIR.md) | Validate/Repair-Vertrag |
+| [UNINSTALL.md](UNINSTALL.md) | Purge / Deinstall |
+| [TRUST.md](TRUST.md) | Katalog + Manifest |
+| [LAUNCHER.md](LAUNCHER.md) | GUI-Architektur |
+| [LOG-PROTOCOL.md](LOG-PROTOCOL.md) | `@step:` / Fehlercodes |
+| [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) | Muster |
+| [I18N.md](I18N.md) · [BRAND.md](BRAND.md) · [CONTRIBUTING.md](CONTRIBUTING.md) | i18n, Marke, Mitwirken |
 
-Englisch: [../en/README.md](../en/README.md)
+Site-Startseite: [index.md](index.md) · Englisch: entsprechende Dateien unter `docs/en/`.

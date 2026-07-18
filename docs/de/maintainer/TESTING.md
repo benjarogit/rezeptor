@@ -1,6 +1,6 @@
 # Test-Matrix — Rezeptor, einheitlicher Daten-Root
 
-Schritt-für-Schritt-QA: **[TEST-PLAN.md](TEST-PLAN.md)**. Englische Vollversion: [maintainer/en/TEST-PLAN.md](../en/TEST-PLAN.md).
+Schritt-für-Schritt-QA: **[TEST-PLAN.md](TEST-PLAN.md)**. Englisch: Sprachumschalter oben rechts (**EN**).
 
 | Rezept | Runtime | Smoke |
 |--------|---------|-------|

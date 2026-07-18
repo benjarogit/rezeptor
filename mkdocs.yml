@@ -1,104 +1,216 @@
-site_name: Rezeptor Docs
+# MkDocs Material — Rezeptor
+# Style oriented on https://squidfunk.github.io/mkdocs-material/
+# Reference layout: https://benjarogit.github.io/simple-woltlab-plugin-manager/
+# Build: pip install -r requirements-docs.txt && mkdocs serve
+# Site: https://benjarogit.github.io/rezeptor/
+
+site_name: Rezeptor · Dokumentation
 site_description: >-
-  Offizielles Rezeptor-Wiki — Rezepte, Autoren-Doku und Maintainer-Notizen für
-  Windows-Software unter Proton-GE auf Linux.
+  Offizielles Handbuch für Rezeptor — Rezepte, Autoren-Doku und Maintainer-Notizen
+  für Windows-Software unter Proton-GE auf Linux.
 site_url: https://benjarogit.github.io/rezeptor/
+site_author: SunnyCueq
 repo_url: https://github.com/benjarogit/rezeptor
 repo_name: benjarogit/rezeptor
 edit_uri: edit/main/docs/
+docs_dir: docs
+site_dir: site
+copyright: Copyright &copy; Rezeptor contributors — GPL-2.0
 
 theme:
   name: material
   language: de
   logo: assets/rezeptor-icon.svg
   favicon: assets/rezeptor-icon.svg
-  features:
-    - navigation.tabs
-    - navigation.sections
-    - navigation.top
-    - search.suggest
-    - search.highlight
-    - content.code.copy
+  font:
+    text: Roboto
+    code: Roboto Mono
+  icon:
+    repo: fontawesome/brands/github
+    edit: material/pencil-outline
+    view: material/eye-outline
+    admonition:
+      note: material/information-outline
+      tip: material/fire
+      warning: material/alert-outline
   palette:
-    - scheme: default
+    - media: "(prefers-color-scheme)"
+      toggle:
+        icon: material/brightness-auto
+        name: Zum hellen Modus
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
       primary: custom
       accent: custom
       toggle:
         icon: material/brightness-7
-        name: Dunkles Theme
-    - scheme: slate
+        name: Zum dunklen Modus
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
       primary: custom
       accent: custom
       toggle:
         icon: material/brightness-4
-        name: Helles Theme
+        name: Systemeinstellung
+  features:
+    # navigation.instant incompatible with mkdocs-static-i18n language switcher
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.top
+    - navigation.footer
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.tabs.link
+    - content.code.copy
+    - content.code.annotate
+    - content.action.edit
+    - content.action.view
+    - content.tooltips
+    - toc.follow
 
 plugins:
   - search:
       lang:
         - de
         - en
+  - i18n:
+      docs_structure: folder
+      fallback_to_default: true
+      reconfigure_material: true
+      languages:
+        - locale: de
+          name: Deutsch
+          default: true
+          build: true
+          site_name: Rezeptor · Dokumentation
+          site_description: >-
+            Offizielles Handbuch für Rezeptor — Rezepte, Autoren-Doku und
+            Maintainer-Notizen für Windows-Software unter Proton-GE auf Linux.
+        - locale: en
+          name: English
+          build: true
+          site_name: Rezeptor · Documentation
+          site_description: >-
+            Official handbook for Rezeptor — recipes, author docs and maintainer
+            notes for Windows software under Proton-GE on Linux.
+          nav_translations:
+            Start: Home
+            Benutzer: User
+            Schnellstart: Quick start
+            Benutzerhandbuch: User guide
+            Rezept-Katalog: Recipe catalog
+            Entwickeln: Develop
+            Übersicht: Overview
+            Rezepte (Verweis): Recipes (pointer)
+            Projektstruktur: Project layout
+            Rezept schreiben: Recipe authoring
+            Core-API: Core API
+            Validate & Repair: Validate & repair
+            Deinstallation: Uninstall
+            Trust & Manifest: Trust & manifest
+            GUI-Launcher: GUI launcher
+            Log-Protokoll: Log protocol
+            Muster: Patterns
+            Offline-Installer: Offline installer
+            Portable (WISO): Portable (WISO)
+            Steam + Online-Fix: Steam + online fix
+            Trainer / Einzel-EXE: Trainer / single EXE
+            Beitrag: Contribute
+            Mitwirken: Contributing
+            Übersetzungen: Translations
+            Internationalisierung: Internationalization
+            Marke: Brand
+            Maintainer: Maintainer
+            Release & AppImage: Release & AppImage
+            Release-QA: Release QA
+            Manual QA: Manual QA
+            Testplan: Test plan
+            Testing: Testing
+            GPU-Experimente: GPU experiments
+            Photoshop GPU Handoff: Photoshop GPU handoff
+
+nav:
+  - Start: index.md
+  - Benutzer:
+      - Schnellstart: GETTING-STARTED.md
+      - Benutzerhandbuch: USER-GUIDE.md
+      - Rezept-Katalog: CATALOG.md
+  - Entwickeln:
+      - Übersicht: ENTWICKLER.md
+      - Rezepte (Verweis): RECIPES.md
+      - Projektstruktur: PROJECT-LAYOUT.md
+      - Rezept schreiben: RECIPE-AUTHORING.md
+      - Core-API: CORE-API.md
+      - Validate & Repair: VALIDATE-REPAIR.md
+      - Deinstallation: UNINSTALL.md
+      - Trust & Manifest: TRUST.md
+      - GUI-Launcher: LAUNCHER.md
+      - Log-Protokoll: LOG-PROTOCOL.md
+  - Muster:
+      - Offline-Installer: INSTALLER.md
+      - Portable (WISO): WISO.md
+      - Steam + Online-Fix: STEAM-WRAPPER.md
+      - Trainer / Einzel-EXE: TRAINER.md
+  - Beitrag:
+      - Mitwirken: CONTRIBUTING.md
+      - Übersetzungen: CONTRIBUTING-TRANSLATIONS.md
+      - Internationalisierung: I18N.md
+      - Marke: BRAND.md
+  - Maintainer:
+      - Release & AppImage: maintainer/RELEASE.md
+      - Release-QA: maintainer/RELEASE-QA.md
+      - Manual QA: maintainer/MANUAL-QA.md
+      - Testplan: maintainer/TEST-PLAN.md
+      - Testing: maintainer/TESTING.md
+      - GPU-Experimente: maintainer/GPU-EXPERIMENTS.md
+      - Photoshop GPU Handoff: maintainer/HANDOFF-PHOTOSHOP-GPU.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - def_list
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra_css:
+  - stylesheets/extra.css
 
 extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/benjarogit/rezeptor
-  alternate:
-    - name: Deutsch
-      link: /rezeptor/de/README/
-      lang: de
-    - name: English
-      link: /rezeptor/en/README/
-      lang: en
+      name: GitHub
+    - icon: fontawesome/solid/download
+      link: https://github.com/benjarogit/rezeptor/releases
+      name: Releases
 
-extra_css:
-  - stylesheets/extra.css
-
-nav:
-  - Start: index.md
-  - Deutsch:
-      - Übersicht: de/README.md
-      - Rezept-Katalog: de/CATALOG.md
-      - Steam-Wrapper: de/STEAM-WRAPPER.md
-      - Für Autoren:
-          - Schnellstart: de/ENTWICKLER.md
-          - Rezept schreiben: de/RECIPE-AUTHORING.md
-          - Rezepte & Workflow: de/RECIPES.md
-          - Referenz WISO: de/WISO.md
-          - Internationalisierung: de/I18N.md
-          - Marke: de/BRAND.md
-  - English:
-      - Overview: en/README.md
-      - Recipe catalog: en/CATALOG.md
-      - Steam wrapper: en/STEAM-WRAPPER.md
-      - For authors:
-          - Quick start: en/ENTWICKLER.md
-          - Recipe authoring: en/RECIPE-AUTHORING.md
-          - Recipes & workflow: en/RECIPES.md
-          - WISO reference: en/WISO.md
-          - Internationalization: en/I18N.md
-          - Brand: en/BRAND.md
-  - Maintainer:
-      - Deutsch:
-          - QA-Handbuch: maintainer/de/MANUAL-QA.md
-          - Testplan: maintainer/de/TEST-PLAN.md
-          - Testing: maintainer/de/TESTING.md
-          - GPU-Experimente: maintainer/de/GPU-EXPERIMENTS.md
-          - Photoshop GPU Handoff: maintainer/de/HANDOFF-PHOTOSHOP-GPU.md
-      - English:
-          - GPU experiments: maintainer/en/GPU-EXPERIMENTS.md
-          - Photoshop GPU handoff: maintainer/en/HANDOFF-PHOTOSHOP-GPU.md
-          - Test plan: maintainer/en/TEST-PLAN.md
-          - Testing: maintainer/en/TESTING.md
-  - Übersetzungen: CONTRIBUTING-TRANSLATIONS.md
-
-markdown_extensions:
-  - admonition
-  - pymdownx.details
-  - pymdownx.superfences
-  - pymdownx.highlight
-  - pymdownx.tabbed:
-      alternate_style: true
-  - tables
-  - toc:
-      permalink: true
+exclude_docs: |
+  Archiv.zip
+  README.md

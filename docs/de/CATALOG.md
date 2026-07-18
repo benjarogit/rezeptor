@@ -50,4 +50,4 @@ Portable Ordner oder Steam-Spiele **außerhalb** von `data_root` bleiben bei Dei
 Alle Rezepte setzen **Proton-GE** voraus (`core/runtime.lock`). Kein System-Wine-Fallback in Rezept-Skripten.
 Grafik-DLLs kommen über `wine_runtime::deploy_proton_graphics_dlls()` — kein winetricks-dxvk.
 
-Weitere Details: [ENTWICKLER.md](ENTWICKLER.md) · [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)
+Weitere Details: [ENTWICKLER.md](ENTWICKLER.md) · [TRUST.md](TRUST.md) · [UNINSTALL.md](UNINSTALL.md)

@@ -4,9 +4,9 @@
 
 **Daten-Root:** `~/.local/share/wine-software/`  
 **Logs:** `~/.local/share/wine-software/logs/`  
-**Issue-Vorlage:** [bug_report.md](../../.github/ISSUE_TEMPLATE/bug_report.md)
+**Issue-Vorlage:** [bug_report.md](https://github.com/benjarogit/rezeptor/blob/main/.github/ISSUE_TEMPLATE/bug_report.md)
 
-Englische Version: [maintainer/en/TEST-PLAN.md](../en/TEST-PLAN.md)
+Englisch: Sprachumschalter oben rechts (**EN**).
 
 ---
 

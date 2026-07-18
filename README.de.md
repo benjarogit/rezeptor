@@ -43,8 +43,8 @@ Oder ein **[Release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz
 
 ### → [Rezeptor Docs](https://benjarogit.github.io/rezeptor/)
 
-- [Deutsch](https://benjarogit.github.io/rezeptor/de/README/) · [English](https://benjarogit.github.io/rezeptor/en/README/)
-- Lokal: `docs/` — `pip install -r requirements-docs.txt && mkdocs serve`
+- [Deutsch](https://benjarogit.github.io/rezeptor/) · [English](https://benjarogit.github.io/rezeptor/en/)
+- Lokal: `pip install -r requirements-docs.txt && mkdocs serve`
 
 ## Rezepte
 

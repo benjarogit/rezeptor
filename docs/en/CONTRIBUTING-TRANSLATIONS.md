@@ -20,11 +20,11 @@ Fallback: active locale → `en` → key name.
 |--------|------|
 | German (default) | `docs/de/*.md` |
 | English | `docs/en/*.md` |
-| Maintainer notes | `docs/maintainer/de/`, `docs/maintainer/en/` (not in GUI catalog) |
+| Maintainer notes | `docs/de/maintainer/`, `docs/en/maintainer/` |
 
-- Keep the **same filenames** in both author folders (`ENTWICKLER.md`, `RECIPE-AUTHORING.md`, …).
-- Links between author docs stay **same-folder relative** (`[text](RECIPE-AUTHORING.md)`).
-- Maintainer docs live under `docs/maintainer/{locale}/` and are linked from `docs/{locale}/README.md`.
+- Keep the **same filenames** in both locale folders (`ENTWICKLER.md`, `RECIPE-AUTHORING.md`, …).
+- Links between docs stay **same-folder relative** (`[text](RECIPE-AUTHORING.md)`).
+- Maintainer docs live under `docs/{locale}/maintainer/` and appear in the MkDocs **Maintainer** nav.
 - The GUI viewer picks `docs/{locale}/` from the launcher language setting (author docs only).
 
 ### New language for docs (e.g. French)
@@ -47,4 +47,4 @@ After changes: `./scripts/recipe-manifest.sh`.
 ## Pull request tips
 
 - One language or one area (UI **or** docs) per PR keeps review easy.
-- Do not add Cursor / AI co-author trailers to commits.
+- Do not add editor-agent co-author trailers to commits.
