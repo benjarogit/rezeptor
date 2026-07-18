@@ -156,6 +156,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.validate.outputs.tag }}
           VER: ${{ needs.validate.outputs.version }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
           shopt -s nullglob
@@ -165,11 +167,39 @@ jobs:
             exit 1
           fi
 
-          # Changelog: GitHub Auto-Notes (Commits/PRs seit vorherigem Tag)
-          notes="$(gh api repos/${{ github.repository }}/releases/generate-notes \
+          # Vorheriges Tag (für Changelog-Range)
+          prev="$(gh release list --limit 20 --json tagName,isLatest \
+            -q "[.[] | select(.tagName != \"${TAG}\")][0].tagName" 2>/dev/null || true)"
+          if [ -z "${prev}" ]; then
+            prev="$(git describe --tags --abbrev=0 "${SHA}^" 2>/dev/null || true)"
+          fi
+
+          # 1) GitHub generate-notes (PRs/Conventional, wenn konfiguriert)
+          notes="$(gh api "repos/${REPO}/releases/generate-notes" \
             -f tag_name="$TAG" \
-            -f target_commitish="${{ github.sha }}" \
-            --jq .body)"
+            -f target_commitish="$SHA" \
+            ${prev:+-f previous_tag_name="$prev"} \
+            --jq .body 2>/dev/null || true)"
+
+          # 2) Fallback: Commit-Liste über Compare-API (immer via GitHub)
+          if [ -z "${notes}" ] || [ "${#notes}" -lt 120 ]; then
+            range="${prev:+${prev}...}${TAG}"
+            if [ -n "${prev}" ]; then
+              commits="$(gh api "repos/${REPO}/compare/${prev}...${SHA}" --paginate \
+                --jq '.commits[] | "* \(.commit.message | split("\n")[0])"' 2>/dev/null || true)"
+            else
+              commits=""
+            fi
+            notes="## What's Changed"$'\n\n'
+            if [ -n "${commits}" ]; then
+              notes+="${commits}"$'\n\n'
+            fi
+            if [ -n "${prev}" ]; then
+              notes+="**Full Changelog**: https://github.com/${REPO}/compare/${prev}...${TAG}"
+            else
+              notes+="**Tag**: https://github.com/${REPO}/releases/tag/${TAG}"
+            fi
+          fi
 
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "${files[@]}" --clobber
@@ -182,7 +212,7 @@ jobs:
               --title "Rezeptor ${VER}" \
               --notes "$notes" \
               --latest \
-              --target "${{ github.sha }}"
+              --target "$SHA"
           fi
 
           echo "Published ${TAG} with:"
