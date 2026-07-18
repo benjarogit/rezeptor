@@ -1,7 +1,14 @@
 name: Release
 
+# Automatisch bei VERSION-Bump auf main → Validate + AppImage + GitHub Release (Tag vX.Y.Z).
+# Zusätzlich: manueller Tag-Push v* (gleiche Pipeline).
+#
+# Hinweis: Ein Tag-Push mit GITHUB_TOKEN würde keinen zweiten Workflow starten —
+# deshalb läuft Build/Release im selben Lauf wie der VERSION-Bump.
 on:
   push:
+    branches: [main, master]
+    paths: [VERSION]
     tags:
       - 'v*'
 
@@ -9,40 +16,90 @@ permissions:
   contents: write
 
 jobs:
-  # Gleiche Checks wie CI — nicht ein zweites, strengeres Shellcheck über alle .sh
   validate:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      skip: ${{ steps.skip.outputs.skip }}
     steps:
       - uses: actions/checkout@v4
 
+      - name: Resolve version / tag
+        id: meta
+        run: |
+          set -euo pipefail
+          ver="$(tr -d '[:space:]' < VERSION)"
+          if [[ ! "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-][A-Za-z0-9.]+)?$ ]]; then
+            echo "VERSION invalid: '$ver'" >&2
+            exit 1
+          fi
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            tag="${GITHUB_REF_NAME}"
+            tag_ver="${tag#v}"
+            if [ "$ver" != "$tag_ver" ]; then
+              echo "VERSION ($ver) != tag ($tag_ver)" >&2
+              exit 1
+            fi
+          else
+            tag="v${ver}"
+          fi
+          echo "version=${ver}" >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "Release target: ${tag} (VERSION ${ver})"
+
+      - name: Skip if tag already has AppImage
+        id: skip
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${{ steps.meta.outputs.tag }}"
+          # Release ohne Assets (wie v3.1.0) wird erneut gebaut
+          if gh release view "$tag" --json assets -q '.assets | length' 2>/dev/null | grep -q '^[1-9]'; then
+            echo "Release ${tag} already has assets — skip."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install tools
+        if: steps.skip.outputs.skip != 'true'
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y shellcheck bats python3-yaml
 
       - name: Shellcheck
+        if: steps.skip.outputs.skip != 'true'
         run: make shellcheck
 
       - name: Bash syntax
+        if: steps.skip.outputs.skip != 'true'
         run: make syntax
 
       - name: Python compile
+        if: steps.skip.outputs.skip != 'true'
         run: make compile
 
       - name: Recipe structure
+        if: steps.skip.outputs.skip != 'true'
         run: make recipes-check
 
       - name: Recipe lint
+        if: steps.skip.outputs.skip != 'true'
         run: make recipe-lint
 
       - name: Recipe manifest
+        if: steps.skip.outputs.skip != 'true'
         run: make recipe-manifest-check
 
       - name: Bats tests
+        if: steps.skip.outputs.skip != 'true'
         run: make test
 
   release:
     needs: validate
+    if: needs.validate.outputs.skip != 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,7 +115,6 @@ jobs:
 
       - name: Build AppImage
         env:
-          # GitHub-Runner: oft kein nutzbares FUSE → AppImage extrahieren statt mounten
           APPIMAGE_EXTRACT_AND_RUN: "1"
         run: |
           set -euo pipefail
@@ -73,9 +129,11 @@ jobs:
           fi
           ls -lh "${files[0]}"
 
-      - name: Upload release assets
+      - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.validate.outputs.tag }}
+          name: Rezeptor ${{ needs.validate.outputs.version }}
           files: rezeptor-*-x86_64.AppImage
           generate_release_notes: true
           fail_on_unmatched_files: true
