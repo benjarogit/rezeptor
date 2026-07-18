@@ -79,10 +79,13 @@ GIT_PUSH_READY.md
 CHANGELOG.md
 
 # ============================================================
-# AppImage build artifacts
+# AppImage / Release build artifacts
 # ============================================================
 AppDir-build/
 *.AppImage
+*.AppImage.sha256
+rezeptor-*.tar.gz
+SHA256SUMS
 .cache/proton-ge-build/
 site/
 .cache/

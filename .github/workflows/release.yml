@@ -1,12 +1,14 @@
 name: Release
 
 # Auslöser:
-#   - VERSION auf main ändern → Validate + AppImage + GitHub Release (Tag vX.Y.Z)
+#   - VERSION auf main ändern → Validate + Paket + AppImage + Checksums + GitHub Release
 #   - Tag v* pushen (manuell)
 #   - workflow_dispatch (Rebuild / Notfall)
 #
-# Changelog: GitHub „Generate release notes“ (Commits/PRs seit letztem Tag) —
-# kein manuelles CHANGELOG.md nötig.
+# Assets pro Release:
+#   - rezeptor-X.Y.Z.tar.gz          (Quell-/Setup-Paket)
+#   - rezeptor-X.Y.Z-x86_64.AppImage (portable)
+#   - SHA256SUMS                     (Prüfung: sha256sum -c SHA256SUMS)
 on:
   push:
     branches: [main, master]
@@ -15,7 +17,7 @@ on:
   workflow_dispatch:
     inputs:
       force:
-        description: 'Rebuild even if release already has assets'
+        description: 'Rebuild even if release already has complete assets'
         type: boolean
         default: false
 
@@ -57,11 +59,12 @@ jobs:
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "Release target: ${tag} (VERSION ${ver})"
 
-      - name: Skip if AppImage already published
+      - name: Skip if complete assets already published
         id: skip
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
+          VER: ${{ steps.meta.outputs.version }}
         run: |
           set -euo pipefail
           tag="${{ steps.meta.outputs.tag }}"
@@ -70,12 +73,19 @@ jobs:
             echo "skip=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          # Release ohne Assets (z. B. altes v3.1.0) wird gebaut
-          count="$(gh release view "$tag" --json assets -q '.assets | length' 2>/dev/null || echo 0)"
-          if [ "${count}" != "0" ] && [ "${count}" != "" ]; then
-            echo "Release ${tag} already has ${count} asset(s) — skip."
+          names="$(gh release view "$tag" --json assets -q '.assets[].name' 2>/dev/null || true)"
+          need_app="rezeptor-${VER}-x86_64.AppImage"
+          need_tar="rezeptor-${VER}.tar.gz"
+          need_sum="SHA256SUMS"
+          ok=true
+          echo "$names" | grep -qxF "$need_app" || ok=false
+          echo "$names" | grep -qxF "$need_tar" || ok=false
+          echo "$names" | grep -qxF "$need_sum" || ok=false
+          if [ "$ok" = true ]; then
+            echo "Release ${tag} already complete — skip."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
+            echo "Missing assets (need AppImage + tar.gz + SHA256SUMS) — build."
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -134,6 +144,13 @@ jobs:
             https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x .cache/appimagetool/appimagetool-x86_64.AppImage
 
+      - name: Build source package (tar.gz)
+        run: |
+          set -euo pipefail
+          chmod +x scripts/build-release-package.sh
+          scripts/build-release-package.sh
+          test -f "rezeptor-${{ needs.validate.outputs.version }}.tar.gz"
+
       - name: Build AppImage
         env:
           APPIMAGE_EXTRACT_AND_RUN: "1"
@@ -149,7 +166,17 @@ jobs:
             exit 1
           fi
           ls -lh "${files[0]}"
-          sha256sum "${files[0]}" | tee "${files[0]}.sha256"
+
+      - name: Write SHA256SUMS
+        run: |
+          set -euo pipefail
+          ver="${{ needs.validate.outputs.version }}"
+          # SHA256 (stärker als MD5) — prüfen mit: sha256sum -c SHA256SUMS
+          sha256sum \
+            "rezeptor-${ver}.tar.gz" \
+            "rezeptor-${ver}-x86_64.AppImage" \
+            | tee SHA256SUMS
+          cat SHA256SUMS
 
       - name: Publish GitHub Release + notes
         env:
@@ -160,30 +187,28 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          shopt -s nullglob
-          files=(rezeptor-*-x86_64.AppImage rezeptor-*-x86_64.AppImage.sha256)
-          if [ "${#files[@]}" -lt 1 ]; then
-            echo "No AppImage artifacts" >&2
-            exit 1
-          fi
+          assets=(
+            "rezeptor-${VER}.tar.gz"
+            "rezeptor-${VER}-x86_64.AppImage"
+            "SHA256SUMS"
+          )
+          for f in "${assets[@]}"; do
+            [ -f "$f" ] || { echo "Missing $f" >&2; exit 1; }
+          done
 
-          # Vorheriges Tag (für Changelog-Range)
           prev="$(gh release list --limit 20 --json tagName,isLatest \
             -q "[.[] | select(.tagName != \"${TAG}\")][0].tagName" 2>/dev/null || true)"
           if [ -z "${prev}" ]; then
             prev="$(git describe --tags --abbrev=0 "${SHA}^" 2>/dev/null || true)"
           fi
 
-          # 1) GitHub generate-notes (PRs/Conventional, wenn konfiguriert)
           notes="$(gh api "repos/${REPO}/releases/generate-notes" \
             -f tag_name="$TAG" \
             -f target_commitish="$SHA" \
             ${prev:+-f previous_tag_name="$prev"} \
             --jq .body 2>/dev/null || true)"
 
-          # 2) Fallback: Commit-Liste über Compare-API (immer via GitHub)
           if [ -z "${notes}" ] || [ "${#notes}" -lt 120 ]; then
-            range="${prev:+${prev}...}${TAG}"
             if [ -n "${prev}" ]; then
               commits="$(gh api "repos/${REPO}/compare/${prev}...${SHA}" --paginate \
                 --jq '.commits[] | "* \(.commit.message | split("\n")[0])"' 2>/dev/null || true)"
@@ -201,14 +226,21 @@ jobs:
             fi
           fi
 
+          notes+=$'\n\n## Downloads\n\n'
+          notes+='- `rezeptor-'"${VER}"'.tar.gz` — Quellpaket (`tar xf` → `./setup.sh`)'$'\n'
+          notes+='- `rezeptor-'"${VER}"'-x86_64.AppImage` — portable App'$'\n'
+          notes+='- `SHA256SUMS` — Integrität prüfen: `sha256sum -c SHA256SUMS`'$'\n'
+
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "${files[@]}" --clobber
+            gh release upload "$TAG" "${assets[@]}" --clobber
+            # Alte Einzel-.sha256 entfernen falls vorhanden
+            gh release delete-asset "$TAG" "rezeptor-${VER}-x86_64.AppImage.sha256" --yes 2>/dev/null || true
             gh release edit "$TAG" \
               --title "Rezeptor ${VER}" \
               --notes "$notes" \
               --latest
           else
-            gh release create "$TAG" "${files[@]}" \
+            gh release create "$TAG" "${assets[@]}" \
               --title "Rezeptor ${VER}" \
               --notes "$notes" \
               --latest \
