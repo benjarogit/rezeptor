@@ -18,7 +18,8 @@ recipe_deploy::sync_portable() {
     fi
 
     case "$mode" in
-        link)
+        link|inplace)
+            # inplace: legacy schema alias — use source in place (no copy)
             echo "$src_real"
             return 0
             ;;

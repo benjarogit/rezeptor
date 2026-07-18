@@ -83,7 +83,7 @@
     "source_formats": { "type": "string" },
     "source_label": { "type": "string" },
     "installer_dir": { "type": "string" },
-    "deploy_mode": { "enum": ["copy", "link", "inplace"] },
+    "deploy_mode": { "enum": ["copy", "link", "move"] },
     "target_default": { "type": "string" },
     "target_label": { "type": "string" },
     "portable_root": { "type": "string" },

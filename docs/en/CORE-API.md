@@ -163,10 +163,10 @@ Marker: `$DATA_ROOT/.rezeptor-desktop`.
 
 | Function | Role |
 |----------|------|
-| `recipe_deploy::sync_portable <src> <dst> <mode>` | Runtime: `copy` (default), `move`, `link` |
+| `recipe_deploy::sync_portable <src> <dst> <mode>` | `copy` (default), `move`, `link` (`inplace` = legacy alias for `link`) |
 | `recipe_deploy::detect_installer <dir>` | Find setup / largest EXE |
 
-`recipe.yml` / schema allow `deploy_mode: copy|link|inplace`; deploy code implements **`move`** instead of `inplace`. Typical portable: `copy` or `link` (Steam).
+Schema/`recipe.yml`: `deploy_mode: copy|link|move`. Typical portable: `copy` or `link` (Steam).
 
 ---
 
