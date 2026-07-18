@@ -1,16 +1,23 @@
 name: Release
 
-# Automatisch bei VERSION-Bump auf main → Validate + AppImage + GitHub Release (Tag vX.Y.Z).
-# Zusätzlich: manueller Tag-Push v* (gleiche Pipeline).
+# Auslöser:
+#   - VERSION auf main ändern → Validate + AppImage + GitHub Release (Tag vX.Y.Z)
+#   - Tag v* pushen (manuell)
+#   - workflow_dispatch (Rebuild / Notfall)
 #
-# Hinweis: Ein Tag-Push mit GITHUB_TOKEN würde keinen zweiten Workflow starten —
-# deshalb läuft Build/Release im selben Lauf wie der VERSION-Bump.
+# Changelog: GitHub „Generate release notes“ (Commits/PRs seit letztem Tag) —
+# kein manuelles CHANGELOG.md nötig.
 on:
   push:
     branches: [main, master]
     paths: [VERSION]
-    tags:
-      - 'v*'
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Rebuild even if release already has assets'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -24,6 +31,8 @@ jobs:
       skip: ${{ steps.skip.outputs.skip }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Resolve version / tag
         id: meta
@@ -48,16 +57,23 @@ jobs:
           echo "tag=${tag}" >> "$GITHUB_OUTPUT"
           echo "Release target: ${tag} (VERSION ${ver})"
 
-      - name: Skip if tag already has AppImage
+      - name: Skip if AppImage already published
         id: skip
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && inputs.force }}
         run: |
           set -euo pipefail
           tag="${{ steps.meta.outputs.tag }}"
-          # Release ohne Assets (wie v3.1.0) wird erneut gebaut
-          if gh release view "$tag" --json assets -q '.assets | length' 2>/dev/null | grep -q '^[1-9]'; then
-            echo "Release ${tag} already has assets — skip."
+          if [ "${FORCE}" = "true" ]; then
+            echo "Force rebuild requested."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # Release ohne Assets (z. B. altes v3.1.0) wird gebaut
+          count="$(gh release view "$tag" --json assets -q '.assets | length' 2>/dev/null || echo 0)"
+          if [ "${count}" != "0" ] && [ "${count}" != "" ]; then
+            echo "Release ${tag} already has ${count} asset(s) — skip."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -103,6 +119,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install build tools
         run: |
@@ -128,12 +146,41 @@ jobs:
             exit 1
           fi
           ls -lh "${files[0]}"
+          sha256sum "${files[0]}" | tee "${files[0]}.sha256"
 
-      - name: Publish GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.validate.outputs.tag }}
-          name: Rezeptor ${{ needs.validate.outputs.version }}
-          files: rezeptor-*-x86_64.AppImage
-          generate_release_notes: true
-          fail_on_unmatched_files: true
+      - name: Publish GitHub Release + notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          VER: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(rezeptor-*-x86_64.AppImage rezeptor-*-x86_64.AppImage.sha256)
+          if [ "${#files[@]}" -lt 1 ]; then
+            echo "No AppImage artifacts" >&2
+            exit 1
+          fi
+
+          # Changelog: GitHub Auto-Notes (Commits/PRs seit vorherigem Tag)
+          notes="$(gh api repos/${{ github.repository }}/releases/generate-notes \
+            -f tag_name="$TAG" \
+            -f target_commitish="${{ github.sha }}" \
+            --jq .body)"
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "${files[@]}" --clobber
+            gh release edit "$TAG" \
+              --title "Rezeptor ${VER}" \
+              --notes "$notes" \
+              --latest
+          else
+            gh release create "$TAG" "${files[@]}" \
+              --title "Rezeptor ${VER}" \
+              --notes "$notes" \
+              --latest \
+              --target "${{ github.sha }}"
+          fi
+
+          echo "Published ${TAG} with:"
+          gh release view "$TAG" --json assets -q '.assets[].name'
