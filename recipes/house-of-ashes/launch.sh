@@ -59,6 +59,11 @@ if [ -z "$compat" ] || [ ! -d "$compat" ]; then
     compat="$steam_root/steamapps/compatdata/${appid}"
 fi
 if [ -z "$proton" ] || [ ! -f "$proton" ]; then
+    if type wine_runtime::resolve_compatdata_proton_script >/dev/null 2>&1; then
+        proton="$(wine_runtime::resolve_compatdata_proton_script "$steam_root" "$compat" 2>/dev/null || true)"
+    fi
+fi
+if [ -z "$proton" ] || [ ! -f "$proton" ]; then
     if type wine_runtime::resolve_proton_script >/dev/null 2>&1; then
         proton="$(wine_runtime::resolve_proton_script "$steam_root" 2>/dev/null || true)"
     fi

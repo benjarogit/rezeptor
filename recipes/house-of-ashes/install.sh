@@ -149,8 +149,13 @@ if [ -z "$compat" ] && [ -f "$steam_root/steamapps/libraryfolders.vdf" ]; then
 fi
 
 proton=""
-if type wine_runtime::resolve_proton_script >/dev/null 2>&1; then
-    proton="$(wine_runtime::resolve_proton_script "$steam_root" 2>/dev/null || true)"
+if type wine_runtime::resolve_compatdata_proton_script >/dev/null 2>&1; then
+    proton="$(wine_runtime::resolve_compatdata_proton_script "$steam_root" "$compat" 2>/dev/null || true)"
+fi
+if [ -z "$proton" ] || [ ! -f "$proton" ]; then
+    if type wine_runtime::resolve_proton_script >/dev/null 2>&1; then
+        proton="$(wine_runtime::resolve_proton_script "$steam_root" 2>/dev/null || true)"
+    fi
 fi
 if [ -z "$proton" ] || [ ! -f "$proton" ]; then
     if compgen -G "$steam_root/compatibilitytools.d/GE-Proton*/proton" >/dev/null 2>&1; then

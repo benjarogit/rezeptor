@@ -250,7 +250,52 @@ wine_runtime::proton_script() {
     echo "$root/proton"
 }
 
-# Steam-/Spiel-Rezepte: Rezeptor Proton-GE zuerst, dann Steam-GE, zuletzt Valve-Proton.
+wine_runtime::_steam_proton_latest() {
+    local steam_root="$1"
+    [ -d "$steam_root" ] || return 1
+    if compgen -G "$steam_root/compatibilitytools.d/GE-Proton*/proton" >/dev/null 2>&1; then
+        ls -1d "$steam_root/compatibilitytools.d"/GE-Proton*/proton 2>/dev/null | sort -V | tail -1
+        return 0
+    fi
+    if compgen -G "$steam_root/steamapps/common/Proton"*/proton >/dev/null 2>&1; then
+        ls -1d "$steam_root/steamapps/common"/Proton*/proton 2>/dev/null | sort -V | tail -1
+        return 0
+    fi
+    return 1
+}
+
+# Steam-compatdata-Rezepte: Prefix-Version aus compatdata/version → passendes Steam-Proton.
+# Rezeptor-GE (runtime.lock) nur Fallback — älteres GE darf Steam-Prefix nicht downgraden.
+wine_runtime::resolve_compatdata_proton_script() {
+    local steam_root="${1:-${STEAM_ROOT:-$HOME/.local/share/Steam}}"
+    local compatdata="${2:-}"
+    local version_tag candidate p
+
+    [ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
+
+    if [ -n "$compatdata" ] && [ -f "$compatdata/version" ]; then
+        version_tag="$(head -n1 "$compatdata/version" | tr -d '[:space:]' || true)"
+        if [ -n "$version_tag" ]; then
+            for candidate in \
+                "$steam_root/compatibilitytools.d/$version_tag/proton" \
+                "$steam_root/steamapps/common/$version_tag/proton"; do
+                if [ -x "$candidate" ]; then
+                    echo "$candidate"
+                    return 0
+                fi
+            done
+        fi
+    fi
+
+    if p="$(wine_runtime::_steam_proton_latest "$steam_root" 2>/dev/null)" && [ -n "$p" ] && [ -x "$p" ]; then
+        echo "$p"
+        return 0
+    fi
+
+    wine_runtime::resolve_proton_script "$steam_root"
+}
+
+# Rezeptor Proton-GE zuerst, dann Steam-GE, zuletzt Valve-Proton (eigene Prefixe).
 wine_runtime::resolve_proton_script() {
     local steam_root="${1:-${STEAM_ROOT:-$HOME/.local/share/Steam}}"
     local p=""
@@ -259,12 +304,8 @@ wine_runtime::resolve_proton_script() {
         return 0
     fi
     [ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
-    if [ -d "$steam_root" ] && compgen -G "$steam_root/compatibilitytools.d/GE-Proton*/proton" >/dev/null 2>&1; then
-        ls -1d "$steam_root/compatibilitytools.d"/GE-Proton*/proton 2>/dev/null | sort -V | tail -1
-        return 0
-    fi
-    if [ -d "$steam_root" ] && compgen -G "$steam_root/steamapps/common/Proton"*/proton >/dev/null 2>&1; then
-        ls -1d "$steam_root/steamapps/common"/Proton*/proton 2>/dev/null | sort -V | tail -1
+    if p="$(wine_runtime::_steam_proton_latest "$steam_root" 2>/dev/null)" && [ -n "$p" ]; then
+        echo "$p"
         return 0
     fi
     return 1
