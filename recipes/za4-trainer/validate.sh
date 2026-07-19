@@ -46,12 +46,13 @@ else
     recipe_validate::warn "compatdata AppID $appid nicht gefunden — Spiel einmal unter Proton starten"
 fi
 
-output::progress_tick "Proton (compatdata)"
+# Rezeptor-GE (wie vor compatdata-Match) — sonst bleibt ein Steam-10-34-Wrapper „grün“
+output::progress_tick "Proton (Rezeptor-GE)"
 steam_root="${STEAM_ROOT:-$HOME/.local/share/Steam}"
 [ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
 expected_proton=""
-if [ -n "$compat" ] && [ -d "$compat" ] && type wine_runtime::resolve_compatdata_proton_script >/dev/null 2>&1; then
-    expected_proton="$(wine_runtime::resolve_compatdata_proton_script "$steam_root" "$compat" 2>/dev/null || true)"
+if type wine_runtime::resolve_proton_script >/dev/null 2>&1; then
+    expected_proton="$(wine_runtime::resolve_proton_script "$steam_root" 2>/dev/null || true)"
 fi
 if [ -n "$script" ] && [ -x "$script" ] && [ -n "$expected_proton" ] && [ -f "$expected_proton" ]; then
     wrapper_proton="$(grep -m1 '^PROTON=' "$script" 2>/dev/null | sed 's/^PROTON=//' || true)"

@@ -24,8 +24,8 @@ steam_root="${STEAM_ROOT:-$HOME/.local/share/Steam}"
 
 if [ -n "$script" ] && [ -f "$script" ] && [ -n "$trainer" ] && [ -f "$trainer" ]; then
     proton=""
-    if type wine_runtime::resolve_compatdata_proton_script >/dev/null 2>&1; then
-        proton="$(wine_runtime::resolve_compatdata_proton_script "$steam_root" "$compat" 2>/dev/null || true)"
+    if type wine_runtime::resolve_proton_script >/dev/null 2>&1; then
+        proton="$(wine_runtime::resolve_proton_script "$steam_root" 2>/dev/null || true)"
     fi
     if [ -n "$proton" ] && [ -f "$proton" ]; then
         q_steam="$(printf '%q' "$steam_root")"
