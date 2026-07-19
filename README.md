@@ -41,7 +41,16 @@ Needs **PyQt6** on the host (`python-pyqt6` on Arch/CachyOS, or your distro’s 
 
 The **`AppImage`** bundles its own Python and PyQt6 — no host `python-pyqt6` required (recommended on Bazzite and other immutable distros).
 
-Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz` or AppImage). Verify with `sha256sum -c SHA256SUMS`.
+The **`Flatpak`** also bundles Python, PyQt6, and Proton-GE. Install from a release bundle:
+
+```bash
+flatpak install --user rezeptor-1.0.2-x86_64.flatpak
+flatpak run io.github.benjarogit.Rezeptor
+```
+
+Or build locally: `scripts/build-flatpak.sh` (needs `flatpak-builder`).
+
+Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz`, AppImage, or Flatpak). Verify portable builds with `sha256sum -c SHA256SUMS` (tar.gz + AppImage).
 
 ## Documentation
 
@@ -61,7 +70,7 @@ Submit ideas via [Recipe Submission](https://github.com/benjarogit/rezeptor/issu
 
 ## Versioning
 
-Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current line starts at **1.0.1**.
+Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current line starts at **1.0.2**.
 
 ## Deutsch
 

@@ -1,0 +1,73 @@
+app-id: io.github.benjarogit.Rezeptor
+runtime: org.freedesktop.Platform
+runtime-version: '24.08'
+sdk: org.freedesktop.Sdk
+command: rezeptor-launch
+
+finish-args:
+  # GUI
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --share=ipc
+  - --device=dri
+  # Wine/Proton guests (GPU, input, shm)
+  - --device=all
+  - --allow=devel
+  - --share=network
+  # User data (~/.local/share/wine-software) + BYOS installer folders
+  - --filesystem=home
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.freedesktop.portal.FileChooser
+
+modules:
+  - name: cabextract
+    buildsystem: autotools
+    config-opts:
+      - --disable-static
+    sources:
+      - type: archive
+        url: http://deb.debian.org/debian/pool/main/c/cabextract/cabextract_1.11.orig.tar.gz
+        sha256: b5546db1155e4c718ff3d4b278573604f30dd64c3c5bfd4657cd089b823a3ac6
+
+  - name: rezeptor
+    buildsystem: simple
+    build-options:
+      build-args:
+        - --share=network
+      strip: false
+      no-debuginfo: true
+    build-commands:
+      - bash flatpak/build-app.sh
+    sources:
+      - type: dir
+        path: ..
+        skip:
+          - .git
+          - .cache
+          - AppDir-build
+          - squashfs-root
+          - '*.AppImage'
+          - '*.flatpak'
+          - flatpak/.flatpak-builder
+          - flatpak/build-flatpak
+          - flatpak/repo
+          - rezeptor-*.tar.gz
+          - SHA256SUMS
+          - photoshop/Set-up.exe
+          - photoshop/packages
+          - photoshop/products
+          - site
+          - .cursor
+      - type: archive
+        url: https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton10-28/GE-Proton10-28.tar.gz
+        sha256: 4c5cc46e7f1af53f610e02c60bc9470db0d82e072b0072372ef588a82c4de316
+        dest: proton-ge-src
+      - type: archive
+        url: https://github.com/astral-sh/python-build-standalone/releases/download/20251217/cpython-3.12.12%2B20251217-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz
+        sha256: 9f5474351378aeca746ee8a2ff3b187edec71d791ef92827eca14ab5b0e15441
+        dest: python-src
+      - type: file
+        url: https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
+        sha256: 954d17f56ae5f4d32eb083193a4a838c73ae5ff6b91765d93b0eab59cf2e7d29
+        dest: winetricks-src

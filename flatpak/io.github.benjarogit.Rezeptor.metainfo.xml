@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.benjarogit.Rezeptor</id>
+  <name>Rezeptor</name>
+  <summary>Install and run Windows software on Linux with tested recipes</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-only</project_license>
+  <developer_name>Benjamin Rogowski</developer_name>
+  <description>
+    <p>
+      Rezeptor is a desktop launcher for tested Wine recipes powered by Proton-GE.
+      Install, repair, validate, launch, and uninstall applications such as Photoshop,
+      tax software, and Steam games with online fixes.
+    </p>
+    <p>
+      User data and Wine prefixes are stored under
+      <code>~/.local/share/wine-software/</code>.
+      Bring-your-own-installer paths need home filesystem access (granted by default).
+    </p>
+  </description>
+  <launchable type="desktop-id">io.github.benjarogit.Rezeptor.desktop</launchable>
+  <url type="homepage">https://github.com/benjarogit/rezeptor</url>
+  <url type="bugtracker">https://github.com/benjarogit/rezeptor/issues</url>
+  <url type="vcs-browser">https://github.com/benjarogit/rezeptor</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.0.2" date="2026-07-19"/>
+  </releases>
+</component>

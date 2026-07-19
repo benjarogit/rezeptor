@@ -8,6 +8,7 @@ name: Release
 # Assets pro Release:
 #   - rezeptor-X.Y.Z.tar.gz          (Quell-/Setup-Paket)
 #   - rezeptor-X.Y.Z-x86_64.AppImage (portable)
+#   - rezeptor-X.Y.Z-x86_64.flatpak  (sandboxed; separater Job, blockiert nicht)
 #   - SHA256SUMS                     (Prüfung: sha256sum -c SHA256SUMS)
 on:
   push:
@@ -242,6 +243,7 @@ jobs:
           notes+=$'\n\n## Downloads\n\n'
           notes+='- `rezeptor-'"${VER}"'.tar.gz` — source package / Quellpaket (`tar xf` → `./setup.sh`)'$'\n'
           notes+='- `rezeptor-'"${VER}"'-x86_64.AppImage` — portable app / portable App'$'\n'
+          notes+='- `rezeptor-'"${VER}"'-x86_64.flatpak` — Flatpak bundle (may follow in a separate upload)'$'\n'
           notes+='- `SHA256SUMS` — verify / prüfen: `sha256sum -c SHA256SUMS`'$'\n'
 
           if gh release view "$TAG" >/dev/null 2>&1; then
@@ -262,3 +264,39 @@ jobs:
 
           echo "Published ${TAG} with:"
           gh release view "$TAG" --json assets -q '.assets[].name'
+
+  flatpak:
+    needs: [validate, release]
+    if: needs.validate.outputs.skip != 'true'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Flatpak builder
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y flatpak flatpak-builder curl rsync cabextract unzip
+          flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install -y --user flathub \
+            org.freedesktop.Platform//24.08 \
+            org.freedesktop.Sdk//24.08
+
+      - name: Build Flatpak
+        run: |
+          set -euo pipefail
+          chmod +x scripts/build-flatpak.sh flatpak/rezeptor-launch flatpak/build-app.sh
+          scripts/build-flatpak.sh
+          test -f "rezeptor-${{ needs.validate.outputs.version }}-x86_64.flatpak"
+
+      - name: Upload Flatpak to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.validate.outputs.tag }}
+          VER: ${{ needs.validate.outputs.version }}
+        run: |
+          set -euo pipefail
+          asset="rezeptor-${VER}-x86_64.flatpak"
+          gh release upload "$TAG" "$asset" --clobber
+          echo "Uploaded ${asset} to ${TAG}"

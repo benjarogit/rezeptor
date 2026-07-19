@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Rezeptor
+Comment=Install and run Windows software on Linux with tested recipes
+Exec=rezeptor-launch
+Icon=io.github.benjarogit.Rezeptor
+Categories=Utility;Graphics;
+StartupWMClass=rezeptor

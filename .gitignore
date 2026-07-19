@@ -79,14 +79,18 @@ GIT_PUSH_READY.md
 CHANGELOG.md
 
 # ============================================================
-# AppImage / Release build artifacts
+# AppImage / Flatpak / Release build artifacts
 # ============================================================
 AppDir-build/
 *.AppImage
 *.AppImage.sha256
+*.flatpak
 rezeptor-*.tar.gz
 SHA256SUMS
 .cache/proton-ge-build/
+flatpak/build-flatpak/
+flatpak/repo/
+flatpak/.flatpak-builder/
 site/
 .cache/
 
