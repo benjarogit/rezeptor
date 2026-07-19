@@ -56,13 +56,13 @@
     },
     "za4-trainer": {
       "files": {
-        "info.de.txt": "sha256:7b98ff90641cd68e2838f2919601965790515e47b9ecadfc09bb02a8a1f2760b",
-        "info.en.txt": "sha256:934adc5008630d06fa764041b32b1f9528db13ebca046ab6a1d523fecb2a94f9",
-        "install.sh": "sha256:70d5061737a368e775f04e7b8dbc7006428cbf8bb4f80b898d6b48ed4edfeda8",
+        "info.de.txt": "sha256:0d45e93b28a95aa32e4023111817119bffff4d4fb73d6b548965c5782a962992",
+        "info.en.txt": "sha256:3dd8921d0e7de64e06540737694a9d0fc2afeb41dbcdd0cd40fdd2d16bb85d5e",
+        "install.sh": "sha256:4384c3a875f9a2d18183e098ff17116cdcef7b93d677f129dabf287d98efa669",
         "kill.sh": "sha256:404f06a0ec6ade0fcde6210475683ba3fd6c2415b3001a61d211dd60eea0dd08",
-        "launch.sh": "sha256:fe8b2ea72c15c2e99aad9ccda054a149949c48f9076c5d57c22760f35e9bb371",
+        "launch.sh": "sha256:b645db9b25dad62b27df4c0485b1c151cc62893d9c5db193d4d27cac7a6e2635",
         "recipe.yml": "sha256:c87a5ba4a5c2980e86f5eb3be17cb3eedf43d0725ea9b88ed22a9490670134a9",
-        "repair.sh": "sha256:43f5f596cb28c22882cf7a1667408aeabb6b30371df91660cc91ec43f0395f83",
+        "repair.sh": "sha256:781b780db585b91f6b56fda0f56a503552cfd8a5be6c507b72b6e1baf8ac481d",
         "uninstall.sh": "sha256:9433543eb8284be1f562e0c125c55bdcf534c8a97e1b470c3f772bcaace840e8",
         "validate.sh": "sha256:0b33b657e297a03d634ec9d68bfa53bd6b017131881778cf3163ffd18195920f"
       }

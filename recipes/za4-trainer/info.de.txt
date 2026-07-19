@@ -11,16 +11,30 @@ Kein Spiel-Installer — es wird nur der Trainer abgelegt und über Proton gesta
 • Steam und Zombie Army 4: Dead War sind installiert
 • Das Spiel wurde mindestens einmal mit Proton bzw. GE-Proton gestartet (dabei entsteht der Steam-Datenordner „compatdata“)
 • Die Trainer-Datei (Plus 14 / ZA4-Trainer.exe) liegt lokal vor
+• **Grafik im Spiel:** **Borderless Window** (randloses Fenster) — **nicht** exklusives Vollbild
 
 ## Installation
 1. „Installieren“ wählen
 2. Die Trainer-**.exe** auswählen (Dateifilter: *.exe)
 3. Zielordner prüfen — Standard: Steam-Spielordner/ZA4-Trainer (wird erkannt, lässt sich manuell ändern)
 
-## Nutzung
-• Zuerst das Spiel starten
-• Danach in Rezeptor „Starten“ — der Trainer öffnet sich über Proton
-• Den Trainer erst nach dem Spielstart verwenden
+## Nutzung (Reihenfolge)
+1. **Zombie Army 4 in Steam starten** (nicht über Rezeptor)
+2. In den **Spiel-Grafikeinstellungen** den Anzeigemodus auf **Borderless Window** stellen
+   → nötig für Fokus, Alt+Tab und Trainer-Hotkeys unter Proton/Wayland
+   → Rezeptor kann diese Einstellung **nicht** automatisch setzen
+3. Im Spiel bis ins Hauptmenü oder in eine Mission gehen
+4. In Rezeptor **„Starten“** — der Trainer öffnet sich über Proton
+5. Im Trainer Cheats aktivieren und/oder **Numpad-Hotkeys** nutzen
+6. Trainer-Fenster danach schließen oder minimieren — Cheats bleiben je nach Option aktiv
+
+## Fehlerbehebung
+• **„Address not found“** (FLiNG-Dialog): Spiel **und** Trainer neu starten (erst Spiel, dann Trainer).
+  Wenn es wiederholt auftritt, passt der Trainer-Build vermutlich nicht zur Spielversion (Ziel: v1.0–v3.21).
+• **Trainer „hängt“ / reagiert nicht:** Oft blockieren **modale Fehlerdialoge** (z. B. „Address not found“) das Fenster —
+  Dialoge schließen oder Trainer beenden und neu starten. Das ist kein Rezeptor-Absturz.
+• **Kein Zurück ins Spiel / kein Minimieren:** Meist exklusives Vollbild — auf **Borderless Window** umstellen und neu versuchen.
+• **Spiel läuft nicht:** Trainer erst **nach** dem Spielstart starten (Hinweis erscheint auch beim Starten).
 
 ## Hinweise
 • Desktop-Benachrichtigungen nutzen den Rezeptnamen (bzw. den optionalen Notify-Titel)

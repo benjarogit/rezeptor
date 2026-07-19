@@ -41,8 +41,8 @@
       "trust": "official",
       "path": "za4-trainer",
       "summary": {
-        "de": "Trainer für Zombie Army 4: Dead War (Steam) — kein Spiel-Installer, nur Trainer ablegen und starten.",
-        "en": "Trainer for Zombie Army 4: Dead War (Steam) — no game installer, only deploy and launch the trainer."
+        "de": "Trainer für Zombie Army 4: Dead War (Steam) — Spiel zuerst in Borderless starten, dann Trainer aus Rezeptor.",
+        "en": "Trainer for Zombie Army 4: Dead War (Steam) — start the game in borderless first, then launch the trainer from Rezeptor."
       }
     }
   ]

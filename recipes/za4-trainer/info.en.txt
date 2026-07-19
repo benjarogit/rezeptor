@@ -11,16 +11,30 @@ This is not a game installer — only the trainer is stored and launched via Pro
 • Steam and Zombie Army 4: Dead War are installed
 • The game has been launched at least once with Proton / GE-Proton (this creates Steam’s “compatdata” folder)
 • The trainer file (Plus 14 / ZA4-Trainer.exe) is available locally
+• **In-game graphics:** **Borderless Window** — **not** exclusive fullscreen
 
 ## Install
 1. Choose Install
 2. Select the trainer **.exe** (file filter: *.exe)
 3. Check the target folder — default: Steam game folder/ZA4-Trainer (detected automatically, always overridable)
 
-## Usage
-• Start the game first
-• Then click Launch in Rezeptor — the trainer opens via Proton
-• Use the trainer only after the game has started
+## Usage (order)
+1. **Launch Zombie Army 4 in Steam** (not via Rezeptor)
+2. In the **in-game graphics settings**, set display mode to **Borderless Window**
+   → required for focus, Alt+Tab, and trainer hotkeys under Proton/Wayland
+   → Rezeptor **cannot** apply this setting automatically
+3. Get into the main menu or a mission in-game
+4. In Rezeptor, click **Launch** — the trainer opens via Proton
+5. Enable cheats in the trainer UI and/or use **numpad hotkeys**
+6. Close or minimize the trainer window afterward — cheats may stay active depending on the option
+
+## Troubleshooting
+• **“Address not found”** (FLiNG dialog): restart the **game and trainer** (game first, then trainer).
+  If it keeps happening, the trainer build likely does not match your game version (target: v1.0–v3.21).
+• **Trainer “hangs” / stops responding:** often caused by **modal error dialogs** (e.g. “Address not found”) blocking the window —
+  close the dialogs or quit and restart the trainer. This is not a Rezeptor crash.
+• **Cannot return to the game / cannot minimize:** usually exclusive fullscreen — switch to **Borderless Window** and try again.
+• **Game not running:** launch the trainer only **after** the game has started (a hint is also printed on launch).
 
 ## Notes
 • Desktop notifications use the recipe name (or an optional notify title)

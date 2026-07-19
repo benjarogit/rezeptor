@@ -91,7 +91,9 @@ if [[ -z "\$COMPATDATA" || ! -d "\$COMPATDATA" ]]; then
   exit 1
 fi
 if ! pgrep -f 'za4_(vulkan|dx12)\\.exe' >/dev/null 2>&1; then
-  echo "Hinweis: ZA4 scheint nicht zu laufen. Trainer erst NACH dem Spielstart ausführen."
+  echo "Hinweis: ZA4 scheint nicht zu laufen — erst Spiel in Steam starten (Borderless Window), dann Trainer."
+else
+  echo "Hinweis: ZA4 läuft. Grafikmodus Borderless Window empfohlen (nicht exklusives Vollbild)."
 fi
 export STEAM_COMPAT_CLIENT_INSTALL_PATH="\$STEAM_ROOT"
 export STEAM_COMPAT_DATA_PATH="\$COMPATDATA"
