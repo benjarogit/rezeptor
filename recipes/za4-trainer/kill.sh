@@ -12,8 +12,8 @@ output::section "ZA4 Trainer beenden"
 
 # Nur den Trainer beenden — nicht den Wineserver des Spiel-Prefixes (compatdata).
 pkill -f 'ZA4-Trainer\.exe' 2>/dev/null || true
-pkill -f 'proton run .*/ZA4-Trainer' 2>/dev/null || true
 pkill -f 'proton runinprefix .*/ZA4-Trainer' 2>/dev/null || true
+pkill -f 'proton run .*/ZA4-Trainer' 2>/dev/null || true
 sleep 0.5
 pkill -9 -f 'ZA4-Trainer\.exe' 2>/dev/null || true
 
