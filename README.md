@@ -37,9 +37,11 @@ cd rezeptor
 ./setup.sh
 ```
 
-Needs **PyQt6** (`python-pyqt6` on Arch/CachyOS, or your distro’s package).
+Needs **PyQt6** on the host (`python-pyqt6` on Arch/CachyOS, or your distro’s package) when you use **git clone** or the **`tar.gz`** release (`./setup.sh`).
 
-Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz` package or AppImage). Verify with `sha256sum -c SHA256SUMS`.
+The **`AppImage`** bundles its own Python and PyQt6 — no host `python-pyqt6` required (recommended on Bazzite and other immutable distros).
+
+Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz` or AppImage). Verify with `sha256sum -c SHA256SUMS`.
 
 ## Documentation
 
@@ -59,7 +61,7 @@ Submit ideas via [Recipe Submission](https://github.com/benjarogit/rezeptor/issu
 
 ## Versioning
 
-Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current line starts at **1.0.0**.
+Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current line starts at **1.0.1**.
 
 ## Deutsch
 

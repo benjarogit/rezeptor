@@ -8,8 +8,8 @@ export PROJECT_ROOT="$HERE/usr/share/rezeptor"
 if [ ! -d "$PROJECT_ROOT" ] && [ -d "$HERE/usr/share/photoshopCClinux" ]; then
     export PROJECT_ROOT="$HERE/usr/share/photoshopCClinux"
 fi
-# venv python3 first (install_steps call python3); bundled helpers; then core.
-export PATH="$HERE/venv/bin:$HERE/usr/bin:$HERE/runtime/winetricks:$PROJECT_ROOT/core:$PATH"
+# Bundled venv/python only — never fall back to host python3 (Bazzite / immutable).
+export PATH="$HERE/venv/bin:$HERE/python/bin:$HERE/usr/bin:$HERE/runtime/winetricks:$PROJECT_ROOT/core:$PATH"
 export REZEPTOR_APPIMAGE=1
 # Prefer desktop portal when present (pip Qt in AppImage lacks KDEPlasmaPlatformTheme).
 if [ -z "${QT_QPA_PLATFORMTHEME:-}" ]; then
@@ -19,15 +19,15 @@ if [ -z "${QT_QPA_PLATFORMTHEME:-}" ]; then
 fi
 
 APPIMAGE_PYTHON="$HERE/venv/bin/python"
-if [ -x "$APPIMAGE_PYTHON" ] && "$APPIMAGE_PYTHON" -c "import PyQt6" 2>/dev/null; then
-    export PYTHON="$APPIMAGE_PYTHON"
-elif python3 -c "import PyQt6" 2>/dev/null; then
-    export PYTHON="python3"
-else
-    # No TTY assumed (double-click). Bundled venv from build-appimage.sh should provide PyQt6.
-    echo "PyQt6 missing: rebuild AppImage (bundled venv) or install host python-pyqt6." >&2
+if [ ! -x "$APPIMAGE_PYTHON" ]; then
+    echo "Bundled Python missing — rebuild AppImage (scripts/build-appimage.sh)." >&2
     exit 1
 fi
+if ! "$APPIMAGE_PYTHON" -c "import PyQt6" 2>/dev/null; then
+    echo "Bundled PyQt6 missing or broken — rebuild AppImage." >&2
+    exit 1
+fi
+export PYTHON="$APPIMAGE_PYTHON"
 
 # Optional: pre-seed from env (CI / advanced). Never block on terminal input.
 if [ -n "${PHOTOSHOP_INSTALLER_DIR:-}" ] && [ -f "${PHOTOSHOP_INSTALLER_DIR}/Set-up.exe" ]; then

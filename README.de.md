@@ -37,7 +37,9 @@ cd rezeptor
 ./setup.sh
 ```
 
-Benötigt **PyQt6** (`python-pyqt6` unter Arch/CachyOS bzw. Distro-Paket).
+Benötigt **PyQt6** auf dem Host (`python-pyqt6` unter Arch/CachyOS bzw. Distro-Paket) bei **Git-Clone** oder **`tar.gz`**-Release (`./setup.sh`).
+
+Das **`AppImage`** bringt eigenes Python und PyQt6 mit — kein hostseitiges `python-pyqt6` nötig (empfohlen auf Bazzite und anderen immutable Distros).
 
 Oder ein **[Release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz` oder AppImage). Prüfen mit `sha256sum -c SHA256SUMS`.
 
@@ -59,7 +61,7 @@ Ideen einreichen über [Recipe Submission](https://github.com/benjarogit/rezepto
 
 ## Versionierung
 
-Releases folgen **SemVer** (`MAJOR.MINOR.PATCH`). Aktuelle Linie ab **1.0.0**.
+Releases folgen **SemVer** (`MAJOR.MINOR.PATCH`). Aktuelle Linie ab **1.0.1**.
 
 ## English
 

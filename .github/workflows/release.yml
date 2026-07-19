@@ -167,6 +167,16 @@ jobs:
           fi
           ls -lh "${files[0]}"
 
+      - name: Verify AppImage Python bundle
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+        run: |
+          set -euo pipefail
+          chmod +x scripts/verify-appimage-bundle.sh
+          shopt -s nullglob
+          files=(rezeptor-*-x86_64.AppImage)
+          scripts/verify-appimage-bundle.sh "${files[0]}"
+
       - name: Write SHA256SUMS
         run: |
           set -euo pipefail

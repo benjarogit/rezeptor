@@ -101,14 +101,47 @@ if [ ! -f "$APPDIR/rezeptor.png" ] && [ -f "$ROOT/images/AdobePhotoshop-icon.png
     cp -f "$ROOT/images/AdobePhotoshop-icon.png" "$APPDIR/rezeptor.png"
 fi
 
+echo "Bundling relocatable CPython ${PYTHON_STANDALONE_VERSION} (python-build-standalone)..."
+py_cache="$ROOT/.cache/python-build-standalone"
+mkdir -p "$py_cache"
+py_tgz="$py_cache/cpython-${PYTHON_STANDALONE_VERSION}+${PYTHON_STANDALONE_TAG}-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+if [ ! -f "$py_tgz" ]; then
+    curl -fsSL "$PYTHON_STANDALONE_URL" -o "$py_tgz"
+fi
+if [ -n "${PYTHON_STANDALONE_SHA256:-}" ]; then
+    echo "${PYTHON_STANDALONE_SHA256}  $py_tgz" | sha256sum -c - >/dev/null 2>&1 || {
+        echo "Python standalone SHA256 mismatch — delete $py_tgz and retry" >&2
+        exit 1
+    }
+fi
+rm -rf "$APPDIR/python"
+tar -xzf "$py_tgz" -C "$APPDIR"
+if [ ! -x "$APPDIR/python/bin/python3" ]; then
+    echo "Bundled python missing after extract: $APPDIR/python/bin/python3" >&2
+    exit 1
+fi
+
 echo "Creating AppImage venv with PyQt6 + Fluent Widgets..."
-python3 -m venv "$APPDIR/venv"
+rm -rf "$APPDIR/venv"
+"$APPDIR/python/bin/python3" -m venv --copies "$APPDIR/venv"
 "$APPDIR/venv/bin/pip" install -q --upgrade pip
 "$APPDIR/venv/bin/pip" install -q PyQt6 "PyQt6-Fluent-Widgets"
-# Metadata-Check (kein GUI-Import): CI-Runner haben oft kein libEGL.
+
+venv_py="$(readlink -f "$APPDIR/venv/bin/python")"
+case "$venv_py" in
+    "$APPDIR"/*) ;;
+    *)
+        echo "AppImage venv python escapes AppDir (host symlink?): $venv_py" >&2
+        exit 1
+        ;;
+esac
 if ! "$APPDIR/venv/bin/python" -c \
     "import importlib.metadata as m; m.version('PyQt6'); m.version('PyQt6-Fluent-Widgets')"; then
     echo "AppImage venv missing PyQt6 or PyQt6-Fluent-Widgets" >&2
+    exit 1
+fi
+if ! "$APPDIR/venv/bin/python" -c "import PyQt6" 2>/dev/null; then
+    echo "AppImage venv cannot import PyQt6 (Qt libs missing on build host?)" >&2
     exit 1
 fi
 
@@ -159,6 +192,15 @@ fi
 # No CLI BYOS prompt in AppRun
 if grep -qE 'read -r|Enter path to folder' "$APPDIR/AppRun"; then
     echo "AppRun still has interactive BYOS prompt" >&2
+    fail=1
+fi
+# AppRun must not mask broken bundles with host python3
+if grep -qE 'elif python3 -c "import PyQt6"|export PYTHON="python3"' "$APPDIR/AppRun"; then
+    echo "AppRun still falls back to host python3" >&2
+    fail=1
+fi
+if [ ! -x "$APPDIR/python/bin/python3" ]; then
+    echo "Bundled python missing in AppDir" >&2
     fail=1
 fi
 # AppRun must point at usr/share/rezeptor (same tree as git ./setup.sh)
