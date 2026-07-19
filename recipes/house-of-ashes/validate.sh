@@ -7,6 +7,8 @@ RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$RECIPE_DIR/../../core/recipe-hooks.sh"
 recipe_hooks::load validate
+# shellcheck source=/dev/null
+source "$RECIPE_DIR/../../core/wine-runtime.sh"
 
 GAME_EXE="HouseOfAshes.exe"
 REAL_APPID="$(recipe_get "$RECIPE_YML" steam_appid 2>/dev/null || echo 1281590)"
@@ -17,7 +19,7 @@ REQUIRED_WIN64=(OnlineFix64.dll OnlineFix.ini winmm.dll StubDRM64.dll dlllist.tx
 FLT_CONFLICT_FILES=(flt.ini steamclient64.dll)
 
 failures=0
-output::progress_begin 7 "Prüfen"
+output::progress_begin 8 "Prüfen"
 
 # Spacewar (480) — Fake-AppID des Online-Fix
 hoa_spacewar_ok() {
@@ -143,6 +145,27 @@ elif [ -d "$HOME/.local/share/Steam/steamapps/compatdata/$REAL_APPID" ]; then
     recipe_validate::warn "compatdata unter Standard-Steam — Wrapper ggf. neu installieren"
 else
     recipe_validate::warn "compatdata AppID $REAL_APPID nicht gefunden — Spiel einmal unter Proton starten"
+fi
+
+output::progress_tick "Proton (compatdata)"
+steam_root="${STEAM_ROOT:-$HOME/.local/share/Steam}"
+[ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
+expected_proton=""
+if [ -n "$compat" ] && [ -d "$compat" ] && type wine_runtime::resolve_compatdata_proton_script >/dev/null 2>&1; then
+    expected_proton="$(wine_runtime::resolve_compatdata_proton_script "$steam_root" "$compat" 2>/dev/null || true)"
+fi
+if [ -n "$script" ] && [ -x "$script" ] && [ -n "$expected_proton" ] && [ -f "$expected_proton" ]; then
+    wrapper_proton="$(grep -m1 '^PROTON=' "$script" 2>/dev/null | sed 's/^PROTON=//' || true)"
+    if [ -n "$wrapper_proton" ] && [ "$wrapper_proton" = "$expected_proton" ]; then
+        recipe_validate::ok "Proton: $(basename "$(dirname "$expected_proton")")"
+    elif [ -n "$wrapper_proton" ]; then
+        recipe_validate::fail "Launch-Wrapper Proton veraltet ($(basename "$(dirname "$wrapper_proton")") → $(basename "$(dirname "$expected_proton")")) — Reparieren"
+        failures=$((failures + 1))
+    else
+        recipe_validate::warn "Launch-Wrapper ohne PROTON-Zeile — Reparieren"
+    fi
+elif [ -n "$expected_proton" ] && [ -f "$expected_proton" ]; then
+    recipe_validate::warn "Launch-Wrapper fehlt — Proton wäre $(basename "$(dirname "$expected_proton")")"
 fi
 
 if [ "$failures" -eq 0 ]; then

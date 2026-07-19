@@ -4,13 +4,13 @@
       "files": {
         "info.de.txt": "sha256:ed927c88c215af25b57fd52cf1f000889d44d62c5406216e41d1d3fb3a537fc4",
         "info.en.txt": "sha256:a37480ec4cf79186cffbcdfb59aaf8887e1a1e83fa53caf723793390bbd58974",
-        "install.sh": "sha256:1f65fb6ab460a98cb5142b1a1246f6c2a1f9cac7ab7c03e7d106d9eb6ef92e23",
+        "install.sh": "sha256:a64aaaec34bf7e2dc8d0c4b87b933b89d7e1cb310986aacb6dc150a76668643e",
         "kill.sh": "sha256:677664cf550c9f27fcf4c100563320dfa55e725c4ed026f4e843783c2af7ca29",
-        "launch.sh": "sha256:a5e49b73219795af649791d01a32b11f0d08855899e86807158444c99847f2c4",
+        "launch.sh": "sha256:a8e1f8c94fc09006a9c09ac48e0eb5241164edeff39b3b10cefb6c0c83b9df9d",
         "recipe.yml": "sha256:78870e21afd7b9826ebb112e2540074df8d17693db2db2832ca5bb6978d655af",
         "repair.sh": "sha256:34dc5c66e51cf9717b5fe59885a890cd5b4ad0918e7ea033e17647d192afd005",
         "uninstall.sh": "sha256:7e8047e698bff41199d1cbfb5bdaa860f7953e0527e8b0f52a602aa37a61a120",
-        "validate.sh": "sha256:63afe0bf6c049c5570d58ee26a777700938c6fcf01eafb846e0587e59d24ee52"
+        "validate.sh": "sha256:ba2d48985cb703e20e4ce6c61640a64fcbe07b7ba2557ca7b5760c8c9aa92482"
       }
     },
     "photoshop": {
@@ -58,13 +58,13 @@
       "files": {
         "info.de.txt": "sha256:7b98ff90641cd68e2838f2919601965790515e47b9ecadfc09bb02a8a1f2760b",
         "info.en.txt": "sha256:934adc5008630d06fa764041b32b1f9528db13ebca046ab6a1d523fecb2a94f9",
-        "install.sh": "sha256:70e6e16c1ddd8b229a08f24f36af30878fac8b448e9147ba3a9cd0ad43fc3c68",
+        "install.sh": "sha256:70d5061737a368e775f04e7b8dbc7006428cbf8bb4f80b898d6b48ed4edfeda8",
         "kill.sh": "sha256:404f06a0ec6ade0fcde6210475683ba3fd6c2415b3001a61d211dd60eea0dd08",
-        "launch.sh": "sha256:8558b0f4546da0ee7fd5a99d4228d802c044cda28c31853b18c490669a561ca8",
+        "launch.sh": "sha256:fe8b2ea72c15c2e99aad9ccda054a149949c48f9076c5d57c22760f35e9bb371",
         "recipe.yml": "sha256:c87a5ba4a5c2980e86f5eb3be17cb3eedf43d0725ea9b88ed22a9490670134a9",
-        "repair.sh": "sha256:6e30cc3ba685b3116af5aa85c12130b5aa5047456497cc87e6857c0f6052634e",
+        "repair.sh": "sha256:43f5f596cb28c22882cf7a1667408aeabb6b30371df91660cc91ec43f0395f83",
         "uninstall.sh": "sha256:9433543eb8284be1f562e0c125c55bdcf534c8a97e1b470c3f772bcaace840e8",
-        "validate.sh": "sha256:bbb18bb49499ea64161dfa03693dd1296bc43bf9317dc45d4411d5b4c3512902"
+        "validate.sh": "sha256:0b33b657e297a03d634ec9d68bfa53bd6b017131881778cf3163ffd18195920f"
       }
     }
   },
