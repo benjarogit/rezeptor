@@ -27,6 +27,8 @@ Photoshop, Steuerprogramme (WISO), Steam-Spiele mit Online-Fix, Trainer und mehr
 - **Katalog & Quellen** — offizielle Rezepte plus Community-Pfad
 - **Daten unter** `~/.local/share/wine-software/`
 
+![Rezeptor Startseite — Dashboard mit Statistik und GitHub-/Wiki-Karten](images/rezeptor-home-de.png)
+
 ## Schnellstart
 
 ```bash

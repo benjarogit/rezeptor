@@ -27,6 +27,8 @@ Photoshop, tax software (WISO), Steam games with online fixes, trainers, and mor
 - **Catalog & sources** — official recipes plus a community path
 - **Data under** `~/.local/share/wine-software/`
 
+![Rezeptor Home — dashboard with stats and GitHub/Wiki link cards](images/rezeptor-home-en.png)
+
 ## Quick start
 
 ```bash
