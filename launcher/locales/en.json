@@ -45,8 +45,10 @@
     "home_cta_docs_tip": "Open the handbook (users & authors)",
     "home_links_hint": "Project & online docs",
     "home_link_github": "GitHub",
+    "home_link_github_sub": "Source & issues",
     "home_link_github_tip": "Open the repository on GitHub",
     "home_link_wiki": "Docs",
+    "home_link_wiki_sub": "Public documentation",
     "home_link_wiki_tip": "Open the public documentation in your browser",
     "home_pill_version": "v{version}",
     "home_pill_recipes": "{n} recipes"

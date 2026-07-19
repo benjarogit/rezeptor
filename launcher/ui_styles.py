@@ -146,23 +146,38 @@ QLabel#homeLinksHint {{
     letter-spacing: 0.04em;
     background: transparent;
 }}
-QPushButton#homeLinkBtn {{
-    text-align: center;
-    padding: 8px 14px;
-    min-height: 32px;
+QPushButton#homeLinkCard {{
+    background-color: {COLOR_ANTHRACITE};
     border: 1px solid {BORDER};
-    border-radius: 6px;
-    background-color: transparent;
-    color: {COLOR_PARCHMENT};
-    font-weight: 600;
+    border-radius: 8px;
+    padding: 0px;
+    text-align: center;
+    min-height: 88px;
 }}
-QPushButton#homeLinkBtn:hover {{
+QPushButton#homeLinkCard:hover {{
     background-color: rgba(184, 115, 51, 0.16);
     border-color: {ACCENT_COPPER};
-    color: {COLOR_PARCHMENT};
 }}
-QPushButton#homeLinkBtn:focus {{
+QPushButton#homeLinkCard:focus {{
     border-color: {ACCENT_COPPER};
+}}
+QPushButton#homeLinkCard:pressed {{
+    background-color: rgba(184, 115, 51, 0.22);
+    border-color: {ACCENT_COPPER};
+}}
+QLabel#homeLinkIcon {{
+    background: transparent;
+}}
+QLabel#homeLinkTitle {{
+    color: {COLOR_PARCHMENT};
+    font-size: 13px;
+    font-weight: 600;
+    background: transparent;
+}}
+QLabel#homeLinkSub {{
+    color: {MUTED};
+    font-size: 11px;
+    background: transparent;
 }}
 QLabel#appTitle {{
     font-size: 20px;

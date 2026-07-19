@@ -17,6 +17,8 @@ from PyQt6.QtGui import (
 
 _FA_FONT: QFont | None = None
 _FA_FAMILY: str = ""
+_FA_BRANDS_FONT: QFont | None = None
+_FA_BRANDS_FAMILY: str = ""
 
 FA_CHECK = "\uf00c"
 FA_XMARK = "\uf00d"
@@ -32,6 +34,9 @@ FA_CLIPBOARD_CHECK = "\uf46c"
 FA_STOP = "\uf04d"
 FA_ELLIPSIS = "\uf141"
 FA_FOLDER_OPEN = "\uf07c"
+FA_BOOK = "\uf02d"
+FA_BOOK_OPEN = "\uf518"
+FA_GITHUB = "\uf09b"  # Font Awesome Brands
 
 _KIND_GLYPH = {
     "ok": FA_CHECK,
@@ -48,7 +53,12 @@ _KIND_GLYPH = {
     "kill": FA_STOP,
     "more": FA_ELLIPSIS,
     "folder": FA_FOLDER_OPEN,
+    "book": FA_BOOK,
+    "book_open": FA_BOOK_OPEN,
+    "github": FA_GITHUB,
 }
+
+_BRAND_KINDS = frozenset({"github"})
 
 # Farben wie vor Dracula (Kupfer / Grün / Amber)
 _KIND_COLOR = {
@@ -73,11 +83,11 @@ def _font_path() -> Path:
     return Path(__file__).resolve().parent / "assets" / "fonts" / "fa-solid-900.otf"
 
 
-def ensure_fa_font() -> QFont | None:
-    global _FA_FONT, _FA_FAMILY
-    if _FA_FONT is not None:
-        return _FA_FONT
-    path = _font_path()
+def _brands_font_path() -> Path:
+    return Path(__file__).resolve().parent / "assets" / "fonts" / "fa-brands-400.ttf"
+
+
+def _load_fa_font(path: Path) -> QFont | None:
     if not path.is_file():
         return None
     font_id = QFontDatabase.addApplicationFont(str(path))
@@ -86,10 +96,33 @@ def ensure_fa_font() -> QFont | None:
     families = QFontDatabase.applicationFontFamilies(font_id)
     if not families:
         return None
-    _FA_FAMILY = families[0]
-    _FA_FONT = QFont(_FA_FAMILY, 11)
-    _FA_FONT.setStyleStrategy(QFont.StyleStrategy.PreferQuality)
+    font = QFont(families[0], 11)
+    font.setStyleStrategy(QFont.StyleStrategy.PreferQuality)
+    return font
+
+
+def ensure_fa_font() -> QFont | None:
+    global _FA_FONT, _FA_FAMILY
+    if _FA_FONT is not None:
+        return _FA_FONT
+    font = _load_fa_font(_font_path())
+    if font is None:
+        return None
+    _FA_FAMILY = font.family()
+    _FA_FONT = font
     return _FA_FONT
+
+
+def ensure_fa_brands_font() -> QFont | None:
+    global _FA_BRANDS_FONT, _FA_BRANDS_FAMILY
+    if _FA_BRANDS_FONT is not None:
+        return _FA_BRANDS_FONT
+    font = _load_fa_font(_brands_font_path())
+    if font is None:
+        return None
+    _FA_BRANDS_FAMILY = font.family()
+    _FA_BRANDS_FONT = font
+    return _FA_BRANDS_FONT
 
 
 def fa_glyph(kind: str) -> str:
@@ -101,7 +134,7 @@ def fa_color(kind: str) -> str:
 
 
 def fa_icon(kind: str, pixel: int = 16, *, color: str | None = None) -> QIcon | None:
-    font = ensure_fa_font()
+    font = ensure_fa_brands_font() if kind in _BRAND_KINDS else ensure_fa_font()
     if font is None:
         return None
     glyph = fa_glyph(kind)

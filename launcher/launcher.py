@@ -38,6 +38,7 @@ try:
         QDialogButtonBox,
         QFormLayout,
         QFrame,
+        QGridLayout,
         QHBoxLayout,
         QInputDialog,
         QLabel,
@@ -161,7 +162,7 @@ from recipe_trust import (
     verify_recipe_trust,
 )
 from ui_styles import COLOR_PARCHMENT, MUTED, STATE_COLORS, palette
-from ui_icons import ensure_fa_font, fa_color, fa_icon
+from ui_icons import ensure_fa_brands_font, ensure_fa_font, fa_color, fa_icon
 from ui_progress import WaitingSpinner
 from ui_window import (
     apply_tool_window,
@@ -1764,26 +1765,78 @@ class RezeptorWindow(QMainWindow):
         self._home_links_hint = links_hint
         lay.addWidget(links_hint)
 
-        links_row = QHBoxLayout()
-        links_row.setSpacing(10)
-        self._home_github_btn = QPushButton(t("app.home_link_github"))
-        self._home_github_btn.setObjectName("homeLinkBtn")
-        self._home_github_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self._home_github_btn.setToolTip(t("app.home_link_github_tip"))
-        self._home_github_btn.setMinimumHeight(32)
-        self._home_github_btn.clicked.connect(self._open_home_github)
-        self._home_wiki_btn = QPushButton(t("app.home_link_wiki"))
-        self._home_wiki_btn.setObjectName("homeLinkBtn")
-        self._home_wiki_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self._home_wiki_btn.setToolTip(t("app.home_link_wiki_tip"))
-        self._home_wiki_btn.setMinimumHeight(32)
-        self._home_wiki_btn.clicked.connect(self._open_home_wiki)
-        links_row.addWidget(self._home_github_btn)
-        links_row.addWidget(self._home_wiki_btn)
-        links_row.addStretch(1)
-        lay.addLayout(links_row)
+        links_grid = QGridLayout()
+        links_grid.setSpacing(10)
+        self._home_github_btn, self._home_github_title, self._home_github_sub = (
+            self._make_home_link_card(
+                icon_kind="github",
+                title_key="app.home_link_github",
+                subtitle_key="app.home_link_github_sub",
+                tip_key="app.home_link_github_tip",
+                on_click=self._open_home_github,
+            )
+        )
+        self._home_wiki_btn, self._home_wiki_title, self._home_wiki_sub = (
+            self._make_home_link_card(
+                icon_kind="book_open",
+                title_key="app.home_link_wiki",
+                subtitle_key="app.home_link_wiki_sub",
+                tip_key="app.home_link_wiki_tip",
+                on_click=self._open_home_wiki,
+            )
+        )
+        links_grid.addWidget(self._home_github_btn, 0, 0)
+        links_grid.addWidget(self._home_wiki_btn, 0, 1)
+        lay.addLayout(links_grid)
         lay.addStretch(1)
         return page
+
+    def _make_home_link_card(
+        self,
+        *,
+        icon_kind: str,
+        title_key: str,
+        subtitle_key: str,
+        tip_key: str,
+        on_click,
+    ) -> tuple[QPushButton, QLabel, QLabel]:
+        """Secondary home action: icon + title + short subtitle (stat-card weight)."""
+        btn = QPushButton()
+        btn.setObjectName("homeLinkCard")
+        btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn.setToolTip(t(tip_key))
+        btn.setMinimumHeight(88)
+        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        btn.setAccessibleName(t(title_key))
+        btn.clicked.connect(on_click)
+
+        cl = QVBoxLayout(btn)
+        cl.setContentsMargins(14, 14, 14, 12)
+        cl.setSpacing(4)
+
+        icon_lbl = QLabel()
+        icon_lbl.setObjectName("homeLinkIcon")
+        icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        ic = fa_icon(icon_kind, 28, color=ACCENT_COPPER)
+        if ic is not None:
+            icon_lbl.setPixmap(ic.pixmap(28, 28))
+
+        title = QLabel(t(title_key))
+        title.setObjectName("homeLinkTitle")
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+
+        sub = QLabel(t(subtitle_key))
+        sub.setObjectName("homeLinkSub")
+        sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sub.setWordWrap(True)
+        sub.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+
+        cl.addWidget(icon_lbl)
+        cl.addWidget(title)
+        cl.addWidget(sub)
+        return btn, title, sub
 
     def _open_home_github(self) -> None:
         QDesktopServices.openUrl(QUrl(github_repo_url()))
@@ -3870,11 +3923,19 @@ class RezeptorWindow(QMainWindow):
         if hasattr(self, "_home_links_hint"):
             self._home_links_hint.setText(t("app.home_links_hint"))
         if hasattr(self, "_home_github_btn"):
-            self._home_github_btn.setText(t("app.home_link_github"))
             self._home_github_btn.setToolTip(t("app.home_link_github_tip"))
+            self._home_github_btn.setAccessibleName(t("app.home_link_github"))
+        if hasattr(self, "_home_github_title"):
+            self._home_github_title.setText(t("app.home_link_github"))
+        if hasattr(self, "_home_github_sub"):
+            self._home_github_sub.setText(t("app.home_link_github_sub"))
         if hasattr(self, "_home_wiki_btn"):
-            self._home_wiki_btn.setText(t("app.home_link_wiki"))
             self._home_wiki_btn.setToolTip(t("app.home_link_wiki_tip"))
+            self._home_wiki_btn.setAccessibleName(t("app.home_link_wiki"))
+        if hasattr(self, "_home_wiki_title"):
+            self._home_wiki_title.setText(t("app.home_link_wiki"))
+        if hasattr(self, "_home_wiki_sub"):
+            self._home_wiki_sub.setText(t("app.home_link_wiki_sub"))
         for key in ("recipes", "installed", "attention", "hidden"):
             cap = getattr(self, f"_home_stat_caption_{key}", None)
             if cap is not None:
@@ -4260,6 +4321,7 @@ def main() -> int:
     app.setDesktopFileName("rezeptor")
     app.setQuitOnLastWindowClosed(True)
     ensure_fa_font()
+    ensure_fa_brands_font()
     # Fusion für Host-Widgets (Combo/Listen) — sonst KDE-Blau statt Kupfer
     app.setStyle("Fusion")
     # Fluent Dark + Brand — egal ob System Light oder Dark
