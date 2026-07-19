@@ -139,6 +139,31 @@ QLabel#homeIntro {{
     font-size: 13px;
     background: transparent;
 }}
+QLabel#homeLinksHint {{
+    color: {MUTED};
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: transparent;
+}}
+QPushButton#homeLinkBtn {{
+    text-align: center;
+    padding: 8px 14px;
+    min-height: 32px;
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    background-color: transparent;
+    color: {COLOR_PARCHMENT};
+    font-weight: 600;
+}}
+QPushButton#homeLinkBtn:hover {{
+    background-color: rgba(184, 115, 51, 0.16);
+    border-color: {ACCENT_COPPER};
+    color: {COLOR_PARCHMENT};
+}}
+QPushButton#homeLinkBtn:focus {{
+    border-color: {ACCENT_COPPER};
+}}
 QLabel#appTitle {{
     font-size: 20px;
     font-weight: 600;

@@ -43,6 +43,11 @@
     "home_tip": "Tipp: F5 aktualisiert den Status aller Rezepte. Unter Hilfe findest du die Dokumentation.",
     "home_cta_docs": "Dokumentation",
     "home_cta_docs_tip": "Handbuch öffnen (Nutzer & Autoren)",
+    "home_links_hint": "Projekt & Online-Doku",
+    "home_link_github": "GitHub",
+    "home_link_github_tip": "Repository auf GitHub öffnen",
+    "home_link_wiki": "Wiki",
+    "home_link_wiki_tip": "Öffentliche Dokumentation im Browser öffnen",
     "home_pill_version": "v{version}",
     "home_pill_recipes": "{n} Rezepte"
   },

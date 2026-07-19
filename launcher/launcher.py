@@ -82,9 +82,11 @@ from app_support import (
     detect_source_version,
     fetch_latest_release,
     github_issue_url,
+    github_repo_url,
     humanize_log_line,
     parse_validate_version_fields,
     prune_old_logs,
+    public_docs_url,
     read_version,
     report_clipboard_text,
     version_compare,
@@ -1755,8 +1757,39 @@ class RezeptorWindow(QMainWindow):
         tip.setWordWrap(True)
         self._home_tip = tip
         lay.addWidget(tip)
+
+        links_hint = QLabel(t("app.home_links_hint"))
+        links_hint.setObjectName("homeLinksHint")
+        links_hint.setWordWrap(True)
+        self._home_links_hint = links_hint
+        lay.addWidget(links_hint)
+
+        links_row = QHBoxLayout()
+        links_row.setSpacing(10)
+        self._home_github_btn = QPushButton(t("app.home_link_github"))
+        self._home_github_btn.setObjectName("homeLinkBtn")
+        self._home_github_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self._home_github_btn.setToolTip(t("app.home_link_github_tip"))
+        self._home_github_btn.setMinimumHeight(32)
+        self._home_github_btn.clicked.connect(self._open_home_github)
+        self._home_wiki_btn = QPushButton(t("app.home_link_wiki"))
+        self._home_wiki_btn.setObjectName("homeLinkBtn")
+        self._home_wiki_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self._home_wiki_btn.setToolTip(t("app.home_link_wiki_tip"))
+        self._home_wiki_btn.setMinimumHeight(32)
+        self._home_wiki_btn.clicked.connect(self._open_home_wiki)
+        links_row.addWidget(self._home_github_btn)
+        links_row.addWidget(self._home_wiki_btn)
+        links_row.addStretch(1)
+        lay.addLayout(links_row)
         lay.addStretch(1)
         return page
+
+    def _open_home_github(self) -> None:
+        QDesktopServices.openUrl(QUrl(github_repo_url()))
+
+    def _open_home_wiki(self) -> None:
+        QDesktopServices.openUrl(QUrl(public_docs_url(get_locale())))
 
     def _recipe_stats(self) -> dict[str, int]:
         hidden = set(self._settings.hidden_recipe_ids or [])
@@ -3834,6 +3867,14 @@ class RezeptorWindow(QMainWindow):
             self._home_intro.setText(t("app.home_intro"))
         if hasattr(self, "_home_tip"):
             self._home_tip.setText(t("app.home_tip"))
+        if hasattr(self, "_home_links_hint"):
+            self._home_links_hint.setText(t("app.home_links_hint"))
+        if hasattr(self, "_home_github_btn"):
+            self._home_github_btn.setText(t("app.home_link_github"))
+            self._home_github_btn.setToolTip(t("app.home_link_github_tip"))
+        if hasattr(self, "_home_wiki_btn"):
+            self._home_wiki_btn.setText(t("app.home_link_wiki"))
+            self._home_wiki_btn.setToolTip(t("app.home_link_wiki_tip"))
         for key in ("recipes", "installed", "attention", "hidden"):
             cap = getattr(self, f"_home_stat_caption_{key}", None)
             if cap is not None:

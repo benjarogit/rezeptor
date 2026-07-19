@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 GITHUB_REPO = "benjarogit/rezeptor"
+DOCS_SITE = "https://benjarogit.github.io/rezeptor"
 LOG_ROOT = Path.home() / ".local/share/wine-software/logs"
 LOG_RETENTION_DAYS = 14
 LOG_MAX_FILES = 50
@@ -56,6 +57,19 @@ def detect_distro() -> str:
     except OSError:
         pass
     return platform.platform() or "Linux"
+
+
+def github_repo_url() -> str:
+    """Canonical GitHub repository URL."""
+    return f"https://github.com/{GITHUB_REPO}"
+
+
+def public_docs_url(locale: str = "de") -> str:
+    """Public docs/wiki (GitHub Pages). EN uses /en/; DE is the site root."""
+    code = (locale or "de").split("-", 1)[0].lower()
+    if code.startswith("en"):
+        return f"{DOCS_SITE}/en/"
+    return f"{DOCS_SITE}/"
 
 
 def github_doc_url(rel_path: str, branch: str = "main") -> str:
