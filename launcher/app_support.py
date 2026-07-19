@@ -98,6 +98,36 @@ def version_compare(current: str, latest: str) -> bool:
     return norm(latest) > norm(current)
 
 
+UPDATE_CHANNELS = frozenset({"flatpak", "appimage", "git", "tarball"})
+
+
+def detect_update_channel() -> str:
+    """How rezeptor-update.sh will apply updates (single source of truth)."""
+    script = ROOT / "scripts" / "rezeptor-update.sh"
+    if not script.is_file():
+        return "tarball"
+    try:
+        proc = subprocess.run(
+            ["bash", str(script), "detect"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+        mode = (proc.stdout or "").strip().lower()
+        if mode in UPDATE_CHANNELS:
+            return mode
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return "tarball"
+
+
+def update_auto_supported(channel: str) -> bool:
+    """In-app apply is disabled for Flatpak (read-only /app; host flatpak required)."""
+    return channel != "flatpak"
+
+
 VERSION_OK_RE = re.compile(
     r"^OK: .+?:\s*(.+?)\s*\(getestet & garantiert\)\s*$"
 )

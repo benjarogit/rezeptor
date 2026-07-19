@@ -81,6 +81,7 @@ from app_support import (
     GITHUB_REPO,
     collect_report_bundle,
     detect_source_version,
+    detect_update_channel,
     fetch_latest_release,
     github_issue_url,
     github_repo_url,
@@ -90,6 +91,7 @@ from app_support import (
     public_docs_url,
     read_version,
     report_clipboard_text,
+    update_auto_supported,
     version_compare,
 )
 from ui_fluent import (
@@ -2056,23 +2058,42 @@ class RezeptorWindow(QMainWindow):
         self._latest_release = latest or self._latest_release
         self._release_url = url
         cur = read_version()
+        channel = detect_update_channel()
+        channel_label = t(f"update.channel_{channel}")
         if latest and version_compare(cur, latest):
             box = QMessageBox(self)
             box.setIcon(QMessageBox.Icon.Information)
             box.setWindowTitle(t("update.available_title"))
-            box.setText(
-                t("update.available_body", current=cur, latest=latest)
-            )
-            auto_btn = box.addButton(
-                t("update.btn_auto"), QMessageBox.ButtonRole.AcceptRole
-            )
+            if channel == "flatpak":
+                box.setText(
+                    t(
+                        "update.available_body_flatpak",
+                        current=cur,
+                        latest=latest,
+                        channel=channel_label,
+                    )
+                )
+            else:
+                box.setText(
+                    t(
+                        "update.available_body",
+                        current=cur,
+                        latest=latest,
+                        channel=channel_label,
+                    )
+                )
+            auto_btn = None
+            if update_auto_supported(channel):
+                auto_btn = box.addButton(
+                    t("update.btn_auto"), QMessageBox.ButtonRole.AcceptRole
+                )
             browser_btn = box.addButton(
                 t("update.btn_browser"), QMessageBox.ButtonRole.ActionRole
             )
             box.addButton(t("update.btn_cancel"), QMessageBox.ButtonRole.RejectRole)
             box.exec()
             clicked = box.clickedButton()
-            if clicked == auto_btn:
+            if auto_btn is not None and clicked == auto_btn:
                 self._run_rezeptor_update(latest)
             elif clicked == browser_btn:
                 QDesktopServices.openUrl(QUrl(url))
@@ -2081,10 +2102,26 @@ class RezeptorWindow(QMainWindow):
             QMessageBox.information(
                 self,
                 t("update.none_title"),
-                t("update.none_body", current=cur, latest_hint=hint),
+                t(
+                    "update.none_body",
+                    current=cur,
+                    latest_hint=hint,
+                    channel=channel_label,
+                ),
             )
 
     def _run_rezeptor_update(self, tag: str = "") -> None:
+        channel = detect_update_channel()
+        if not update_auto_supported(channel):
+            latest = tag.lstrip("v") if tag else (self._latest_release or "")
+            QMessageBox.information(
+                self,
+                t("update.available_title"),
+                t("update.flatpak_manual", latest=latest),
+            )
+            if self._release_url:
+                QDesktopServices.openUrl(QUrl(self._release_url))
+            return
         script = ROOT / "scripts" / "rezeptor-update.sh"
         if not script.is_file():
             QMessageBox.warning(self, t("dialog.missing"), str(script))
@@ -2119,6 +2156,14 @@ class RezeptorWindow(QMainWindow):
             if code == 0:
                 self._activity("ok", t("update.done"))
                 QMessageBox.information(self, t("update.available_title"), t("update.done"))
+            elif code == 3 and detect_update_channel() == "flatpak":
+                latest = tag.lstrip("v") if tag else (self._latest_release or "")
+                self._activity("error", t("update.failed_flatpak", code=code, latest=latest))
+                QMessageBox.warning(
+                    self,
+                    t("update.available_title"),
+                    t("update.failed_flatpak", code=code, latest=latest),
+                )
             else:
                 ev = LogEvent(
                     level="error",

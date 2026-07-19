@@ -25,19 +25,38 @@ current_version() {
     fi
 }
 
-detect_mode() {
-    # Nur echte Rezeptor-AppImage — nicht Cursor/andere APPIMAGE-Env
+is_flatpak_env() {
+    [ "${REZEPTOR_FLATPAK:-}" = "1" ] && return 0
+    [ -n "${FLATPAK_ID:-}" ] && return 0
+    [ -f "/.flatpak-info" ] && return 0
+    return 1
+}
+
+is_appimage_env() {
+    # AppRun sets REZEPTOR_APPIMAGE=1; AppImage runtime sets $APPIMAGE.
+    if [ "${REZEPTOR_APPIMAGE:-}" = "1" ]; then
+        return 0
+    fi
     if [ -n "${APPIMAGE:-}" ] && [ -f "$APPIMAGE" ]; then
         case "${APPIMAGE,,}" in
-            *photoshopcclinux*|*rezeptor*)
-                echo "appimage"
-                return
-                ;;
+            *photoshopcclinux*|*rezeptor*) return 0 ;;
         esac
     fi
     case "$ROOT" in
-        *.AppImage) echo "appimage"; return ;;
+        *.AppImage|*.appimage) return 0 ;;
     esac
+    return 1
+}
+
+detect_mode() {
+    if is_flatpak_env; then
+        echo "flatpak"
+        return
+    fi
+    if is_appimage_env; then
+        echo "appimage"
+        return
+    fi
     if [ -d "$ROOT/.git" ]; then
         echo "git"
         return
@@ -179,6 +198,75 @@ apply_tarball() {
     info "Update auf $ver abgeschlossen (tarball)"
 }
 
+flatpak_manual_hint() {
+    local ver="$1" reason="${2:-}"
+    local bundle_name="rezeptor-${ver}-x86_64.flatpak"
+    {
+        echo "ERROR: Flatpak-Update konnte nicht automatisch angewendet werden.${reason:+ ($reason)}"
+        echo ""
+        echo "Bitte manuell:"
+        echo "  1. Release v${ver} auf GitHub öffnen"
+        echo "  2. ${bundle_name} herunterladen"
+        echo "  3. flatpak install --user -y --reinstall ${bundle_name}"
+        echo ""
+        echo "Alternativ (wenn Flathub/Remote konfiguriert):"
+        echo "  flatpak update io.github.benjarogit.Rezeptor"
+    } >&2
+    exit 3
+}
+
+apply_flatpak() {
+    local tag="${1:-}"
+    [ -n "$tag" ] || tag="$(latest_release_tag)"
+    local ver="${tag#v}"
+    local json asset_url staging bundle
+    json="$(curl -fsSL -H 'Accept: application/vnd.github+json' \
+        "https://api.github.com/repos/${GITHUB_REPO}/releases/tags/${tag}" 2>/dev/null \
+        || curl -fsSL -H 'Accept: application/vnd.github+json' \
+        "https://api.github.com/repos/${GITHUB_REPO}/releases/latest")"
+    asset_url="$(printf '%s' "$json" | python3 -c '
+import json,sys,re
+d=json.load(sys.stdin)
+assets=d.get("assets") or []
+picked=""
+for a in assets:
+    name=a.get("name") or ""
+    if re.search(r"(?i)^rezeptor-.*\.flatpak$", name):
+        picked=a.get("browser_download_url","")
+        break
+if not picked:
+    for a in assets:
+        name=a.get("name") or ""
+        if re.search(r"\.flatpak$", name, re.I):
+            picked=a.get("browser_download_url","")
+            break
+print(picked)
+')"
+    [ -n "$asset_url" ] || flatpak_manual_hint "$ver" "Kein .flatpak-Asset in Release ${tag}"
+    staging="${XDG_CACHE_HOME:-$HOME/.cache}/wine-software/rezeptor/update"
+    mkdir -p "$staging"
+    bundle="$staging/rezeptor-${ver}-x86_64.flatpak"
+    info "Lade Flatpak-Bundle → $bundle"
+    curl -fsSL "$asset_url" -o "$bundle"
+    if command -v flatpak-spawn >/dev/null 2>&1; then
+        info "Installiere via flatpak-spawn --host flatpak install --reinstall"
+        if flatpak-spawn --host flatpak install --user -y --reinstall "$bundle"; then
+            info "Flatpak-Update auf $ver abgeschlossen — bitte Rezeptor neu starten"
+            return 0
+        fi
+        flatpak_manual_hint "$ver" "flatpak-spawn fehlgeschlagen (Bundle: $bundle)"
+    fi
+    if command -v flatpak >/dev/null 2>&1 && ! is_flatpak_env; then
+        info "Installiere via flatpak install --reinstall"
+        if flatpak install --user -y --reinstall "$bundle"; then
+            info "Flatpak-Update auf $ver abgeschlossen — bitte Rezeptor neu starten"
+            return 0
+        fi
+        flatpak_manual_hint "$ver" "flatpak install fehlgeschlagen"
+    fi
+    flatpak_manual_hint "$ver" "flatpak CLI nicht verfügbar"
+}
+
 apply_appimage() {
     local tag="${1:-}"
     [ -n "$tag" ] || tag="$(latest_release_tag)"
@@ -224,6 +312,7 @@ cmd_apply() {
     case "$mode" in
         git) apply_git "$tag" ;;
         appimage) apply_appimage "$tag" ;;
+        flatpak) apply_flatpak "$tag" ;;
         tarball) apply_tarball "$tag" ;;
         *) die "Unbekannter Modus: $mode" ;;
     esac
