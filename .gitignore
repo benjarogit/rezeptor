@@ -90,7 +90,7 @@ SHA256SUMS
 .cache/proton-ge-build/
 flatpak/build-flatpak/
 flatpak/repo/
-flatpak/.flatpak-builder/
+.flatpak-builder/
 site/
 .cache/
 

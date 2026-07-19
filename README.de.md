@@ -44,7 +44,7 @@ Das **`AppImage`** bringt eigenes Python und PyQt6 mit — kein hostseitiges `py
 Das **`Flatpak`** bringt Python, PyQt6 und Proton-GE ebenfalls mit. Installation aus dem Release-Bundle:
 
 ```bash
-flatpak install --user rezeptor-1.0.2-x86_64.flatpak
+flatpak install --user rezeptor-<version>-x86_64.flatpak
 flatpak run io.github.benjarogit.Rezeptor
 ```
 

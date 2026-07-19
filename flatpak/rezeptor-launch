@@ -30,4 +30,7 @@ if [ -n "${PHOTOSHOP_INSTALLER_DIR:-}" ] && [ -f "${PHOTOSHOP_INSTALLER_DIR}/Set
 fi
 
 cd "$PROJECT_ROOT"
+STATE_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/rezeptor"
+mkdir -p "$STATE_DIR"
+cd "$STATE_DIR"
 exec "$PYTHON" "$PROJECT_ROOT/launcher/launcher.py" "$@"
