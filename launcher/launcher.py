@@ -946,21 +946,15 @@ class RezeptorWindow(QMainWindow):
                 self._activity("warn", t("trust.hidden_warn", line=line))
         if self._dev_mode:
             self._activity("info", t("app.dev_mode_info"))
-        if self.recipes:
-            start = 0
-            last = (self._settings.last_recipe_id or "").strip()
-            if last:
-                for i, info in enumerate(self.recipes):
-                    if info.rid == last:
-                        start = i
-                        break
-            self._select_recipe_index(start)
+        # Startseite statt erstem/letztem Rezept — Auswahl erst durch Klick.
+        self._show_home()
         # Netzwerk nicht auf dem UI-Thread — verzögert + Hintergrund.
         QTimer.singleShot(2500, self.check_updates_background)
 
     def _build_menus(self) -> None:
         self.menuBar().clear()
         rezeptor_menu = self.menuBar().addMenu(t("menu.rezeptor"))
+        rezeptor_menu.addAction(t("menu.home"), self._show_home)
         rezeptor_menu.addAction(t("menu.settings"), self.show_settings)
         rezeptor_menu.addSeparator()
         self.action_refresh = QAction(t("menu.refresh"), self)
@@ -1077,6 +1071,13 @@ class RezeptorWindow(QMainWindow):
         st.setObjectName("sidebarTitle")
         self._sidebar_title = st
         sl.addWidget(st)
+
+        self._home_btn = QPushButton(t("app.home_sidebar"))
+        self._home_btn.setObjectName("homeSidebarBtn")
+        self._home_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self._home_btn.setToolTip(t("menu.home"))
+        self._home_btn.clicked.connect(self._show_home)
+        sl.addWidget(self._home_btn)
 
         self.sidebar_search = QLineEdit()
         self.sidebar_search.setObjectName("sidebarSearch")
@@ -1233,8 +1234,16 @@ class RezeptorWindow(QMainWindow):
         hl.addLayout(hc, stretch=1)
         ml.addWidget(header)
 
+        # Detail: Startseite | Rezept (CTA + Tabs)
+        self._home_page = self._create_home_page()
+        recipe_pane = QWidget()
+        recipe_pane.setObjectName("recipePane")
+        rp = QVBoxLayout(recipe_pane)
+        rp.setContentsMargins(0, 0, 0, 0)
+        rp.setSpacing(12)
+
         # —— Navigation —— Starten / Reparieren / Prüfen / Beenden / Mehr
-        self._build_action_bar(ml)
+        self._build_action_bar(rp)
 
         overview = self._create_overview_tab()
         progress = self._create_progress_tab()
@@ -1267,7 +1276,12 @@ class RezeptorWindow(QMainWindow):
         content_l.addWidget(self.segment_tabs)
         content_l.addWidget(self.stack, stretch=1)
 
-        ml.addWidget(content_shell, stretch=1)
+        rp.addWidget(content_shell, stretch=1)
+
+        self._detail_stack = QStackedWidget()
+        self._detail_stack.addWidget(self._home_page)
+        self._detail_stack.addWidget(recipe_pane)
+        ml.addWidget(self._detail_stack, stretch=1)
         root.addWidget(main, stretch=1)
 
     def _build_action_bar(self, parent_layout: QVBoxLayout) -> None:
@@ -1360,7 +1374,9 @@ class RezeptorWindow(QMainWindow):
         busy = bool(getattr(self, "_busy", False))
         mode = getattr(self, "_cta_mode", "none")
         if info is None:
-            self._add_menu_action(menu, self._view_recipe_label(), self.show_recipe_view)
+            self._add_menu_action(menu, t("app.home_cta_docs"), self.show_developer_docs)
+            self._add_menu_action(menu, t("menu.settings"), self.show_settings)
+            self._add_menu_action(menu, t("menu.refresh"), self.refresh_statuses)
             return
 
         dr = resolve_data_root(info.meta, info.rid)
@@ -1427,6 +1443,9 @@ class RezeptorWindow(QMainWindow):
         if isinstance(w, (QLineEdit, QTextEdit, QTextBrowser)):
             return
         mode = getattr(self, "_cta_mode", "none")
+        if mode == "docs":
+            self.show_developer_docs()
+            return
         if mode == "install":
             self.run_install()
         elif mode == "launch":
@@ -1691,6 +1710,135 @@ class RezeptorWindow(QMainWindow):
         self.info_browser.setFrameShape(QFrame.Shape.NoFrame)
         lay.addWidget(self.info_browser)
         return tab
+
+    def _create_home_page(self) -> QWidget:
+        """Startseite: Intro + Kennzahlen (Header bleibt darüber)."""
+        page = CardWidget() if FLUENT_AVAILABLE else QFrame()
+        page.setObjectName("contentShell")
+        lay = QVBoxLayout(page)
+        lay.setContentsMargins(20, 18, 20, 18)
+        lay.setSpacing(16)
+
+        intro = QLabel(t("app.home_intro"))
+        intro.setObjectName("homeIntro")
+        intro.setWordWrap(True)
+        intro.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self._home_intro = intro
+        lay.addWidget(intro)
+
+        stats_row = QHBoxLayout()
+        stats_row.setSpacing(10)
+        self._home_stat_labels: dict[str, QLabel] = {}
+        for key in ("recipes", "installed", "attention", "hidden"):
+            card = QFrame()
+            card.setObjectName("homeStatCard")
+            card.setMinimumWidth(110)
+            cl = QVBoxLayout(card)
+            cl.setContentsMargins(12, 12, 12, 12)
+            cl.setSpacing(4)
+            val = QLabel("0")
+            val.setObjectName("homeStatValue")
+            val.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lab = QLabel(t(f"app.home_stat_{key}"))
+            lab.setObjectName("homeStatLabel")
+            lab.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lab.setWordWrap(True)
+            cl.addWidget(val)
+            cl.addWidget(lab)
+            stats_row.addWidget(card, stretch=1)
+            self._home_stat_labels[key] = val
+            setattr(self, f"_home_stat_caption_{key}", lab)
+        lay.addLayout(stats_row)
+
+        tip = QLabel(t("app.home_tip"))
+        tip.setObjectName("muted")
+        tip.setWordWrap(True)
+        self._home_tip = tip
+        lay.addWidget(tip)
+        lay.addStretch(1)
+        return page
+
+    def _recipe_stats(self) -> dict[str, int]:
+        hidden = set(self._settings.hidden_recipe_ids or [])
+        visible = [r for r in self.recipes if r.rid not in hidden]
+        installed = sum(1 for r in visible if r.state == RecipeState.INSTALLED)
+        attention = sum(
+            1
+            for r in visible
+            if r.state in (RecipeState.PARTIAL, RecipeState.UNTRUSTED)
+            or (r.trust_ok is False)
+        )
+        return {
+            "recipes": len(visible),
+            "installed": installed,
+            "attention": attention,
+            "hidden": len(hidden),
+        }
+
+    def _refresh_home_stats(self) -> None:
+        if not hasattr(self, "_home_stat_labels"):
+            return
+        stats = self._recipe_stats()
+        for key, val in self._home_stat_labels.items():
+            val.setText(str(stats.get(key, 0)))
+
+    def _set_home_btn_active(self, active: bool) -> None:
+        btn = getattr(self, "_home_btn", None)
+        if btn is None:
+            return
+        btn.setProperty("homeActive", "true" if active else "false")
+        btn.style().unpolish(btn)
+        btn.style().polish(btn)
+
+    def _show_home(self) -> None:
+        """Hauptansicht ohne Rezept — Intro + Statistiken."""
+        self._selected = None
+        self._selected_index = -1
+        for card, _info in self._recipe_cards:
+            card.set_selected(False)
+        self._set_home_btn_active(True)
+
+        if REZEPTOR_ICON.is_file():
+            ic = QIcon(str(REZEPTOR_ICON))
+            self.setWindowIcon(ic)
+            self.icon_label.setPixmap(ic.pixmap(64, 64))
+        self.name_label.setText(t("app.home_title"))
+        self.version_info_btn.setVisible(False)
+        self.status_pill.setVisible(False)
+        self.health_chip.setVisible(False)
+        self.progress_chip.setVisible(False)
+
+        ver = read_version()
+        stats = self._recipe_stats()
+        self.version_pill.set_content(t("app.home_pill_version", version=ver), COLOR_TESTED)
+        self.tested_pill.set_content(
+            t("app.home_pill_recipes", n=stats["recipes"]), COLOR_TESTED
+        )
+        self.proton_pill.set_content("Proton-GE", COLOR_EXPERIMENTAL)
+        self.author_pill.set_content("", MUTED)
+
+        self.path_label.setText(t("app.home_tagline"))
+        self._current_data_root = None
+        self.open_path_btn.setEnabled(False)
+        self.open_path_btn.setToolTip(t("tooltip.open_data_root"))
+        self.status_detail_label.setText("")
+
+        self._cta_mode = "docs"
+        self.primary_btn.setText(t("app.home_cta_docs"))
+        self.primary_btn.setToolTip(t("app.home_cta_docs_tip"))
+        docs_ic = fa_icon("info", 14, color="#1a1a1a")
+        if docs_ic is not None:
+            self.primary_btn.setIcon(docs_ic)
+            self.primary_btn.setIconSize(QSize(14, 14))
+        self.primary_btn.setEnabled(True)
+        self.primary_btn.setVisible(True)
+        self.trust_btn.setVisible(False)
+        self.more_btn.setEnabled(True)
+
+        self._refresh_home_stats()
+        if hasattr(self, "_detail_stack"):
+            self._detail_stack.setCurrentIndex(0)
+        self._rebuild_more_menu()
 
     def _create_progress_tab(self) -> QWidget:
         tab = QWidget()
@@ -2148,6 +2296,9 @@ class RezeptorWindow(QMainWindow):
     def _select_recipe_index(self, row: int) -> None:
         if row < 0 or row >= len(self.recipes):
             return
+        self._set_home_btn_active(False)
+        if hasattr(self, "_detail_stack"):
+            self._detail_stack.setCurrentIndex(1)
         self._selected_index = row
         for i, (card, info) in enumerate(self._recipe_cards):
             card.set_selected(info.rid == self.recipes[row].rid)
@@ -2218,9 +2369,14 @@ class RezeptorWindow(QMainWindow):
             QApplication.processEvents()
         self.recipes = refreshed
         prev = self._selected_index
+        was_home = self._selected is None
         self._populate_list()
-        if self.recipes:
+        if was_home or prev < 0:
+            self._show_home()
+        elif self.recipes:
             self._select_recipe_index(prev if 0 <= prev < len(self.recipes) else 0)
+        else:
+            self._show_home()
         self._activity("info", t("menu.refresh_done", n=len(self.recipes)))
 
     def _on_select(self, row: int) -> None:
@@ -3240,12 +3396,7 @@ class RezeptorWindow(QMainWindow):
             self._selected = None
             self._selected_index = -1
         self._populate_list()
-        if self._recipe_cards:
-            first = self._recipe_cards[0][1]
-            for i, info in enumerate(self.recipes):
-                if info.rid == first.rid:
-                    self._select_recipe_index(i)
-                    break
+        self._show_home()
 
     def _recipe_category(self, rid: str) -> str:
         overrides = dict(self._settings.recipe_category_overrides or {})
@@ -3674,8 +3825,19 @@ class RezeptorWindow(QMainWindow):
         self._refresh_status_footer(self._update_available)
         if hasattr(self, "_sidebar_title"):
             self._sidebar_title.setText(t("app.sidebar_title"))
+        if hasattr(self, "_home_btn"):
+            self._home_btn.setText(t("app.home_sidebar"))
+            self._home_btn.setToolTip(t("menu.home"))
         if hasattr(self, "sidebar_search"):
             self.sidebar_search.setPlaceholderText(t("app.sidebar_search"))
+        if hasattr(self, "_home_intro"):
+            self._home_intro.setText(t("app.home_intro"))
+        if hasattr(self, "_home_tip"):
+            self._home_tip.setText(t("app.home_tip"))
+        for key in ("recipes", "installed", "attention", "hidden"):
+            cap = getattr(self, f"_home_stat_caption_{key}", None)
+            if cap is not None:
+                cap.setText(t(f"app.home_stat_{key}"))
         if hasattr(self, "_overview_hint"):
             self._overview_hint.setText(t("overview.hint"))
         if hasattr(self, "_progress_steps_label"):
@@ -3695,8 +3857,6 @@ class RezeptorWindow(QMainWindow):
             self.cancel_install_btn.setToolTip(t("tooltip.cancel_install"))
         if hasattr(self, "_rebuild_more_menu"):
             self._rebuild_more_menu()
-        if not self._selected:
-            self.name_label.setText(t("app.choose_recipe"))
         if hasattr(self, "segment_tabs"):
             self.segment_tabs.set_labels(
                 [
@@ -3707,6 +3867,8 @@ class RezeptorWindow(QMainWindow):
             )
         if self._selected:
             self._on_select(self._selected_index)
+        else:
+            self._show_home()
 
     def cleanup_logs_now(self) -> None:
         removed = prune_old_logs(

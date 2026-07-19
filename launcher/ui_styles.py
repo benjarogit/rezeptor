@@ -101,6 +101,44 @@ QLabel#sidebarTitle {{
     font-weight: 600;
     letter-spacing: 0.06em;
 }}
+QPushButton#homeSidebarBtn {{
+    text-align: left;
+    padding: 8px 10px;
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    background-color: {SURFACE_2};
+    color: {COLOR_PARCHMENT};
+    font-weight: 600;
+}}
+QPushButton#homeSidebarBtn:hover {{
+    border-color: {ACCENT_COPPER};
+}}
+QPushButton#homeSidebarBtn[homeActive="true"] {{
+    border-color: {ACCENT_COPPER};
+    background-color: rgba(184, 115, 51, 0.16);
+}}
+QFrame#homeStatCard {{
+    background-color: {COLOR_ANTHRACITE};
+    border: 1px solid {BORDER};
+    border-radius: 8px;
+}}
+QLabel#homeStatValue {{
+    color: {ACCENT_COPPER};
+    font-size: 22px;
+    font-weight: 700;
+    background: transparent;
+}}
+QLabel#homeStatLabel {{
+    color: {MUTED};
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+}}
+QLabel#homeIntro {{
+    color: {COLOR_PARCHMENT};
+    font-size: 13px;
+    background: transparent;
+}}
 QLabel#appTitle {{
     font-size: 20px;
     font-weight: 600;
