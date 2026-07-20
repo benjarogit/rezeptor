@@ -121,27 +121,34 @@ if [ ! -x "$APPDIR/python/bin/python3" ]; then
     exit 1
 fi
 
-echo "Creating AppImage venv with PyQt6 + Fluent Widgets..."
-rm -rf "$APPDIR/venv"
-"$APPDIR/python/bin/python3" -m venv --copies "$APPDIR/venv"
-"$APPDIR/venv/bin/pip" install -q --upgrade pip
-"$APPDIR/venv/bin/pip" install -q PyQt6 "PyQt6-Fluent-Widgets"
+echo "Installing PyQt6 + Fluent Widgets into bundled Python..."
+# python-build-standalone is relocatable; venv --copies hardcodes /install and CI paths.
+"$APPDIR/python/bin/python3" -m pip install -q --upgrade pip
+"$APPDIR/python/bin/python3" -m pip install -q PyQt6 "PyQt6-Fluent-Widgets"
 
-venv_py="$(readlink -f "$APPDIR/venv/bin/python")"
-case "$venv_py" in
+bundled_py="$(readlink -f "$APPDIR/python/bin/python3")"
+case "$bundled_py" in
     "$APPDIR"/*) ;;
     *)
-        echo "AppImage venv python escapes AppDir (host symlink?): $venv_py" >&2
+        echo "Bundled python escapes AppDir: $bundled_py" >&2
         exit 1
         ;;
 esac
-if ! "$APPDIR/venv/bin/python" -c \
+prefix="$("$APPDIR/python/bin/python3" -c 'import sys; print(sys.prefix)')"
+case "$prefix" in
+    "$APPDIR"/*) ;;
+    *)
+        echo "Bundled python prefix escapes AppDir: $prefix" >&2
+        exit 1
+        ;;
+esac
+if ! "$APPDIR/python/bin/python3" -c \
     "import importlib.metadata as m; m.version('PyQt6'); m.version('PyQt6-Fluent-Widgets')"; then
-    echo "AppImage venv missing PyQt6 or PyQt6-Fluent-Widgets" >&2
+    echo "AppImage python missing PyQt6 or PyQt6-Fluent-Widgets" >&2
     exit 1
 fi
-if ! "$APPDIR/venv/bin/python" -c "import PyQt6" 2>/dev/null; then
-    echo "AppImage venv cannot import PyQt6 (Qt libs missing on build host?)" >&2
+if ! "$APPDIR/python/bin/python3" -c "import PyQt6; import PyQt6.QtCore"; then
+    echo "AppImage python cannot import PyQt6 (Qt libs missing on build host?)" >&2
     exit 1
 fi
 
@@ -172,7 +179,7 @@ do
     fi
 done
 # Trust must be green for photoshop (stale manifest = install blocked in GUI)
-if ! "$APPDIR/venv/bin/python" - <<PY
+if ! "$APPDIR/python/bin/python3" - <<PY
 import sys
 from pathlib import Path
 sys.path.insert(0, "$SHARE/launcher")

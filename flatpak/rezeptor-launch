@@ -5,7 +5,7 @@ HERE="/app"
 export APPDIR="$HERE"
 export PROJECT_ROOT="$HERE/share/rezeptor"
 export REZEPTOR_FLATPAK=1
-export PATH="$HERE/venv/bin:$HERE/python/bin:$HERE/bin:$HERE/runtime/winetricks:$PROJECT_ROOT/core:$PATH"
+export PATH="$HERE/python/bin:$HERE/bin:$HERE/runtime/winetricks:$PROJECT_ROOT/core:$PATH"
 
 if [ -z "${QT_QPA_PLATFORMTHEME:-}" ]; then
     case "${XDG_CURRENT_DESKTOP:-}${KDE_FULL_SESSION:+KDE}" in
@@ -13,12 +13,12 @@ if [ -z "${QT_QPA_PLATFORMTHEME:-}" ]; then
     esac
 fi
 
-FLATPAK_PYTHON="$HERE/venv/bin/python"
+FLATPAK_PYTHON="$HERE/python/bin/python3"
 if [ ! -x "$FLATPAK_PYTHON" ]; then
     echo "Bundled Python missing — rebuild Flatpak (scripts/build-flatpak.sh)." >&2
     exit 1
 fi
-if ! "$FLATPAK_PYTHON" -c "import PyQt6" 2>/dev/null; then
+if ! "$FLATPAK_PYTHON" -c "import PyQt6"; then
     echo "Bundled PyQt6 missing or broken — rebuild Flatpak." >&2
     exit 1
 fi

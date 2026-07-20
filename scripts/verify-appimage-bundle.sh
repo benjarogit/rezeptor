@@ -24,20 +24,37 @@ check() {
     fi
 }
 
-check test -x "$ROOT/venv/bin/python"
-check test -x "$ROOT/python/bin/python3"
+BUNDLED_PY="$ROOT/python/bin/python3"
 
-venv_py="$(readlink -f "$ROOT/venv/bin/python")"
-case "$venv_py" in
-    "$ROOT"/*) echo "venv python is bundled: $venv_py" ;;
+check test -x "$BUNDLED_PY"
+
+bundled_py="$(readlink -f "$BUNDLED_PY")"
+case "$bundled_py" in
+    "$ROOT"/*) echo "bundled python: $bundled_py" ;;
     *)
-        echo "FAIL: venv python escapes AppDir: $venv_py" >&2
+        echo "FAIL: bundled python escapes AppDir: $bundled_py" >&2
         fail=1
         ;;
 esac
 
-check "$ROOT/venv/bin/python" -c "import PyQt6; import PyQt6.QtCore"
-pyqt_path="$("$ROOT/venv/bin/python" -c 'import PyQt6; print(PyQt6.__file__)')"
+prefix="$("$BUNDLED_PY" -c 'import sys; print(sys.prefix)')"
+case "$prefix" in
+    "$ROOT"/*) echo "python prefix in bundle: $prefix" ;;
+    *)
+        echo "FAIL: python prefix not in AppDir: $prefix" >&2
+        fail=1
+        ;;
+esac
+
+if ! "$BUNDLED_PY" -c 'import sys; raise SystemExit(1 if sys.prefix.startswith("/install") or sys.base_prefix.startswith("/install") else 0)'; then
+    echo "FAIL: python prefix still hardcoded to /install (broken venv copy?)" >&2
+    fail=1
+fi
+
+check test ! -e "$ROOT/venv/bin/python"
+
+check "$BUNDLED_PY" -c "import PyQt6; import PyQt6.QtCore"
+pyqt_path="$("$BUNDLED_PY" -c 'import PyQt6; print(PyQt6.__file__)')"
 case "$pyqt_path" in
     "$ROOT"/*) echo "PyQt6 from bundle: $pyqt_path" ;;
     *)
@@ -50,6 +67,10 @@ if grep -qE 'elif python3 -c "import PyQt6"|export PYTHON="python3"' "$ROOT/AppR
     echo "FAIL: AppRun still falls back to host python3" >&2
     fail=1
 fi
+if grep -q 'venv/bin/python' "$ROOT/AppRun"; then
+    echo "FAIL: AppRun still points at broken venv python" >&2
+    fail=1
+fi
 
 fakebin="$WORKDIR/fakebin"
 mkdir -p "$fakebin"
@@ -60,11 +81,20 @@ exit 99
 EOF
 chmod +x "$fakebin/python3"
 
-if ! PATH="$fakebin:$PATH" "$ROOT/venv/bin/python" -c "import PyQt6" >/dev/null; then
+if ! PATH="$fakebin:$PATH" "$BUNDLED_PY" -c "import PyQt6" >/dev/null; then
     echo "FAIL: bundled python import with host decoy on PATH" >&2
     fail=1
 else
     echo "Bundled python works with host python3 decoy on PATH"
+fi
+
+reloc="$WORKDIR/reloc-test"
+cp -a "$ROOT" "$reloc"
+if ! "$reloc/python/bin/python3" -c "import PyQt6.QtCore" >/dev/null; then
+    echo "FAIL: bundled python broken after directory relocation" >&2
+    fail=1
+else
+    echo "Bundled python survives relocation"
 fi
 
 if [ "$fail" -ne 0 ]; then

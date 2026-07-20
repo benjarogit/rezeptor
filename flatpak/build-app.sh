@@ -114,27 +114,34 @@ if [ ! -x /app/python/bin/python3 ]; then
     exit 1
 fi
 
-echo "Creating Flatpak venv with PyQt6 + Fluent Widgets..."
-rm -rf /app/venv
-/app/python/bin/python3 -m venv --copies /app/venv
-/app/venv/bin/pip install -q --upgrade pip
-/app/venv/bin/pip install -q PyQt6 "PyQt6-Fluent-Widgets"
+echo "Installing PyQt6 + Fluent Widgets into bundled Python..."
+# python-build-standalone is relocatable; venv --copies hardcodes /install and build paths.
+/app/python/bin/python3 -m pip install -q --upgrade pip
+/app/python/bin/python3 -m pip install -q PyQt6 "PyQt6-Fluent-Widgets"
 
-venv_py="$(readlink -f /app/venv/bin/python)"
-case "$venv_py" in
+bundled_py="$(readlink -f /app/python/bin/python3)"
+case "$bundled_py" in
     /app/*) ;;
     *)
-        echo "Flatpak venv python escapes /app: $venv_py" >&2
+        echo "Bundled python escapes /app: $bundled_py" >&2
         exit 1
         ;;
 esac
-if ! /app/venv/bin/python -c \
+prefix="$(/app/python/bin/python3 -c 'import sys; print(sys.prefix)')"
+case "$prefix" in
+    /app/*) ;;
+    *)
+        echo "Bundled python prefix escapes /app: $prefix" >&2
+        exit 1
+        ;;
+esac
+if ! /app/python/bin/python3 -c \
     "import importlib.metadata as m; m.version('PyQt6'); m.version('PyQt6-Fluent-Widgets')"; then
-    echo "Flatpak venv missing PyQt6 packages" >&2
+    echo "Flatpak python missing PyQt6 packages" >&2
     exit 1
 fi
-if ! /app/venv/bin/python -c "import PyQt6" 2>/dev/null; then
-    echo "Flatpak venv cannot import PyQt6" >&2
+if ! /app/python/bin/python3 -c "import PyQt6; import PyQt6.QtCore"; then
+    echo "Flatpak python cannot import PyQt6" >&2
     exit 1
 fi
 
@@ -147,7 +154,6 @@ for f in \
     /app/share/rezeptor/recipes/manifest.json \
     /app/runtime/winetricks/winetricks \
     /app/runtime/proton-ge/"$PROTON_GE_TAG"/files/bin/wine64 \
-    /app/venv/bin/python \
     /app/python/bin/python3
 do
     if [ ! -e "$f" ]; then
@@ -155,7 +161,7 @@ do
         fail=1
     fi
 done
-if ! /app/venv/bin/python -c "import PyQt6; import PyQt6.QtCore"; then
+if ! /app/python/bin/python3 -c "import PyQt6; import PyQt6.QtCore"; then
     echo "PyQt6 import check failed" >&2
     fail=1
 fi

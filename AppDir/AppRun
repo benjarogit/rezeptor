@@ -8,8 +8,8 @@ export PROJECT_ROOT="$HERE/usr/share/rezeptor"
 if [ ! -d "$PROJECT_ROOT" ] && [ -d "$HERE/usr/share/photoshopCClinux" ]; then
     export PROJECT_ROOT="$HERE/usr/share/photoshopCClinux"
 fi
-# Bundled venv/python only — never fall back to host python3 (Bazzite / immutable).
-export PATH="$HERE/venv/bin:$HERE/python/bin:$HERE/usr/bin:$HERE/runtime/winetricks:$PROJECT_ROOT/core:$PATH"
+# Bundled python only — never fall back to host python3 (Bazzite / immutable).
+export PATH="$HERE/python/bin:$HERE/usr/bin:$HERE/runtime/winetricks:$PROJECT_ROOT/core:$PATH"
 export REZEPTOR_APPIMAGE=1
 # Prefer desktop portal when present (pip Qt in AppImage lacks KDEPlasmaPlatformTheme).
 if [ -z "${QT_QPA_PLATFORMTHEME:-}" ]; then
@@ -18,12 +18,12 @@ if [ -z "${QT_QPA_PLATFORMTHEME:-}" ]; then
     esac
 fi
 
-APPIMAGE_PYTHON="$HERE/venv/bin/python"
+APPIMAGE_PYTHON="$HERE/python/bin/python3"
 if [ ! -x "$APPIMAGE_PYTHON" ]; then
     echo "Bundled Python missing — rebuild AppImage (scripts/build-appimage.sh)." >&2
     exit 1
 fi
-if ! "$APPIMAGE_PYTHON" -c "import PyQt6" 2>/dev/null; then
+if ! "$APPIMAGE_PYTHON" -c "import PyQt6"; then
     echo "Bundled PyQt6 missing or broken — rebuild AppImage." >&2
     exit 1
 fi
@@ -36,7 +36,7 @@ if [ -n "${PHOTOSHOP_INSTALLER_DIR:-}" ] && [ -f "${PHOTOSHOP_INSTALLER_DIR}/Set
 fi
 
 cd "$PROJECT_ROOT"
-if ! "$PYTHON" -c "import PyQt6" 2>/dev/null; then
+if ! "$PYTHON" -c "import PyQt6"; then
     echo "PyQt6 import failed." >&2
     exit 1
 fi
