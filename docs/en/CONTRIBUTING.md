@@ -7,8 +7,9 @@ Contributions to recipes, launcher, core, and docs are welcome. Keep changes sma
 ```bash
 git clone https://github.com/benjarogit/rezeptor.git
 cd rezeptor
-# Distro: python-pyqt6, bats-core, shellcheck (names vary)
+# Distro (for clone/tar.gz development): python-pyqt6, bats-core, shellcheck
 pip install --user PyQt6-Fluent-Widgets   # optional
+# End users on Bazzite etc.: release AppImage or Flatpak — no host PyQt6
 make validate
 make test
 REZEPTOR_DEV=1 ./setup.sh
@@ -59,7 +60,7 @@ Ideas: [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?tem
 
 ## Releases
 
-- Bump SemVer in `VERSION` and push to `main` → GitHub Actions builds the AppImage/`tar.gz` and publishes the release
+- Bump SemVer in `VERSION` and push to `main` → GitHub Actions builds AppImage, Flatpak, and `tar.gz` and publishes the release
 - Assets: https://github.com/benjarogit/rezeptor/releases
 
 ## Next

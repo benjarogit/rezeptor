@@ -182,9 +182,18 @@ def _parse_scalar(val: str) -> Any:
     return val
 
 
+# Version/resource strings live well below this; avoid loading multi-hundred-MB EXEs.
+_PE_SCAN_MAX = 32 * 1024 * 1024
+
+
+def _pe_read_capped(exe: Path, limit: int = _PE_SCAN_MAX) -> bytes:
+    with exe.open("rb") as f:
+        return f.read(limit)
+
+
 def _pe_field(exe: Path, field: str) -> str:
     try:
-        data = exe.read_bytes()
+        data = _pe_read_capped(exe)
     except OSError:
         return ""
     marker = f"{field}\x00".encode("utf-16le")
@@ -199,13 +208,41 @@ def _pe_field(exe: Path, field: str) -> str:
     return s.split("\x00", 1)[0].strip()
 
 
+def _bytes_contains_ci(haystack: bytes, needle: bytes) -> bool:
+    """Case-insensitive ASCII substring search without lowercasing the whole file."""
+    if not needle:
+        return True
+    nlen = len(needle)
+    if nlen > len(haystack):
+        return False
+    # Sliding window: compare lowered needle to each window (ASCII fold only).
+    first = needle[0:1]
+    first_alt = bytes([first[0] ^ 0x20]) if 65 <= first[0] <= 90 or 97 <= first[0] <= 122 else first
+    start = 0
+    while True:
+        i = haystack.find(first, start)
+        j = haystack.find(first_alt, start) if first_alt != first else -1
+        if i < 0 and j < 0:
+            return False
+        if i < 0:
+            i = j
+        elif j >= 0:
+            i = min(i, j)
+        window = haystack[i : i + nlen]
+        if len(window) == nlen and window.lower() == needle:
+            return True
+        start = i + 1
+
+
 def _pe_contains(exe: Path, needles: list[str]) -> bool:
+    if not needles:
+        return True
     try:
-        data = exe.read_bytes()
+        data = _pe_read_capped(exe)
     except OSError:
         return False
-    low = data.lower()
-    return all(n.encode("utf-8", errors="ignore").lower() in low for n in needles)
+    encoded = [n.encode("utf-8", errors="ignore").lower() for n in needles]
+    return all(_bytes_contains_ci(data, n) for n in encoded)
 
 
 def _resolve_globs(root: Path, pattern: str) -> list[Path]:

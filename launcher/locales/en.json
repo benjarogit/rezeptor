@@ -51,7 +51,8 @@
     "home_link_wiki_sub": "Public documentation",
     "home_link_wiki_tip": "Open the public documentation in your browser",
     "home_pill_version": "v{version}",
-    "home_pill_recipes": "{n} recipes"
+    "home_pill_recipes": "{n} recipes",
+    "sidebar_search_empty": "No recipes match \"{query}\"."
   },
   "menu": {
     "home": "Home",
@@ -66,6 +67,7 @@
     "refresh": "Refresh status",
     "refresh_tip": "Refresh install status of all recipes via validate.sh (also runs after install/repair and on startup).",
     "refresh_busy": "Checking status…",
+    "refresh_failed": "Status refresh failed: {error}",
     "refresh_done": "Status updated ({n} recipes)",
     "reorder_saved": "Order saved",
     "reorder_same_category": "Reorder only within the same category (e.g. both under Games)",
@@ -146,11 +148,13 @@
     "installed": "Installed",
     "unknown": "Unknown",
     "untrusted": "Approval needed",
+    "checking": "Checking…",
     "running": "Running",
     "installed_tip": "Installed — ready to launch",
     "partial_tip": "Partial — repair recommended",
     "not_installed_tip": "Not installed yet",
     "untrusted_tip": "Recipe files changed — use More → “Approve files” (developer mode / REZEPTOR_DEV)",
+    "checking_tip": "Recipe file integrity is still being verified",
     "prefix_present": "Prefix present",
     "installed_with_warnings": "Installed (validation with warnings)",
     "tested_guaranteed": "Tested & guaranteed · {version}",
@@ -161,6 +165,7 @@
     "partial": "Partial",
     "not_installed": "Not installed",
     "untrusted": "Approval needed",
+    "checking": "Checking…",
     "unknown": "Unknown",
     "running": "Running",
     "author": "Author · {author}",
@@ -198,17 +203,20 @@
     "path_missing": "Folder does not exist yet:\n{path}",
     "install_cancelled": "Installation cancelled.",
     "install_rolled_back": "Installation cancelled — recipe data that was created has been rolled back.",
-    "install_rollback_fail": "Installation cancelled, but rollback was incomplete.\nPlease use More → Uninstall to clean up."
+    "install_rollback_fail": "Installation cancelled, but rollback was incomplete.\nPlease use More → Uninstall to clean up.",
+    "query_error": "Status check failed: {error}"
   },
   "trust": {
     "title": "Check Rezeptor files",
     "detail": "{reason}",
     "manifest_failed": "Rezeptor files do not match",
     "reason_changed": "Some Rezeptor files changed and need to be approved again.",
+    "reason_checking": "Checking integrity…",
     "reason_missing": "Expected Rezeptor files are missing or unreadable.",
     "hint_dev": "Click “Approve files” to accept the local changes — then you can launch again.",
     "hint_user": "Please update Rezeptor (Help → Check for updates), then reopen.",
     "hidden_warn": "Recipe warning: {line}",
+    "resync_needed": "Recipe files changed — approve them again before install/launch. {detail}",
     "regen_ok": "Files approved — refreshing status",
     "regen_fail": "Could not approve files"
   },
@@ -269,7 +277,8 @@
     "developer_mode_tip": "On: Rezeptor menu → “Edit recipe…”, save source; can approve manifest. Same as REZEPTOR_DEV=1.",
     "developer_mode_ready": "Developer mode on — More → “Edit recipe…” (Source tab).",
     "archive_passwords": "Archive passwords (global)",
-    "archive_passwords_hint": "One line = one password, top to bottom. Comments with #. If the right one is missing at install, Rezeptor asks and saves it here.",
+    "archive_passwords_show": "Show passwords",
+    "archive_passwords_hint": "One line = one password, top to bottom. Comments with #. Stored separately and readable only by you (not in settings.json). If the right one is missing at install, Rezeptor asks and saves it here.",
     "archive_passwords_ph": "List empty — type here, e.g.:\nsecret123\nother-password\n# lines starting with # are comments",
     "archive_passwords_count": "{count} password(s) in the list",
     "archive_passwords_count_empty": "0 passwords — list empty (gray hint text is only an example)",
@@ -367,7 +376,7 @@
     "repair_wiso": "Repair runs validate.sh and fills in what’s missing:\n• Portable root / launch script\n• vcrun2019, gdiplus, dotnet48 (Wine Mono), win10\n\nWine windows may appear briefly — please click OK or Install.\n\nContinue?",
     "repair_default": "Repair runs validate.sh and fixes:\n• Native MSXML\n• Fonts (ClearType/Segoe UI)\n• Proton-GE graphics DLLs\n• Desktop icon (only if already created)\n\nContinue?",
     "uninstall_title": "Uninstall",
-    "uninstall_confirm": "Remove “{name}”?",
+    "uninstall_confirm": "Uninstall “{name}”?\n\nThis permanently deletes the Wine prefix and recipe data under the chosen data folder (and Rezeptor’s copy under ~/.local/share/wine-software/). Desktop shortcuts for this recipe are removed.\n\nGame/portable folders outside that data folder are left alone.\n\nThis cannot be undone.",
     "shortcuts_title": "Shortcuts",
     "shortcuts_body": "Create “{name}” in the application/start menu and on the Desktop?\n\nThe icon comes from the recipe.\n\nNo / later: anytime under More → “Add or update shortcuts…”.",
     "shortcuts_created": "Start-menu and desktop shortcuts created.\n\nCreate or refresh again (e.g. after deleting): More → “Add or update shortcuts…”.",
@@ -508,7 +517,8 @@
     "E_UPDATE_APPLY": "Update failed",
     "E_UPDATE_ROLLBACK": "Rollback failed",
     "E_LAUNCH_NO_PROCESS": "Process not active after launch",
-    "E_SCRIPT_FAILED": "{label} failed (exit {code})"
+    "E_SCRIPT_FAILED": "{label} failed (exit {code})",
+    "E_STATUS_QUERY": "Recipe status check failed"
   },
   "info": {
     "missing": "No recipe description available.",

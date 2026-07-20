@@ -6,11 +6,9 @@ RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$RECIPE_DIR/../../core/recipe-hooks.sh"
 recipe_hooks::load validate
-# shellcheck source=/dev/null
-source "$RECIPE_DIR/../../core/wine-runtime.sh"
 
 failures=0
-output::progress_begin 4 "Prüfen"
+output::progress_begin 3 "Prüfen"
 
 script="$(recipe_hooks::state_get SCRIPT_PATH 2>/dev/null || true)"
 trainer="$(recipe_hooks::state_get TRAINER_EXE 2>/dev/null || true)"
@@ -44,32 +42,6 @@ elif [ -d "$HOME/.local/share/Steam/steamapps/compatdata/$appid" ]; then
     recipe_validate::warn "compatdata unter Standard-Steam — Wrapper ggf. neu installieren"
 else
     recipe_validate::warn "compatdata AppID $appid nicht gefunden — Spiel einmal unter Proton starten"
-fi
-
-# Gleicher Proton wie Spiel-Prefix + runinprefix (Rezeptor-GE+"run" startet nicht neben laufendem ZA4)
-output::progress_tick "Proton (compatdata + runinprefix)"
-steam_root="${STEAM_ROOT:-$HOME/.local/share/Steam}"
-[ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
-expected_proton=""
-if [ -n "$compat" ] && [ -d "$compat" ] && type wine_runtime::resolve_compatdata_proton_script >/dev/null 2>&1; then
-    expected_proton="$(wine_runtime::resolve_compatdata_proton_script "$steam_root" "$compat" 2>/dev/null || true)"
-fi
-if [ -n "$script" ] && [ -x "$script" ]; then
-    wrapper_proton="$(grep -m1 '^PROTON=' "$script" 2>/dev/null | sed 's/^PROTON=//' || true)"
-    if ! grep -q 'runinprefix' "$script" 2>/dev/null; then
-        recipe_validate::fail "Launch-Wrapper nutzt noch 'proton run' — Reparieren (runinprefix nötig)"
-        failures=$((failures + 1))
-    elif [ -n "$expected_proton" ] && [ -f "$expected_proton" ] && [ -n "$wrapper_proton" ] \
-        && [ "$wrapper_proton" != "$expected_proton" ]; then
-        recipe_validate::fail "Launch-Wrapper Proton veraltet ($(basename "$(dirname "$wrapper_proton")") → $(basename "$(dirname "$expected_proton")")) — Reparieren"
-        failures=$((failures + 1))
-    elif [ -n "$expected_proton" ] && [ -f "$expected_proton" ]; then
-        recipe_validate::ok "Proton: $(basename "$(dirname "$expected_proton")") + runinprefix"
-    else
-        recipe_validate::ok "Wrapper: runinprefix"
-    fi
-elif [ -n "$expected_proton" ] && [ -f "$expected_proton" ]; then
-    recipe_validate::warn "Launch-Wrapper fehlt — Proton wäre $(basename "$(dirname "$expected_proton")")"
 fi
 
 if [ "$failures" -eq 0 ]; then

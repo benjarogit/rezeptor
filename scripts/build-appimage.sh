@@ -11,6 +11,8 @@ SHARE="$APPDIR/usr/share/rezeptor"
 
 # shellcheck source=/dev/null
 source "$ROOT/core/runtime.lock"
+# shellcheck source=/dev/null
+source "$ROOT/core/proton-ge-fetch.sh"
 
 echo "Building AppDir (Rezeptor ${VERSION})..."
 rm -rf "$APPDIR"
@@ -46,14 +48,12 @@ if [ ! -d "$APPDIR/runtime/proton-ge/$PROTON_GE_TAG/files/bin" ]; then
     cache="$ROOT/.cache/proton-ge-build"
     mkdir -p "$cache"
     if [ ! -f "$cache/${PROTON_GE_TAG}.tar.gz" ]; then
-        curl -fsSL "$PROTON_GE_URL" -o "$cache/${PROTON_GE_TAG}.tar.gz"
+        proton_ge_fetch::download_tarball "$PROTON_GE_URL" "$cache/${PROTON_GE_TAG}.tar.gz"
     fi
-    if [ -n "${PROTON_GE_SHA256:-}" ]; then
-        echo "${PROTON_GE_SHA256}  $cache/${PROTON_GE_TAG}.tar.gz" | sha256sum -c - >/dev/null 2>&1 || {
-            echo "Proton-GE SHA256 mismatch — delete $cache/${PROTON_GE_TAG}.tar.gz and retry" >&2
-            exit 1
-        }
-    fi
+    proton_ge_fetch::verify_tarball "$cache/${PROTON_GE_TAG}.tar.gz" || {
+        echo "Proton-GE SHA256 mismatch — delete $cache/${PROTON_GE_TAG}.tar.gz and retry" >&2
+        exit 1
+    }
     tar -xzf "$cache/${PROTON_GE_TAG}.tar.gz" -C "$APPDIR/runtime/proton-ge"
 fi
 
@@ -68,16 +68,47 @@ fi
 cp -f "$wt_cache/winetricks" "$APPDIR/runtime/winetricks/winetricks"
 chmod +x "$APPDIR/runtime/winetricks/winetricks"
 
-# Host helpers often missing on immutable distros (winetricks needs them).
-mkdir -p "$APPDIR/usr/bin"
-for bin in cabextract unzip; do
-    if command -v "$bin" >/dev/null 2>&1; then
-        cp -f "$(command -v "$bin")" "$APPDIR/usr/bin/$bin"
-        chmod +x "$APPDIR/usr/bin/$bin"
-    else
-        echo "WARNING: host $bin missing — not bundled (winetricks may fail for some verbs)" >&2
+# Pinned Debian bookworm amd64 helpers (SHA256) — never copy arbitrary host PATH binaries.
+# cabextract needs libmspack.so.0 from the same suite (LD_LIBRARY_PATH in AppRun).
+mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/lib"
+_helper_cache="$ROOT/.cache/appimage-helpers"
+mkdir -p "$_helper_cache"
+_extract_deb() {
+    local url="$1" sha="$2"
+    local deb base tmp
+    base="$(basename "$url")"
+    deb="$_helper_cache/$base"
+    if [ ! -f "$deb" ]; then
+        curl -fsSL "$url" -o "$deb"
     fi
-done
+    echo "${sha}  ${deb}" | sha256sum -c - >/dev/null 2>&1 || {
+        echo "SHA256 mismatch for $base — delete $deb and retry" >&2
+        exit 1
+    }
+    tmp="$(mktemp -d)"
+    (
+        cd "$tmp"
+        ar x "$deb"
+        tar xf data.tar.* 2>/dev/null || tar xf data.tar.xz
+    )
+    printf '%s' "$tmp"
+}
+_tmp="$(_extract_deb \
+    "http://deb.debian.org/debian/pool/main/c/cabextract/cabextract_1.9-3_amd64.deb" \
+    "0b02139c1bc170c6ee107fd480da5d290bdeba7cbbb881d95d9ff6544ccda748")"
+install -Dm755 "$_tmp/usr/bin/cabextract" "$APPDIR/usr/bin/cabextract"
+rm -rf "$_tmp"
+_tmp="$(_extract_deb \
+    "http://deb.debian.org/debian/pool/main/u/unzip/unzip_6.0-28_amd64.deb" \
+    "b3d9529c34382cc8d2e6cc8299a18536504edbc284b9133ffbe522704865068e")"
+install -Dm755 "$_tmp/usr/bin/unzip" "$APPDIR/usr/bin/unzip"
+rm -rf "$_tmp"
+_tmp="$(_extract_deb \
+    "http://deb.debian.org/debian/pool/main/libm/libmspack/libmspack0_0.10.1-2_amd64.deb" \
+    "fbf5d0c0dd516770dd1910543baf9050bfb8b4cfa4baf457c8117bd8f93393c5")"
+cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libmspack.so.0"* "$APPDIR/usr/lib/"
+rm -rf "$_tmp"
+chmod +x "$APPDIR/usr/bin/cabextract" "$APPDIR/usr/bin/unzip"
 
 cat > "$APPDIR/rezeptor.desktop" <<EOF
 [Desktop Entry]

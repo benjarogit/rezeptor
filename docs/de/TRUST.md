@@ -38,9 +38,9 @@ SHA256 über alle Dateien pro offiziellem Rezept:
 
 | Kontext | Verhalten |
 |---------|-----------|
-| Release / AppImage | Strenge Hash-Prüfung |
+| Release / AppImage / Flatpak | Strenge Hash-Prüfung |
 | `REZEPTOR_DEV=1` | Bypass / Entwickler-Workflow |
-| Git-Checkout | Auto-Sync des Manifests oft erlaubt |
+| Git-Checkout (Auto-Sync) | Nach Sync gilt Trust **nicht** stillschweigend weiter — Manifest darf nicht heimisch „grün“ regeneriert werden; Nutzer muss geänderten Rezepten erneut vertrauen |
 
 Vor PR nach Dateiänderungen immer `./scripts/recipe-manifest.sh` und Commit von `recipes/manifest.json`.
 
@@ -49,7 +49,7 @@ Der Generator hasht nur **Top-Level**-Ordner `recipes/<id>/` mit `recipe.yml` un
 
 ## Release-Assets
 
-GitHub Release enthält `SHA256SUMS` für `tar.gz` und AppImage:
+GitHub Release enthält `SHA256SUMS` für `tar.gz` und AppImage (Flatpak hat eigene Bundle-Prüfsumme in den Release-Assets):
 
 ```bash
 sha256sum -c SHA256SUMS

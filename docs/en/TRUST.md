@@ -38,9 +38,9 @@ SHA256 over all files per official recipe:
 
 | Context | Behavior |
 |---------|----------|
-| Release / AppImage | Strict hash checks |
+| Release / AppImage / Flatpak | Strict hash checks |
 | `REZEPTOR_DEV=1` | Bypass / developer workflow |
-| Git checkout | Manifest auto-sync often allowed |
+| Git checkout (auto-sync) | Trust does **not** silently stay green after sync — the manifest must not be quietly regenerated as “ok”; the user must re-confirm trust for changed recipes |
 
 Before a PR after file changes, always run `./scripts/recipe-manifest.sh` and commit `recipes/manifest.json`.
 
@@ -49,7 +49,7 @@ The generator hashes only **top-level** dirs `recipes/<id>/` that contain `recip
 
 ## Release assets
 
-GitHub releases include `SHA256SUMS` for the `tar.gz` and AppImage:
+GitHub releases include `SHA256SUMS` for the `tar.gz` and AppImage (Flatpak has its own bundle checksum in the release assets):
 
 ```bash
 sha256sum -c SHA256SUMS

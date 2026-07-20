@@ -85,6 +85,35 @@ QFrame#sidebar {{
     background-color: {SURFACE_1};
     border-right: 1px solid {BORDER};
 }}
+/* ScrollArea must not paint Base (#2B2B2B) — looked like stacked card blocks */
+QScrollArea#recipeCardsScroll {{
+    background-color: transparent;
+    border: none;
+}}
+QScrollArea#recipeCardsScroll > QWidget {{
+    background-color: transparent;
+}}
+QWidget#recipeCardsHost {{
+    background-color: transparent;
+}}
+QLabel#sidebarCategory {{
+    color: {MUTED};
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 8px 4px 2px 4px;
+    background-color: transparent;
+}}
+QLabel#sidebarCardTitle {{
+    background-color: transparent;
+    color: {COLOR_PARCHMENT};
+}}
+QLabel#sidebarSearchEmpty {{
+    color: {MUTED};
+    font-size: 12px;
+    padding: 8px 4px;
+    background-color: transparent;
+}}
 QFrame#headerCard, QFrame#contentShell {{
     background-color: {SURFACE_2};
     border: 1px solid {BORDER};
@@ -100,6 +129,7 @@ QLabel#sidebarTitle {{
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.06em;
+    background-color: transparent;
 }}
 QPushButton#homeSidebarBtn {{
     text-align: left;
@@ -421,6 +451,12 @@ QSplitter::handle {{ background-color: {BORDER}; width: 1px; }}
 
 
 _HOST_CACHE: str | None = None
+
+
+def clear_host_stylesheet_cache() -> None:
+    """Drop cached Host-QSS (tests / after token edits)."""
+    global _HOST_CACHE
+    _HOST_CACHE = None
 
 
 def get_host_stylesheet() -> str:

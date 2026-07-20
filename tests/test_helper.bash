@@ -26,3 +26,19 @@ setup_test_environment() {
     }
 }
 
+# Resolve repository root from tests/ (works when sourced from any tests/*.bats).
+rezeptor_root() {
+    local d="${BATS_TEST_DIRNAME:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
+    while [ -n "$d" ] && [ "$d" != "/" ]; do
+        if [ -f "$d/launcher/launcher.py" ] || [ -f "$d/core/recipe-source.sh" ]; then
+            echo "$d"
+            return 0
+        fi
+        d="$(dirname "$d")"
+    done
+    echo "${BATS_TEST_DIRNAME:-.}/.."
+}
+
+REZEPTOR_ROOT="$(rezeptor_root)"
+export REZEPTOR_ROOT
+

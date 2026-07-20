@@ -31,6 +31,16 @@ Afterwards `recipe_hooks::load_app_module` always runs (optional `core/recipe-<i
 
     Always `recipe_hooks::load minimal` — **never** `load kill` (Proton hang risk).
 
+### Install orchestration (one path)
+
+| Path | Status | Use for |
+|------|--------|---------|
+| `recipes/<id>/*.sh` + `recipe_hooks::*` | **Current** | All new and maintained recipes |
+| `launcher()` in `core/sharedFuncs.sh` | **LEGACY** | Historical Photoshop CLI desktop deploy only — do not add call sites |
+| `photoshop::*` helpers in `sharedFuncs.sh` | Shared utilities | Called from modern `recipes/photoshop/*` when needed |
+
+Updates go through `scripts/rezeptor-update.sh` (not a second `core/update.sh`).
+
 ---
 
 ## `recipe-hooks.sh`
@@ -191,6 +201,11 @@ Schema/`recipe.yml`: `deploy_mode: copy|link|move`. Typical portable: `copy` or 
 ### `security.sh`
 
 Path/URL validation, `filesystem::safe_remove` for controlled deletes. Purge uses its own guards.
+
+| Function | Used by |
+|----------|---------|
+| `security::validate_url` | `wine_runtime::_download`, `download_component` |
+| `security::sanitize_input` | `env_file_set` (keys) |
 
 ---
 

@@ -44,6 +44,29 @@ wine_runtime::_load_lock() {
     export PROTON_GE_SHA256="${PROTON_GE_SHA256:-}"
 }
 
+# Download with retries for transient network/CDN failures.
+wine_runtime::_fail() {
+    echo "ERROR: $*" >&2
+    type log_err >/dev/null 2>&1 && log_err "$*"
+    return 1
+}
+
+wine_runtime::_download() {
+    local url="$1" dest="$2"
+    if type security::validate_url >/dev/null 2>&1; then
+        security::validate_url "$url" || return 1
+    elif [[ ! "$url" =~ ^https:// ]]; then
+        return 1
+    fi
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL --retry 3 --retry-delay 2 --retry-all-errors "$url" -o "$dest"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q --tries=3 --retry-connrefused "$url" -O "$dest"
+    else
+        return 1
+    fi
+}
+
 wine_runtime::reset() {
     _WINE_RUNTIME_INITIALIZED=0
     _WINE_RUNTIME_MODE=""
@@ -110,42 +133,47 @@ wine_runtime::ensure_proton_ge() {
     dest="$base/$tag"
     archive="$base/${tag}.tar.gz"
 
-    mkdir -p "$base" || return 1
+    mkdir -p "$base" || wine_runtime::_fail "Proton-GE runtime directory not writable: $base"
 
     if [ ! -f "$archive" ]; then
         if ! command -v curl >/dev/null 2>&1 && ! command -v wget >/dev/null 2>&1; then
-            return 1
+            wine_runtime::_fail "Proton-GE download requires curl or wget"
         fi
         local lockfile="$base/.proton-download.lock"
         if command -v flock >/dev/null 2>&1; then
             (
                 flock -w 300 9 || exit 1
                 if [ ! -f "$archive" ]; then
-                    if command -v curl >/dev/null 2>&1; then
-                        curl -fsSL "$url" -o "$archive" || exit 1
-                    else
-                        wget -q "$url" -O "$archive" || exit 1
-                    fi
+                    wine_runtime::_download "$url" "$archive" || exit 1
                 fi
-            ) 9>"$lockfile" || return 1
+            ) 9>"$lockfile" || wine_runtime::_fail "Proton-GE download lock failed: $lockfile"
         else
-            if command -v curl >/dev/null 2>&1; then
-                curl -fsSL "$url" -o "$archive" || return 1
-            else
-                wget -q "$url" -O "$archive" || return 1
-            fi
+            wine_runtime::_download "$url" "$archive" || \
+                wine_runtime::_fail "Proton-GE download failed: $url"
         fi
     fi
 
-    if [ -n "${PROTON_GE_SHA256:-}" ]; then
-        echo "${PROTON_GE_SHA256}  $archive" | sha256sum -c - >/dev/null 2>&1 || return 1
+    # shellcheck source=/dev/null
+    source "${BASH_SOURCE[0]%/*}/proton-ge-fetch.sh"
+    if ! proton_ge_fetch::verify_tarball "$archive"; then
+        wine_runtime::_fail "Proton-GE archive checksum verification failed: $archive"
+        return 1
     fi
 
-    mkdir -p "$dest" || return 1
-    tar -xzf "$archive" -C "$base" --strip-components=0 2>/dev/null || \
-        tar -xzf "$archive" -C "$base" 2>/dev/null || return 1
+    mkdir -p "$dest" || {
+        wine_runtime::_fail "Proton-GE extract directory not writable: $dest"
+        return 1
+    }
+    if ! tar -xzf "$archive" -C "$base" --strip-components=0 2>/dev/null && \
+        ! tar -xzf "$archive" -C "$base" 2>/dev/null; then
+        wine_runtime::_fail "Proton-GE archive extract failed: $archive"
+        return 1
+    fi
 
-    _WINE_RUNTIME_ROOT="$(wine_runtime::_find_proton_dir)" || return 1
+    _WINE_RUNTIME_ROOT="$(wine_runtime::_find_proton_dir)" || {
+        wine_runtime::_fail "Proton-GE install incomplete under $base"
+        return 1
+    }
     return 0
 }
 
@@ -189,7 +217,7 @@ wine_runtime::init() {
         _WINE_RUNTIME_INITIALIZED=1
         return 0
     fi
-    return 1
+    wine_runtime::_fail "Proton-GE runtime unavailable (see messages above)"
 }
 
 wine_runtime::wine() {
@@ -250,52 +278,7 @@ wine_runtime::proton_script() {
     echo "$root/proton"
 }
 
-wine_runtime::_steam_proton_latest() {
-    local steam_root="$1"
-    [ -d "$steam_root" ] || return 1
-    if compgen -G "$steam_root/compatibilitytools.d/GE-Proton*/proton" >/dev/null 2>&1; then
-        ls -1d "$steam_root/compatibilitytools.d"/GE-Proton*/proton 2>/dev/null | sort -V | tail -1
-        return 0
-    fi
-    if compgen -G "$steam_root/steamapps/common/Proton"*/proton >/dev/null 2>&1; then
-        ls -1d "$steam_root/steamapps/common"/Proton*/proton 2>/dev/null | sort -V | tail -1
-        return 0
-    fi
-    return 1
-}
-
-# Steam-compatdata-Rezepte: Prefix-Version aus compatdata/version → passendes Steam-Proton.
-# Rezeptor-GE (runtime.lock) nur Fallback — älteres GE darf Steam-Prefix nicht downgraden.
-wine_runtime::resolve_compatdata_proton_script() {
-    local steam_root="${1:-${STEAM_ROOT:-$HOME/.local/share/Steam}}"
-    local compatdata="${2:-}"
-    local version_tag candidate p
-
-    [ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
-
-    if [ -n "$compatdata" ] && [ -f "$compatdata/version" ]; then
-        version_tag="$(head -n1 "$compatdata/version" | tr -d '[:space:]' || true)"
-        if [ -n "$version_tag" ]; then
-            for candidate in \
-                "$steam_root/compatibilitytools.d/$version_tag/proton" \
-                "$steam_root/steamapps/common/$version_tag/proton"; do
-                if [ -x "$candidate" ]; then
-                    echo "$candidate"
-                    return 0
-                fi
-            done
-        fi
-    fi
-
-    if p="$(wine_runtime::_steam_proton_latest "$steam_root" 2>/dev/null)" && [ -n "$p" ] && [ -x "$p" ]; then
-        echo "$p"
-        return 0
-    fi
-
-    wine_runtime::resolve_proton_script "$steam_root"
-}
-
-# Rezeptor Proton-GE zuerst, dann Steam-GE, zuletzt Valve-Proton (eigene Prefixe).
+# Steam-/Spiel-Rezepte: Rezeptor Proton-GE zuerst, dann Steam-GE, zuletzt Valve-Proton.
 wine_runtime::resolve_proton_script() {
     local steam_root="${1:-${STEAM_ROOT:-$HOME/.local/share/Steam}}"
     local p=""
@@ -304,8 +287,12 @@ wine_runtime::resolve_proton_script() {
         return 0
     fi
     [ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
-    if p="$(wine_runtime::_steam_proton_latest "$steam_root" 2>/dev/null)" && [ -n "$p" ]; then
-        echo "$p"
+    if [ -d "$steam_root" ] && compgen -G "$steam_root/compatibilitytools.d/GE-Proton*/proton" >/dev/null 2>&1; then
+        ls -1d "$steam_root/compatibilitytools.d"/GE-Proton*/proton 2>/dev/null | sort -V | tail -1
+        return 0
+    fi
+    if [ -d "$steam_root" ] && compgen -G "$steam_root/steamapps/common/Proton"*/proton >/dev/null 2>&1; then
+        ls -1d "$steam_root/steamapps/common"/Proton*/proton 2>/dev/null | sort -V | tail -1
         return 0
     fi
     return 1
@@ -344,17 +331,29 @@ wine_runtime::deploy_proton_graphics_dlls() {
     local sys32="$prefix/drive_c/windows/system32"
     local wow64="$prefix/drive_c/windows/syswow64"
     local dll=""
+    local err=0
 
-    [ -n "$prefix" ] && [ -d "$sys32" ] || return 1
+    [ -n "$prefix" ] && [ -d "$sys32" ] || wine_runtime::_fail "Wine prefix system32 missing: ${prefix:-<unset>}"
 
     for dll in libvkd3d-1.dll libvkd3d-shader-1.dll; do
-        [ -f "$def_sys32/$dll" ] && cp -f "$def_sys32/$dll" "$sys32/$dll" 2>/dev/null || true
-        [ -f "$def_wow64/$dll" ] && cp -f "$def_wow64/$dll" "$wow64/$dll" 2>/dev/null || true
+        if [ -f "$def_sys32/$dll" ]; then
+            cp -f "$def_sys32/$dll" "$sys32/$dll" 2>/dev/null || err=1
+        fi
+        if [ -f "$def_wow64/$dll" ]; then
+            cp -f "$def_wow64/$dll" "$wow64/$dll" 2>/dev/null || err=1
+        fi
     done
     for dll in d3d11.dll dxgi.dll; do
-        [ -f "$dxvk64/$dll" ] && cp -f "$dxvk64/$dll" "$sys32/$dll" 2>/dev/null || true
-        [ -f "$dxvk32/$dll" ] && cp -f "$dxvk32/$dll" "$wow64/$dll" 2>/dev/null || true
+        if [ -f "$dxvk64/$dll" ]; then
+            cp -f "$dxvk64/$dll" "$sys32/$dll" 2>/dev/null || err=1
+        fi
+        if [ -f "$dxvk32/$dll" ]; then
+            cp -f "$dxvk32/$dll" "$wow64/$dll" 2>/dev/null || err=1
+        fi
     done
+    if [ "$err" -ne 0 ]; then
+        wine_runtime::_fail "Proton graphics DLL deploy failed for prefix $prefix"
+    fi
     return 0
 }
 

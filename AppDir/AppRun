@@ -10,6 +10,10 @@ if [ ! -d "$PROJECT_ROOT" ] && [ -d "$HERE/usr/share/photoshopCClinux" ]; then
 fi
 # Bundled python only — never fall back to host python3 (Bazzite / immutable).
 export PATH="$HERE/python/bin:$HERE/usr/bin:$HERE/runtime/winetricks:$PROJECT_ROOT/core:$PATH"
+# Bundled libmspack for pinned cabextract (see scripts/build-appimage.sh).
+if [ -d "$HERE/usr/lib" ]; then
+    export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+fi
 export REZEPTOR_APPIMAGE=1
 # Prefer desktop portal when present (pip Qt in AppImage lacks KDEPlasmaPlatformTheme).
 if [ -z "${QT_QPA_PLATFORMTHEME:-}" ]; then

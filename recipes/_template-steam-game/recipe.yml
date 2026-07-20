@@ -2,6 +2,7 @@
 # Anlegen: ./scripts/new-recipe.sh --type steam-game meine-app "Meine App"
 # Runtime: nur Proton-GE. Rezeptor kopiert kein Spiel — nur Wrapper + Checks.
 id: example-steam-game
+schema_version: 1
 icon: "{repo}/images/rezeptor-icon.svg"
 name: "Example Steam Game (Template)"
 author: ""
@@ -33,6 +34,7 @@ steam_appid: "0"
 steam_fake_appid: "480"
 fix_kind: none
 exe_glob: "Game.exe"
+launch_process_patterns: [Game.exe]
 # Relativ zum Spielordner — an euren Fix anpassen
 steam_fix_win64_rel: "Binaries/Win64"
 steam_fix_required:

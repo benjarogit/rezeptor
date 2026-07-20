@@ -29,13 +29,7 @@ steam_root="${STEAM_ROOT:-$HOME/.local/share/Steam}"
 if [ -z "$compat" ] || [ ! -d "$compat" ]; then
     compat="$steam_root/steamapps/compatdata/${appid}"
 fi
-expected_proton=""
-if type wine_runtime::resolve_compatdata_proton_script >/dev/null 2>&1; then
-    expected_proton="$(wine_runtime::resolve_compatdata_proton_script "$steam_root" "$compat" 2>/dev/null || true)"
-fi
-if [ -n "$expected_proton" ] && [ -f "$expected_proton" ]; then
-    proton="$expected_proton"
-elif [ -z "$proton" ] || [ ! -f "$proton" ]; then
+if [ -z "$proton" ] || [ ! -f "$proton" ]; then
     if type wine_runtime::resolve_proton_script >/dev/null 2>&1; then
         proton="$(wine_runtime::resolve_proton_script "$steam_root" 2>/dev/null || true)"
     fi
@@ -46,13 +40,9 @@ if [ -z "$game_exe" ] || [ ! -f "$game_exe" ]; then
     fi
 fi
 
-# Wrapper nur nutzen, wenn PROTON noch zum compatdata passt
 if [ -n "$script" ] && [ -x "$script" ]; then
-    wrapper_proton="$(grep -m1 '^PROTON=' "$script" 2>/dev/null | sed 's/^PROTON=//' || true)"
-    if [ -z "$expected_proton" ] || [ ! -f "$expected_proton" ] || [ "$wrapper_proton" = "$expected_proton" ]; then
-        recipe_notify::starting 2>/dev/null || true
-        exec "$script" "$@"
-    fi
+    recipe_notify::starting 2>/dev/null || true
+    exec "$script" "$@"
 fi
 
 [ -n "$proton" ] && [ -f "$proton" ] || recipe_hooks::die "Proton-GE fehlt"

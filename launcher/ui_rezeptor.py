@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PyQt6.QtCore import QPoint, Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QIcon
+from PyQt6.QtCore import QPoint, QSize, Qt, pyqtSignal
+from PyQt6.QtGui import QFontMetrics, QIcon, QKeyEvent, QResizeEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -26,9 +26,7 @@ from ui_fluent import (
     COLOR_TESTED,
     FLUENT_AVAILABLE,
     MUTED,
-    CaptionLabel,
     IconWidget,
-    StrongBodyLabel,
 )
 from ui_icons import ensure_chevron_png
 from i18n import t
@@ -43,6 +41,7 @@ STATE_DOT = {
     "not_installed": "#6b7280",
     "unknown": "#6b7280",
     "untrusted": "#d9a441",
+    "checking": "#9ca3af",
     "running": "#3ddc84",
 }
 
@@ -51,6 +50,7 @@ _STATE_TIP_KEYS = {
     "partial": "state.partial_tip",
     "not_installed": "state.not_installed_tip",
     "untrusted": "state.untrusted_tip",
+    "checking": "state.checking_tip",
 }
 
 
@@ -183,7 +183,8 @@ QLabel#sidebarCategory {{
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.08em;
-    padding: 10px 4px 4px 4px;
+    padding: 8px 4px 2px 4px;
+    background-color: transparent;
 }}
 """
 
@@ -284,7 +285,46 @@ class StatusPill(QLabel):
         )
 
 
-class SidebarCategoryHeader(QLabel):
+class ElidedLabel(QLabel):
+    """Single-line label that shrinks inside the sidebar and shows full text as tip."""
+
+    def __init__(self, text: str = "", parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self._full = text
+        self.setWordWrap(False)
+        self.setMinimumWidth(0)
+        self.setSizePolicy(
+            QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred
+        )
+        self.setToolTip(text)
+        self._apply_elide()
+
+    def full_text(self) -> str:
+        return self._full
+
+    def set_full_text(self, text: str) -> None:
+        self._full = text or ""
+        self.setToolTip(self._full)
+        self._apply_elide()
+
+    def resizeEvent(self, event: QResizeEvent) -> None:  # noqa: N802
+        super().resizeEvent(event)
+        self._apply_elide()
+
+    def _apply_elide(self) -> None:
+        width = max(0, self.width())
+        if width <= 0:
+            self.setText(self._full)
+            return
+        elided = QFontMetrics(self.font()).elidedText(
+            self._full, Qt.TextElideMode.ElideRight, width
+        )
+        # Avoid feedback loops when text is unchanged
+        if elided != self.text():
+            self.setText(elided)
+
+
+class SidebarCategoryHeader(ElidedLabel):
     """Category label in the sidebar — drop target for cross-category moves."""
 
     def __init__(self, category: str, parent: QWidget | None = None) -> None:
@@ -292,13 +332,17 @@ class SidebarCategoryHeader(QLabel):
         self.category = category
         self.setObjectName("sidebarCategory")
         self.setProperty("dropInsert", "")
+        self.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
 
     def set_drop_highlight(self, on: bool) -> None:
         self.setProperty("dropInsert", "header" if on else "")
         if on:
             self.setStyleSheet(
                 f"QLabel#sidebarCategory {{ color: {ACCENT_COPPER};"
-                f" border-bottom: 2px solid {ACCENT_COPPER}; padding-bottom: 2px; }}"
+                f" border-bottom: 2px solid {ACCENT_COPPER}; padding-bottom: 2px;"
+                f" background-color: transparent; }}"
             )
         else:
             self.setStyleSheet("")
@@ -338,11 +382,15 @@ class RecipeSidebarCard(QFrame):
         self._insert_place: str = ""  # before | after
         self.setObjectName("RecipeSidebarCard")
         self.setFixedHeight(42)
+        self.setMinimumWidth(0)
         self.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
         )
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMouseTracking(True)
+        self._card_name = name
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self._set_a11y(name, state)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(lambda _pos: self.contextMenuRequested.emit())
         self._selected = False
@@ -365,10 +413,12 @@ class RecipeSidebarCard(QFrame):
             dot.setFixedWidth(16)
             layout.addWidget(dot)
 
-        title = StrongBodyLabel(name, self) if FLUENT_AVAILABLE else QLabel(name, self)
-        title = _pass_mouse(title)
-        title.setWordWrap(False)
+        # Plain ElidedLabel — Fluent StrongBodyLabel ignores shrink/elide in the list.
+        title = _pass_mouse(ElidedLabel(name, self))
         title.setObjectName("sidebarCardTitle")
+        title.setStyleSheet(
+            "background: transparent; color: #EDE6D6; font-weight: 600;"
+        )
         self._title = title
         layout.addWidget(title, stretch=1)
 
@@ -392,6 +442,34 @@ class RecipeSidebarCard(QFrame):
         layout.addWidget(self._state_dot)
         self._theme: str = "dark"
         self._apply_border()
+
+    def _set_a11y(self, name: str, state: str) -> None:
+        tip = _state_tip(state)
+        self.setAccessibleName(f"{name}, {tip}" if tip else name)
+        self.setAccessibleDescription(tip)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            self.clicked.emit()
+            event.accept()
+            return
+        if event.key() in (Qt.Key.Key_Up, Qt.Key.Key_Down):
+            parent = self.parentWidget()
+            if parent is not None:
+                cards = [
+                    w
+                    for w in parent.findChildren(RecipeSidebarCard)
+                    if w.isVisible()
+                ]
+                if self in cards:
+                    idx = cards.index(self)
+                    nxt = idx - 1 if event.key() == Qt.Key.Key_Up else idx + 1
+                    if 0 <= nxt < len(cards):
+                        cards[nxt].setFocus(Qt.FocusReason.TabFocusReason)
+                        cards[nxt].clicked.emit()
+                        event.accept()
+                        return
+        super().keyPressEvent(event)
 
     def mousePressEvent(self, event) -> None:  # type: ignore[no-untyped-def]
         if event.button() == Qt.MouseButton.LeftButton:
@@ -515,10 +593,18 @@ class RecipeSidebarCard(QFrame):
         )
         self._state_dot.setToolTip(_state_tip(state))
         self._state_dot.setVisible(not self._running)
+        self._set_a11y(self._card_name, state)
 
     def apply_theme(self, theme: str = "dark") -> None:
         self._theme = theme
         self._apply_border()
+
+    def sizeHint(self) -> QSize:  # noqa: N802
+        # Don't expand the scroll host to the full unelided title width.
+        return QSize(0, 42)
+
+    def minimumSizeHint(self) -> QSize:  # noqa: N802
+        return QSize(0, 42)
 
     def _apply_border(self) -> None:
         insert = str(self.property("dropInsert") or "")

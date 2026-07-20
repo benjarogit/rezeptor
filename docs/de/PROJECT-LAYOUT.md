@@ -15,7 +15,9 @@ rezeptor/
 │   ├── catalog.json      # GUI-Katalog + trust
 │   ├── manifest.json     # SHA256-Integrität
 │   └── recipe.schema.json
-├── launcher/             # PyQt6-GUI
+├── launcher/             # PyQt6-GUI (Host-PyQt6 bei Clone/tar.gz; AppImage/Flatpak bundeln)
+│   ├── recipe_discovery.py  # RecipeInfo / Discover
+│   └── …                 # siehe [GUI-Launcher](LAUNCHER.md) / [Architektur](ARCHITECTURE-LAUNCHER.md)
 ├── scripts/              # Lint, Manifest, new-recipe, Builds
 ├── tests/                # bats + Python
 ├── docs/{de,en}/         # Diese Site (MkDocs)
@@ -59,8 +61,13 @@ Neue Logik **nicht** in Rezepten duplizieren — erst in `core/` zentralisieren.
 | `wine-runtime.sh` | Proton-GE, Grafik-DLLs |
 | `recipe-desktop.sh` | `.desktop` + Icons |
 | `paths.sh` / `env-file.sh` / `output.sh` | Pfade, State, GUI-Tags |
+| `sharedFuncs.sh` | Geteilte Helfer; `launcher()` ist **LEGACY** (siehe [Core-API](CORE-API.md)) |
 
-Tiefenreferenz: [Core-API](CORE-API.md).
+Tiefenreferenz: [Core-API](CORE-API.md). App-Updates: nur `scripts/rezeptor-update.sh`.
+
+### AppRun / `PATH`-Exposition
+
+`AppDir/AppRun` hängt `PROJECT_ROOT/core` an `PATH`, damit Legacy-Helfer per Namen gefunden werden. **Rezept-Hooks dürfen nicht auf ambient `PATH` bauen:** `recipe_hooks::load` und `CORE_DIR`/`recipe_hooks::_source` nutzen. Keine neuen Rezept-Abhängigkeiten von `PATH`-sichtbaren `core/`-Modulen.
 
 ## Runtime: nur Proton-GE
 
@@ -74,7 +81,7 @@ Installationsort Proton: `~/.local/share/wine-software/runtime/proton-ge/<tag>/`
 
 ## `launcher/`
 
-PyQt6-App: Katalog, Trust, Settings, Hook-Prozesse, Activity-Log. Siehe [GUI-Launcher](LAUNCHER.md).
+PyQt6-App: Katalog, Trust, Settings, Hook-Prozesse, Activity-Log. Siehe [GUI-Launcher](LAUNCHER.md) und [Architektur](ARCHITECTURE-LAUNCHER.md).
 
 ## Datenorte (Laufzeit)
 

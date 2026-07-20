@@ -53,16 +53,18 @@ if [ -z "$compat" ] && [ -f "$steam_root/steamapps/libraryfolders.vdf" ]; then
 fi
 
 proton=""
-if type wine_runtime::resolve_compatdata_proton_script >/dev/null 2>&1; then
-    proton="$(wine_runtime::resolve_compatdata_proton_script "$steam_root" "$compat" 2>/dev/null || true)"
+if type wine_runtime::resolve_proton_script >/dev/null 2>&1; then
+    proton="$(wine_runtime::resolve_proton_script "$steam_root" 2>/dev/null || true)"
 fi
 if [ -z "$proton" ] || [ ! -f "$proton" ]; then
-    if type wine_runtime::resolve_proton_script >/dev/null 2>&1; then
-        proton="$(wine_runtime::resolve_proton_script "$steam_root" 2>/dev/null || true)"
+    if compgen -G "$steam_root/compatibilitytools.d/GE-Proton*/proton" >/dev/null 2>&1; then
+        proton="$(ls -1d "$steam_root/compatibilitytools.d"/GE-Proton*/proton 2>/dev/null | sort -V | tail -1)"
+    elif compgen -G "$steam_root/steamapps/common/Proton"*/proton >/dev/null 2>&1; then
+        proton="$(ls -1d "$steam_root/steamapps/common"/Proton*/proton 2>/dev/null | sort -V | tail -1)"
     fi
 fi
 [ -n "$proton" ] && [ -f "$proton" ] || recipe_hooks::die \
-    "Proton-GE fehlt — Steam GE-Proton (Spiel-Prefix) oder Rezeptor-Runtime installieren"
+    "Proton-GE fehlt — Rezeptor-Runtime oder Steam GE-Proton installieren"
 
 output::progress 60 "Launch-Wrapper"
 wrapper="$DATA_ROOT/za4-trainer-run.sh"
@@ -91,14 +93,12 @@ if [[ -z "\$COMPATDATA" || ! -d "\$COMPATDATA" ]]; then
   exit 1
 fi
 if ! pgrep -f 'za4_(vulkan|dx12)\\.exe' >/dev/null 2>&1; then
-  echo "Hinweis: ZA4 scheint nicht zu laufen — erst Spiel in Steam starten (Borderless Window), dann Trainer."
-else
-  echo "Hinweis: ZA4 läuft. Grafikmodus Borderless Window empfohlen (nicht exklusives Vollbild)."
+  echo "Hinweis: ZA4 scheint nicht zu laufen. Trainer erst NACH dem Spielstart ausführen."
 fi
 export STEAM_COMPAT_CLIENT_INSTALL_PATH="\$STEAM_ROOT"
 export STEAM_COMPAT_DATA_PATH="\$COMPATDATA"
 unset PROTON_ENABLE_WAYLAND || true
-exec "\$PROTON" runinprefix "\$TRAINER"
+exec "\$PROTON" run "\$TRAINER"
 EOF
 chmod +x "$wrapper"
 

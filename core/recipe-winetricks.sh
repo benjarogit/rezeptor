@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # Einheitlicher winetricks-Lauf für Rezepte (Proton-GE, kein Subshell-Rauschen).
 
+WINETRICKS_WINEBOOT_WATCHDOG_SEC=60
+WINETRICKS_DEFAULT_TIMEOUT_SEC=600
+WINETRICKS_HEAVY_TIMEOUT_SEC=900
+
 recipe_winetricks::prepare() {
     wine_runtime::init || return 1
     wine_runtime::export_env
@@ -18,7 +22,7 @@ recipe_winetricks::stabilize_prefix() {
     wine wineboot -u >> "${LOG_FILE:-/dev/null}" 2>&1 &
     boot_pid=$!
     (
-        sleep 60
+        sleep "$WINETRICKS_WINEBOOT_WATCHDOG_SEC"
         if kill -0 "$boot_pid" 2>/dev/null; then
             kill -TERM "$boot_pid" 2>/dev/null || true
             wine_runtime::wineserver -k 2>/dev/null || true
@@ -93,12 +97,12 @@ recipe_winetricks::_invoke_with_timeout() {
 recipe_winetricks::run() {
     local log_file="$1"
     shift
-    local rc attempt wt_timeout=600
+    local rc attempt wt_timeout=${WINETRICKS_DEFAULT_TIMEOUT_SEC}
 
     # Font-Pakete laden/extrahieren oft >5 Min — 300s killt mitten im Lauf (falsch als Fail).
     case "$*" in
         *corefonts*|*allfonts*|*calibri*|*tahoma*|*dotnet48*|*vcrun*)
-            wt_timeout=900
+            wt_timeout=${WINETRICKS_HEAVY_TIMEOUT_SEC}
             ;;
     esac
 

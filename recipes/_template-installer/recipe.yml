@@ -1,5 +1,6 @@
 # Vorlage installer_offline — Kopie via: ./scripts/new-recipe.sh meine-app --type installer
 id: example-app
+schema_version: 1
 icon: "{repo}/images/rezeptor-icon.svg"
 name: "Example App (Template)"
 author: ""
@@ -27,6 +28,7 @@ target_default: "~/.local/share/wine-software/example-app"
 target_label: "Datenordner (Wine-Prefix wird hier angelegt)"
 fix_kind: none
 exe_glob: "**/*.exe"
+# launch_process_patterns: [App.exe]
 winetricks: [win10, vcrun2015]
 env:
   WINEDEBUG: "-all"

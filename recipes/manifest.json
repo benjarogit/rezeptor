@@ -4,13 +4,13 @@
       "files": {
         "info.de.txt": "sha256:ed927c88c215af25b57fd52cf1f000889d44d62c5406216e41d1d3fb3a537fc4",
         "info.en.txt": "sha256:a37480ec4cf79186cffbcdfb59aaf8887e1a1e83fa53caf723793390bbd58974",
-        "install.sh": "sha256:a64aaaec34bf7e2dc8d0c4b87b933b89d7e1cb310986aacb6dc150a76668643e",
+        "install.sh": "sha256:1f65fb6ab460a98cb5142b1a1246f6c2a1f9cac7ab7c03e7d106d9eb6ef92e23",
         "kill.sh": "sha256:677664cf550c9f27fcf4c100563320dfa55e725c4ed026f4e843783c2af7ca29",
-        "launch.sh": "sha256:a8e1f8c94fc09006a9c09ac48e0eb5241164edeff39b3b10cefb6c0c83b9df9d",
-        "recipe.yml": "sha256:78870e21afd7b9826ebb112e2540074df8d17693db2db2832ca5bb6978d655af",
+        "launch.sh": "sha256:a5e49b73219795af649791d01a32b11f0d08855899e86807158444c99847f2c4",
+        "recipe.yml": "sha256:3d163ba4d7f5b48ca161c5521ab083884b1177619dd2f94849d0126979ed359f",
         "repair.sh": "sha256:34dc5c66e51cf9717b5fe59885a890cd5b4ad0918e7ea033e17647d192afd005",
         "uninstall.sh": "sha256:7e8047e698bff41199d1cbfb5bdaa860f7953e0527e8b0f52a602aa37a61a120",
-        "validate.sh": "sha256:ba2d48985cb703e20e4ce6c61640a64fcbe07b7ba2557ca7b5760c8c9aa92482"
+        "validate.sh": "sha256:63afe0bf6c049c5570d58ee26a777700938c6fcf01eafb846e0587e59d24ee52"
       }
     },
     "photoshop": {
@@ -33,8 +33,8 @@
         "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
         "kill.sh": "sha256:8bb102767ac30c240e662585e13e8735caa5d93b20e7ba722be91c4423c7da52",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
-        "optional/cameraRawInstaller.sh": "sha256:b3877f81ae1720bbe3284e68bee38298cea546beff6a434e11d7350fcb80cf06",
-        "recipe.yml": "sha256:76df35394adf4102c6f9a5a3c6738a26fadd8d622228c5f51f894640981d7cc9",
+        "optional/cameraRawInstaller.sh": "sha256:9097568694ea8deac6e925fd5f098d6ec60298b0325a3140fce68bb7ff011b93",
+        "recipe.yml": "sha256:e6da74d031985079018de49435b3acbae30ffd21c5172b03c2af97991be99ad0",
         "repair.sh": "sha256:f1362b1ea8545118e9a54c74ffec72eb867775161f749897e9a09571535a14e8",
         "uninstall.sh": "sha256:4dd23e1814e426203305b5fa160939d62e68b00c85178ec6cca724e022df9925",
         "validate.sh": "sha256:148296253f190121b7b478a18fe37b8bd3829ca73d2ac9fd14f51149ad1924a5"
@@ -48,7 +48,7 @@
         "install.sh": "sha256:3496986f2c925e149d6997a2f0c26ec0f0daf6e02b5b0fc08d96b40882177f47",
         "kill.sh": "sha256:45cd86774ab92681a70cc7069460e96d54baec3567292f8073ce571350a06ef8",
         "launch.sh": "sha256:2fc1b57e79f5c1aeac3962920a43d197281df4976bee361b585303994c713414",
-        "recipe.yml": "sha256:6c25e6b85b6bf3130e3bcc3d5f540bbac276da9d48c80b7ed70f2ced1c43b219",
+        "recipe.yml": "sha256:1effc98866a8e37959216d94c318145f3e2dee8da307ddc1956a27ae3cf52486",
         "repair.sh": "sha256:b33937ad49655bd63835cb492a9bcb650fb4d96052aa317a54a9d8a7b36e44b3",
         "uninstall.sh": "sha256:81327d97a234ad2b34ab7ff6d9e56f8e163feed1739a89ebb70f417e22f8e793",
         "validate.sh": "sha256:db5bf9235de2713625f1667048d35516b9202109e344debf42500c5f52a2965c"
@@ -56,15 +56,15 @@
     },
     "za4-trainer": {
       "files": {
-        "info.de.txt": "sha256:0d45e93b28a95aa32e4023111817119bffff4d4fb73d6b548965c5782a962992",
-        "info.en.txt": "sha256:3dd8921d0e7de64e06540737694a9d0fc2afeb41dbcdd0cd40fdd2d16bb85d5e",
-        "install.sh": "sha256:1a542e26d17879f9bc383a0f1dabdcc7aa2bb3791ab4dee25f824c42aa9e9e2c",
-        "kill.sh": "sha256:dabdce8d4db227d55b4f81ebbaf5912f261db66f1e3813b7419577707fdb55ca",
-        "launch.sh": "sha256:816c54edf285b8e813b74d1412299bd285c8b9372f6ccb0cc22ba7747dda6ba6",
-        "recipe.yml": "sha256:c87a5ba4a5c2980e86f5eb3be17cb3eedf43d0725ea9b88ed22a9490670134a9",
-        "repair.sh": "sha256:ee4ecd226ab670dc5330249c206bdc92ba30d09636adcc99957fad47a5aa0dd4",
+        "info.de.txt": "sha256:7b98ff90641cd68e2838f2919601965790515e47b9ecadfc09bb02a8a1f2760b",
+        "info.en.txt": "sha256:934adc5008630d06fa764041b32b1f9528db13ebca046ab6a1d523fecb2a94f9",
+        "install.sh": "sha256:70e6e16c1ddd8b229a08f24f36af30878fac8b448e9147ba3a9cd0ad43fc3c68",
+        "kill.sh": "sha256:404f06a0ec6ade0fcde6210475683ba3fd6c2415b3001a61d211dd60eea0dd08",
+        "launch.sh": "sha256:8558b0f4546da0ee7fd5a99d4228d802c044cda28c31853b18c490669a561ca8",
+        "recipe.yml": "sha256:acde5e7dca3f60e47b142cadba869d8512c819b0c26f447da1a69fbfbb9270d1",
+        "repair.sh": "sha256:6e30cc3ba685b3116af5aa85c12130b5aa5047456497cc87e6857c0f6052634e",
         "uninstall.sh": "sha256:9433543eb8284be1f562e0c125c55bdcf534c8a97e1b470c3f772bcaace840e8",
-        "validate.sh": "sha256:b4adb516e4ca073241b7d1718fdb7f37a6c68204c677f9736fed6ace3d39316b"
+        "validate.sh": "sha256:bbb18bb49499ea64161dfa03693dd1296bc43bf9317dc45d4411d5b4c3512902"
       }
     }
   },

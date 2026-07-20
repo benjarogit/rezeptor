@@ -83,12 +83,10 @@ recipe_photoshop::_export_launch_env() {
 }
 
 recipe_photoshop::_validate_prefix() {
-    if type security::validate_path >/dev/null 2>&1; then
-        security::validate_path "$WINE_PREFIX" || return 1
-    elif [[ "$WINE_PREFIX" =~ ^/etc|^/usr/bin|^/usr/sbin|^/bin|^/sbin|^/lib|^/var/log|^/root ]]; then
-        echo "ERROR: WINEPREFIX zeigt auf System-Verzeichnis: $WINE_PREFIX" >&2
-        return 1
+    if ! type security::validate_path >/dev/null 2>&1; then
+        recipe_hooks::_source security.sh
     fi
+    security::validate_path "$WINE_PREFIX" || return 1
     [ -d "$WINE_PREFIX" ] || {
         echo "FEHLER: Wine-Prefix nicht gefunden: $WINE_PREFIX" >&2
         recipe_photoshop::_notify "Adobe Photoshop CC 2021" \

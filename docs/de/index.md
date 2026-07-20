@@ -105,7 +105,7 @@ Offizielles **Handbuch** für Rezeptor — Windows-Software unter **Proton-GE** 
 
 | Thema | Link |
 |-------|------|
-| Releases / AppImage | [GitHub Releases](https://github.com/benjarogit/rezeptor/releases) |
+| Releases (AppImage / Flatpak / tar.gz) | [GitHub Releases](https://github.com/benjarogit/rezeptor/releases) |
 | Projekt-README | [README.md](https://github.com/benjarogit/rezeptor/blob/main/README.md) |
 | Mitwirken (Übersetzungen) | [CONTRIBUTING-TRANSLATIONS.md](CONTRIBUTING-TRANSLATIONS.md) |
 | Marke | [BRAND.md](BRAND.md) |

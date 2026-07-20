@@ -15,7 +15,7 @@ jobs:
       - name: Install tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y shellcheck bats python3-yaml
+          sudo apt-get install -y shellcheck bats python3-yaml p7zip-full
 
       - name: Shellcheck
         run: make shellcheck

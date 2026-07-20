@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import json
+import os
+import tempfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 SETTINGS_DIR = Path.home() / ".local/share/wine-software/rezeptor"
 SETTINGS_FILE = SETTINGS_DIR / "settings.json"
+ARCHIVE_PASSWORDS_FILE = SETTINGS_DIR / "archive-passwords.json"
+ARCHIVE_PASSWORDS_KEY_FILE = SETTINGS_DIR / "archive-passwords.key"
+SETTINGS_SCHEMA_VERSION = 1
 
 
 def _default_locale() -> str:
@@ -21,6 +26,7 @@ def _default_locale() -> str:
 
 @dataclass
 class RezeptorSettings:
+    schema_version: int = SETTINGS_SCHEMA_VERSION
     log_retention_days: int = 14
     log_max_files: int = 50
     prune_logs_on_startup: bool = True
@@ -36,7 +42,7 @@ class RezeptorSettings:
     # User sidebar category override (rid → category). Default remains recipe.yml.
     recipe_category_overrides: dict[str, str] = field(default_factory=dict)
     recipe_sources: list[dict] = field(default_factory=list)  # [{id, url, label, trusted: bool}]
-    # Archive passwords (one entry per line in UI; tried in order when extracting)
+    # Archive passwords (secrets file; never persisted in settings.json)
     archive_passwords: list[str] = field(default_factory=list)
     # Pending install env per recipe id (source/target from dialog — not yet installed)
     recipe_install_env: dict[str, dict[str, str]] = field(default_factory=dict)
@@ -194,21 +200,138 @@ def prepend_archive_password(settings: RezeptorSettings, password: str) -> bool:
 
 def recipe_edit_allowed(settings: RezeptorSettings | None = None) -> bool:
     """True when REZEPTOR_DEV=1 or settings.developer_mode (recipe view save)."""
-    import os
-
     if os.environ.get("REZEPTOR_DEV", "").lower() in ("1", "true", "yes"):
         return True
     return bool(settings and settings.developer_mode)
 
 
+def _ensure_settings_dir() -> None:
+    SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(SETTINGS_DIR, 0o700)
+    except OSError:
+        pass
+
+
+def _atomic_write_bytes(path: Path, data: bytes, mode: int = 0o600) -> None:
+    _ensure_settings_dir()
+    fd, tmp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=str(SETTINGS_DIR))
+    tmp_path = Path(tmp_name)
+    try:
+        with os.fdopen(fd, "wb") as fh:
+            fh.write(data)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.chmod(tmp_path, mode)
+        os.replace(tmp_path, path)
+        try:
+            os.chmod(path, mode)
+        except OSError:
+            pass
+    except Exception:
+        try:
+            tmp_path.unlink(missing_ok=True)
+        except OSError:
+            pass
+        raise
+
+
+def _atomic_write_text(path: Path, text: str, mode: int = 0o600) -> None:
+    _atomic_write_bytes(path, text.encode("utf-8"), mode=mode)
+
+
+def _try_fernet():
+    try:
+        from cryptography.fernet import Fernet
+
+        return Fernet
+    except ImportError:
+        return None
+
+
+def _fernet_key() -> bytes | None:
+    Fernet = _try_fernet()
+    if Fernet is None:
+        return None
+    if ARCHIVE_PASSWORDS_KEY_FILE.is_file():
+        try:
+            key = ARCHIVE_PASSWORDS_KEY_FILE.read_bytes().strip()
+            if key:
+                return key
+        except OSError:
+            return None
+    key = Fernet.generate_key()
+    try:
+        _atomic_write_bytes(ARCHIVE_PASSWORDS_KEY_FILE, key + b"\n", mode=0o600)
+    except OSError:
+        return None
+    return key
+
+
+def _encrypt_passwords_blob(passwords: list[str]) -> dict:
+    """Return JSON-serializable secrets payload (Fernet when available)."""
+    plain = json.dumps({"passwords": passwords}, ensure_ascii=False).encode("utf-8")
+    Fernet = _try_fernet()
+    key = _fernet_key() if Fernet is not None else None
+    if Fernet is not None and key is not None:
+        token = Fernet(key).encrypt(plain).decode("ascii")
+        return {"version": 1, "enc": "fernet", "payload": token}
+    return {"version": 1, "enc": "plain", "passwords": passwords}
+
+
+def _decrypt_passwords_blob(data: dict) -> list[str]:
+    enc = str(data.get("enc", "plain")).strip().lower()
+    if enc == "fernet":
+        Fernet = _try_fernet()
+        key = _fernet_key() if Fernet is not None else None
+        payload = str(data.get("payload", "") or "").strip()
+        if Fernet is None or key is None or not payload:
+            return []
+        try:
+            raw = Fernet(key).decrypt(payload.encode("ascii"))
+            inner = json.loads(raw.decode("utf-8"))
+            return _parse_str_list(inner.get("passwords") if isinstance(inner, dict) else None)
+        except Exception:
+            return []
+    return _parse_str_list(data.get("passwords"))
+
+
+def _load_archive_passwords_file() -> list[str]:
+    if not ARCHIVE_PASSWORDS_FILE.is_file():
+        return []
+    try:
+        data = json.loads(ARCHIVE_PASSWORDS_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if isinstance(data, list):
+        return _parse_str_list(data)
+    if isinstance(data, dict):
+        return _decrypt_passwords_blob(data)
+    return []
+
+
+def _save_archive_passwords(passwords: list[str]) -> None:
+    cleaned = _parse_str_list(passwords)
+    blob = _encrypt_passwords_blob(cleaned)
+    _atomic_write_text(
+        ARCHIVE_PASSWORDS_FILE,
+        json.dumps(blob, indent=2, ensure_ascii=False) + "\n",
+        mode=0o600,
+    )
+
+
 def load_settings() -> RezeptorSettings:
     if not SETTINGS_FILE.is_file():
         s = RezeptorSettings(locale=_default_locale())
+        s.archive_passwords = _load_archive_passwords_file()
         return s
     try:
         data = json.loads(SETTINGS_FILE.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return RezeptorSettings(locale=_default_locale())
+    if not isinstance(data, dict):
+        return RezeptorSettings(locale=_default_locale())
+
     locale = str(data.get("locale", "")).strip() or _default_locale()
     # Früher system/light → immer Standard (dark)
     theme = str(data.get("theme", "dark")).strip().lower()
@@ -217,7 +340,20 @@ def load_settings() -> RezeptorSettings:
     tab = str(data.get("content_tab", "overview") or "overview").strip()
     if tab not in ("overview", "progress", "logs"):
         tab = "overview"
-    return RezeptorSettings(
+
+    # Secrets: dedicated file preferred; migrate plaintext out of settings.json.
+    passwords = _load_archive_passwords_file()
+    legacy = _parse_str_list(data.get("archive_passwords"))
+    migrated = False
+    if legacy:
+        if not passwords:
+            passwords = legacy
+        migrated = True
+
+    settings = RezeptorSettings(
+        schema_version=max(
+            1, int(data.get("schema_version", SETTINGS_SCHEMA_VERSION))
+        ),
         log_retention_days=max(1, min(365, int(data.get("log_retention_days", 14)))),
         log_max_files=max(5, min(500, int(data.get("log_max_files", 50)))),
         prune_logs_on_startup=bool(data.get("prune_logs_on_startup", True)),
@@ -231,7 +367,7 @@ def load_settings() -> RezeptorSettings:
         custom_category_order=_parse_str_list(data.get("custom_category_order")),
         recipe_category_overrides=_parse_str_dict(data.get("recipe_category_overrides")),
         recipe_sources=_parse_recipe_sources(data.get("recipe_sources")),
-        archive_passwords=_parse_str_list(data.get("archive_passwords")),
+        archive_passwords=passwords,
         recipe_install_env=_parse_recipe_install_env(data.get("recipe_install_env")),
         host_deps_prompt_done=bool(data.get("host_deps_prompt_done", False)),
         window_geometry=str(data.get("window_geometry", "") or ""),
@@ -242,13 +378,22 @@ def load_settings() -> RezeptorSettings:
         docs_geometry=str(data.get("docs_geometry", "") or ""),
         settings_geometry=str(data.get("settings_geometry", "") or ""),
     )
+    if migrated:
+        # Persist secrets file and strip plaintext from settings.json.
+        save_settings(settings)
+    return settings
 
 
 def save_settings(settings: RezeptorSettings) -> None:
-    SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
+    _ensure_settings_dir()
     if not settings.locale:
         settings.locale = _default_locale()
-    SETTINGS_FILE.write_text(
-        json.dumps(asdict(settings), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
+    data = asdict(settings)
+    passwords = _parse_str_list(data.pop("archive_passwords", []))
+    settings.archive_passwords = passwords
+    _atomic_write_text(
+        SETTINGS_FILE,
+        json.dumps(data, indent=2, sort_keys=True) + "\n",
+        mode=0o600,
     )
+    _save_archive_passwords(passwords)

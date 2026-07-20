@@ -1,5 +1,6 @@
 # Vorlage — nicht im offiziellen Manifest. Kopieren mit: ./scripts/new-recipe.sh meine-app
 id: example-app
+schema_version: 1
 icon: "{repo}/images/rezeptor-icon.svg"
 name: "Example App (Template)"
 author: ""
@@ -28,6 +29,8 @@ source_label: "Quelle (Ordner oder Archiv)"
 source_formats: zip,tar.gz,tgz,7z,rar
 fix_kind: optional
 exe_glob: "**/*.exe"
+# Optional: process names for “app is running” detection (else derived from exe_glob)
+# launch_process_patterns: [App.exe]
 winetricks: [win10, vcrun2019]
 env:
   WINEDEBUG: "-all"

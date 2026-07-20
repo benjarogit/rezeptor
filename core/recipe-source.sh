@@ -9,11 +9,21 @@ set -eu
 
 recipe_source::validate_path() {
     local path="$1"
+    local label="${2:-path}"
     if type security::validate_path >/dev/null 2>&1; then
-        security::validate_path "$path" || return 1
+        if ! security::validate_path "$path"; then
+            echo "ERROR: Unsafe $label (blocked by security policy): $path" >&2
+            return 1
+        fi
     fi
-    [ -n "$path" ] || return 1
-    [[ "$path" != *".."* ]] || return 1
+    if [ -z "$path" ]; then
+        echo "ERROR: Missing $label" >&2
+        return 1
+    fi
+    if [[ "$path" == *".."* ]]; then
+        echo "ERROR: Unsafe $label (path traversal): $path" >&2
+        return 1
+    fi
     return 0
 }
 
@@ -159,20 +169,35 @@ recipe_source::_postcheck_dest() {
 
 recipe_source::_extract_7z_once() {
     local seven="$1" archive="$2" dest="$3" pw="$4"
-    local -a args
-    args=(-y "-o${dest}" --)
+    local core_dir pwfile="" rc=1
     if [ -n "$pw" ]; then
-        args=(-y "-o${dest}" "-p${pw}" --)
+        core_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        if command -v python3 >/dev/null 2>&1 && [ -f "$core_dir/archive_7z.py" ]; then
+            pwfile="$(mktemp)"
+            printf '%s' "$pw" > "$pwfile"
+            chmod 600 "$pwfile" 2>/dev/null || true
+            python3 "$core_dir/archive_7z.py" extract "$seven" "$archive" "$dest" "$pwfile"
+            rc=$?
+            rm -f "$pwfile"
+            return "$rc"
+        fi
+        # Fallback when Python helper unavailable (password briefly on 7z argv).
+        "$seven" x -y "-o${dest}" "-p${pw}" -- "$archive" </dev/null >/dev/null 2>&1
+        return $?
     fi
-    # Suppress password-related chatter; keep real errors.
-    # stdin must be /dev/null — otherwise 7z drains the password candidate pipe.
-    "$seven" x "${args[@]}" "$archive" </dev/null >/dev/null 2>&1
+    "$seven" x -y "-o${dest}" -- "$archive" </dev/null >/dev/null 2>&1
 }
 
 recipe_source::_extract_via_7z() {
     local archive="$1" dest="$2"
     local seven pw
     seven="$(recipe_source::_find_7z)" || return 1
+    # Member pre-check (zip-slip / absolute paths) before any extract attempt.
+    if ! "$seven" l -ba -- "$archive" </dev/null 2>/dev/null \
+        | awk '{print $NF}' \
+        | recipe_source::_members_safe; then
+        return 1
+    fi
     # Clear dest contents between password attempts (caller creates dest).
     while IFS= read -r -d '' pw; do
         find "$dest" -mindepth 1 -delete 2>/dev/null || true
@@ -181,6 +206,11 @@ recipe_source::_extract_via_7z() {
             if [ -z "$(find "$dest" -mindepth 1 -print -quit 2>/dev/null)" ]; then
                 continue
             fi
+            dest_abs="$(cd "$dest" && pwd)" || return 1
+            if ! recipe_source::_postcheck_dest "$dest_abs"; then
+                find "$dest" -mindepth 1 -delete 2>/dev/null || true
+                return 1
+            fi
             recipe_source::_record_used_password "$pw"
             return 0
         fi
@@ -188,26 +218,56 @@ recipe_source::_extract_via_7z() {
     return 1
 }
 
+recipe_source::_zip_py() {
+    # Prefer in-process zip (no password on argv). Fallback: host unzip without -P.
+    local core_dir
+    core_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if command -v python3 >/dev/null 2>&1 && [ -f "$core_dir/archive_zip.py" ]; then
+        python3 "$core_dir/archive_zip.py" "$@"
+        return $?
+    fi
+    return 127
+}
+
 recipe_source::_extract_zip_native() {
     local archive="$1" dest="$2"
-    command -v unzip >/dev/null 2>&1 || return 1
-    unzip -Z1 "$archive" | recipe_source::_members_safe || return 1
+    local pw pwfile rc
+    # Member pre-check when unzip is available
+    if command -v unzip >/dev/null 2>&1; then
+        unzip -Z1 "$archive" | recipe_source::_members_safe || return 1
+    fi
     if [ -n "${RECIPE_ARCHIVE_PASSWORD:-}" ] || [ -n "${RECIPE_ARCHIVE_PASSWORD_FILE:-}" ]; then
-        # unzip -P only takes one password; try candidates.
-        local pw
         while IFS= read -r -d '' pw; do
             find "$dest" -mindepth 1 -delete 2>/dev/null || true
-            if [ -z "$pw" ]; then
+            pwfile=""
+            if [ -n "$pw" ]; then
+                pwfile="$(mktemp)"
+                printf '%s' "$pw" > "$pwfile"
+                chmod 600 "$pwfile" 2>/dev/null || true
+            fi
+            if recipe_source::_zip_py extract "$archive" "$dest" ${pwfile:+"$pwfile"}; then
+                rc=0
+            else
+                rc=$?
+            fi
+            [ -n "$pwfile" ] && rm -f "$pwfile"
+            if [ "$rc" -eq 0 ]; then
+                [ -n "$pw" ] && recipe_source::_record_used_password "$pw"
+                return 0
+            fi
+            # Fallback: unzip without password only (never -P — argv leak).
+            if [ -z "$pw" ] && command -v unzip >/dev/null 2>&1; then
                 if unzip -o -q "$archive" -d "$dest" </dev/null 2>/dev/null; then
                     return 0
                 fi
-            elif unzip -o -q -P "$pw" "$archive" -d "$dest" </dev/null 2>/dev/null; then
-                recipe_source::_record_used_password "$pw"
-                return 0
             fi
         done < <(recipe_source::_password_candidates)
         return 1
     fi
+    if recipe_source::_zip_py extract "$archive" "$dest"; then
+        return 0
+    fi
+    command -v unzip >/dev/null 2>&1 || return 1
     unzip -o -q "$archive" -d "$dest" </dev/null || return 1
 }
 

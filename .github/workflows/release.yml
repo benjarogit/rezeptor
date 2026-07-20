@@ -268,7 +268,7 @@ jobs:
   flatpak:
     needs: [validate, release]
     if: needs.validate.outputs.skip != 'true'
-    continue-on-error: true
+    continue-on-error: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

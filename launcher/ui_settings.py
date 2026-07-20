@@ -168,17 +168,21 @@ class SettingsDialog(QDialog):
         toolbar.addWidget(self.pw_fix_btn, stretch=0)
         layout.addLayout(toolbar)
 
+        self.pw_show = QCheckBox(t("settings.archive_passwords_show"))
+        self.pw_show.setChecked(False)
+        self.pw_show.toggled.connect(self._toggle_password_visibility)
+        layout.addWidget(self.pw_show)
+
+        self._pw_plain = "\n".join(settings.archive_passwords)
+        if self._pw_plain:
+            self._pw_plain += "\n"
+        self._pw_syncing = False
         self.archive_passwords = QPlainTextEdit()
         self.archive_passwords.document().setDocumentMargin(10)
         pal = self.archive_passwords.palette()
         pal.setColor(QPalette.ColorRole.PlaceholderText, QColor("#6B6B66"))
         self.archive_passwords.setPalette(pal)
         self.archive_passwords.setPlaceholderText(t("settings.archive_passwords_ph"))
-        existing = "\n".join(settings.archive_passwords)
-        if existing:
-            self.archive_passwords.setPlainText(existing + "\n")
-        else:
-            self.archive_passwords.clear()
         self.archive_passwords.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
         self.archive_passwords.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
@@ -190,11 +194,45 @@ class SettingsDialog(QDialog):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
         self.archive_passwords.setMinimumHeight(180)
+        self.archive_passwords.textChanged.connect(self._on_password_editor_changed)
         self.archive_passwords.textChanged.connect(self._on_passwords_changed)
         layout.addWidget(self.archive_passwords, stretch=1)
+        self._apply_password_display()
 
         self._on_passwords_changed()
         return page
+
+    def _mask_password_text(self, plain: str) -> str:
+        lines: list[str] = []
+        for line in plain.splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                lines.append(line)
+            else:
+                lines.append("•" * max(8, min(24, len(stripped))))
+        if plain.endswith("\n"):
+            return "\n".join(lines) + "\n"
+        return "\n".join(lines)
+
+    def _apply_password_display(self) -> None:
+        self._pw_syncing = True
+        show = self.pw_show.isChecked()
+        if show:
+            self.archive_passwords.setPlainText(self._pw_plain)
+        else:
+            self.archive_passwords.setPlainText(self._mask_password_text(self._pw_plain))
+        self.archive_passwords.setReadOnly(not show)
+        self._pw_syncing = False
+
+    def _toggle_password_visibility(self, _checked: bool = False) -> None:
+        self._apply_password_display()
+
+    def _on_password_editor_changed(self) -> None:
+        if self._pw_syncing:
+            return
+        if self.pw_show.isChecked():
+            self._pw_plain = self.archive_passwords.toPlainText()
+        # When masked, ignore edits that would corrupt the bullet display
 
     def _wire_dirty(self) -> None:
         self.lang_combo.currentIndexChanged.connect(self._mark_dirty)
@@ -211,8 +249,13 @@ class SettingsDialog(QDialog):
     def is_dirty(self) -> bool:
         return bool(self._dirty)
 
+    def _password_text_for_normalize(self) -> str:
+        if self.pw_show.isChecked():
+            return self.archive_passwords.toPlainText()
+        return self._pw_plain
+
     def _on_passwords_changed(self) -> None:
-        result = normalize_password_list_text(self.archive_passwords.toPlainText())
+        result = normalize_password_list_text(self._password_text_for_normalize())
         n = len(result.passwords)
         if n == 0:
             self.pw_count.setText(t("settings.archive_passwords_count_empty"))
@@ -234,7 +277,7 @@ class SettingsDialog(QDialog):
             self.pw_fix_btn.setEnabled(False)
 
     def _fix_passwords(self) -> None:
-        result = normalize_password_list_text(self.archive_passwords.toPlainText())
+        result = normalize_password_list_text(self._password_text_for_normalize())
         if result.corrected_text is None:
             QMessageBox.warning(
                 self,
@@ -245,9 +288,8 @@ class SettingsDialog(QDialog):
                 ),
             )
             return
-        self.archive_passwords.blockSignals(True)
-        self.archive_passwords.setPlainText(result.corrected_text)
-        self.archive_passwords.blockSignals(False)
+        self._pw_plain = result.corrected_text
+        self._apply_password_display()
         self._mark_dirty()
         self._on_passwords_changed()
 
@@ -265,7 +307,7 @@ class SettingsDialog(QDialog):
         )
 
     def _apply_to_settings(self) -> bool:
-        result = normalize_password_list_text(self.archive_passwords.toPlainText())
+        result = normalize_password_list_text(self._password_text_for_normalize())
         if result.errors and result.corrected_text is None:
             self.tabs.setCurrentIndex(1)
             QMessageBox.warning(
@@ -278,10 +320,9 @@ class SettingsDialog(QDialog):
             )
             return False
         if result.auto_fixed and result.corrected_text is not None:
-            self.archive_passwords.blockSignals(True)
-            self.archive_passwords.setPlainText(result.corrected_text)
-            self.archive_passwords.blockSignals(False)
-            result = normalize_password_list_text(self.archive_passwords.toPlainText())
+            self._pw_plain = result.corrected_text
+            self._apply_password_display()
+            result = normalize_password_list_text(self._pw_plain)
         if result.errors:
             self.tabs.setCurrentIndex(1)
             QMessageBox.warning(

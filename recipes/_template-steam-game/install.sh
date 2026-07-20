@@ -112,22 +112,10 @@ if [ -n "$STEAM_API_REL" ] && [ ! -f "$src/$STEAM_API_REL" ]; then
 fi
 [ "$fail" -eq 0 ] || recipe_hooks::die "Online-Fix unvollständig (BYOS — Rezeptor liefert keinen Fix)"
 
-compat=""
-for lib in "$steam_root" /mnt/*/SteamLibrary "$HOME"/.local/share/Steam; do
-    [ -d "$lib/steamapps/compatdata/$REAL_APPID" ] || continue
-    compat="$lib/steamapps/compatdata/$REAL_APPID"
-    break
-done
-
 output::progress 55 "Proton suchen"
 proton=""
-if type wine_runtime::resolve_compatdata_proton_script >/dev/null 2>&1; then
-    proton="$(wine_runtime::resolve_compatdata_proton_script "$steam_root" "$compat" 2>/dev/null || true)"
-fi
-if [ -z "$proton" ] || [ ! -f "$proton" ]; then
-    if type wine_runtime::resolve_proton_script >/dev/null 2>&1; then
-        proton="$(wine_runtime::resolve_proton_script "$steam_root" 2>/dev/null || true)"
-    fi
+if type wine_runtime::resolve_proton_script >/dev/null 2>&1; then
+    proton="$(wine_runtime::resolve_proton_script "$steam_root" 2>/dev/null || true)"
 fi
 if [ -z "$proton" ] || [ ! -f "$proton" ]; then
     if compgen -G "$steam_root/compatibilitytools.d/GE-Proton*/proton" >/dev/null 2>&1; then
@@ -135,6 +123,13 @@ if [ -z "$proton" ] || [ ! -f "$proton" ]; then
     fi
 fi
 [ -n "$proton" ] && [ -f "$proton" ] || recipe_hooks::die "Proton-GE fehlt"
+
+compat=""
+for lib in "$steam_root" /mnt/*/SteamLibrary "$HOME"/.local/share/Steam; do
+    [ -d "$lib/steamapps/compatdata/$REAL_APPID" ] || continue
+    compat="$lib/steamapps/compatdata/$REAL_APPID"
+    break
+done
 
 output::progress 75 "Launch-Wrapper"
 wrapper="$DATA_ROOT/steam-game-run.sh"

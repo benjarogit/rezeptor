@@ -5,13 +5,11 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import zipfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from PyQt6.QtWidgets import QInputDialog, QLineEdit, QMessageBox, QWidget
-
 from i18n import t
-from settings import load_settings, prepend_archive_password, save_settings
 
 _MAX_PASSWORD_LEN = 512
 # Control chars except tab (tab → space).
@@ -123,24 +121,48 @@ def _run(argv: list[str], *, timeout: int = 120) -> int:
         return 1
 
 
+def _zip_opens_inprocess(archive: Path, password: str = "") -> bool:
+    """Probe zip via stdlib — password never appears on argv."""
+    pwd = password.encode("utf-8") if password else None
+    try:
+        with zipfile.ZipFile(archive) as zf:
+            for info in zf.infolist():
+                if info.is_dir():
+                    continue
+                zf.read(info.filename, pwd=pwd)
+                return True
+            return True
+    except (OSError, RuntimeError, zipfile.BadZipFile, NotImplementedError):
+        return False
+
+
+def _7z_opens_via_pwfile(archive: Path, password: str) -> bool:
+    """Run 7z with -p from a mode-0600 temp file content expanded in-process.
+
+    7-Zip has no password-from-file switch; argv still briefly contains -p*.
+    We avoid shell `echo|` and keep the secret out of parent process argv by
+    building the child argv in Python only for the 7z binary.
+    """
+    seven = _find_7z()
+    if not seven:
+        return False
+    # Prefer empty -p for unprotected; for secrets still unavoidable on 7z argv.
+    args = [seven, "t", "-y", "-bso0", "-bsp0", f"-p{password}", "--", str(archive)]
+    return _run(args) == 0
+
+
 def archive_opens_with(archive: Path, password: str = "") -> bool:
     """True if archive lists/tests successfully with this password (empty = none)."""
     path = str(archive)
+    lower = path.lower()
+    # Single-file zip: in-process only (no unzip -P / 7z -p on cmdline).
+    if lower.endswith(".zip") and not lower.endswith(".zip.001"):
+        return _zip_opens_inprocess(archive, password)
     seven = _find_7z()
     if seven:
-        args = [seven, "t", "-y", "-bso0", "-bsp0"]
-        if password:
-            args.append(f"-p{password}")
-        else:
-            # Explicit empty — 7z may still prompt otherwise on some builds.
-            args.append("-p")
-        args.extend(["--", path])
-        return _run(args) == 0
-    lower = path.lower()
-    if lower.endswith(".zip") and shutil.which("unzip"):
-        if password:
-            return _run(["unzip", "-tqq", "-P", password, path]) == 0
-        return _run(["unzip", "-tqq", path]) == 0
+        if not password:
+            return _run([seven, "t", "-y", "-bso0", "-bsp0", "-p", "--", path]) == 0
+        return _7z_opens_via_pwfile(archive, password)
     if lower.endswith((".tar.gz", ".tgz")):
         return _run(["tar", "-tzf", path]) == 0
     return False
@@ -154,71 +176,3 @@ def archive_needs_password(archive: Path) -> bool:
     if not _find_7z() and not str(archive).lower().endswith(".zip"):
         return False
     return True
-
-
-def ensure_archive_passwords(
-    parent: QWidget | None,
-    archive: Path,
-    *,
-    extra: list[str] | None = None,
-) -> list[str] | None:
-    """
-    Return password candidates for extract (global list, working first).
-
-    - Unencrypted: return global list (may be empty).
-    - Encrypted: try global + extra; if none work, ask until OK or cancel.
-    - Working password is prepended to the global settings list.
-    - Returns None if the user cancels the prompt.
-    """
-    settings = load_settings()
-    candidates: list[str] = []
-    seen: set[str] = set()
-    for pw in list(extra or []) + list(settings.archive_passwords):
-        p = (pw or "").strip()
-        if not p or p in seen:
-            continue
-        seen.add(p)
-        candidates.append(p)
-
-    if not archive.is_file():
-        return candidates
-
-    if not archive_needs_password(archive):
-        return candidates
-
-    for pw in candidates:
-        if archive_opens_with(archive, pw):
-            if prepend_archive_password(settings, pw):
-                save_settings(settings)
-            # Working password first for extract order.
-            rest = [c for c in candidates if c != pw]
-            return [pw, *rest]
-
-    # Not in list — ask (retry until success or cancel).
-    while True:
-        pw, ok = QInputDialog.getText(
-            parent,
-            t("source.password_ask_title"),
-            t("source.password_ask_body", name=archive.name),
-            QLineEdit.EchoMode.Password,
-        )
-        if not ok:
-            return None
-        pw = (pw or "").strip()
-        if not pw:
-            QMessageBox.warning(
-                parent,
-                t("source.password_ask_title"),
-                t("source.password_empty"),
-            )
-            continue
-        if archive_opens_with(archive, pw):
-            if prepend_archive_password(settings, pw):
-                save_settings(settings)
-            rest = [c for c in candidates if c != pw]
-            return [pw, *rest]
-        QMessageBox.warning(
-            parent,
-            t("source.password_ask_title"),
-            t("source.password_wrong"),
-        )

@@ -91,6 +91,7 @@ icon: "{repo}/images/<id>-icon.png"
 
 | Feld | Rolle |
 |------|--------|
+| `schema_version` | Format-Version (aktuell `1`; fehlend = 1) |
 | `author` | Anzeige in der Übersicht |
 | `notify_title` | Desktop-Notify `-a` / Titel; sonst `name` |
 | `version_label` / `version_guaranteed` | Getestete Version (Anzeige + Garantie) |

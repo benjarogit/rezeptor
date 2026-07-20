@@ -56,11 +56,11 @@ function check_ps_installed() {
 
 function install_cameraRaw() {
     local filename="CameraRaw_12_2_1.exe"
-    local filemd5="b6a6b362e0c159be5ba1d0eb1ebd0054"
+    local filesha256="629dacb785191a6ee2d30645fcbe720e718d1ba1544df59fda0ba97fb2262b2d"
     local filelink="https://download.adobe.com/pub/adobe/photoshop/cameraraw/win/12.x/CameraRaw_12_2_1.exe"
     local filepath="$CACHE_PATH/$filename"
 
-    download_component $filepath $filemd5 $filelink $filename
+    download_component "$filepath" "$filesha256" "$filelink" "$filename"
 
     echo "===============| Adobe Camera Raw v12 |===============" >> "$SCR_PATH/wine-error.log"
     show_message2 "Adobe Camera Raw v12 installation..."
@@ -73,7 +73,7 @@ function install_cameraRaw() {
         notify-send -a "Photoshop CC" "Adobe Camera Raw v12 installed successfully" -i "photoshop" 2>/dev/null || true
     fi
     show_message2 "Adobe Camera Raw v12 installed..."
-    unset filename filemd5 filelink filepath
+    unset filename filesha256 filelink filepath
 }
 
 main

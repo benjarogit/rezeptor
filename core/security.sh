@@ -29,11 +29,28 @@
 security::validate_path() {
     local path="$1"
     local allow_root="${2:-false}"
+    local resolved=""
     
     # Check if path is empty
     if [ -z "$path" ]; then
         return 1
     fi
+    
+    # Check for path traversal attempts (literal .. before resolve)
+    if [[ "$path" =~ \.\. ]]; then
+        return 1
+    fi
+
+    # Canonicalize so symlink escapes into system trees are caught
+    if command -v realpath >/dev/null 2>&1; then
+        resolved="$(realpath -m -- "$path" 2>/dev/null)" || return 1
+    elif command -v readlink >/dev/null 2>&1; then
+        resolved="$(readlink -f -- "$path" 2>/dev/null)" || return 1
+    else
+        resolved="$path"
+    fi
+    [ -n "$resolved" ] || return 1
+    path="$resolved"
     
     # Check if path points to system directories (security risk)
     local unsafe_patterns=(
@@ -57,11 +74,6 @@ security::validate_path() {
             fi
         fi
     done
-    
-    # Check for path traversal attempts
-    if [[ "$path" =~ \.\. ]]; then
-        return 1
-    fi
     
     # Note: Null byte check removed - paths with null bytes would fail anyway
     # and the check was causing false positives

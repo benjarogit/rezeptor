@@ -5,13 +5,19 @@ Rezeptor installiert und startet Windows-Software unter Linux mit getesteten **R
 ## Voraussetzungen
 
 - Linux (x86_64), Desktop-Umgebung
-- **PyQt6** (`python-pyqt6` unter Arch/CachyOS bzw. Distro-Paket)
-- Optional: `PyQt6-Fluent-Widgets` für die Fluent-Oberfläche
 - Netzwerk beim ersten Lauf (Proton-GE-Download laut `core/runtime.lock`)
+
+**Je nach Installationsweg:**
+
+| Weg | Host-PyQt6 nötig? |
+|-----|-------------------|
+| Git-Clone oder **`tar.gz`** + `./setup.sh` | **Ja** — Distro-Paket `python-pyqt6` (Arch/CachyOS) bzw. Entsprechung; optional `PyQt6-Fluent-Widgets` |
+| **AppImage** (Release) | **Nein** — Python und PyQt6 sind im Bundle (empfohlen auf Bazzite / immutable Distros) |
+| **Flatpak** (Release) | **Nein** — Python, PyQt6 und Proton-GE sind im Bundle |
 
 ## Installation
 
-### Aus dem Repository
+### Aus dem Repository (Host-PyQt6 nötig)
 
 ```bash
 git clone https://github.com/benjarogit/rezeptor.git
@@ -19,11 +25,25 @@ cd rezeptor
 ./setup.sh
 ```
 
-### Release / AppImage
+### AppImage (kein Host-PyQt6)
 
-1. Assets von [GitHub Releases](https://github.com/benjarogit/rezeptor/releases) laden
+1. `rezeptor-*-x86_64.AppImage` und `SHA256SUMS` von [GitHub Releases](https://github.com/benjarogit/rezeptor/releases) laden
 2. Prüfen: `sha256sum -c SHA256SUMS`
-3. AppImage ausführbar machen und starten, oder `tar.gz` entpacken und `./setup.sh`
+3. `chmod +x rezeptor-*-x86_64.AppImage && ./rezeptor-*-x86_64.AppImage`
+
+### Flatpak (kein Host-PyQt6)
+
+```bash
+flatpak install --user rezeptor-<version>-x86_64.flatpak
+flatpak run io.github.benjarogit.Rezeptor
+```
+
+Lokal bauen: `scripts/build-flatpak.sh` (benötigt `flatpak-builder` und Runtime `org.freedesktop.Platform//25.08`).
+
+### tar.gz-Release (Host-PyQt6 nötig)
+
+1. `rezeptor-*.tar.gz` laden und `sha256sum -c SHA256SUMS`
+2. Entpacken und `./setup.sh`
 
 ## Erste Schritte in der GUI
 
@@ -50,10 +70,10 @@ cd rezeptor
 REZEPTOR_DEV=1 ./setup.sh
 ```
 
-Aktiviert Dev-Features (Rezept-Editor, Manifest-Sync im Git-Checkout). Entspricht der Einstellung **Entwicklermodus**.
+Oder in den Einstellungen **Entwicklermodus** aktivieren (Rezept-Dateien in der GUI bearbeiten).
 
-## Weiter
+## Weiterlesen
 
-- [Benutzerhandbuch](USER-GUIDE.md) — GUI im Detail
-- [Rezept-Katalog](CATALOG.md) — offiziell vs. Community
-- [Entwickler-Übersicht](ENTWICKLER.md) — eigenes Rezept
+- [Benutzerhandbuch](USER-GUIDE.md)
+- [Trust / Integrität](TRUST.md)
+- [GUI-Launcher](LAUNCHER.md)

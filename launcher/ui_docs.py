@@ -129,11 +129,16 @@ def markdown_to_html(md: str) -> str:
             r"<b>\1</b>",
             text,
         )
-        text = re.sub(
-            r"\[([^\]]+)\]\(([^)]+)\)",
-            r'<a href="\2">\1</a>',
-            text,
-        )
+        def _md_link(m: re.Match[str]) -> str:
+            label, href = m.group(1), m.group(2).strip()
+            # Only emit http(s) or relative .md hrefs into HTML (click handler allowlists).
+            if href.startswith(("http://", "https://")) or href.split("#", 1)[0].lower().endswith(
+                ".md"
+            ):
+                return f'<a href="{html.escape(href, quote=True)}">{label}</a>'
+            return label
+
+        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", _md_link, text)
         return text
 
     for line in lines:
@@ -287,20 +292,22 @@ class DeveloperDocsDialog(QDialog):
                 break
 
     def _on_anchor(self, url: QUrl) -> None:
-        href = url.toString()
-        if href.startswith("http://") or href.startswith("https://"):
+        # Allowlist: http(s) external + in-app .md basenames only.
+        # Reject file://, custom schemes, and unknown relative targets.
+        scheme = (url.scheme() or "").lower()
+        if scheme in ("http", "https"):
             QDesktopServices.openUrl(url)
             return
-        # Relative .md link
+        if scheme and scheme not in ("", "qrc"):
+            return
+        href = url.toString()
         path = href.split("#", 1)[0].strip()
         if path.endswith(".md") or path.endswith(".MD"):
             name = Path(path).name
-            # Map legacy flat names
-            self._show_file(name)
+            if name and "/" not in name and "\\" not in name and ".." not in name:
+                self._show_file(name)
             return
-        # Try as docs file without extension handling
-        if path:
-            QDesktopServices.openUrl(url)
+        # No openUrl fallback for unknown schemes/paths.
 
     def _open_github(self) -> None:
         if not self._current_file:

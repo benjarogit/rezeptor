@@ -40,32 +40,35 @@ else
 fi
 export LC_ALL="${LC_ALL:-$LANG}"
 
-# DEBUG MODE: Debug log function for runtime tracking
-# Use LOG_DIR from environment if available (set by PhotoshopSetup.sh), otherwise fallback
+sharedFuncs::_core_dir() {
+    if [ -n "${CORE_DIR:-}" ]; then
+        echo "$CORE_DIR"
+    elif [ -n "${PROJECT_ROOT:-}" ] && [ -d "${PROJECT_ROOT}/core" ]; then
+        echo "${PROJECT_ROOT}/core"
+    else
+        echo "${BASH_SOURCE[0]%/*}"
+    fi
+}
+
+sharedFuncs::_validate_path() {
+    local path="$1"
+    if ! type security::validate_path >/dev/null 2>&1; then
+        # shellcheck source=/dev/null
+        source "$(sharedFuncs::_core_dir)/security.sh"
+    fi
+    security::validate_path "$path"
+}
+
 # Get PROJECT_ROOT from environment or derive from SCRIPT_DIR
 PROJECT_ROOT="${PROJECT_ROOT:-}"
 if [ -z "$PROJECT_ROOT" ] && [ -n "${SCRIPT_DIR:-}" ]; then
     PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd 2>/dev/null || echo "")"
 fi
-# Use LOG_DIR if set (from PhotoshopSetup.sh), otherwise use PROJECT_ROOT/logs
+# LOG_DIR if set by setup.sh / recipe hooks, otherwise PROJECT_ROOT/logs
 LOG_DIR="${LOG_DIR:-${PROJECT_ROOT:-}/logs}"
 TIMESTAMP="${TIMESTAMP:-$(date +%d.%m.%y\ %H:%M\ Uhr)}"
-# Do not overwrite DEBUG_LOG when install.sh already set structured paths
-if [ -z "${DEBUG_LOG:-}" ]; then
-    DEBUG_LOG="${LOG_DIR}/debug.log"
-fi
-debug_log() {
-    local location="$1"
-    local message="$2"
-    local data="$3"
-    local hypothesis_id="${4:-}"
-    local timestamp=$(date +%s%3N 2>/dev/null || date +%s000)
-    local session_id="debug-session-$(date +%s)"
-    local run_id="${RUN_ID:-run1}"
-    echo "{\"id\":\"log_${timestamp}_$$\",\"timestamp\":${timestamp},\"location\":\"${location}\",\"message\":\"${message}\",\"data\":${data},\"sessionId\":\"${session_id}\",\"runId\":\"${run_id}\",\"hypothesisId\":\"${hypothesis_id}\"}" >> "$DEBUG_LOG" 2>/dev/null || true
-}
 
-# Fallback log_debug function (if not defined by PhotoshopSetup.sh)
+# Fallback log_debug function (if not already defined by caller)
 if ! command -v log_debug >/dev/null 2>&1; then
     log_debug() {
         local timestamp=$(date '+%Y-%m-%d %H:%M:%S' 2>/dev/null || date)
@@ -88,7 +91,7 @@ if ! command -v log_debug >/dev/null 2>&1; then
     }
 fi
 
-# ANSI Color codes (same as setup.sh and PhotoshopSetup.sh)
+# ANSI Color codes (same as setup.sh)
 if [ -t 1 ] && [ "$TERM" != "dumb" ]; then
     C_RESET="\033[0m"
     C_CYAN="\033[0;36;1m"
@@ -153,7 +156,7 @@ function package_installed() {
     fi
 }
 
-# Get main log file if available (from PhotoshopSetup.sh)
+# Get main log file if available (from setup.sh / recipe hooks)
 get_main_log() {
     # Try to find the main log file from environment or project root
     if [ -n "${LOG_FILE:-}" ]; then
@@ -175,7 +178,7 @@ function setup_log() {
         echo "[$timestamp] $*" >> "${main_log}"
     fi
     
-    # Also log to new LOG_FILE if available (from PhotoshopSetup.sh)
+    # Also log to LOG_FILE if available
     if [ -n "${LOG_FILE:-}" ] && [ -f "${LOG_FILE:-}" ]; then
         echo "[$timestamp] $*" >> "${LOG_FILE}" 2>/dev/null || true
     fi
@@ -220,7 +223,7 @@ function show_message() {
     
     # Extended logging (unless simple mode)
     if [ "$simple_mode" = false ]; then
-        # Also log to new LOG_FILE if available (from PhotoshopSetup.sh)
+        # Also log to LOG_FILE if available
         if [ -n "${LOG_FILE:-}" ] && [ -f "${LOG_FILE:-}" ]; then
             echo "[$timestamp] $plain_message" >> "${LOG_FILE}"
         fi
@@ -373,6 +376,9 @@ function show_message2() {
     show_message "simple" "$@"
 }
 
+# LEGACY: Monolithic Photoshop desktop/launcher deploy from the pre-recipe CLI era.
+# New installs use recipes/photoshop/* + recipe_hooks::*. Do not add call sites.
+# photoshop::* helpers below remain shared utilities for the modern recipe path.
 function launcher() {
 
     local project_root="${PROJECT_ROOT:-}"
@@ -494,9 +500,6 @@ function launcher() {
         # BEST PRACTICE: Correct Wine-generated desktop entries instead of deleting them
         # Wine creates desktop entries that we can fix by updating Exec and Icon paths
         # This is cleaner than deleting and recreating - follows Wine community best practices
-        # #region agent log
-        debug_log "sharedFuncs.sh:396" "Before correcting Wine desktop entries" "{}" "H4"
-        # #endregion
         
         # Function to correct a Wine desktop entry
         correct_wine_desktop_entry() {
@@ -508,9 +511,6 @@ function launcher() {
             # Check if it's a Wine-generated entry that needs correction
             # Fix grep warnings: Use separate grep calls or fix escaping
             if grep -q "WINEPREFIX=" "$entry" 2>/dev/null || grep -q "wine.*Photoshop.exe" "$entry" 2>/dev/null || grep -q "'C:\\\\" "$entry" 2>/dev/null || grep -q "Exec=env.*wine" "$entry" 2>/dev/null; then
-                # #region agent log
-                debug_log "sharedFuncs.sh:407" "Correcting Wine desktop entry" "{\"entry\":\"${entry}\"}" "H4"
-                # #endregion
                 
                 # Backup original
                 cp "$entry" "${entry}.bak" 2>/dev/null || true
@@ -591,21 +591,12 @@ function launcher() {
     # .lnk files are Windows shortcuts that can't be used - remove them
     # Desktop entries can be corrected to use our launcher
     if [ -n "$desktop_dir" ] && [ -d "$desktop_dir" ]; then
-        # #region agent log
-        debug_log "sharedFuncs.sh:467" "Before cleaning/correcting desktop directory" "{\"desktop_dir\":\"${desktop_dir}\"}" "H4"
-        # #endregion
         
         # Remove .lnk files (Windows shortcuts - can't be used on Linux, must be removed)
         # These are created by Wine when Windows programs create desktop shortcuts
         local lnk_files=$(find "$desktop_dir" -maxdepth 1 -type f \( -name "*.lnk" -o -name "*Photoshop*.lnk" -o -name "*Adobe*.lnk" \) 2>/dev/null | wc -l)
-        # #region agent log
-        debug_log "sharedFuncs.sh:473" "Found .lnk files on desktop" "{\"lnk_count\":${lnk_files}}" "H4"
-        # #endregion
         find "$desktop_dir" -maxdepth 1 -type f \( -name "*.lnk" -o -name "*Photoshop*.lnk" -o -name "*Adobe*.lnk" \) 2>/dev/null | while IFS= read -r lnk_file; do
             if [ -f "$lnk_file" ]; then
-                # #region agent log
-                debug_log "sharedFuncs.sh:477" "Removing .lnk file (Windows shortcut, unusable on Linux)" "{\"lnk_file\":\"${lnk_file}\"}" "H4"
-                # #endregion
                 rm -f "$lnk_file" 2>/dev/null || true
             fi
         done
@@ -617,9 +608,6 @@ function launcher() {
                 # Check if it's a Wine-generated entry that needs correction
                 # Fix grep warnings: Use separate grep calls or fix escaping
                 if grep -q "WINEPREFIX=" "$entry" 2>/dev/null || grep -q "wine.*Photoshop.exe" "$entry" 2>/dev/null || grep -q "'C:\\\\" "$entry" 2>/dev/null || grep -q "Exec=env.*wine" "$entry" 2>/dev/null; then
-                    # #region agent log
-                    debug_log "sharedFuncs.sh:488" "Correcting Wine desktop entry on desktop" "{\"entry\":\"${entry}\"}" "H4"
-                    # #endregion
                     
                     # Correct the entry to use our launcher
                     local launcher_script_path="$SCR_PATH/launcher/launcher.sh"
@@ -644,15 +632,9 @@ function launcher() {
             fi
         done
         
-        # #region agent log
-        debug_log "sharedFuncs.sh:465" "After cleaning desktop, before creating shortcut" "{\"desktop_dir\":\"${desktop_dir}\",\"desktop_entry_dest\":\"${desktop_entry_dest}\"}" "H4"
-        # #endregion
         
         # Now create the correct desktop shortcut
         cp "$desktop_entry_dest" "$desktop_dir/photoshop.desktop" 2>/dev/null && chmod +x "$desktop_dir/photoshop.desktop" 2>/dev/null || true
-        # #region agent log
-        debug_log "sharedFuncs.sh:470" "After creating desktop shortcut" "{\"shortcut_exists\":$([ -f "$desktop_dir/photoshop.desktop" ] && echo "true" || echo "false"),\"icon_in_entry\":$(grep -q "Icon=" "$desktop_dir/photoshop.desktop" 2>/dev/null && echo "true" || echo "false")}" "H4"
-        # #endregion
         show_message "${C_GREEN}✓${C_RESET} ${C_CYAN}Desktop-Verknüpfung${C_RESET} erstellt"
     fi
 
@@ -943,8 +925,6 @@ EOF
             # Remove old cache to force regeneration
             rm -f "$hicolor_dir/icon-theme.cache" 2>/dev/null || true
             
-            # #region agent log
-            # #endregion
             
             # Check icon files before cache update
             local icon_count=0
@@ -952,14 +932,10 @@ EOF
                 if [ -f "$hicolor_dir/${size}x${size}/apps/${icon_name}.png" ]; then
                     local icon_size=$(stat -c%s "$hicolor_dir/${size}x${size}/apps/${icon_name}.png" 2>/dev/null || echo "0")
                     local icon_dimensions=$(file "$hicolor_dir/${size}x${size}/apps/${icon_name}.png" 2>/dev/null | grep -o "[0-9]* x [0-9]*" || echo "unknown")
-                    # #region agent log
-                    # #endregion
                     icon_count=$((icon_count + 1))
                 fi
             done
             
-            # #region agent log
-            # #endregion
             
             # CRITICAL: Fix icon cache issues - validate icon files first
             # Check for corrupted or invalid icon files that might cause cache to be invalid
@@ -991,14 +967,10 @@ EOF
             cache_output=$(timeout 15 gtk-update-icon-cache -f -t "$hicolor_dir" 2>&1)
             local cache_exit=$?
             
-            # #region agent log
-            # #endregion
             
             # Check if cache was created (even if marked as invalid)
             if [ -f "$hicolor_dir/icon-theme.cache" ]; then
                 local cache_size=$(stat -c%s "$hicolor_dir/icon-theme.cache" 2>/dev/null || echo "0")
-                # #region agent log
-                # #endregion
                 if [ $cache_exit -eq 0 ]; then
                     log_debug "Icon cache updated successfully: $hicolor_dir"
                 else
@@ -1009,8 +981,6 @@ EOF
                     timeout 15 gtk-update-icon-cache -f "$hicolor_dir" 2>&1 | grep -v "invalid" || true
                 fi
             else
-                # #region agent log
-                # #endregion
                 log_debug "Warning: Icon cache file not created (icons will use icon name lookup): $cache_output"
                 # Try alternative method (without -t flag) - with timeout
                 timeout 15 gtk-update-icon-cache -f "$hicolor_dir" 2>&1 | grep -v "invalid" || true
@@ -1049,9 +1019,6 @@ EOF
         # Desktop environments work better with icon names that are registered in the icon theme system
         # However, absolute paths are also supported and can be more reliable if icon cache fails
         # The template already has Icon=photoshop, but we need to ensure it's set correctly
-        # #region agent log
-        debug_log "sharedFuncs.sh:585" "Before setting icon in desktop entry" "{\"icon_name\":\"${icon_name}\",\"icon_exists\":$([ -f "$HOME/.local/share/icons/hicolor/48x48/apps/${icon_name}.png" ] && echo "true" || echo "false"),\"svg_exists\":$([ -f "$HOME/.local/share/icons/hicolor/scalable/apps/${icon_name}.svg" ] && echo "true" || echo "false"),\"desktop_entry_dest\":\"${desktop_entry_dest}\"}" "H4"
-        # #endregion
         
         # CRITICAL: Use icon NAME, not absolute path (KDE and most DEs prefer icon names)
         # According to freedesktop.org Desktop Entry Specification, Icon field can be:
@@ -1108,18 +1075,12 @@ EOF
         fi
         # Also update desktop shortcut if it exists (use same icon_value)
         if [ -n "${desktop_dir:-}" ] && [ -f "${desktop_dir}/photoshop.desktop" ]; then
-            # #region agent log
-            debug_log "sharedFuncs.sh:590" "Updating icon in desktop shortcut" "{\"desktop_shortcut\":\"${desktop_dir}/photoshop.desktop\",\"icon_value\":\"${icon_value}\"}" "H4"
-            # #endregion
             # CRITICAL: Update icon in desktop shortcut (same logic as main desktop entry)
             if grep -q "^Icon=photoshopicon" "${desktop_dir}/photoshop.desktop" 2>/dev/null; then
                 safe_sed_replace "${desktop_dir}/photoshop.desktop" "photoshopicon" "$icon_value" 2>/dev/null || true
             else
                 sed -i "s|^Icon=.*|Icon=$icon_value|g" "${desktop_dir}/photoshop.desktop" 2>/dev/null || true
             fi
-            # #region agent log
-            debug_log "sharedFuncs.sh:593" "After updating icon in desktop shortcut" "{\"icon_set\":$(grep -q "Icon=${icon_value}" "${desktop_dir}/photoshop.desktop" 2>/dev/null && echo "true" || echo "false")}" "H4"
-            # #endregion
         fi
         # Update launcher script with absolute path (for launcher script itself)
         safe_sed_replace "$launcher_dest/launcher.sh" "photoshopicon" "$launch_icon" || error "can't edit launcher script"
@@ -1216,25 +1177,16 @@ EOF
     # User can create the command later if needed
     local skip_command_creation="${SKIP_COMMAND_CREATION:-false}"
     
-    # If called during installation (from PhotoshopSetup.sh), skip interactive command creation
+    # If called during installation (SKIP_COMMAND_CREATION=true), skip interactive command creation
     # This prevents blocking the installation flow
     if [ "$skip_command_creation" = "true" ]; then
         log_debug "Skipping interactive command creation during installation"
     else
         show_message "${C_YELLOW}→${C_RESET} ${C_CYAN}create photoshop command...${C_RESET}"
         # CRITICAL: Validation BEFORE sudo operation - prevent privilege escalation
-        # Use centralized security::validate_path function if available
-        if type security::validate_path >/dev/null 2>&1; then
-            if ! security::validate_path "$SCR_PATH"; then
-                error "SCR_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $SCR_PATH"
-                return 1
-            fi
-        else
-            # Fallback to inline validation if security module not loaded
-            if [[ "$SCR_PATH" =~ ^/etc|^/usr/bin|^/usr/sbin|^/bin|^/sbin|^/lib|^/var/log|^/root ]]; then
-                error "SCR_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $SCR_PATH"
-                return 1
-            fi
+        if ! sharedFuncs::_validate_path "$SCR_PATH"; then
+            error "SCR_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $SCR_PATH"
+            return 1
         fi
         if [ ! -f "$SCR_PATH/launcher/launcher.sh" ]; then
             error "Launcher-Script nicht gefunden: $SCR_PATH/launcher/launcher.sh"
@@ -1249,7 +1201,7 @@ EOF
         
         # Ask user if they want system-wide installation
         local use_system_wide=false
-        # LANG_CODE should be set by PhotoshopSetup.sh, default to "de" if not set
+        # LANG_CODE should be set by the installer entrypoint, default to "de" if not set
         local lang_code="${LANG_CODE:-de}"
         if [ "$lang_code" = "de" ]; then
             echo ""
@@ -1273,11 +1225,9 @@ EOF
             show_message "${C_YELLOW}→${C_RESET} ${C_GRAY}photoshop command${C_RESET} existiert, lösche..."
             if [ "$use_system_wide" = true ]; then
                 # CRITICAL: Validate path before sudo operation
-                if type security::validate_path >/dev/null 2>&1; then
-                    if ! security::validate_path "$command_path"; then
-                        warning "Unsafe command path: $command_path"
-                        return 1
-                    fi
+                if ! sharedFuncs::_validate_path "$command_path"; then
+                    warning "Unsafe command path: $command_path"
+                    return 1
                 fi
                 # CRITICAL: Don't suppress errors - let user see sudo password prompt
                 sudo rm -f "$command_path" || {
@@ -1288,34 +1238,13 @@ EOF
         
         # Try system-wide installation if user chose it
         if [ "$use_system_wide" = true ]; then
-            # BEST PRACTICE: Try graphical password prompt first (zenity/systemd-ask-password)
-            # Falls nicht verfügbar, verwendet sudo normal (zeigt Passwort-Abfrage)
-            local sudo_password=""
-            if command -v zenity >/dev/null 2>&1; then
-                # Use zenity for graphical password prompt
-                sudo_password=$(zenity --password --title="$(i18n::get "password_required")" 2>/dev/null || echo "")
-                if [ -n "$sudo_password" ]; then
-                    echo "$sudo_password" | sudo -S ln -s "$SCR_PATH/launcher/launcher.sh" "$command_path" 2>/dev/null && command_created=1 || sudo_password=""
-                fi
-            elif command -v systemd-ask-password >/dev/null 2>&1; then
-                # Use systemd-ask-password for systemd-integrated prompt
-                sudo_password=$(systemd-ask-password "$(i18n::get "password_required")" 2>/dev/null || echo "")
-                if [ -n "$sudo_password" ]; then
-                    echo "$sudo_password" | sudo -S ln -s "$SCR_PATH/launcher/launcher.sh" "$command_path" 2>/dev/null && command_created=1 || sudo_password=""
-                fi
-            fi
-            
-            # Fallback: Use normal sudo (will prompt for password if needed)
-            if [ $command_created -eq 0 ]; then
-                # CRITICAL: Don't suppress errors (2>/dev/null) - let user see sudo password prompt
-                # sudo will prompt for password if needed
-                if sudo ln -s "$SCR_PATH/launcher/launcher.sh" "$command_path"; then
-                    command_created=1
-                    show_message "${C_GREEN}✓${C_RESET} ${C_CYAN}$(i18n::get "command_created_system" "$command_path")${C_RESET}"
-                else
-                    warning "$(i18n::get "system_wide_install_failed")"
-                    use_system_wide=false  # Fallback to user-local
-                fi
+            # Interactive sudo only — never echo password into argv (zenity|sudo -S).
+            if sudo ln -s "$SCR_PATH/launcher/launcher.sh" "$command_path"; then
+                command_created=1
+                show_message "${C_GREEN}✓${C_RESET} ${C_CYAN}$(i18n::get "command_created_system" "$command_path")${C_RESET}"
+            else
+                warning "$(i18n::get "system_wide_install_failed")"
+                use_system_wide=false  # Fallback to user-local
             fi
         fi
         
@@ -1355,75 +1284,11 @@ EOF
     unset desktop_entry desktop_entry_dest launcher_path launcher_dest
 }
 
-function set_dark_mod() {
-    # Use WINEPREFIX if WINE_PREFIX is not set (WINEPREFIX is the standard Wine variable)
-    local wine_prefix="${WINE_PREFIX:-${WINEPREFIX:-}}"
-    if [ -z "$wine_prefix" ]; then
-        error "WINE_PREFIX or WINEPREFIX not set"
-        return 1
-    fi
-    echo " " >> "$wine_prefix/user.reg"
-    local colorarray=(
-        '[Control Panel\\Colors] 1491939580'
-        '#time=1d2b2fb5c69191c'
-        '"ActiveBorder"="49 54 58"'
-        '"ActiveTitle"="49 54 58"'
-        '"AppWorkSpace"="60 64 72"'
-        '"Background"="49 54 58"'
-        '"ButtonAlternativeFace"="200 0 0"'
-        '"ButtonDkShadow"="154 154 154"'
-        '"ButtonFace"="49 54 58"'
-        '"ButtonHilight"="119 126 140"'
-        '"ButtonLight"="60 64 72"'
-        '"ButtonShadow"="60 64 72"'
-        '"ButtonText"="219 220 222"'
-        '"GradientActiveTitle"="49 54 58"'
-        '"GradientInactiveTitle"="49 54 58"'
-        '"GrayText"="155 155 155"'
-        '"Hilight"="119 126 140"'
-        '"HilightText"="255 255 255"'
-        '"InactiveBorder"="49 54 58"'
-        '"InactiveTitle"="49 54 58"'
-        '"InactiveTitleText"="219 220 222"'
-        '"InfoText"="159 167 180"'
-        '"InfoWindow"="49 54 58"'
-        '"Menu"="49 54 58"'
-        '"MenuBar"="49 54 58"'
-        '"MenuHilight"="119 126 140"'
-        '"MenuText"="219 220 222"'
-        '"Scrollbar"="73 78 88"'
-        '"TitleText"="219 220 222"'
-        '"Window"="35 38 41"'
-        '"WindowFrame"="49 54 58"'
-        '"WindowText"="219 220 222"'
-    )
-    for i in "${colorarray[@]}";do
-        echo "$i" >> "$WINE_PREFIX/user.reg"
-    done
-    # Use i18n for translation
-    if type i18n::get >/dev/null 2>&1; then
-        show_message "$(i18n::get "set_dark_mode")"
-    else
-    show_message "set dark mode for wine..." 
-    fi
-    unset colorarray
-}
-
 function export_var() {
     # CRITICAL: WINEPREFIX validation - prevent manipulation
-    # Use centralized security::validate_path function if available
-    # Use type instead of command -v for namespace functions (::)
-    if type security::validate_path >/dev/null 2>&1; then
-        if ! security::validate_path "$WINE_PREFIX"; then
-            error "WINEPREFIX zeigt auf System-Verzeichnis (Sicherheitsrisiko): $WINE_PREFIX"
-            return 1
-        fi
-    else
-        # Fallback to inline validation if security module not loaded
-        if [[ "$WINE_PREFIX" =~ ^/etc|^/usr/bin|^/usr/sbin|^/bin|^/sbin|^/lib|^/var/log|^/root ]]; then
-            error "WINEPREFIX zeigt auf System-Verzeichnis (Sicherheitsrisiko): $WINE_PREFIX"
-            return 1
-        fi
+    if ! sharedFuncs::_validate_path "$WINE_PREFIX"; then
+        error "WINEPREFIX zeigt auf System-Verzeichnis (Sicherheitsrisiko): $WINE_PREFIX"
+        return 1
     fi
     export WINEPREFIX="$WINE_PREFIX"
     if [ "${LAUNCHER_GUI:-0}" != "1" ]; then
@@ -1443,34 +1308,37 @@ function download_component() {
     local url="$3"
     
     # CRITICAL: Download URL validation - prevent malicious URLs
-    # Whitelist: Nur erlaubte Domains
-    local allowed_domains=(
-        "github.com"
-        "githubusercontent.com"
-        "sourceforge.net"
-        "microsoft.com"
-        "adobe.com"
-    )
-    
-    # Check that URL starts with https:// (HTTPS enforcement)
     if [[ ! "$url" =~ ^https:// ]]; then
         error "Download URL must use HTTPS (security risk): $url"
         return 1
     fi
     
-    # Check that URL is from allowed domain
-    local url_domain=$(echo "$url" | sed -E 's|^https?://([^/]+).*|\1|' | sed 's|^www\.||')
-    local domain_allowed=0
-    for domain in "${allowed_domains[@]}"; do
-        if [[ "$url_domain" == "$domain" ]] || [[ "$url_domain" == *".$domain" ]]; then
-            domain_allowed=1
-            break
+    if type security::validate_url >/dev/null 2>&1; then
+        if ! security::validate_url "$url" "microsoft.com" "adobe.com"; then
+            error "Download-URL von nicht erlaubter Domain (Sicherheitsrisiko): $url"
+            return 1
         fi
-    done
-    
-    if [ $domain_allowed -eq 0 ]; then
-        error "Download-URL von nicht erlaubter Domain (Sicherheitsrisiko): $url_domain"
-        return 1
+    else
+        local allowed_domains=(
+            "github.com"
+            "githubusercontent.com"
+            "sourceforge.net"
+            "microsoft.com"
+            "adobe.com"
+        )
+        local url_domain
+        url_domain=$(echo "$url" | sed -E 's|^https?://([^/]+).*|\1|' | sed 's|^www\.||')
+        local domain_allowed=0
+        for domain in "${allowed_domains[@]}"; do
+            if [[ "$url_domain" == "$domain" ]] || [[ "$url_domain" == *".$domain" ]]; then
+                domain_allowed=1
+                break
+            fi
+        done
+        if [ $domain_allowed -eq 0 ]; then
+            error "Download-URL von nicht erlaubter Domain (Sicherheitsrisiko): $url_domain"
+            return 1
+        fi
     fi
     
     while true;do
@@ -1478,12 +1346,14 @@ function download_component() {
             error "sorry something went wrong during download $4"
         fi
         if [ -f $1 ];then
-            local FILE_ID=$(md5sum $1 | cut -d" " -f1)
+            # Integrity: SHA-256 (MD5 is collision-broken; callers pass sha256 hex).
+            local FILE_ID
+            FILE_ID=$(sha256sum "$1" | cut -d" " -f1)
             if [ "$FILE_ID" = "${2:-}" ];then
                 show_message "\033[1;36m$4\e[0m detected"
                 return 0
             else
-                show_message "md5 is not match"
+                show_message "sha256 is not match"
                 rm $1 
             fi
         else   
@@ -1718,8 +1588,6 @@ progress::bar() {
     
     # Show spinner while process is running (simpler and more reliable than progress bar)
     # CRITICAL: Use stderr for spinner output to avoid interfering with process output
-    # #region agent log
-    # #endregion
     
     local spinstr='|/-\'
     local spin_idx=0
@@ -2007,28 +1875,13 @@ function usage() {
 
 function save_paths() {
     # CRITICAL: Validation BEFORE saving - prevent privilege escalation
-    # Use centralized security::validate_path function if available, otherwise fallback to inline check
-    if command -v security::validate_path >/dev/null 2>&1; then
-        if ! security::validate_path "$SCR_PATH"; then
-            error "SCR_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $SCR_PATH"
-            return 1
-        fi
-        
-        if ! security::validate_path "$CACHE_PATH"; then
-            error "CACHE_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $CACHE_PATH"
-            return 1
-        fi
-    else
-        # Fallback to inline validation if security module not loaded
-        if [[ "$SCR_PATH" =~ ^/etc|^/usr/bin|^/usr/sbin|^/bin|^/sbin|^/lib|^/var/log|^/root ]]; then
-            error "SCR_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $SCR_PATH"
-            return 1
-        fi
-        
-        if [[ "$CACHE_PATH" =~ ^/etc|^/usr/bin|^/usr/sbin|^/bin|^/sbin|^/lib|^/var/log|^/root ]]; then
-            error "CACHE_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $CACHE_PATH"
-            return 1
-        fi
+    if ! sharedFuncs::_validate_path "$SCR_PATH"; then
+        error "SCR_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $SCR_PATH"
+        return 1
+    fi
+    if ! sharedFuncs::_validate_path "$CACHE_PATH"; then
+        error "CACHE_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $CACHE_PATH"
+        return 1
     fi
     
     # Prüfe dass Pfade nicht leer sind
@@ -2119,39 +1972,18 @@ function load_paths() {
     fi
     
     # CRITICAL: Path security check - prevent privilege escalation
-    # Use centralized security::validate_path function if available
-    if command -v security::validate_path >/dev/null 2>&1; then
-        if ! security::validate_path "$SCR_PATH"; then
-            echo "ERROR: SCR_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $SCR_PATH"
-            if [ "$skip_validation" = "false" ]; then
-                echo -e "${C_RED}✗${C_RESET} ${C_YELLOW}Please reinstall Photoshop using setup.sh${C_RESET}"
-                exit 1
-            fi
+    if ! sharedFuncs::_validate_path "$SCR_PATH"; then
+        echo "ERROR: SCR_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $SCR_PATH"
+        if [ "$skip_validation" = "false" ]; then
+            echo -e "${C_RED}✗${C_RESET} ${C_YELLOW}Please reinstall Photoshop using setup.sh${C_RESET}"
+            exit 1
         fi
-        
-        if ! security::validate_path "$CACHE_PATH"; then
-            echo "ERROR: CACHE_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $CACHE_PATH"
-            if [ "$skip_validation" = "false" ]; then
-                echo -e "${C_RED}✗${C_RESET} ${C_YELLOW}Please reinstall Photoshop using setup.sh${C_RESET}"
-                exit 1
-            fi
-        fi
-    else
-        # Fallback to inline validation if security module not loaded
-        if [[ "$SCR_PATH" =~ ^/etc|^/usr/bin|^/usr/sbin|^/bin|^/sbin|^/lib|^/var/log|^/root ]]; then
-            echo "ERROR: SCR_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $SCR_PATH"
-            if [ "$skip_validation" = "false" ]; then
-                echo -e "${C_RED}✗${C_RESET} ${C_YELLOW}Please reinstall Photoshop using setup.sh${C_RESET}"
-                exit 1
-            fi
-        fi
-        
-        if [[ "$CACHE_PATH" =~ ^/etc|^/usr/bin|^/usr/sbin|^/bin|^/sbin|^/lib|^/var/log|^/root ]]; then
-            echo "ERROR: CACHE_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $CACHE_PATH"
-            if [ "$skip_validation" = "false" ]; then
-                echo -e "${C_RED}✗${C_RESET} ${C_YELLOW}Please reinstall Photoshop using setup.sh${C_RESET}"
-                exit 1
-            fi
+    fi
+    if ! sharedFuncs::_validate_path "$CACHE_PATH"; then
+        echo "ERROR: CACHE_PATH zeigt auf System-Verzeichnis (Sicherheitsrisiko): $CACHE_PATH"
+        if [ "$skip_validation" = "false" ]; then
+            echo -e "${C_RED}✗${C_RESET} ${C_YELLOW}Please reinstall Photoshop using setup.sh${C_RESET}"
+            exit 1
         fi
     fi
     

@@ -64,7 +64,9 @@ desktop.ini
 # ============================================================
 gitpush.sh
 stagefiles.sh
-tests/
+# bats suite is tracked (CI); ignore only local scratch
+tests/*.log
+tests/tmp/
 .shellcheckrc
 
 # ============================================================
@@ -93,6 +95,11 @@ flatpak/repo/
 .flatpak-builder/
 site/
 .cache/
+
+# ============================================================
+# Local audit / lens noise (not ship artifacts)
+# ============================================================
+.audit/
 
 # ============================================================
 # IDE/Editor Files

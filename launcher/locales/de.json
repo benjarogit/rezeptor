@@ -51,7 +51,8 @@
     "home_link_wiki_sub": "Öffentliche Doku",
     "home_link_wiki_tip": "Öffentliche Dokumentation im Browser öffnen",
     "home_pill_version": "v{version}",
-    "home_pill_recipes": "{n} Rezepte"
+    "home_pill_recipes": "{n} Rezepte",
+    "sidebar_search_empty": "Keine Rezepte für „{query}\"."
   },
   "menu": {
     "home": "Startseite",
@@ -66,6 +67,7 @@
     "refresh": "Status neu prüfen",
     "refresh_tip": "Installationsstatus aller Rezepte per validate.sh aktualisieren (auch automatisch nach Install/Reparatur und beim Start).",
     "refresh_busy": "Status wird geprüft…",
+    "refresh_failed": "Status-Aktualisierung fehlgeschlagen: {error}",
     "refresh_done": "Status aktualisiert ({n} Rezepte)",
     "reorder_saved": "Reihenfolge gespeichert",
     "reorder_same_category": "Nur innerhalb derselben Kategorie sortieren (z. B. beide unter Spiele)",
@@ -146,11 +148,13 @@
     "installed": "Installiert",
     "unknown": "Unbekannt",
     "untrusted": "Freigabe nötig",
+    "checking": "Prüfung…",
     "running": "Läuft gerade",
     "installed_tip": "Installiert — bereit zum Starten",
     "partial_tip": "Teilweise — Reparieren empfohlen",
     "not_installed_tip": "Noch nicht installiert",
     "untrusted_tip": "Rezept-Dateien geändert — unter Mehr „Dateien freigeben“ (nur mit Entwicklermodus / REZEPTOR_DEV)",
+    "checking_tip": "Integrität der Rezept-Dateien wird noch geprüft",
     "prefix_present": "Prefix vorhanden",
     "installed_with_warnings": "Installiert (Prüfung mit Warnungen)",
     "tested_guaranteed": "Getestet & garantiert · {version}",
@@ -161,6 +165,7 @@
     "partial": "Teilweise",
     "not_installed": "Nicht installiert",
     "untrusted": "Freigabe nötig",
+    "checking": "Prüfung…",
     "unknown": "Unbekannt",
     "running": "Läuft",
     "author": "Autor · {author}",
@@ -198,17 +203,20 @@
     "path_missing": "Ordner existiert noch nicht:\n{path}",
     "install_cancelled": "Installation abgebrochen.",
     "install_rolled_back": "Installation abgebrochen — bereits angelegte Rezept-Daten wurden zurückgenommen.",
-    "install_rollback_fail": "Installation abgebrochen, Rollback unvollständig.\nBitte unter Mehr → Deinstallieren bereinigen."
+    "install_rollback_fail": "Installation abgebrochen, Rollback unvollständig.\nBitte unter Mehr → Deinstallieren bereinigen.",
+    "query_error": "Statusprüfung fehlgeschlagen: {error}"
   },
   "trust": {
     "title": "Rezeptor-Dateien prüfen",
     "detail": "{reason}",
     "manifest_failed": "Rezeptor-Dateien stimmen nicht überein",
     "reason_changed": "Einige Rezeptor-Dateien wurden geändert und müssen erneut freigegeben werden.",
+    "reason_checking": "Integrität wird geprüft…",
     "reason_missing": "Erwartete Rezeptor-Dateien fehlen oder sind unlesbar.",
     "hint_dev": "Ein Klick auf „Dateien freigeben“ übernimmt die lokalen Änderungen — danach kannst du wieder starten.",
     "hint_user": "Bitte Rezeptor aktualisieren (Hilfe → Update prüfen), dann erneut öffnen.",
     "hidden_warn": "Rezept mit Warnung: {line}",
+    "resync_needed": "Rezept-Dateien geändert — bitte erneut freigeben vor Install/Start. {detail}",
     "regen_ok": "Dateien freigegeben — Status wird aktualisiert",
     "regen_fail": "Freigabe fehlgeschlagen"
   },
@@ -269,7 +277,8 @@
     "developer_mode_tip": "Ein: Menü Rezeptor → „Rezept bearbeiten…“, Quelltext speichern; Manifest-Freigabe möglich. Entspricht REZEPTOR_DEV=1.",
     "developer_mode_ready": "Entwicklermodus an — Mehr → „Rezept bearbeiten…“ (Quelltext).",
     "archive_passwords": "Archiv-Passwörter (global)",
-    "archive_passwords_hint": "Eine Zeile = ein Passwort, von oben nach unten. Kommentare mit #. Fehlt das passende bei der Installation, fragt Rezeptor nach und speichert es hier.",
+    "archive_passwords_show": "Passwörter anzeigen",
+    "archive_passwords_hint": "Eine Zeile = ein Passwort, von oben nach unten. Kommentare mit #. Speicherung getrennt und nur für dich lesbar (nicht in settings.json). Fehlt das passende bei der Installation, fragt Rezeptor nach und speichert es hier.",
     "archive_passwords_ph": "Liste leer — hier tippen, z. B.:\ngeheim123\nanderes-passwort\n# Zeilen mit # sind Kommentare",
     "archive_passwords_count": "{count} Passwort(e) in der Liste",
     "archive_passwords_count_empty": "0 Passwörter — Liste leer (grauer Hinweistext ist nur ein Beispiel)",
@@ -367,7 +376,7 @@
     "repair_wiso": "Die Reparatur prüft validate.sh und ergänzt Fehlendes:\n• Portable-Root / Launch-Skript\n• vcrun2019, gdiplus, dotnet48 (Wine-Mono), win10\n\nEs können kurz Wine-Fenster erscheinen — bitte OK bzw. Installieren klicken.\n\nFortfahren?",
     "repair_default": "Reparatur prüft validate.sh und behebt:\n• Native MSXML\n• Schriften (ClearType/Segoe UI)\n• Proton-GE Grafik-DLLs\n• Desktop-Icon (nur wenn schon angelegt)\n\nFortfahren?",
     "uninstall_title": "Deinstallieren",
-    "uninstall_confirm": "„{name}“ entfernen?",
+    "uninstall_confirm": "„{name}“ deinstallieren?\n\nDabei werden Wine-Prefix und Rezeptdaten im gewählten Datenordner dauerhaft gelöscht (inkl. der Kopie unter ~/.local/share/wine-software/). Desktop-Verknüpfungen dieses Rezepts werden entfernt.\n\nSpiel-/Portable-Ordner außerhalb dieses Datenordners bleiben erhalten.\n\nDas lässt sich nicht rückgängig machen.",
     "shortcuts_title": "Verknüpfungen",
     "shortcuts_body": "„{name}“ im Startmenü/Anwendungsmenü und auf dem Desktop/Schreibtisch anlegen?\n\nDas Icon kommt aus dem Rezept.\n\nNein / später: jederzeit unter Mehr → „Verknüpfungen anlegen/aktualisieren…“.",
     "shortcuts_created": "Startmenü- und Desktop-Verknüpfung angelegt.\n\nErneut anlegen (z. B. nach Löschen): Mehr → „Verknüpfungen anlegen/aktualisieren…“.",
@@ -508,7 +517,8 @@
     "E_UPDATE_APPLY": "Update fehlgeschlagen",
     "E_UPDATE_ROLLBACK": "Rollback fehlgeschlagen",
     "E_LAUNCH_NO_PROCESS": "Prozess nach Start nicht aktiv",
-    "E_SCRIPT_FAILED": "{label} fehlgeschlagen (Exit {code})"
+    "E_SCRIPT_FAILED": "{label} fehlgeschlagen (Exit {code})",
+    "E_STATUS_QUERY": "Rezept-Statusprüfung fehlgeschlagen"
   },
   "info": {
     "missing": "Keine Rezept-Beschreibung vorhanden.",

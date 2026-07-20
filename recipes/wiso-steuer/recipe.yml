@@ -1,4 +1,5 @@
 id: wiso-steuer
+schema_version: 1
 icon: "{repo}/images/wiso-steuer-icon.png"
 name: "WISO Steuer (Portable)"
 author: "benjarogit"
@@ -34,6 +35,7 @@ source_formats: zip,tar.gz,tgz,7z,rar
 fix_kind: none
 portable_root: ""
 exe_glob: "**/wiso*.exe"
+launch_process_patterns: [wiso2026.exe, wmain26.exe]
 winetricks: [vcrun2019, dotnet48, corefonts, tahoma, calibri, d3dcompiler_47, gdiplus, "fontsmooth=rgb"]
 env:
   WINEARCH: win64

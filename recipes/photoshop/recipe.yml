@@ -1,4 +1,5 @@
 id: photoshop
+schema_version: 1
 icon: "{repo}/images/AdobePhotoshop-icon.png"
 name: "Adobe Photoshop CC 2021"
 author: "benjarogit"
@@ -26,6 +27,7 @@ target_default: "~/.local/share/wine-software/photoshop"
 target_label: "Datenordner (Wine-Prefix wird hier angelegt)"
 fix_kind: none
 exe_glob: "**/Photoshop.exe"
+launch_process_patterns: [Photoshop.exe]
 # win10 via recipe_win10::ensure; VC++ via recipe_vcrun::ensure (nicht winetricks)
 winetricks: [atmlib, corefonts, "fontsmooth=rgb", gdiplus, msxml3, msxml6, ie8]
 env:

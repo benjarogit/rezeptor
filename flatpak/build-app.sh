@@ -7,6 +7,8 @@ SHARE="/app/share/rezeptor"
 
 # shellcheck source=/dev/null
 source "$ROOT/core/runtime.lock"
+# shellcheck source=/dev/null
+source "$ROOT/core/proton-ge-fetch.sh"
 
 echo "Installing Rezeptor application tree..."
 mkdir -p "$SHARE"
@@ -50,11 +52,9 @@ elif [ ! -d "/app/runtime/proton-ge/$PROTON_GE_TAG/files/bin" ]; then
     cache="/var/tmp/rezeptor-flatpak-cache"
     mkdir -p "$cache"
     if [ ! -f "$cache/${PROTON_GE_TAG}.tar.gz" ]; then
-        curl -fsSL "$PROTON_GE_URL" -o "$cache/${PROTON_GE_TAG}.tar.gz"
+        proton_ge_fetch::download_tarball "$PROTON_GE_URL" "$cache/${PROTON_GE_TAG}.tar.gz"
     fi
-    if [ -n "${PROTON_GE_SHA256:-}" ]; then
-        echo "${PROTON_GE_SHA256}  $cache/${PROTON_GE_TAG}.tar.gz" | sha256sum -c -
-    fi
+    proton_ge_fetch::verify_tarball "$cache/${PROTON_GE_TAG}.tar.gz"
     tar -xzf "$cache/${PROTON_GE_TAG}.tar.gz" -C /app/runtime/proton-ge
     if [ -d "/app/runtime/proton-ge/files/bin" ] && [ ! -d "/app/runtime/proton-ge/$PROTON_GE_TAG/files/bin" ]; then
         mkdir -p "/app/runtime/proton-ge/.tmp"

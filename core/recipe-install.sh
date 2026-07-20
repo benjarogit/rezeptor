@@ -7,11 +7,22 @@
 #   RECIPE_INSTALLER_PATH  (bei installer_*)
 
 recipe_install::_validate_path() {
+    local path="$1"
+    local label="${2:-path}"
     if type security::validate_path >/dev/null 2>&1; then
-        security::validate_path "$1" || return 1
+        if ! security::validate_path "$path"; then
+            recipe_install::_err "Unsafe $label (blocked by security policy): $path"
+            return 1
+        fi
     fi
-    [ -n "$1" ] || return 1
-    [[ "$1" != *".."* ]] || return 1
+    if [ -z "$path" ]; then
+        recipe_install::_err "Missing $label"
+        return 1
+    fi
+    if [[ "$path" == *".."* ]]; then
+        recipe_install::_err "Unsafe $label (path traversal): $path"
+        return 1
+    fi
     return 0
 }
 
@@ -102,6 +113,26 @@ recipe_install::_expect_installer() {
     return 1
 }
 
+recipe_install::_validate_install_type() {
+    local install_type="$1"
+    case "$install_type" in
+        installer_offline|portable_launch|portable_bootstrap|game_install|game_portable|adobe_offline|portable)
+            return 0
+            ;;
+    esac
+    recipe_install::_err "Unbekannter install_type: $install_type"
+    return 1
+}
+
+recipe_install::_validate_source_kind() {
+    local source_kind="$1"
+    case "$source_kind" in
+        folder|installer|archive|fixed_path) return 0 ;;
+    esac
+    recipe_install::_err "Unbekannter source_kind: $source_kind"
+    return 1
+}
+
 recipe_install::prepare_source() {
     local recipe_yml="${1:?recipe.yml}"
     local data_root="${2:?data_root}"
@@ -111,6 +142,8 @@ recipe_install::prepare_source() {
     export RECIPE_YML="$recipe_yml"
     install_type="$(recipe_get "$recipe_yml" install_type 2>/dev/null || echo portable_launch)"
     source_kind="$(recipe_get "$recipe_yml" source_kind 2>/dev/null || echo folder)"
+    recipe_install::_validate_install_type "$install_type" || return 1
+    recipe_install::_validate_source_kind "$source_kind" || return 1
     deploy_mode="${RECIPE_DEPLOY_MODE:-$(recipe_get "$recipe_yml" deploy_mode 2>/dev/null || echo copy)}"
     target_dir="${RECIPE_TARGET_DIR:-}"
     if [ -n "$target_dir" ]; then
@@ -131,7 +164,7 @@ recipe_install::prepare_source() {
             work_root="$(recipe_source::staging_dir "$data_root" "${RECIPE_ID:-app}")/extract"
             rm -rf "$work_root" 2>/dev/null || true
             mkdir -p "$work_root"
-            recipe_install::_validate_path "${RECIPE_ARCHIVE_PATH}" || return 1
+            recipe_install::_validate_path "${RECIPE_ARCHIVE_PATH}" archive || return 1
             recipe_install::_step "Archiv entpacken"
             recipe_source::extract_archive "${RECIPE_ARCHIVE_PATH}" "$work_root" || {
                 recipe_install::_err "Archiv konnte nicht entpackt werden"
@@ -144,7 +177,7 @@ recipe_install::prepare_source() {
             ;;
         installer_file)
             installer="${RECIPE_INSTALLER_PATH}"
-            recipe_install::_validate_path "$installer" || return 1
+            recipe_install::_validate_path "$installer" installer || return 1
             work_root="$(cd "$(dirname "$installer")" && pwd)"
             resolved="installer_file"
             ;;
@@ -195,9 +228,9 @@ recipe_install::prepare_source() {
     fi
 
     if [ "$resolved" = "portable_folder" ]; then
-        recipe_install::_validate_path "$work_root" || return 1
+        recipe_install::_validate_path "$work_root" work_root || return 1
         if [ -n "$target_dir" ]; then
-            recipe_install::_validate_path "$target_dir" || return 1
+            recipe_install::_validate_path "$target_dir" target_dir || return 1
             recipe_install::_step "Portable installieren (Quelle → Ziel)"
             recipe_install::_info "Quelle: $work_root"
             recipe_install::_info "Ziel: $target_dir"
@@ -244,12 +277,16 @@ recipe_install::apply_fix() {
 
     if [ -d "$fix" ]; then
         recipe_install::_step "Patch-Ordner: $(basename "$fix")"
-        local ran=0 f
+        local ran=0 ok=0 f
         shopt -s nullglob 2>/dev/null || true
         for f in "$fix"/*.exe "$fix"/*/*.exe; do
             [ -f "$f" ] || continue
             ran=1
-            "$wine_cmd" "$f" /S >>"$log" 2>&1 || "$wine_cmd" "$f" >>"$log" 2>&1 || true
+            if "$wine_cmd" "$f" /S >>"$log" 2>&1 || "$wine_cmd" "$f" >>"$log" 2>&1; then
+                ok=$((ok + 1))
+            else
+                recipe_install::_err "Patch-EXE fehlgeschlagen: $f"
+            fi
         done
         shopt -u nullglob 2>/dev/null || true
         if [ "$ran" -eq 0 ]; then
@@ -261,6 +298,9 @@ recipe_install::apply_fix() {
             else
                 cp -a "$fix/." "${RECIPE_WORK_ROOT:-.}/" >>"$log" 2>&1 || return 1
             fi
+        elif [ "$ok" -eq 0 ]; then
+            recipe_install::_err "Alle Patch-EXEs fehlgeschlagen"
+            return 1
         fi
         recipe_install::_success "Patch-Ordner verarbeitet"
         return 0

@@ -105,7 +105,7 @@ Official **handbook** for Rezeptor — install, validate, launch, and cleanly re
 
 | Topic | Link |
 |-------|------|
-| Releases / AppImage | [GitHub Releases](https://github.com/benjarogit/rezeptor/releases) |
+| Releases (AppImage / Flatpak / tar.gz) | [GitHub Releases](https://github.com/benjarogit/rezeptor/releases) |
 | Project README | [README.md](https://github.com/benjarogit/rezeptor/blob/main/README.md) |
 | Contributing (translations) | [CONTRIBUTING-TRANSLATIONS.md](CONTRIBUTING-TRANSLATIONS.md) |
 | Brand | [BRAND.md](BRAND.md) |

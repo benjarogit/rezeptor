@@ -19,6 +19,7 @@ CATALOG_FILENAME = "catalog.json"
 COMMUNITY_DIR = "community"
 _HTTP_TIMEOUT = 30
 _USER_AGENT = "Rezeptor-recipe-catalog/1.0"
+_HTTP_OPENER = urllib.request.build_opener()
 
 
 class CatalogError(Exception):
@@ -57,7 +58,7 @@ def _request_json(url: str) -> Any:
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT) as resp:
+        with _HTTP_OPENER.open(req, timeout=_HTTP_TIMEOUT) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         body = ""
@@ -75,7 +76,7 @@ def _request_json(url: str) -> Any:
 def _download_bytes(url: str) -> bytes:
     req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
     try:
-        with urllib.request.urlopen(req, timeout=_HTTP_TIMEOUT) as resp:
+        with _HTTP_OPENER.open(req, timeout=_HTTP_TIMEOUT) as resp:
             return resp.read()
     except urllib.error.HTTPError as exc:
         raise RecipeInstallError(f"HTTP {exc.code} downloading {url}: {exc.reason}") from exc
@@ -209,6 +210,32 @@ def _github_raw_url(repo: str, ref: str, repo_path: str) -> str:
     return f"https://raw.githubusercontent.com/{repo}/{ref}/{repo_path}"
 
 
+def _contained_recipe_target(dest_dir: Path, rel: str) -> tuple[Path, str]:
+    """Return ``(target, safe_rel)`` under *dest_dir*, or raise on traversal."""
+    raw = (rel or "").replace("\\", "/")
+    # Reject absolute paths before any strip — ``lstrip("/")`` would turn
+    # ``/etc/passwd`` into a false relative ``etc/passwd``.
+    if not raw or raw.endswith("/") or raw.startswith("/") or Path(raw).is_absolute():
+        raise RecipeInstallError(f"Invalid or absolute recipe path: {rel!r}")
+    while raw.startswith("./"):
+        raw = raw[2:]
+    if not raw or raw.startswith("/") or Path(raw).is_absolute():
+        raise RecipeInstallError(f"Invalid recipe path: {rel!r}")
+    parts = tuple(p for p in Path(raw).parts if p not in ("", "."))
+    if not parts or any(p == ".." for p in parts):
+        raise RecipeInstallError(f"Path traversal rejected: {rel!r}")
+    safe_rel = "/".join(parts)
+    dest_resolved = dest_dir.resolve()
+    target = (dest_dir / safe_rel).resolve()
+    try:
+        target.relative_to(dest_resolved)
+    except ValueError as exc:
+        raise RecipeInstallError(
+            f"Path escapes recipe directory: {rel!r}"
+        ) from exc
+    return target, safe_rel
+
+
 def _list_github_tree(repo: str, ref: str, repo_path: str) -> list[str]:
     """Return repo-relative file paths under *repo_path* via the Contents API."""
     api_url = f"https://api.github.com/repos/{repo}/contents/{repo_path}?ref={ref}"
@@ -285,11 +312,13 @@ def install_recipe_from_github(
 
     dest_dir.mkdir(parents=True, exist_ok=True)
     for rel in rel_files:
-        rel = rel.lstrip("/")
-        if not rel or rel.endswith("/"):
-            continue
-        raw_url = _github_raw_url(repo, ref, f"{repo_prefix}/{rel}")
-        target = dest_dir / rel
+        try:
+            target, safe_rel = _contained_recipe_target(dest_dir, rel)
+        except RecipeInstallError as exc:
+            raise RecipeInstallError(
+                f"Failed to install '{recipe_id}' file '{rel}': {exc}"
+            ) from exc
+        raw_url = _github_raw_url(repo, ref, f"{repo_prefix}/{safe_rel}")
         target.parent.mkdir(parents=True, exist_ok=True)
         try:
             target.write_bytes(_download_bytes(raw_url))

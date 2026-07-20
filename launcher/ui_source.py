@@ -28,7 +28,8 @@ from PyQt6.QtWidgets import (
 )
 
 from app_support import detect_source_version, version_guarantee_mismatch
-from archive_passwords import ensure_archive_passwords, normalize_password_list_text
+from archive_passwords import normalize_password_list_text
+from ui_archive_passwords import ensure_archive_passwords
 from i18n import t
 from settings import is_recipe_install_cleared, load_settings, save_settings
 from steam_paths import default_trainer_target, steam_app_install_dir

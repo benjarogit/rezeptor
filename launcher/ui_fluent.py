@@ -56,17 +56,26 @@ try:
     _setTheme = setTheme
     _setThemeColor = setThemeColor
 except ImportError:
-    from PyQt6.QtWidgets import QMenu, QPushButton, QWidget
+    from PyQt6.QtGui import QIcon
+    from PyQt6.QtWidgets import QLabel, QMenu, QPushButton, QWidget
+
+    class IconWidget(QLabel):  # type: ignore[no-redef]
+        """Fluent-less fallback: show recipe icon in sidebar cards."""
+
+        def __init__(self, icon: QIcon, parent: QWidget | None = None) -> None:
+            super().__init__(parent)
+            if icon is not None and not icon.isNull():
+                self.setPixmap(icon.pixmap(20, 20))
 
     PrimaryPushButton = QPushButton  # type: ignore[misc, assignment]
     PushButton = QPushButton  # type: ignore[misc, assignment]
     RoundMenu = QMenu  # type: ignore[misc, assignment]
     CardWidget = QWidget  # type: ignore[misc, assignment]
-    TitleLabel = QWidget  # type: ignore[misc, assignment]
-    SubtitleLabel = QWidget  # type: ignore[misc, assignment]
-    CaptionLabel = QWidget  # type: ignore[misc, assignment]
-    BodyLabel = QWidget  # type: ignore[misc, assignment]
-    StrongBodyLabel = QWidget  # type: ignore[misc, assignment]
+    TitleLabel = QLabel  # type: ignore[misc, assignment]
+    SubtitleLabel = QLabel  # type: ignore[misc, assignment]
+    CaptionLabel = QLabel  # type: ignore[misc, assignment]
+    BodyLabel = QLabel  # type: ignore[misc, assignment]
+    StrongBodyLabel = QLabel  # type: ignore[misc, assignment]
 
     def setThemeColor(_color: str) -> None:
         return

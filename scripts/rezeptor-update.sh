@@ -17,6 +17,65 @@ VERSION_FILE="$ROOT/VERSION"
 die() { echo "ERROR: $*" >&2; exit 1; }
 info() { echo "→ $*"; }
 
+fetch_github_release_json() {
+    local tag="$1"
+    curl -fsSL -H 'Accept: application/vnd.github+json' \
+        "https://api.github.com/repos/${GITHUB_REPO}/releases/tags/${tag}" 2>/dev/null \
+        || curl -fsSL -H 'Accept: application/vnd.github+json' \
+        "https://api.github.com/repos/${GITHUB_REPO}/releases/latest"
+}
+
+pick_release_asset_url() {
+    local json="$1" primary="$2" fallback="${3:-}"
+    printf '%s' "$json" | python3 -c '
+import json, sys, re
+d = json.load(sys.stdin)
+assets = d.get("assets") or []
+patterns = [p for p in sys.argv[1:] if p]
+for pat in patterns:
+    for a in assets:
+        name = a.get("name") or ""
+        if re.search(pat, name, re.I):
+            url = a.get("browser_download_url", "")
+            if url:
+                print(url)
+                raise SystemExit
+print("")
+' "$primary" "$fallback"
+}
+
+# Download SHA256SUMS for *tag* and verify *file* (basename must appear in sums).
+verify_release_sha256() {
+    local tag="$1" file="$2"
+    local sums_url sums_file base
+    base="$(basename "$file")"
+    sums_url="https://github.com/${GITHUB_REPO}/releases/download/${tag}/SHA256SUMS"
+    sums_file="$(mktemp)"
+    if ! curl -fsSL "$sums_url" -o "$sums_file"; then
+        rm -f "$sums_file"
+        die "SHA256SUMS fehlt für Release $tag — Update abgebrochen"
+    fi
+    if ! grep -E "[[:space:]]${base}\$" "$sums_file" >/dev/null 2>&1; then
+        rm -f "$sums_file"
+        die "Keine SHA256-Zeile für $base in SHA256SUMS ($tag)"
+    fi
+    (
+        cd "$(dirname "$file")"
+        if ! sha256sum -c "$sums_file" --ignore-missing 2>/dev/null | grep -F "$base: OK" >/dev/null; then
+            # Portable check: extract expected hash and compare
+            local expect got
+            expect="$(awk -v b="$base" '$2==b || $2==("./" b) {print $1; exit}' "$sums_file")"
+            got="$(sha256sum "$file" | awk '{print $1}')"
+            [ -n "$expect" ] && [ "$expect" = "$got" ] || {
+                rm -f "$sums_file"
+                die "SHA256-Mismatch für $base"
+            }
+        fi
+    )
+    rm -f "$sums_file"
+    info "SHA256 OK: $base"
+}
+
 current_version() {
     if [ -f "$VERSION_FILE" ]; then
         tr -d '\n' < "$VERSION_FILE"
@@ -220,34 +279,15 @@ apply_flatpak() {
     [ -n "$tag" ] || tag="$(latest_release_tag)"
     local ver="${tag#v}"
     local json asset_url staging bundle
-    json="$(curl -fsSL -H 'Accept: application/vnd.github+json' \
-        "https://api.github.com/repos/${GITHUB_REPO}/releases/tags/${tag}" 2>/dev/null \
-        || curl -fsSL -H 'Accept: application/vnd.github+json' \
-        "https://api.github.com/repos/${GITHUB_REPO}/releases/latest")"
-    asset_url="$(printf '%s' "$json" | python3 -c '
-import json,sys,re
-d=json.load(sys.stdin)
-assets=d.get("assets") or []
-picked=""
-for a in assets:
-    name=a.get("name") or ""
-    if re.search(r"(?i)^rezeptor-.*\.flatpak$", name):
-        picked=a.get("browser_download_url","")
-        break
-if not picked:
-    for a in assets:
-        name=a.get("name") or ""
-        if re.search(r"\.flatpak$", name, re.I):
-            picked=a.get("browser_download_url","")
-            break
-print(picked)
-')"
+    json="$(fetch_github_release_json "$tag")"
+    asset_url="$(pick_release_asset_url "$json" '(?i)^rezeptor-.*\.flatpak$' '\.flatpak$')"
     [ -n "$asset_url" ] || flatpak_manual_hint "$ver" "Kein .flatpak-Asset in Release ${tag}"
     staging="${XDG_CACHE_HOME:-$HOME/.cache}/wine-software/rezeptor/update"
     mkdir -p "$staging"
     bundle="$staging/rezeptor-${ver}-x86_64.flatpak"
     info "Lade Flatpak-Bundle → $bundle"
     curl -fsSL "$asset_url" -o "$bundle"
+    verify_release_sha256 "$tag" "$bundle"
     if command -v flatpak-spawn >/dev/null 2>&1; then
         info "Installiere via flatpak-spawn --host flatpak install --reinstall"
         if flatpak-spawn --host flatpak install --user -y --reinstall "$bundle"; then
@@ -273,33 +313,13 @@ apply_appimage() {
     local ver="${tag#v}"
     local json asset_url dest
     backup_appimage "$ver" >/dev/null
-    json="$(curl -fsSL -H 'Accept: application/vnd.github+json' \
-        "https://api.github.com/repos/${GITHUB_REPO}/releases/tags/${tag}" 2>/dev/null \
-        || curl -fsSL -H 'Accept: application/vnd.github+json' \
-        "https://api.github.com/repos/${GITHUB_REPO}/releases/latest")"
-    asset_url="$(printf '%s' "$json" | python3 -c '
-import json,sys,re
-d=json.load(sys.stdin)
-assets=d.get("assets") or []
-# Prefer rezeptor-*.AppImage; fall back to any AppImage (legacy photoshopCClinux-*)
-picked=""
-for a in assets:
-    name=a.get("name") or ""
-    if re.search(r"(?i)^rezeptor-.*\.AppImage$", name):
-        picked=a.get("browser_download_url","")
-        break
-if not picked:
-    for a in assets:
-        name=a.get("name") or ""
-        if re.search(r"AppImage$", name, re.I):
-            picked=a.get("browser_download_url","")
-            break
-print(picked)
-')"
+    json="$(fetch_github_release_json "$tag")"
+    asset_url="$(pick_release_asset_url "$json" '(?i)^rezeptor-.*\.AppImage$' 'AppImage$')"
     [ -n "$asset_url" ] || die "Kein AppImage-Asset in Release $tag"
     dest="${APPIMAGE}"
     info "Lade AppImage → $dest"
     curl -fsSL "$asset_url" -o "${dest}.new"
+    verify_release_sha256 "$tag" "${dest}.new"
     chmod +x "${dest}.new"
     mv -f "${dest}.new" "$dest"
     info "AppImage Update auf $ver abgeschlossen"

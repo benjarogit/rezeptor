@@ -9,13 +9,17 @@ Technische Notizen zur PyQt6-Oberfläche unter `launcher/`. Brand und UX-Regeln:
 REZEPTOR_DEV=1 ./setup.sh  # Entwicklermodus
 ```
 
-Abhängigkeiten: **PyQt6** Pflicht; optional **PyQt6-Fluent-Widgets** (`ui_fluent.FLUENT_AVAILABLE`).
+Abhängigkeiten beim **Git-Clone / tar.gz / `./setup.sh`**: **PyQt6** auf dem Host; optional **PyQt6-Fluent-Widgets** (`ui_fluent.FLUENT_AVAILABLE`).
+
+**AppImage** und **Flatpak** bringen Python + PyQt6 (+ Fluent) bereits mit — dort kein hostseitiges `python-pyqt6` nötig. Siehe [Schnellstart](GETTING-STARTED.md).
 
 ## Modulübersicht
 
 | Datei | Rolle |
 |-------|--------|
 | `launcher.py` | Hauptfenster, QProcess-Hooks, Activity, Updates |
+| `recipe_discovery.py` | `RecipeInfo` / Discover / YAML-Metadaten |
+| `ARCHITECTURE-LAUNCHER.md` | Prozess-/Trust-/Secrets-Modell |
 | `ui_fluent.py` | Fluent `Theme.DARK` + Kupfer `#B87333` |
 | `ui_styles.py` | Host-QSS, Brand-Tokens |
 | `ui_rezeptor.py` | Sidebar, Segment-Tabs, Status-Pille |
@@ -70,6 +74,16 @@ In `app_support.py`:
 ## Fehlercodes
 
 Definiert in `log_context.py`, Texte unter `error.*` in Locales — siehe [I18N](I18N.md).
+
+## Install vs Reinstall vs Reparieren
+
+| Aktion | Skript | Vertrag |
+|--------|--------|---------|
+| **Installieren** (erstes Mal) | `install.sh` | Volle `install_steps` |
+| **Neu installieren** (GUI, bereits installiert) | `install.sh` erneut | **Kein automatisches Löschen** — Rezept entscheidet Überschreiben; für sauberen Neustart **Deinstallieren** |
+| **Reparieren** | `repair.sh` | `validate.sh` → nur Lücken beheben → erneut validieren |
+
+Reinstall ist **nicht** global idempotent: es gibt keinen zentralen Pre-Install-Purge. Rezepte mit Clean-Deploy müssen das in `install.sh` dokumentieren oder Deinstall verlangen.
 
 ## Weiter
 

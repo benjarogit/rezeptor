@@ -5,13 +5,19 @@ Rezeptor installs and launches Windows software on Linux with tested **recipes**
 ## Requirements
 
 - Linux (x86_64), desktop environment
-- **PyQt6** (`python-pyqt6` on Arch/CachyOS, or your distro package)
-- Optional: `PyQt6-Fluent-Widgets` for the Fluent UI
 - Network on first run (Proton-GE download per `core/runtime.lock`)
+
+**Depends on how you install:**
+
+| Path | Host PyQt6 needed? |
+|------|--------------------|
+| Git clone or **`tar.gz`** + `./setup.sh` | **Yes** — distro package `python-pyqt6` (Arch/CachyOS) or equivalent; optional `PyQt6-Fluent-Widgets` |
+| **AppImage** (release) | **No** — Python and PyQt6 are bundled (recommended on Bazzite / immutable distros) |
+| **Flatpak** (release) | **No** — Python, PyQt6, and Proton-GE are bundled |
 
 ## Installation
 
-### From the repository
+### From the repository (host PyQt6 required)
 
 ```bash
 git clone https://github.com/benjarogit/rezeptor.git
@@ -19,11 +25,25 @@ cd rezeptor
 ./setup.sh
 ```
 
-### Release / AppImage
+### AppImage (no host PyQt6)
 
-1. Download assets from [GitHub Releases](https://github.com/benjarogit/rezeptor/releases)
+1. Download `rezeptor-*-x86_64.AppImage` and `SHA256SUMS` from [GitHub Releases](https://github.com/benjarogit/rezeptor/releases)
 2. Verify: `sha256sum -c SHA256SUMS`
-3. Make the AppImage executable and run it, or unpack the `tar.gz` and run `./setup.sh`
+3. `chmod +x rezeptor-*-x86_64.AppImage && ./rezeptor-*-x86_64.AppImage`
+
+### Flatpak (no host PyQt6)
+
+```bash
+flatpak install --user rezeptor-<version>-x86_64.flatpak
+flatpak run io.github.benjarogit.Rezeptor
+```
+
+Build locally: `scripts/build-flatpak.sh` (needs `flatpak-builder` and runtime `org.freedesktop.Platform//25.08`).
+
+### tar.gz release (host PyQt6 required)
+
+1. Download `rezeptor-*.tar.gz` and verify with `sha256sum -c SHA256SUMS`
+2. Unpack and run `./setup.sh`
 
 ## First steps in the GUI
 
@@ -50,10 +70,10 @@ cd rezeptor
 REZEPTOR_DEV=1 ./setup.sh
 ```
 
-Enables dev features (recipe editor, manifest sync in a git checkout). Same as the **Developer mode** setting.
+Or enable **Developer mode** in Settings (edit recipe files in the GUI).
 
-## Next
+## Further reading
 
-- [User guide](USER-GUIDE.md) — GUI in detail
-- [Recipe catalog](CATALOG.md) — official vs community
-- [Developer overview](ENTWICKLER.md) — write your own recipe
+- [User guide](USER-GUIDE.md)
+- [Trust / integrity](TRUST.md)
+- [GUI launcher](LAUNCHER.md)

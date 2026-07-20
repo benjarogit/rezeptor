@@ -13,12 +13,20 @@ import threading
 import time
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass
-from enum import Enum
 from pathlib import Path
 
 try:
-    from PyQt6.QtCore import Qt, QProcess, QProcessEnvironment, QSize, QTimer, QUrl
+    from PyQt6.QtCore import (
+        Qt,
+        QObject,
+        QProcess,
+        QProcessEnvironment,
+        QSize,
+        QThread,
+        QTimer,
+        QUrl,
+        pyqtSignal,
+    )
     from PyQt6.QtGui import (
         QAction,
         QColor,
@@ -143,7 +151,7 @@ from ui_recipe_wizard import (
     RecipeWizardDialog,
     can_create_recipes,
 )
-from archive_passwords import ensure_archive_passwords
+from ui_archive_passwords import ensure_archive_passwords
 from ui_source import (
     RecipeSourceDialog,
     attach_archive_password_files,
@@ -156,11 +164,19 @@ from recipe_categories import (
     sort_categories,
     sort_recipes_in_category,
 )
+from recipe_discovery import (
+    STATE_LABEL,
+    DiscoverOutcome,
+    RecipeInfo,
+    RecipeState,
+    discover_recipes as _discover_recipes,
+    launch_process_patterns_from_meta,
+    parse_recipe_yml,
+)
 from recipe_trust import (
     friendly_trust_reason,
     generate_manifest,
     rezeptor_dev_mode,
-    sync_manifest_if_stale,
     verify_recipe_trust,
 )
 from ui_styles import COLOR_PARCHMENT, MUTED, STATE_COLORS, palette
@@ -177,6 +193,7 @@ from i18n import get_locale, set_locale, t
 from log_context import (
     E_LAUNCH_NO_PROCESS,
     E_SCRIPT_FAILED,
+    E_STATUS_QUERY,
     E_TRUST_MANIFEST,
     E_UPDATE_APPLY,
     E_UPDATE_ROLLBACK,
@@ -185,99 +202,43 @@ from log_context import (
 RECIPES_DIR = ROOT / "recipes"
 MANIFEST_PATH = RECIPES_DIR / "manifest.json"
 LOG_ROOT = Path.home() / ".local/share/wine-software/logs"
+
+_VALIDATE_SUBPROCESS_TIMEOUT_SEC = 25
+_ROLLBACK_UNINSTALL_TIMEOUT_SEC = 180
+_DESKTOP_SHORTCUT_TIMEOUT_SEC = 90
+_RAW_LOG_MAX_LINES = 2000
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m|\x08+")
 SPINNER_RE = re.compile(r"^\[[\\/\-\|]\]\s*$")
 GUI_TAG_RE = re.compile(r"^@(step|ok|warn|error|info|progress):(.+)$")
 PROGRESS_RE = re.compile(r"Progress:\s*(\d+)%", re.I)
 
 
-class RecipeState(str, Enum):
-    NOT_INSTALLED = "not_installed"
-    PARTIAL = "partial"
-    INSTALLED = "installed"
-    UNKNOWN = "unknown"
-    UNTRUSTED = "untrusted"
+def discover_recipes(*, verify_trust: bool = True) -> DiscoverOutcome:
+    return _discover_recipes(
+        recipes_dir=RECIPES_DIR,
+        manifest_path=MANIFEST_PATH,
+        project_root=ROOT,
+        verify_trust=verify_trust,
+    )
 
 
-STATE_LABEL = {
-    RecipeState.NOT_INSTALLED: "state.not_installed",
-    RecipeState.PARTIAL: "state.partial",
-    RecipeState.INSTALLED: "state.installed",
-    RecipeState.UNKNOWN: "state.unknown",
-    RecipeState.UNTRUSTED: "state.untrusted",
-}
+def _recipe_is_checking(info: RecipeInfo) -> bool:
+    return info.state == RecipeState.CHECKING or (
+        not info.trust_ok
+        and friendly_trust_reason(info.trust_reason or info.status_detail) == "checking"
+    )
 
 
-@dataclass
-class RecipeInfo:
-    rid: str
-    meta: dict[str, str]
-    state: RecipeState = RecipeState.UNKNOWN
-    status_detail: str = ""
-    version_detected: str = ""
-    version_warning: str = ""
-    trust_ok: bool = True
-    trust_reason: str = ""
-    validate_fails: list[str] | None = None
+def _recipe_is_untrusted(info: RecipeInfo) -> bool:
+    """True when scripts must stay blocked (not during async integrity check)."""
+    if _recipe_is_checking(info):
+        return False
+    return info.state == RecipeState.UNTRUSTED or not info.trust_ok
 
 
-def parse_recipe_yml(path: Path) -> dict[str, str]:
-    """Flache Metadaten für die GUI. Eingebettete Blöcke (version_detect, …) werden übersprungen."""
-    data: dict[str, str] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        # Nur Top-Level-Keys — eingerückte YAML-Zeilen nicht als Felder lesen
-        if not line or line[0] in " \t#" or ":" not in line:
-            continue
-        key, _, val = line.partition(":")
-        key = key.strip()
-        if not key or key.startswith("-"):
-            continue
-        data[key] = val.strip().strip('"')
-    return data
-
-
-def discover_recipes() -> list[RecipeInfo]:
-    found: list[RecipeInfo] = []
-    trust_failures: list[str] = []
-    if not RECIPES_DIR.is_dir():
-        return found
-    synced, sync_msg = sync_manifest_if_stale(RECIPES_DIR, MANIFEST_PATH, ROOT)
-    if synced and sync_msg:
-        os.environ["REZEPTOR_MANIFEST_SYNC"] = sync_msg
-
-    yml_paths: list[Path] = []
-    for yml in sorted(RECIPES_DIR.glob("*/recipe.yml")):
-        if yml.parent.name.startswith("_"):
-            continue
-        if yml.parent.name == "community":
-            continue
-        yml_paths.append(yml)
-    community = RECIPES_DIR / "community"
-    if community.is_dir():
-        for yml in sorted(community.glob("*/recipe.yml")):
-            if yml.parent.name.startswith("_"):
-                continue
-            yml_paths.append(yml)
-
-    for yml in yml_paths:
-        ok, reason = verify_recipe_trust(yml.parent, MANIFEST_PATH)
-        meta = parse_recipe_yml(yml)
-        rid = meta.get("id", yml.parent.name)
-        meta["_dir"] = str(yml.parent)
-        if "community" in yml.parent.parts and meta.get("origin", "") != "official":
-            meta.setdefault("origin", "community")
-        info = RecipeInfo(rid=rid, meta=meta, trust_ok=ok, trust_reason=reason or "")
-        if not ok:
-            info.state = RecipeState.UNTRUSTED
-            info.status_detail = reason or t("trust.manifest_failed")
-            trust_failures.append(f"{rid}: {reason}")
-        found.append(info)
-    if trust_failures and not rezeptor_dev_mode():
-        os.environ.setdefault(
-            "REZEPTOR_TRUST_LOG",
-            "\n".join(trust_failures),
-        )
-    return found
+def _debug_log(message: str) -> None:
+    if rezeptor_dev_mode():
+        print(f"rezeptor: {message}", file=sys.stderr)
 
 
 def expand_home(path: str) -> Path:
@@ -288,13 +249,19 @@ def strip_ansi(text: str) -> str:
     return ANSI_RE.sub("", text).strip()
 
 
-# Nur App-spezifische Muster — kein QtWebEngineProcess / start.exe (zu breit).
+# Fallback when recipe.yml has no launch_process_patterns (prefer YAML).
 LAUNCH_PROCESS_PATTERNS: dict[str, list[str]] = {
-    "wiso-steuer": ["wiso2026.exe", "wmain26.exe"],
     "photoshop": ["Photoshop.exe"],
-    "za4-trainer": ["ZA4-Trainer.exe"],
     "house-of-ashes": ["HouseOfAshes.exe"],
 }
+
+
+def launch_process_patterns(rid: str, meta: dict[str, str] | None = None) -> list[str]:
+    if meta:
+        from_meta = launch_process_patterns_from_meta(meta, rid)
+        if from_meta:
+            return from_meta
+    return list(LAUNCH_PROCESS_PATTERNS.get(rid, []))
 
 # Cmdlines, die nur über den Text matchen (Agent, Shell, Editor) — nie „läuft“.
 _RUNNING_NOISE = (
@@ -380,8 +347,8 @@ def installed_paths_text(meta: dict[str, str], rid: str, dr: Path) -> str:
         or (env.get("RECIPE_TARGET_DIR") or "").strip()
         or (env.get("TRAINER_EXE") or "").strip()
     )
-    # Trainer: EXE ist Zielkopie — als Ziel zeigen, nicht als Quelle
-    if rid == "za4-trainer" or meta.get("install_type") == "portable_launch":
+    # Trainer/portable: EXE copy is the deploy target — show as target, not source
+    if meta.get("install_type") == "portable_launch":
         trainer = (env.get("TRAINER_EXE") or "").strip()
         if trainer:
             target = trainer
@@ -488,7 +455,7 @@ def _proc_has_wineprefix(pid: str, prefix: Path) -> bool:
 
 def recipe_process_running(rid: str, meta: dict[str, str] | None = None) -> bool:
     """True nur bei echtem App-Prozess (Wine/Proton), nicht bei Shell-/Agent-Cmdlines."""
-    patterns = LAUNCH_PROCESS_PATTERNS.get(rid, [])
+    patterns = launch_process_patterns(rid, meta)
     if not patterns:
         return False
     prefix: Path | None = None
@@ -526,8 +493,8 @@ def recipe_process_running(rid: str, meta: dict[str, str] | None = None) -> bool
                 compat = steam_compatdata_dir(appid)
                 if compat is not None:
                     path_hints.append(str(compat).lower())
-            except Exception:
-                pass
+            except Exception as exc:  # noqa: BLE001
+                _debug_log(f"steam path lookup for appid {appid}: {exc}")
 
     patterns_l = [p.lower() for p in patterns]
     for ent in Path("/proc").iterdir():
@@ -803,7 +770,7 @@ def query_recipe_state(
                 env=env,
                 capture_output=True,
                 text=True,
-                timeout=25,
+                timeout=_VALIDATE_SUBPROCESS_TIMEOUT_SEC,
             )
         except subprocess.TimeoutExpired:
             detected = _version_fallback("")
@@ -865,6 +832,65 @@ class AboutDialog(QDialog):
         layout.addWidget(buttons)
 
 
+class _RecipeStatusWorker(QObject):
+    """Background trust verify + optional validate.sh (keeps UI thread free)."""
+
+    finished = pyqtSignal(object)  # list[RecipeInfo]
+    failed = pyqtSignal(str)
+
+    def __init__(self, env: dict[str, str], *, full_validate: bool) -> None:
+        super().__init__()
+        self._env = env
+        self._full_validate = full_validate
+
+    def run(self) -> None:
+        try:
+            self.finished.emit(
+                _collect_recipe_statuses(self._env, full_validate=self._full_validate)
+            )
+        except Exception as exc:  # noqa: BLE001
+            self.failed.emit(str(exc))
+
+
+def _collect_recipe_statuses(
+    env: dict[str, str], *, full_validate: bool
+) -> DiscoverOutcome:
+    """Trust + install state off the UI thread (subprocess.validate, hashing)."""
+    outcome = discover_recipes(verify_trust=True)
+    for info in outcome.recipes:
+        if not info.trust_ok:
+            continue
+        try:
+            if full_validate:
+                recipe_env = dict(env)
+                recipe_env["RECIPE_ID"] = info.rid
+                (
+                    info.state,
+                    info.status_detail,
+                    info.version_detected,
+                    info.version_warning,
+                    info.validate_fails,
+                ) = query_recipe_state(info.rid, info.meta, recipe_env)
+            else:
+                (
+                    info.state,
+                    info.status_detail,
+                    info.version_detected,
+                    info.version_warning,
+                    _,
+                ) = query_recipe_state_quick(info.rid, info.meta)
+                # Quick refresh skips validate.sh — keep last full-validate fails
+                # so the health chip does not hide known problems.
+        except Exception as exc:  # noqa: BLE001 — ein Rezept darf GUI nicht killen
+            _debug_log(f"status query for {info.rid}: {exc}")
+            info.state = RecipeState.PARTIAL
+            info.status_detail = t("status.query_error", error=str(exc))
+            info.version_detected = ""
+            info.version_warning = str(exc)
+            info.validate_fails = [str(exc)]
+    return outcome
+
+
 class RezeptorWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
@@ -885,7 +911,8 @@ class RezeptorWindow(QMainWindow):
         self._ui_restored = False
         self._suppress_tab_persist = False
         self.session_id = uuid.uuid4().hex[:12]
-        self.recipes = discover_recipes()
+        # First paint without hashing — trust verify runs on a worker thread.
+        self.recipes = discover_recipes(verify_trust=False).recipes
         self._dev_mode = rezeptor_dev_mode()
         self._selected: RecipeInfo | None = None
         self._selected_index = -1
@@ -918,6 +945,10 @@ class RezeptorWindow(QMainWindow):
         self._running_poll.timeout.connect(self._refresh_running_indicators)
         self._running_prev: dict[str, bool] = {}
         self._watched_launch_rid: str | None = None
+        self._status_thread: QThread | None = None
+        self._status_worker: _RecipeStatusWorker | None = None
+        self._status_refresh_announce = False
+        self._status_refresh_pending: tuple[bool, bool] | None = None
 
         self._build_menus()
         self._build_status_bar()
@@ -925,8 +956,6 @@ class RezeptorWindow(QMainWindow):
         self._apply_theme()
 
         self._install_shortcuts()
-        # Schneller Erststatus (nur Marker) — volle validate.sh später, sonst Start-Freeze.
-        self._apply_quick_recipe_states()
         self._populate_list()
         self._running_poll.start()
         removed = 0
@@ -942,17 +971,12 @@ class RezeptorWindow(QMainWindow):
                 f"(>{self._settings.log_retention_days} Tage / max. {self._settings.log_max_files})",
             )
         self.populate_log_files()
-        manifest_sync = os.environ.pop("REZEPTOR_MANIFEST_SYNC", "")
-        if manifest_sync:
-            self._activity("info", manifest_sync)
-        trust_log = os.environ.pop("REZEPTOR_TRUST_LOG", "")
-        if trust_log:
-            for line in trust_log.splitlines():
-                self._activity("warn", t("trust.hidden_warn", line=line))
         if self._dev_mode:
             self._activity("info", t("app.dev_mode_info"))
         # Startseite statt erstem/letztem Rezept — Auswahl erst durch Klick.
         self._show_home()
+        # Trust + quick status off UI thread (after first paint).
+        QTimer.singleShot(0, self._start_deferred_trust_verify)
         # Netzwerk nicht auf dem UI-Thread — verzögert + Hintergrund.
         QTimer.singleShot(2500, self.check_updates_background)
 
@@ -1092,15 +1116,33 @@ class RezeptorWindow(QMainWindow):
         sl.addWidget(self.sidebar_search)
 
         self.recipe_cards_host = QWidget()
+        self.recipe_cards_host.setObjectName("recipeCardsHost")
         self.recipe_cards_host.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
         )
+        self.recipe_cards_host.setAutoFillBackground(False)
         self.recipe_cards_layout = QVBoxLayout(self.recipe_cards_host)
         self.recipe_cards_layout.setContentsMargins(0, 0, 0, 0)
-        self.recipe_cards_layout.setSpacing(8)
+        # Tight list — 8px + ScrollArea-Viewport wirkte wie lose „Karten-Stapel“.
+        self.recipe_cards_layout.setSpacing(4)
         self.recipe_cards_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        sl.addWidget(self.recipe_cards_host, 0, Qt.AlignmentFlag.AlignTop)
-        sl.addStretch(1)
+        self.recipe_cards_scroll = QScrollArea()
+        self.recipe_cards_scroll.setObjectName("recipeCardsScroll")
+        self.recipe_cards_scroll.setWidgetResizable(True)
+        self.recipe_cards_scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self.recipe_cards_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self.recipe_cards_scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        self.recipe_cards_scroll.setAutoFillBackground(False)
+        self.recipe_cards_scroll.viewport().setAutoFillBackground(False)
+        self.recipe_cards_scroll.setWidget(self.recipe_cards_host)
+        self.recipe_cards_scroll.setAccessibleName(t("app.sidebar_title"))
+        # Keep host within sidebar content width so titles elide instead of spilling.
+        self.recipe_cards_host.setMaximumWidth(240 - 24)  # sidebar padding 12+12
+        sl.addWidget(self.recipe_cards_scroll, 1)
         root.addWidget(sidebar)
 
         # —— Rechte Spalte: HEADER + Navigation + INFO ——
@@ -1392,7 +1434,7 @@ class RezeptorWindow(QMainWindow):
             RecipeState.PARTIAL,
         )
         kill_ok = (Path(info.meta["_dir"]) / "kill.sh").is_file()
-        untrusted = info.state == RecipeState.UNTRUSTED or not info.trust_ok
+        untrusted = _recipe_is_untrusted(info) or _recipe_is_checking(info)
         installed_ish = info.state in (
             RecipeState.INSTALLED,
             RecipeState.PARTIAL,
@@ -1489,7 +1531,7 @@ class RezeptorWindow(QMainWindow):
             RecipeState.PARTIAL,
         )
         kill_ok = (Path(info.meta["_dir"]) / "kill.sh").is_file()
-        untrusted = info.state == RecipeState.UNTRUSTED or not info.trust_ok
+        untrusted = _recipe_is_untrusted(info) or _recipe_is_checking(info)
 
         if untrusted or busy:
             mode = "none"
@@ -1853,8 +1895,7 @@ class RezeptorWindow(QMainWindow):
         attention = sum(
             1
             for r in visible
-            if r.state in (RecipeState.PARTIAL, RecipeState.UNTRUSTED)
-            or (r.trust_ok is False)
+            if r.state == RecipeState.PARTIAL or _recipe_is_untrusted(r)
         )
         return {
             "recipes": len(visible),
@@ -2126,6 +2167,8 @@ class RezeptorWindow(QMainWindow):
         if not script.is_file():
             QMessageBox.warning(self, t("dialog.missing"), str(script))
             return
+        if self._reject_if_subprocess_busy():
+            return
         self._switch_to_progress_tab()
         self._activity("step", t("update.applying"))
         cmd = ["bash", str(script), "apply"]
@@ -2151,8 +2194,9 @@ class RezeptorWindow(QMainWindow):
                     self._activity("log", line[:200])
 
         def done(code: int, _status: QProcess.ExitStatus) -> None:
+            if self._process is not proc:
+                return
             self._set_busy(False)
-            self._process = None
             if code == 0:
                 self._activity("ok", t("update.done"))
                 QMessageBox.information(self, t("update.available_title"), t("update.done"))
@@ -2176,8 +2220,14 @@ class RezeptorWindow(QMainWindow):
                 QMessageBox.critical(
                     self, t("dialog.error"), t("update.failed", code=code)
                 )
+            if self._process is proc:
+                self._process = None
+
+        def on_update_error(err: QProcess.ProcessError) -> None:
+            self._activity("error", f"update process error: {err}")
 
         proc.readyReadStandardOutput.connect(on_out)
+        proc.errorOccurred.connect(on_update_error)
         proc.finished.connect(done)
         proc.start(cmd[0], cmd[1:])
 
@@ -2266,7 +2316,7 @@ class RezeptorWindow(QMainWindow):
             try:
                 n = generate_manifest(RECIPES_DIR, MANIFEST_PATH)
                 self._activity("ok", t("trust.regen_ok") + f" ({n})")
-                self.recipes = discover_recipes()
+                self._apply_discover_outcome(discover_recipes())
                 self.refresh_statuses()
             except OSError as exc:
                 self._activity("error", t("trust.regen_fail") + f": {exc}")
@@ -2286,7 +2336,7 @@ class RezeptorWindow(QMainWindow):
                 modal=True,
             )
             if dlg.exec() == QDialog.DialogCode.Accepted:
-                self.recipes = discover_recipes()
+                self._apply_discover_outcome(discover_recipes())
                 self._populate_list()
                 self.refresh_statuses()
             return
@@ -2394,6 +2444,12 @@ class RezeptorWindow(QMainWindow):
                 continue
             matched.append((i, info))
 
+        if needle and not matched:
+            empty = QLabel(t("app.sidebar_search_empty", query=needle))
+            empty.setObjectName("sidebarSearchEmpty")
+            self.recipe_cards_layout.addWidget(empty)
+            return
+
         overrides = dict(self._settings.recipe_category_overrides or {})
         grouped: dict[str, list[tuple[int, RecipeInfo]]] = {}
         for i, info in matched:
@@ -2423,6 +2479,7 @@ class RezeptorWindow(QMainWindow):
                     card, 0, Qt.AlignmentFlag.AlignTop
                 )
                 self._recipe_cards.append((card, info))
+        self.recipe_cards_layout.addStretch(1)
 
     def _select_recipe_index(self, row: int) -> None:
         if row < 0 or row >= len(self.recipes):
@@ -2435,70 +2492,95 @@ class RezeptorWindow(QMainWindow):
             card.set_selected(info.rid == self.recipes[row].rid)
         self._on_select(row)
 
-    def _apply_quick_recipe_states(self) -> None:
-        """Marker-only Status — kein validate.sh (Start bleibt flüssig)."""
-        for info in self.recipes:
-            if not info.trust_ok:
-                continue
-            try:
-                (
-                    info.state,
-                    info.status_detail,
-                    info.version_detected,
-                    info.version_warning,
-                    info.validate_fails,
-                ) = query_recipe_state_quick(info.rid, info.meta)
-            except Exception:  # noqa: BLE001
-                pass
+    def _start_deferred_trust_verify(self) -> None:
+        """After first paint: hash recipes + marker status (no validate.sh)."""
+        self._begin_status_refresh(full_validate=False, announce=False)
 
     def refresh_statuses(self) -> None:
-        self._activity("info", t("menu.refresh_busy"))
-        QApplication.processEvents()
-        env = self._base_env()
-        # Re-verify trust + install state (official + community/)
-        refreshed: list[RecipeInfo] = []
-        yml_paths: list[Path] = []
-        for yml in sorted(RECIPES_DIR.glob("*/recipe.yml")):
-            if yml.parent.name.startswith("_") or yml.parent.name == "community":
-                continue
-            yml_paths.append(yml)
-        community = RECIPES_DIR / "community"
-        if community.is_dir():
-            for yml in sorted(community.glob("*/recipe.yml")):
-                if yml.parent.name.startswith("_"):
-                    continue
-                yml_paths.append(yml)
-        for yml in yml_paths:
-            ok, reason = verify_recipe_trust(yml.parent, MANIFEST_PATH)
-            meta = parse_recipe_yml(yml)
-            rid = meta.get("id", yml.parent.name)
-            meta["_dir"] = str(yml.parent)
-            if "community" in yml.parent.parts and meta.get("origin", "") != "official":
-                meta.setdefault("origin", "community")
-            info = RecipeInfo(rid=rid, meta=meta, trust_ok=ok, trust_reason=reason or "")
-            if not ok:
-                info.state = RecipeState.UNTRUSTED
-                info.status_detail = reason or t("trust.manifest_failed")
+        self._begin_status_refresh(full_validate=True, announce=True)
+
+    def _begin_status_refresh(self, *, full_validate: bool, announce: bool) -> None:
+        if self._status_thread is not None and self._status_thread.isRunning():
+            # Coalesce: prefer a pending full validate over a quick check.
+            prev = self._status_refresh_pending
+            if prev is None:
+                self._status_refresh_pending = (full_validate, announce)
             else:
-                env["RECIPE_ID"] = rid
-                try:
-                    (
-                        info.state,
-                        info.status_detail,
-                        info.version_detected,
-                        info.version_warning,
-                        info.validate_fails,
-                    ) = query_recipe_state(rid, meta, env)
-                except Exception as exc:  # noqa: BLE001 — ein Rezept darf GUI nicht killen
-                    info.state = RecipeState.PARTIAL
-                    info.status_detail = f"Status-Fehler: {exc}"
-                    info.version_detected = ""
-                    info.version_warning = str(exc)
-                    info.validate_fails = [str(exc)]
-            refreshed.append(info)
-            # Zwischen Rezepten UI atmen lassen (validate.sh sonst Start-Freeze).
-            QApplication.processEvents()
-        self.recipes = refreshed
+                self._status_refresh_pending = (
+                    prev[0] or full_validate,
+                    prev[1] or announce,
+                )
+            return
+        self._status_refresh_announce = announce
+        if announce:
+            self._activity("info", t("menu.refresh_busy"))
+        if hasattr(self, "action_refresh"):
+            self.action_refresh.setEnabled(False)
+        env = self._base_env()
+        thread = QThread(self)
+        worker = _RecipeStatusWorker(env, full_validate=full_validate)
+        worker.moveToThread(thread)
+        thread.started.connect(worker.run)
+        worker.finished.connect(
+            self._on_status_refresh_finished, Qt.ConnectionType.QueuedConnection
+        )
+        worker.failed.connect(
+            self._on_status_refresh_failed, Qt.ConnectionType.QueuedConnection
+        )
+        worker.finished.connect(thread.quit)
+        worker.failed.connect(thread.quit)
+        thread.finished.connect(worker.deleteLater)
+        thread.finished.connect(thread.deleteLater)
+        thread.finished.connect(self._on_status_thread_finished)
+        self._status_thread = thread
+        self._status_worker = worker
+        thread.start()
+
+    def _on_status_thread_finished(self) -> None:
+        self._status_thread = None
+        self._status_worker = None
+        if hasattr(self, "action_refresh"):
+            self.action_refresh.setEnabled(True)
+        pending = self._status_refresh_pending
+        if pending is not None:
+            self._status_refresh_pending = None
+            full_validate, announce = pending
+            QTimer.singleShot(
+                0,
+                lambda: self._begin_status_refresh(
+                    full_validate=full_validate, announce=announce
+                ),
+            )
+
+    def _on_status_refresh_failed(self, message: str) -> None:
+        ev = LogEvent(
+            level="warn",
+            code=E_STATUS_QUERY,
+            message_key="error.E_STATUS_QUERY",
+            detail=message,
+        )
+        self._activity("warn", ev.display_text())
+        # Don't leave the UI stuck on CHECKING — fall back to sync trust verify.
+        try:
+            outcome = _collect_recipe_statuses(self._base_env(), full_validate=False)
+            self._on_status_refresh_finished(outcome)
+        except Exception as exc:  # noqa: BLE001
+            _debug_log(f"status fallback failed: {exc}")
+            self._activity("warn", t("status.query_error", error=str(exc)))
+
+    def _apply_discover_outcome(self, outcome: DiscoverOutcome) -> None:
+        self.recipes = outcome.recipes
+        if outcome.manifest_sync:
+            self._activity("warn", t("trust.resync_needed", detail=outcome.manifest_sync))
+        if outcome.trust_log:
+            for line in outcome.trust_log.splitlines():
+                if line.strip():
+                    self._activity("warn", t("trust.hidden_warn", line=line))
+
+    def _on_status_refresh_finished(self, refreshed: object) -> None:
+        if not isinstance(refreshed, DiscoverOutcome):
+            return
+        self.recipes = refreshed.recipes
         prev = self._selected_index
         was_home = self._selected is None
         self._populate_list()
@@ -2508,7 +2590,14 @@ class RezeptorWindow(QMainWindow):
             self._select_recipe_index(prev if 0 <= prev < len(self.recipes) else 0)
         else:
             self._show_home()
-        self._activity("info", t("menu.refresh_done", n=len(self.recipes)))
+        if refreshed.manifest_sync:
+            self._activity("warn", t("trust.resync_needed", detail=refreshed.manifest_sync))
+        if refreshed.trust_log:
+            for line in refreshed.trust_log.splitlines():
+                if line.strip():
+                    self._activity("warn", t("trust.hidden_warn", line=line))
+        if self._status_refresh_announce:
+            self._activity("info", t("menu.refresh_done", n=len(self.recipes)))
 
     def _on_select(self, row: int) -> None:
         if row < 0 or row >= len(self.recipes):
@@ -2537,28 +2626,31 @@ class RezeptorWindow(QMainWindow):
         self._update_progress_chip()
         self._remember_last_recipe(info.rid)
 
-        untrusted = info.state == RecipeState.UNTRUSTED or not info.trust_ok
-        if untrusted:
+        checking = _recipe_is_checking(info)
+        untrusted = _recipe_is_untrusted(info)
+        if checking or untrusted:
             raw = info.trust_reason or info.status_detail or "?"
-            reason_key = f"trust.reason_{friendly_trust_reason(raw)}"
+            reason_suffix = "checking" if checking else friendly_trust_reason(raw)
+            reason_key = f"trust.reason_{reason_suffix}"
             reason = t(reason_key)
             if reason == reason_key:
                 reason = t("trust.reason_changed")
             detail = t("trust.detail", reason=reason)
-            if (ROOT / ".git").is_dir():
-                detail = f"{detail}\n{t('trust.hint_dev')}"
-                self.trust_btn.setText(t("btn.regen_manifest"))
-                self.trust_btn.setToolTip(t("tooltip.regen_manifest"))
-            else:
-                detail = f"{detail}\n{t('trust.hint_user')}"
-                self.trust_btn.setText(t("btn.update_rezeptor"))
-                self.trust_btn.setToolTip(t("tooltip.regen_manifest"))
+            if not checking:
+                if (ROOT / ".git").is_dir():
+                    detail = f"{detail}\n{t('trust.hint_dev')}"
+                    self.trust_btn.setText(t("btn.regen_manifest"))
+                    self.trust_btn.setToolTip(t("tooltip.regen_manifest"))
+                else:
+                    detail = f"{detail}\n{t('trust.hint_user')}"
+                    self.trust_btn.setText(t("btn.update_rezeptor"))
+                    self.trust_btn.setToolTip(t("tooltip.regen_manifest"))
             self.status_detail_label.setText(detail)
             self.status_detail_label.setVisible(True)
             self._status_detail_base = detail
             self._info_raw = recipe_info_text(info.rid, Path(meta["_dir"]))
             self._render_info_markdown()
-            self.trust_btn.setVisible(True)
+            self.trust_btn.setVisible(not checking)
             self._apply_primary_cta(
                 info, can_launch=False, running=False, busy=self._busy
             )
@@ -2673,8 +2765,11 @@ class RezeptorWindow(QMainWindow):
         elif info.state == RecipeState.PARTIAL:
             self.status_pill.set_content(t("badge.partial"), COLOR_EXPERIMENTAL)
             self.status_pill.setVisible(True)
-        elif info.state == RecipeState.UNTRUSTED:
+        elif info.state == RecipeState.UNTRUSTED or _recipe_is_untrusted(info):
             self.status_pill.set_content(t("badge.untrusted"), "#d9a441")
+            self.status_pill.setVisible(True)
+        elif info.state == RecipeState.CHECKING or _recipe_is_checking(info):
+            self.status_pill.set_content(t("badge.checking"), "#9ca3af")
             self.status_pill.setVisible(True)
         elif info.state == RecipeState.INSTALLED:
             self.status_pill.set_content(t("badge.installed"), COLOR_TESTED)
@@ -2897,7 +2992,7 @@ class RezeptorWindow(QMainWindow):
 
     def _feed_line(self, raw: str) -> None:
         for part in raw.splitlines():
-            line = strip_ansi(part)
+            line = sanitize_log_text(strip_ansi(part))
             if not line or SPINNER_RE.match(line):
                 continue
 
@@ -2931,8 +3026,7 @@ class RezeptorWindow(QMainWindow):
             # sonst springt die Bar wild und flackert gegen @progress:-Tags.
             if PROGRESS_RE.search(line):
                 if human and not human.startswith("Progress:"):
-                    self._raw_log_buffer.append(human)
-                    self.raw_log.append(human)
+                    self._append_raw_log(human)
                 continue
 
             if line.startswith("═══") or line.startswith("RECIPE_"):
@@ -2944,8 +3038,14 @@ class RezeptorWindow(QMainWindow):
                 continue
 
             # Konsolen-/Rohzeilen → nur Live-Ausgabe (kein zweites Mal in Schritte)
-            self._raw_log_buffer.append(human)
-            self.raw_log.append(human)
+            self._append_raw_log(human)
+
+    def _append_raw_log(self, line: str) -> None:
+        buf = self._raw_log_buffer
+        if len(buf) >= _RAW_LOG_MAX_LINES:
+            del buf[: len(buf) - _RAW_LOG_MAX_LINES + 1]
+        buf.append(line)
+        self.raw_log.append(line)
 
     def _flash_status(self, text: str, ms: int = 4000) -> None:
         """Visible on every tab (status bar). Activity list is Vorgang-only."""
@@ -3067,13 +3167,60 @@ class RezeptorWindow(QMainWindow):
     def _switch_to_progress_tab(self) -> None:
         self._set_content_tab("progress")
 
-    def _require_recipe(self) -> Path | None:
-        if self._process and self._process.state() != QProcess.ProcessState.NotRunning:
+    def _subprocess_running(self) -> bool:
+        proc = self._process
+        return (
+            proc is not None
+            and proc.state() != QProcess.ProcessState.NotRunning
+        )
+
+    def _reject_if_subprocess_busy(self) -> bool:
+        """Return True when a QProcess op is already running (caller should abort)."""
+        if self._subprocess_running():
             QMessageBox.warning(self, t("dialog.running"), t("dialog.busy_warn"))
+            return True
+        return False
+
+    def _require_recipe(self) -> Path | None:
+        if self._reject_if_subprocess_busy():
             return None
         if not self._selected:
             return None
         return Path(self._selected.meta["_dir"])
+
+    def _require_trusted_recipe(self) -> Path | None:
+        """Deny script runners when recipe integrity check failed (handler-level)."""
+        rd = self._require_recipe()
+        if rd is None:
+            return None
+        if self._selected and _recipe_is_checking(self._selected):
+            QMessageBox.information(
+                self,
+                t("trust.title"),
+                t("trust.detail", reason=t("trust.reason_checking")),
+            )
+            return None
+        if self._selected and _recipe_is_untrusted(self._selected):
+            QMessageBox.warning(
+                self,
+                t("trust.title"),
+                t("trust.detail", reason=self._selected.trust_reason or "?"),
+            )
+            return None
+        # Re-verify on disk before async/launch (catches tamper after selection).
+        if self._selected and rd is not None and not rezeptor_dev_mode():
+            ok, reason = verify_recipe_trust(rd, MANIFEST_PATH)
+            if not ok:
+                self._selected.trust_ok = False
+                self._selected.trust_reason = reason or ""
+                self._selected.state = RecipeState.UNTRUSTED
+                QMessageBox.warning(
+                    self,
+                    t("trust.title"),
+                    t("trust.detail", reason=reason or "?"),
+                )
+                return None
+        return rd
 
     def _finish_archive_password_files(
         self, extra: dict[str, str] | None, *, success: bool
@@ -3111,6 +3258,8 @@ class RezeptorWindow(QMainWindow):
         op: str = "",
         recipe_dir: Path | None = None,
     ) -> None:
+        if self._reject_if_subprocess_busy():
+            return
         if not done_label:
             done_label = t("action.done")
         env = QProcessEnvironment.systemEnvironment()
@@ -3165,6 +3314,8 @@ class RezeptorWindow(QMainWindow):
         )
 
         def done(code: int, _s: QProcess.ExitStatus) -> None:
+            if self._process is not proc:
+                return
             cancelled = self._cancel_requested
             op_kind = self._current_op
             install_dir = self._install_recipe_dir
@@ -3180,6 +3331,8 @@ class RezeptorWindow(QMainWindow):
                 self._activity("warn", t("status.install_cancelled"))
                 self._rollback_cancelled_install(install_dir)
                 self.refresh_statuses()
+                if self._process is proc:
+                    self._process = None
                 return
             self._activity(
                 "ok" if code == 0 else "error",
@@ -3196,7 +3349,13 @@ class RezeptorWindow(QMainWindow):
                     t("status.done"),
                     t("status.done_body", label=done_label),
                 )
+            if self._process is proc:
+                self._process = None
 
+        def on_install_error(err: QProcess.ProcessError) -> None:
+            self._activity("error", f"install process error: {err}")
+
+        proc.errorOccurred.connect(on_install_error)
         proc.finished.connect(done)
         proc.start()
 
@@ -3248,7 +3407,7 @@ class RezeptorWindow(QMainWindow):
                     env=env,
                     capture_output=True,
                     text=True,
-                    timeout=180,
+                    timeout=_ROLLBACK_UNINSTALL_TIMEOUT_SEC,
                     check=False,
                 )
                 ok = result.returncode == 0
@@ -3285,7 +3444,7 @@ class RezeptorWindow(QMainWindow):
                 env=env,
                 capture_output=True,
                 text=True,
-                timeout=90,
+                timeout=_DESKTOP_SHORTCUT_TIMEOUT_SEC,
                 check=False,
             )
             return result.returncode == 0
@@ -3307,7 +3466,7 @@ class RezeptorWindow(QMainWindow):
                 t("dialog.shortcuts_title"),
                 t("dialog.shortcuts_body", name=name),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.Yes,
+                QMessageBox.StandardButton.No,
             )
             != QMessageBox.StandardButton.Yes
         ):
@@ -3344,7 +3503,7 @@ class RezeptorWindow(QMainWindow):
                 t("dialog.shortcuts_title"),
                 t("dialog.shortcuts_body", name=name),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.Yes,
+                QMessageBox.StandardButton.No,
             )
             != QMessageBox.StandardButton.Yes
         ):
@@ -3417,7 +3576,7 @@ class RezeptorWindow(QMainWindow):
         clamp_restored_geometry(dlg, min_w=560, min_h=420)
         dlg.exec()
         self._settings = load_settings()
-        self.recipes = discover_recipes()
+        self._apply_discover_outcome(discover_recipes())
         self._populate_list()
         self.refresh_statuses()
 
@@ -3445,8 +3604,16 @@ class RezeptorWindow(QMainWindow):
                 for e in load_local_catalog(RECIPES_DIR)
                 if e.is_official and e.path and "community" not in e.path
             }
-        except Exception:  # noqa: BLE001
-            return {"photoshop", "wiso-steuer", "house-of-ashes", "za4-trainer"}
+        except Exception as exc:  # noqa: BLE001
+            _debug_log(f"official catalog load failed: {exc}")
+            ids: set[str] = set()
+            if RECIPES_DIR.is_dir():
+                for yml in sorted(RECIPES_DIR.glob("*/recipe.yml")):
+                    if yml.parent.name.startswith("_"):
+                        continue
+                    meta = parse_recipe_yml(yml)
+                    ids.add(meta.get("id", yml.parent.name))
+            return ids
 
     def _is_official_bundled_recipe(self, rid: str) -> bool:
         return rid in self._official_catalog_ids()
@@ -3509,7 +3676,7 @@ class RezeptorWindow(QMainWindow):
             self._settings.hidden_recipe_ids = hidden
             save_settings(self._settings)
         self._activity("ok", t("recipe_remove.ok", id=rid))
-        self.recipes = discover_recipes()
+        self._apply_discover_outcome(discover_recipes())
         self._populate_list()
         self.refresh_statuses()
 
@@ -3832,11 +3999,7 @@ class RezeptorWindow(QMainWindow):
     def _confirm_app_quit(self) -> bool:
         """Vorgang/Nebenfenster: App nach vorne, dann eine klare Beenden-Frage."""
         self._bring_app_to_front()
-        busy = bool(
-            self._busy
-            and self._process is not None
-            and self._process.state() != QProcess.ProcessState.NotRunning
-        )
+        busy = bool(self._busy and self._subprocess_running())
         tools = self._visible_tool_windows()
         dirty = any(
             hasattr(w, "is_dirty") and w.is_dirty()  # type: ignore[misc]
@@ -4081,7 +4244,7 @@ class RezeptorWindow(QMainWindow):
         return True
 
     def run_install(self) -> None:
-        rd = self._require_recipe()
+        rd = self._require_trusted_recipe()
         if rd is None:
             return
         install = rd / "install.sh"
@@ -4156,7 +4319,7 @@ class RezeptorWindow(QMainWindow):
         self._prompt_and_save_source(title_key="dialog.source_title")
 
     def run_repair(self) -> None:
-        rd = self._require_recipe()
+        rd = self._require_trusted_recipe()
         if rd is None:
             return
         repair = rd / "repair.sh"
@@ -4187,7 +4350,15 @@ class RezeptorWindow(QMainWindow):
         rid = env.get("RECIPE_ID", "app")
         log_path = LOG_ROOT / f"launch_{rid}_{self.session_id[:8]}.log"
         LOG_ROOT.mkdir(parents=True, exist_ok=True)
+        try:
+            os.chmod(LOG_ROOT, 0o700)
+        except OSError:
+            pass
         log_f = open(log_path, "a", encoding="utf-8")  # noqa: SIM115
+        try:
+            os.chmod(log_path, 0o600)
+        except OSError:
+            pass
         log_f.write(f"\n--- {rid} launch ---\n")
         log_f.flush()
         subprocess.Popen(
@@ -4220,7 +4391,7 @@ class RezeptorWindow(QMainWindow):
         if "Hängende unsichtbare" in log_tail and attempt == 0:
             self._activity("info", t("dialog.launch_hung"))
         meta = self._selected.meta if self._selected else None
-        if not LAUNCH_PROCESS_PATTERNS.get(rid):
+        if not launch_process_patterns(rid, meta):
             return
         if recipe_process_running(rid, meta):
             # „läuft“ / später „beendet“ meldet _refresh_running_indicators unter Vorgang.
@@ -4257,15 +4428,8 @@ class RezeptorWindow(QMainWindow):
         self.populate_log_files()
 
     def run_launch(self) -> None:
-        rd = self._require_recipe()
+        rd = self._require_trusted_recipe()
         if rd is None:
-            return
-        if self._selected and not self._selected.trust_ok:
-            QMessageBox.warning(
-                self,
-                t("trust.title"),
-                t("trust.detail", reason=self._selected.trust_reason or "?"),
-            )
             return
         if self._selected and self._selected.version_warning:
             if QMessageBox.warning(
@@ -4299,13 +4463,13 @@ class RezeptorWindow(QMainWindow):
         self.step_label.setStyleSheet("")
         self._activity("step", t("status.start_triggered", name=name))
         self._activity("info", t("status.window_soon"))
-        if rid in LAUNCH_PROCESS_PATTERNS:
+        if launch_process_patterns(rid, meta):
             QTimer.singleShot(
                 2500, lambda: self._check_launch_alive(rid, log_path, 0)
             )
 
     def run_validate(self) -> None:
-        rd = self._require_recipe()
+        rd = self._require_trusted_recipe()
         if rd is None:
             return
         v = rd / "validate.sh"
@@ -4333,7 +4497,7 @@ class RezeptorWindow(QMainWindow):
         self._run_async(kill, done_label=t("action.kill"), dialog=False)
 
     def run_uninstall(self) -> None:
-        rd = self._require_recipe()
+        rd = self._require_trusted_recipe()
         if rd is None:
             return
         un = rd / "uninstall.sh"
@@ -4348,6 +4512,7 @@ class RezeptorWindow(QMainWindow):
                 name=self._selected.meta.get("name", self._selected.rid),
             ),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         ) != QMessageBox.StandardButton.Yes:
             return
         extra = {"PHOTOSHOP_UNINSTALL_YES": "1", "UNINSTALL_YES": "1"}
@@ -4372,11 +4537,15 @@ def main() -> int:
     # Fluent Dark + Brand — egal ob System Light oder Dark
     host = apply_rezeptor_theme()
     app.setStyleSheet((host or "") + SEGMENT_TAB_STYLES)
-    w = RezeptorWindow()
-    w.show()
-    QTimer.singleShot(0, w._apply_theme)
-    # Volle validate.sh: Hinweisdialog in _startup_prompts (nach erstem Show).
-    return app.exec()
+    try:
+        w = RezeptorWindow()
+        w.show()
+        QTimer.singleShot(0, w._apply_theme)
+        # Volle validate.sh: Hinweisdialog in _startup_prompts (nach erstem Show).
+        return app.exec()
+    except Exception as exc:  # noqa: BLE001 — startup must not hang silently
+        print(f"rezeptor: fatal startup error: {exc}", file=sys.stderr)
+        return 1
 
 
 if __name__ == "__main__":

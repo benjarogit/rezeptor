@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import platform
 import re
 import subprocess
@@ -24,6 +25,11 @@ SENSITIVE_PATTERNS = [
     (re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b"), "<EMAIL>"),
     (re.compile(r"\b\d{1,3}(?:\.\d{1,3}){3}\b"), "<IP>"),
     (re.compile(r"(?i)(token|api[_-]?key|password|secret)\s*[:=]\s*\S+"), r"\1=<REDACTED>"),
+    # 7z -pSECRET / unzip -P SECRET (no space after -p is common for 7z)
+    (re.compile(r"(?i)(\s-p)(\S+)"), r"\1<REDACTED>"),
+    (re.compile(r"(?i)(\s-P\s+)\S+"), r"\1<REDACTED>"),
+    (re.compile(r"(?i)(Authorization:\s*Bearer\s+)\S+"), r"\1<REDACTED>"),
+    (re.compile(r"(?i)(Bearer\s+)[A-Za-z0-9._\-+=/]+"), r"\1<REDACTED>"),
 ]
 
 # Bash/Shell-Rauschen — nicht in GUI oder Issue-Body
@@ -296,6 +302,10 @@ def humanize_log_line(line: str) -> str | None:
 
 def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
     LOG_ROOT.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(LOG_ROOT, 0o700)
+    except OSError:
+        pass
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
     out = LOG_ROOT / f"github-report_{recipe_id}_{ts}.txt"
     lines: list[str] = [
@@ -339,6 +349,10 @@ def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
             lines.append("")
 
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    try:
+        os.chmod(out, 0o600)
+    except OSError:
+        pass
     return out
 
 

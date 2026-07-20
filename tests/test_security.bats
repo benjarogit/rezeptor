@@ -54,3 +54,13 @@ setup() {
     [ "$status" -eq 0 ]
     [ "$output" = "test-path_123" ]
 }
+
+@test "security::validate_url accepts github HTTPS URLs" {
+    run security::validate_url "https://github.com/foo/bar.tar.gz"
+    [ "$status" -eq 0 ]
+}
+
+@test "security::validate_url rejects unknown domains" {
+    run security::validate_url "https://evil.example/malware.exe"
+    [ "$status" -eq 1 ]
+}
