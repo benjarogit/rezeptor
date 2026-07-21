@@ -57,7 +57,13 @@ case "$pyqt_path" in
 esac
 
 check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "/app/runtime/proton-ge/GE-Proton10-28/files/bin/wine64"
-# wine64 must actually run (32-bit wine often cannot exec without multiarch)
+check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "/app/runtime/proton-ge/GE-Proton10-28/files/bin/wine"
+# Real 32-bit wine needs Compat.i386 + --allow=multiarch (not a wine64 shim).
+if flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
+    head -c 2 /app/runtime/proton-ge/GE-Proton10-28/files/bin/wine | grep -q '#!'; then
+    echo "FAIL: wine is a shell shim — need real ELF + Compat.i386 for msxml3" >&2
+    fail=1
+fi
 if ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
     /app/runtime/proton-ge/GE-Proton10-28/files/bin/wine64 --version >/dev/null; then
     echo "FAIL: wine64 --version failed inside Flatpak runtime" >&2
@@ -65,13 +71,12 @@ if ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
 else
     echo "wine64 runs inside Flatpak runtime"
 fi
-# Sibling "wine" must also work (winetricks syswow64 path) — shim or real binary
 if ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
     /app/runtime/proton-ge/GE-Proton10-28/files/bin/wine --version >/dev/null; then
-    echo "FAIL: wine --version failed inside Flatpak (need wine64 shim)" >&2
+    echo "FAIL: 32-bit wine --version failed (install Compat.i386 //25.08)" >&2
     fail=1
 else
-    echo "wine shim/binary runs inside Flatpak runtime"
+    echo "32-bit wine runs inside Flatpak runtime (Compat.i386)"
 fi
 check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x /app/runtime/winetricks/winetricks
 check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -f /app/share/rezeptor/recipes/manifest.json

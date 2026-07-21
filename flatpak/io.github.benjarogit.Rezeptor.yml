@@ -1,8 +1,14 @@
 app-id: io.github.benjarogit.Rezeptor
 runtime: org.freedesktop.Platform
-runtime-version: '25.08'
+runtime-version: &runtime-version '25.08'
 sdk: org.freedesktop.Sdk
 command: rezeptor-launch
+
+# Proton/winetricks need real 32-bit wine (syswow64 / msxml3). The FDO
+# Platform is 64-bit only — pull Compat.i386 (+ GL32) like org.winehq.Wine.
+x-gl-version: &gl-version '1.4'
+x-gl-versions: &gl-versions 25.08;25.08-extra;1.4
+x-gl-merge-dirs: &gl-merge-dirs vulkan/icd.d;glvnd/egl_vendor.d;egl/egl_external_platform.d;OpenCL/vendors;lib/dri;lib/d3d;lib/gbm;vulkan/explicit_layer.d;vulkan/implicit_layer.d;vdpau
 
 finish-args:
   # GUI
@@ -13,6 +19,7 @@ finish-args:
   # Wine/Proton guests (GPU, input, shm)
   - --device=all
   - --allow=devel
+  - --allow=multiarch
   - --share=network
   # User data (~/.local/share/wine-software) + BYOS installer folders
   - --filesystem=home
@@ -25,6 +32,27 @@ finish-args:
   - --talk-name=org.freedesktop.Notifications
   - --talk-name=org.freedesktop.portal.Desktop
   - --talk-name=org.freedesktop.portal.FileChooser
+
+add-extensions:
+  org.freedesktop.Platform.Compat.i386:
+    directory: lib/i386-linux-gnu
+    version: *runtime-version
+  org.freedesktop.Platform.Compat.i386.Debug:
+    directory: lib/debug/lib/i386-linux-gnu
+    version: *runtime-version
+    no-autodownload: true
+  org.freedesktop.Platform.GL32:
+    directory: lib/i386-linux-gnu/GL
+    version: *gl-version
+    versions: *gl-versions
+    subdirectories: true
+    no-autodownload: true
+    autodelete: false
+    add-ld-path: lib
+    merge-dirs: *gl-merge-dirs
+    download-if: active-gl-driver
+    enable-if: active-gl-driver
+    autoprune-unless: active-gl-driver
 
 modules:
   - name: cabextract

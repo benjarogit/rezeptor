@@ -313,7 +313,8 @@ jobs:
           flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
           flatpak install -y --user flathub \
             org.freedesktop.Platform//25.08 \
-            org.freedesktop.Sdk//25.08
+            org.freedesktop.Sdk//25.08 \
+            org.freedesktop.Platform.Compat.i386//25.08
 
       - name: Build Flatpak
         run: |

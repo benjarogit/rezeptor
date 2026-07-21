@@ -17,13 +17,15 @@ fi
 
 chmod +x "$ROOT/flatpak/rezeptor-launch" "$ROOT/flatpak/build-app.sh"
 
-echo "Installing Flatpak runtime/SDK (org.freedesktop.Platform//25.08)..."
+echo "Installing Flatpak runtime/SDK + i386 compat (org.freedesktop.Platform//25.08)..."
 flatpak install -y --user flathub \
     org.freedesktop.Platform//25.08 \
     org.freedesktop.Sdk//25.08 \
+    org.freedesktop.Platform.Compat.i386//25.08 \
     org.flatpak.Builder 2>/dev/null || flatpak install -y flathub \
     org.freedesktop.Platform//25.08 \
     org.freedesktop.Sdk//25.08 \
+    org.freedesktop.Platform.Compat.i386//25.08 \
     org.flatpak.Builder
 
 echo "Building Flatpak (Rezeptor ${VERSION})..."

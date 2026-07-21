@@ -84,20 +84,19 @@ elif [ ! -d "/app/runtime/proton-ge/$PROTON_GE_TAG/files/bin" ]; then
     fi
 fi
 
-# Always shim wine→wine64 in Flatpak. The Sdk may exec 32-bit wine during
-# build while the Platform runtime cannot (no i386 ld-linux) — so a
-# build-time "wine --version" probe is unreliable. Winetricks still calls
-# sibling "wine" for syswow64 (msxml3/ie8).
+# Extension mount points for Compat.i386 / GL32 (see manifest add-extensions).
+mkdir -p /app/lib/i386-linux-gnu \
+    /app/lib/debug/lib/i386-linux-gnu \
+    /app/lib/i386-linux-gnu/GL \
+    /app/lib/debug/lib/i386-linux-gnu/GL
+
+# Keep real 32-bit Proton wine — Compat.i386 + --allow=multiarch provide
+# ld-linux.so.2. Do not wine→wine64 shim: that breaks syswow64 (msxml3).
 _proton_bin="/app/runtime/proton-ge/$PROTON_GE_TAG/files/bin"
-if [ -x "$_proton_bin/wine64" ] && [ -e "$_proton_bin/wine" ]; then
-    if head -c 2 "$_proton_bin/wine" | grep -q '#!'; then
-        echo "wine already a shim — keep"
-    else
-        echo "Replacing Proton wine ELF with wine64 shim (Flatpak)..."
-        mv "$_proton_bin/wine" "$_proton_bin/wine.real32" 2>/dev/null || rm -f "$_proton_bin/wine"
-        printf '#!/bin/sh\nexec "$(dirname "$0")/wine64" "$@"\n' >"$_proton_bin/wine"
-        chmod +x "$_proton_bin/wine"
-    fi
+if [ -f "$_proton_bin/wine.real32" ] && head -c 2 "$_proton_bin/wine" 2>/dev/null | grep -q '#!'; then
+    echo "Restoring Proton wine ELF from wine.real32 (drop wine64 shim)..."
+    mv -f "$_proton_bin/wine.real32" "$_proton_bin/wine"
+    chmod +x "$_proton_bin/wine"
 fi
 
 echo "Bundling winetricks..."
