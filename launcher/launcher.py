@@ -1234,10 +1234,7 @@ class RezeptorWindow(QMainWindow):
         self.health_chip.setVisible(False)
         self.health_chip.clicked.connect(self._show_health_dialog)
         pills_row.addWidget(self.health_chip)
-        self.progress_chip = QLabel("")
-        self.progress_chip.setObjectName("progressChip")
-        self.progress_chip.setVisible(False)
-        pills_row.addWidget(self.progress_chip)
+        # Fortschritt nur unter Tab „Vorgang“ — kein doppeltes „Vorgang %“ im Header
         pills_row.addStretch(1)
 
         self.path_label = QLabel()
@@ -1689,15 +1686,8 @@ class RezeptorWindow(QMainWindow):
         menu.exec(self.cursor().pos())
 
     def _update_progress_chip(self) -> None:
-        chip = getattr(self, "progress_chip", None)
-        if chip is None:
-            return
-        if self._busy:
-            chip.setText(t("app.chip_progress", pct=str(self._progress_pct)))
-            chip.setVisible(True)
-        else:
-            chip.setVisible(False)
-            chip.setText("")
+        """No-op: progress lives only in the Vorgang tab (not header pills)."""
+        return
 
     def _update_health_chip(self, info: RecipeInfo) -> None:
         chip = getattr(self, "health_chip", None)
@@ -1936,7 +1926,6 @@ class RezeptorWindow(QMainWindow):
         self.version_info_btn.setVisible(False)
         self.status_pill.setVisible(False)
         self.health_chip.setVisible(False)
-        self.progress_chip.setVisible(False)
 
         ver = read_version()
         stats = self._recipe_stats()
