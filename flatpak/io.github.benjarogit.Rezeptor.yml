@@ -16,9 +16,9 @@ finish-args:
   - --share=network
   # User data (~/.local/share/wine-software) + BYOS installer folders
   - --filesystem=home
-  # Dolphin/SMB/GVFS mounts live under /run/user — not covered by "home"
+  # Dolphin/SMB/GVFS: xdg-run/gvfs only — never bind all of /run/user
+  # (ro on /run/user breaks bwrap flatpak-info and flatpak-builder --run)
   - --filesystem=xdg-run/gvfs:ro
-  - --filesystem=/run/user:ro
   # Common host mounts (USB, virtiofs, manual smb)
   - --filesystem=/mnt:ro
   - --filesystem=/media:ro
