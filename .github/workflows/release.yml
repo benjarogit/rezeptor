@@ -25,6 +25,12 @@ on:
 permissions:
   contents: write
 
+# One release pipeline at a time — parallel push+dispatch races delete the
+# in-flight release mid-upload (HTTP 404 on assets).
+concurrency:
+  group: release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     runs-on: ubuntu-latest
@@ -246,21 +252,47 @@ jobs:
           notes+='- `rezeptor-'"${VER}"'-x86_64.flatpak` — Flatpak bundle (may follow in a separate upload)'$'\n'
           notes+='- `SHA256SUMS` — verify / prüfen: `sha256sum -c SHA256SUMS`'$'\n'
 
-          if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "${assets[@]}" --clobber
-            # Alte Einzel-.sha256 entfernen falls vorhanden
-            gh release delete-asset "$TAG" "rezeptor-${VER}-x86_64.AppImage.sha256" --yes 2>/dev/null || true
-            gh release edit "$TAG" \
-              --title "Rezeptor ${VER}" \
-              --notes "$notes" \
-              --latest
-          else
-            gh release create "$TAG" "${assets[@]}" \
+          # Create release shell first (no assets), then upload with retries.
+          # Avoids races where create-with-assets fails mid-upload after a peer deletes the release.
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
               --title "Rezeptor ${VER}" \
               --notes "$notes" \
               --latest \
-              --target "$SHA"
+              --target "$SHA" || true
           fi
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            echo "ERROR: release ${TAG} missing after create" >&2
+            exit 1
+          fi
+
+          uploaded=0
+          for attempt in 1 2 3 4 5; do
+            if gh release upload "$TAG" "${assets[@]}" --clobber; then
+              uploaded=1
+              break
+            fi
+            echo "upload attempt ${attempt} failed — retrying..." >&2
+            sleep $((attempt * 3))
+            # Peer race may have wiped the release; recreate shell
+            if ! gh release view "$TAG" >/dev/null 2>&1; then
+              gh release create "$TAG" \
+                --title "Rezeptor ${VER}" \
+                --notes "$notes" \
+                --latest \
+                --target "$SHA" || true
+            fi
+          done
+          if [ "$uploaded" -ne 1 ]; then
+            echo "ERROR: could not upload assets to ${TAG}" >&2
+            exit 1
+          fi
+
+          gh release delete-asset "$TAG" "rezeptor-${VER}-x86_64.AppImage.sha256" --yes 2>/dev/null || true
+          gh release edit "$TAG" \
+            --title "Rezeptor ${VER}" \
+            --notes "$notes" \
+            --latest
 
           echo "Published ${TAG} with:"
           gh release view "$TAG" --json assets -q '.assets[].name'
