@@ -99,6 +99,7 @@ from app_support import (
     public_docs_url,
     read_version,
     report_clipboard_text,
+    sanitize_log_text,
     update_auto_supported,
     version_compare,
 )
