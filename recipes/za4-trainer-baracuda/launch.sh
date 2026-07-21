@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Baracuda/CE-Trainer: in den laufenden Steam-Prefix (runinprefix), nicht als
-# eigener wineserver — sonst startet er oft nur einmal.
+# Baracuda/CE-Trainer über Proton im Steam-compatdata des Spiels.
+# Wichtig: "proton run" (nicht runinprefix) — runinprefix endet sofort, wenn
+# Steam keinen klassischen wineserver für Attach bereitstellt.
 set -eu
 (set -o pipefail 2>/dev/null) || true
 
@@ -20,7 +21,6 @@ appid="$(recipe_hooks::state_get STEAM_APPID 2>/dev/null || true)"
 steam_root="${STEAM_ROOT:-$HOME/.local/share/Steam}"
 [ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
 
-# compatdata / Proton immer frisch auflösen (Wrapper-Pfade werden schnell stale)
 if [ -z "$compat" ] || [ ! -d "$compat" ]; then
     for lib in "$steam_root" /mnt/*/SteamLibrary "$HOME"/.local/share/Steam; do
         [ -d "$lib/steamapps/compatdata/$appid" ] || continue
@@ -62,31 +62,20 @@ fi
 [ -n "$compat" ] && [ -d "$compat" ] || recipe_hooks::die \
     "Steam compatdata für AppID $appid fehlt — Spiel einmal mit Proton starten"
 
-# Alte CE-/Trainer-Reste wegräumen (ohne wineserver -k am Spiel-Prefix!)
-pkill -f 'ZA4-Trainer-Baracuda\.exe' 2>/dev/null || true
-pkill -f '[Cc]heat[Ee]ngine' 2>/dev/null || true
-pkill -f 'CET_TRAINER' 2>/dev/null || true
-sleep 0.3
-
-game_running=0
-if pgrep -f 'za4_(vulkan|dx12)\.exe' >/dev/null 2>&1; then
-    game_running=1
-fi
-if [ "$game_running" -ne 1 ]; then
-    output::warning "ZA4 läuft nicht — Baracuda braucht das laufende Spiel (Borderless empfohlen)."
-    recipe_hooks::die "Bitte zuerst Zombie Army 4 starten, dann den Trainer erneut starten"
+if ! pgrep -f 'za4_(vulkan|dx12)\.exe' >/dev/null 2>&1; then
+    output::warning "ZA4 scheint nicht zu laufen — Trainer erst NACH dem Spielstart nutzen (Borderless)."
 fi
 
-export STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_root"
-export STEAM_COMPAT_DATA_PATH="$compat"
-unset PROTON_ENABLE_WAYLAND || true
-
-# State aktualisieren (Reparatur / nächster Start)
+# Veralteten Wrapper nicht mehr nutzen (enthielt oft runinprefix → Sofort-Exit)
+recipe_hooks::state_set SCRIPT_PATH ""
 recipe_hooks::state_set TRAINER_EXE "$trainer"
 recipe_hooks::state_set COMPATDATA "$compat"
 recipe_hooks::state_set PROTON "$proton"
 recipe_hooks::state_set STEAM_APPID "$appid"
 
+export STEAM_COMPAT_CLIENT_INSTALL_PATH="$steam_root"
+export STEAM_COMPAT_DATA_PATH="$compat"
+unset PROTON_ENABLE_WAYLAND || true
+
 recipe_notify::starting
-# runinprefix = gleicher wineserver wie das Spiel (CE-Injection)
-exec "$proton" runinprefix "$trainer" "$@"
+exec "$proton" run "$trainer" "$@"

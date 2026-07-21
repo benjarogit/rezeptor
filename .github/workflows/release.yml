@@ -29,7 +29,8 @@ permissions:
 # in-flight release mid-upload (HTTP 404 on assets).
 concurrency:
   group: release-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Never cancel — cancelling mid-flatpak left releases without .flatpak assets
+  cancel-in-progress: false
 
 jobs:
   validate:

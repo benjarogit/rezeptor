@@ -71,10 +71,10 @@
       "files": {
         "info.de.txt": "sha256:a1e5ef7eca034f3781b28ab2023f2dd2e4b19348da9a4e01ee07ddf893c2b992",
         "info.en.txt": "sha256:26bade489c75618ed45dd641f806b72cc46fabc60ebf3b44f8cdcf46bb5d8f1a",
-        "install.sh": "sha256:c128d43cfd9d5baa978e9a7e652a71543bcf60d0ad13d26a6615b2ee5639493c",
+        "install.sh": "sha256:cf860789c5f8153b8467c1eb34c385f7a09020a0e4f32b5436411f444de19266",
         "kill.sh": "sha256:0ba1df5f03d16c22897e1cc08956e4dd8601e073260b8d780a62df5a091f746d",
-        "launch.sh": "sha256:a08e1f4362cd53d29c1b12c038254af59d97d6f5f472fdc9d3044a7bf8eea45f",
-        "recipe.yml": "sha256:f83c5a40e93e6b133f856e08b4bb223a04a527fd8df9b6481597266bff69f80c",
+        "launch.sh": "sha256:ce4348d1cc464c2222042ae46ea87ef5af0d9331a7a791371c00e6cb9aadfe35",
+        "recipe.yml": "sha256:f05430c90b3d89f70f4f33e785e0bb963b242a3954564c1b8dc8a22e3cf3d661",
         "repair.sh": "sha256:6e30cc3ba685b3116af5aa85c12130b5aa5047456497cc87e6857c0f6052634e",
         "uninstall.sh": "sha256:69f9e08dfb5a7266e4456efc781be4ae8669b744f119ae0a078d2a9da0f105a3",
         "validate.sh": "sha256:ecca1ab64b34a8d3dcaf0b2e604d42c25b9973164efb0ac41bbf1b39c73e921f"

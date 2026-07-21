@@ -32,7 +32,8 @@ target_default: "~/.local/share/wine-software/za4-trainer-baracuda/ZA4-Trainer-B
 target_label: "Zielordner (Steam-Spielordner wird automatisch erkannt)"
 fix_kind: none
 exe_glob: "ZA4-Trainer-Baracuda.exe"
-launch_process_patterns: [ZA4-Trainer-Baracuda.exe]
+# CE-Stub kann beenden, während cheatengine weiterläuft
+launch_process_patterns: [ZA4-Trainer-Baracuda.exe, cheatengine-i386.exe, cheatengine-x86_64.exe, cheatengine.exe]
 env: {}
 validate: validate.sh
 launch: launch.sh

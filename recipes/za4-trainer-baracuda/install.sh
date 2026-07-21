@@ -95,19 +95,13 @@ if [[ -z "\$COMPATDATA" || ! -d "\$COMPATDATA" ]]; then
   exit 1
 fi
 if ! pgrep -f 'za4_(vulkan|dx12)\\.exe' >/dev/null 2>&1; then
-  echo "ZA4 läuft nicht — zuerst das Spiel starten, dann Trainer." >&2
-  exit 1
+  echo "Hinweis: ZA4 scheint nicht zu laufen — Trainer erst nach Spielstart nutzen." >&2
 fi
-# Alte CE-Reste (ohne wineserver -k)
-pkill -f 'ZA4-Trainer-Baracuda\\.exe' 2>/dev/null || true
-pkill -f '[Cc]heat[Ee]ngine' 2>/dev/null || true
-pkill -f 'CET_TRAINER' 2>/dev/null || true
-sleep 0.3
 export STEAM_COMPAT_CLIENT_INSTALL_PATH="\$STEAM_ROOT"
 export STEAM_COMPAT_DATA_PATH="\$COMPATDATA"
 unset PROTON_ENABLE_WAYLAND || true
-# Gleicher wineserver wie das Spiel (Cheat Engine)
-exec "\$PROTON" runinprefix "\$TRAINER"
+# "run" (nicht runinprefix) — sonst Sofort-Exit ohne Steam-wineserver-Attach
+exec "\$PROTON" run "\$TRAINER"
 EOF
 chmod +x "$wrapper"
 
