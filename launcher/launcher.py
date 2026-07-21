@@ -2699,8 +2699,12 @@ class RezeptorWindow(QMainWindow):
         self._refresh_running_indicators()
 
     def _refresh_running_indicators(self) -> None:
-        for card, info in self._recipe_cards:
-            running = recipe_process_running(info.rid, info.meta)
+        for card, info in list(self._recipe_cards):
+            try:
+                running = recipe_process_running(info.rid, info.meta)
+            except Exception as exc:  # noqa: BLE001 — Flatpak /proc quirks
+                _debug_log(f"recipe_process_running({info.rid}): {exc}")
+                continue
             was = self._running_prev.get(info.rid)
             self._running_prev[info.rid] = running
             # True→False: App beendet — unter Vorgang melden
@@ -2710,16 +2714,23 @@ class RezeptorWindow(QMainWindow):
                 self._on_recipe_process_started(info)
             elif was is None and running:
                 self._running_prev[info.rid] = True
-            card.set_running(running)
-            card.set_install_state(info.state.value)
+            try:
+                card.set_running(running)
+                card.set_install_state(info.state.value)
+            except RuntimeError:
+                # SIP: sidebar card already deleted mid-refresh
+                continue
             if not (self._selected and self._selected.rid == info.rid):
                 continue
             self._update_status_pills(info)
             base = getattr(self, "_status_detail_base", "") or ""
             if not base.strip() or base.strip() == " ":
                 base = self._action_hint_for(info) or " "
-            self.status_detail_label.setText(base if base.strip() else " ")
-            self.status_detail_label.setVisible(bool(base.strip()))
+            try:
+                self.status_detail_label.setText(base if base.strip() else " ")
+                self.status_detail_label.setVisible(bool(base.strip()))
+            except RuntimeError:
+                continue
             if not self._busy:
                 dr = resolve_data_root(info.meta, info.rid)
                 self._apply_primary_cta(

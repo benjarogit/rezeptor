@@ -74,10 +74,29 @@ wine_runtime::reset() {
     _WINE_RUNTIME_ROOT=""
 }
 
+wine_runtime::_proton_bin_works() {
+    local bin="${1:-}"
+    [ -n "$bin" ] && [ -x "$bin" ] || return 1
+    # Flatpak often lacks i386 ld-linux.so.2 — 32-bit wine exists but cannot exec.
+    "$bin" --version >/dev/null 2>&1
+}
+
 wine_runtime::_apply_proton_env() {
+    local bin32 bin64
     _WINE_RUNTIME_MODE="proton-ge"
     _WINE_RUNTIME_ROOT="$(wine_runtime::_find_proton_dir)"
-    _WINE_RUNTIME_BIN="$_WINE_RUNTIME_ROOT/files/bin/wine"
+    bin32="$_WINE_RUNTIME_ROOT/files/bin/wine"
+    bin64="$_WINE_RUNTIME_ROOT/files/bin/wine64"
+    # Prefer classic wine when it actually runs; else wine64 (Flatpak / no multiarch).
+    if wine_runtime::_proton_bin_works "$bin32"; then
+        _WINE_RUNTIME_BIN="$bin32"
+    elif wine_runtime::_proton_bin_works "$bin64"; then
+        _WINE_RUNTIME_BIN="$bin64"
+    elif [ -x "$bin64" ]; then
+        _WINE_RUNTIME_BIN="$bin64"
+    else
+        _WINE_RUNTIME_BIN="$bin32"
+    fi
     export PROTON_PATH="$_WINE_RUNTIME_ROOT"
     export PATH="$_WINE_RUNTIME_ROOT/files/bin:$_WINE_RUNTIME_ROOT/files/bin/w64:$_WINE_RUNTIME_ROOT/files/bin/w32:${PATH}"
     export WINE_RUNTIME_MODE="proton-ge"
@@ -109,7 +128,9 @@ wine_runtime::_find_proton_dir() {
     )
     shopt -u nullglob 2>/dev/null || true
     for candidate in "${glob_candidates[@]}"; do
-        if [ -d "$candidate/files/bin" ] && [ -x "$candidate/files/bin/wine" ]; then
+        if [ -d "$candidate/files/bin" ] && {
+            [ -x "$candidate/files/bin/wine" ] || [ -x "$candidate/files/bin/wine64" ]
+        }; then
             echo "$candidate"
             return 0
         fi

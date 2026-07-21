@@ -16,6 +16,12 @@ finish-args:
   - --share=network
   # User data (~/.local/share/wine-software) + BYOS installer folders
   - --filesystem=home
+  # Dolphin/SMB/GVFS mounts live under /run/user — not covered by "home"
+  - --filesystem=xdg-run/gvfs:ro
+  - --filesystem=/run/user:ro
+  # Common host mounts (USB, virtiofs, manual smb)
+  - --filesystem=/mnt:ro
+  - --filesystem=/media:ro
   - --talk-name=org.freedesktop.Notifications
   - --talk-name=org.freedesktop.portal.Desktop
   - --talk-name=org.freedesktop.portal.FileChooser

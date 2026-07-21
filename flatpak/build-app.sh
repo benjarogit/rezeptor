@@ -23,7 +23,12 @@ fi
 install -Dm755 "$ROOT/flatpak/rezeptor-launch" /app/bin/rezeptor-launch
 install -Dm644 "$ROOT/flatpak/io.github.benjarogit.Rezeptor.desktop" \
     /app/share/applications/io.github.benjarogit.Rezeptor.desktop
-install -Dm644 "$ROOT/flatpak/io.github.benjarogit.Rezeptor.metainfo.xml" \
+# Keep Flatpak metainfo version in sync with repo VERSION
+ver="$(tr -d '[:space:]' < "$ROOT/VERSION" 2>/dev/null || echo 0.0.0)"
+sed "s/version=\"[0-9.][0-9.]*\"/version=\"${ver}\"/" \
+    "$ROOT/flatpak/io.github.benjarogit.Rezeptor.metainfo.xml" \
+    > /tmp/rezeptor.metainfo.xml
+install -Dm644 /tmp/rezeptor.metainfo.xml \
     /app/share/metainfo/io.github.benjarogit.Rezeptor.metainfo.xml
 
 if [ -f "$ROOT/images/rezeptor-icon.png" ]; then

@@ -57,6 +57,14 @@ case "$pyqt_path" in
 esac
 
 check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "/app/runtime/proton-ge/GE-Proton10-28/files/bin/wine64"
+# wine64 must actually run (32-bit wine often cannot exec without multiarch)
+if ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
+    /app/runtime/proton-ge/GE-Proton10-28/files/bin/wine64 --version >/dev/null; then
+    echo "FAIL: wine64 --version failed inside Flatpak runtime" >&2
+    fail=1
+else
+    echo "wine64 runs inside Flatpak runtime"
+fi
 check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x /app/runtime/winetricks/winetricks
 check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -f /app/share/rezeptor/recipes/manifest.json
 
