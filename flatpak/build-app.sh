@@ -84,6 +84,19 @@ elif [ ! -d "/app/runtime/proton-ge/$PROTON_GE_TAG/files/bin" ]; then
     fi
 fi
 
+# Flatpak FDO runtime has no i386 loader — Proton's wine is 32-bit ELF and
+# cannot exec. Winetricks still invokes sibling "wine" for syswow64; replace
+# it with a wine64 shim so msxml3/ie8 verbs work.
+_proton_bin="/app/runtime/proton-ge/$PROTON_GE_TAG/files/bin"
+if [ -x "$_proton_bin/wine64" ] && [ -e "$_proton_bin/wine" ]; then
+    if ! "$_proton_bin/wine" --version >/dev/null 2>&1; then
+        echo "Replacing non-executable 32-bit wine with wine64 shim..."
+        mv "$_proton_bin/wine" "$_proton_bin/wine.real32" 2>/dev/null || rm -f "$_proton_bin/wine"
+        printf '#!/bin/sh\nexec "$(dirname "$0")/wine64" "$@"\n' >"$_proton_bin/wine"
+        chmod +x "$_proton_bin/wine"
+    fi
+fi
+
 echo "Bundling winetricks..."
 mkdir -p /app/runtime/winetricks
 if [ -f "$ROOT/winetricks-src/winetricks" ]; then

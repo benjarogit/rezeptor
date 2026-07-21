@@ -81,24 +81,49 @@ wine_runtime::_proton_bin_works() {
     "$bin" --version >/dev/null 2>&1
 }
 
+# Winetricks always calls dirname($WINE)/wine for 32-bit PE (syswow64).
+# When the real wine ELF cannot exec (no i386 loader), shadow the Proton bin
+# dir with a writable wrap where wine → wine64.
+wine_runtime::_proton_wine64_wrap_dir() {
+    local _bin32="$1" bin64="$2" tag wrap f name
+    tag="${PROTON_GE_TAG:-GE-Proton10-28}"
+    wrap="${XDG_CACHE_HOME:-$HOME/.cache}/rezeptor/wine-wrap-${tag}"
+    mkdir -p "$wrap"
+    for f in "$_WINE_RUNTIME_ROOT/files/bin"/*; do
+        [ -e "$f" ] || continue
+        name="$(basename "$f")"
+        [ "$name" = "wine" ] && continue
+        ln -sfn "$f" "$wrap/$name"
+    done
+    printf '#!/bin/sh\nexec "%s" "$@"\n' "$bin64" >"$wrap/wine"
+    chmod +x "$wrap/wine"
+    : "$_bin32"
+    echo "$wrap"
+}
+
 wine_runtime::_apply_proton_env() {
-    local bin32 bin64
+    local bin32 bin64 wrap
     _WINE_RUNTIME_MODE="proton-ge"
     _WINE_RUNTIME_ROOT="$(wine_runtime::_find_proton_dir)"
     bin32="$_WINE_RUNTIME_ROOT/files/bin/wine"
     bin64="$_WINE_RUNTIME_ROOT/files/bin/wine64"
-    # Prefer classic wine when it actually runs; else wine64 (Flatpak / no multiarch).
+    # Prefer classic wine when it actually runs; else wine64 wrap (Flatpak / no multiarch).
     if wine_runtime::_proton_bin_works "$bin32"; then
         _WINE_RUNTIME_BIN="$bin32"
+        export PATH="$_WINE_RUNTIME_ROOT/files/bin:$_WINE_RUNTIME_ROOT/files/bin/w64:$_WINE_RUNTIME_ROOT/files/bin/w32:${PATH}"
     elif wine_runtime::_proton_bin_works "$bin64"; then
-        _WINE_RUNTIME_BIN="$bin64"
+        wrap="$(wine_runtime::_proton_wine64_wrap_dir "$bin32" "$bin64")"
+        _WINE_RUNTIME_BIN="$wrap/wine"
+        export PATH="$wrap:$_WINE_RUNTIME_ROOT/files/bin:$_WINE_RUNTIME_ROOT/files/bin/w64:$_WINE_RUNTIME_ROOT/files/bin/w32:${PATH}"
     elif [ -x "$bin64" ]; then
-        _WINE_RUNTIME_BIN="$bin64"
+        wrap="$(wine_runtime::_proton_wine64_wrap_dir "$bin32" "$bin64")"
+        _WINE_RUNTIME_BIN="$wrap/wine"
+        export PATH="$wrap:$_WINE_RUNTIME_ROOT/files/bin:${PATH}"
     else
         _WINE_RUNTIME_BIN="$bin32"
+        export PATH="$_WINE_RUNTIME_ROOT/files/bin:${PATH}"
     fi
     export PROTON_PATH="$_WINE_RUNTIME_ROOT"
-    export PATH="$_WINE_RUNTIME_ROOT/files/bin:$_WINE_RUNTIME_ROOT/files/bin/w64:$_WINE_RUNTIME_ROOT/files/bin/w32:${PATH}"
     export WINE_RUNTIME_MODE="proton-ge"
 }
 

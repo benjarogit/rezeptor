@@ -139,12 +139,12 @@ recipe_photoshop::_ensure_native_msxml() {
         recipe_hooks::log_err "MSXML winetricks fehlgeschlagen — $wt_log"
         return 1
     fi
-    wine reg add "HKCU\\Software\\Wine\\DllOverrides" /v msxml3 /t REG_SZ /d "native,builtin" /f \
+    wine_runtime::wine reg add "HKCU\\Software\\Wine\\DllOverrides" /v msxml3 /t REG_SZ /d "native,builtin" /f \
         >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    wine reg add "HKCU\\Software\\Wine\\DllOverrides" /v msxml6 /t REG_SZ /d "native,builtin" /f \
+    wine_runtime::wine reg add "HKCU\\Software\\Wine\\DllOverrides" /v msxml6 /t REG_SZ /d "native,builtin" /f \
         >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    wine regsvr32 /S C:\\windows\\syswow64\\msxml3.dll >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    wine regsvr32 /S C:\\windows\\syswow64\\msxml6.dll >>"${LOG_FILE:-/dev/null}" 2>&1 || true
+    wine_runtime::wine regsvr32 /S C:\\windows\\syswow64\\msxml3.dll >>"${LOG_FILE:-/dev/null}" 2>&1 || true
+    wine_runtime::wine regsvr32 /S C:\\windows\\syswow64\\msxml6.dll >>"${LOG_FILE:-/dev/null}" 2>&1 || true
     photoshop_setup::msxml_is_native "$msxml3" && photoshop_setup::msxml_is_native "$msxml6"
 }
 

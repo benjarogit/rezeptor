@@ -65,6 +65,14 @@ if ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
 else
     echo "wine64 runs inside Flatpak runtime"
 fi
+# Sibling "wine" must also work (winetricks syswow64 path) — shim or real binary
+if ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
+    /app/runtime/proton-ge/GE-Proton10-28/files/bin/wine --version >/dev/null; then
+    echo "FAIL: wine --version failed inside Flatpak (need wine64 shim)" >&2
+    fail=1
+else
+    echo "wine shim/binary runs inside Flatpak runtime"
+fi
 check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x /app/runtime/winetricks/winetricks
 check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -f /app/share/rezeptor/recipes/manifest.json
 
