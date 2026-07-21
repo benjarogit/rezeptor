@@ -23,13 +23,27 @@ fi
 install -Dm755 "$ROOT/flatpak/rezeptor-launch" /app/bin/rezeptor-launch
 install -Dm644 "$ROOT/flatpak/io.github.benjarogit.Rezeptor.desktop" \
     /app/share/applications/io.github.benjarogit.Rezeptor.desktop
-# Keep Flatpak metainfo version in sync with repo VERSION
+# Keep Flatpak metainfo <release version> in sync with repo VERSION (XML-safe).
 ver="$(tr -d '[:space:]' < "$ROOT/VERSION" 2>/dev/null || echo 0.0.0)"
-sed "s/version=\"[0-9.][0-9.]*\"/version=\"${ver}\"/" \
-    "$ROOT/flatpak/io.github.benjarogit.Rezeptor.metainfo.xml" \
-    > /tmp/rezeptor.metainfo.xml
-install -Dm644 /tmp/rezeptor.metainfo.xml \
-    /app/share/metainfo/io.github.benjarogit.Rezeptor.metainfo.xml
+python3 - "$ROOT/flatpak/io.github.benjarogit.Rezeptor.metainfo.xml" "$ver" \
+    /app/share/metainfo/io.github.benjarogit.Rezeptor.metainfo.xml <<'PY'
+import re
+import sys
+from pathlib import Path
+
+src, ver, dest = Path(sys.argv[1]), sys.argv[2], Path(sys.argv[3])
+text = src.read_text(encoding="utf-8")
+text2, n = re.subn(
+    r'(<release\s+version=")[^"]+(")',
+    rf"\g<1>{ver}\2",
+    text,
+    count=1,
+)
+if n != 1:
+    raise SystemExit(f"metainfo: expected 1 <release version> replace, got {n}")
+dest.parent.mkdir(parents=True, exist_ok=True)
+dest.write_text(text2, encoding="utf-8")
+PY
 
 if [ -f "$ROOT/images/rezeptor-icon.png" ]; then
     install -Dm644 "$ROOT/images/rezeptor-icon.png" \
