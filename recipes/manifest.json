@@ -59,7 +59,7 @@
         "info.de.txt": "sha256:82e96b347b8b0634471ce10b6e23a4ec46d81482f207dd5e81a979bcedba7233",
         "info.en.txt": "sha256:a4659167eee909671da85c3e6bdf229fbc3cd0ce3a79e01e37b532650eee44cb",
         "install.sh": "sha256:70e6e16c1ddd8b229a08f24f36af30878fac8b448e9147ba3a9cd0ad43fc3c68",
-        "kill.sh": "sha256:404f06a0ec6ade0fcde6210475683ba3fd6c2415b3001a61d211dd60eea0dd08",
+        "kill.sh": "sha256:4e61791efa44bfec43640331284b976c6b81204a0744d2785b94b118b54cd868",
         "launch.sh": "sha256:8558b0f4546da0ee7fd5a99d4228d802c044cda28c31853b18c490669a561ca8",
         "recipe.yml": "sha256:acde5e7dca3f60e47b142cadba869d8512c819b0c26f447da1a69fbfbb9270d1",
         "repair.sh": "sha256:6e30cc3ba685b3116af5aa85c12130b5aa5047456497cc87e6857c0f6052634e",
