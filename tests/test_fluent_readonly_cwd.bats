@@ -1,9 +1,15 @@
 #!/usr/bin/env bats
 # Regression: AppImage FUSE is read-only; Fluent must not mkdir ./config there.
+# Full gate runs in scripts/verify-appimage-bundle.sh (bundled python + Fluent).
+# This bats test runs when host PyQt6 is available; otherwise skip.
 
 load test_helper
 
 @test "apply_rezeptor_theme works with read-only cwd" {
+    if ! python3 -c "import PyQt6.QtWidgets" 2>/dev/null; then
+        skip "PyQt6 not installed on host (AppImage verify covers this)"
+    fi
+
     ro_cwd="$BATS_TEST_TMPDIR/ro-cwd"
     smoke_home="$BATS_TEST_TMPDIR/home"
     mkdir -p "$ro_cwd" "$smoke_home/.config"
@@ -26,6 +32,7 @@ print('ok')
 PY"
 
     chmod 755 "$ro_cwd" || true
+    echo "$output"
     [ "$status" -eq 0 ]
     [[ "$output" == *ok* ]]
 }
