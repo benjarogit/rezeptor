@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from PyQt6.QtCore import QPointF, Qt
@@ -153,7 +154,9 @@ def fa_icon(kind: str, pixel: int = 16, *, color: str | None = None) -> QIcon | 
 
 
 def _ui_asset_dir() -> Path:
-    d = Path(__file__).resolve().parent / "assets" / "ui"
+    # AppImage/FUSE mount is read-only — never mkdir next to __file__.
+    xdg = Path(os.environ.get("XDG_CACHE_HOME") or (Path.home() / ".cache"))
+    d = xdg / "rezeptor" / "ui"
     d.mkdir(parents=True, exist_ok=True)
     return d
 

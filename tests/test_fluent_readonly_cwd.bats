@@ -12,22 +12,28 @@ load test_helper
 
     ro_cwd="$BATS_TEST_TMPDIR/ro-cwd"
     smoke_home="$BATS_TEST_TMPDIR/home"
-    mkdir -p "$ro_cwd" "$smoke_home/.config"
+    mkdir -p "$ro_cwd" "$smoke_home/.config" "$smoke_home/.cache"
     chmod 555 "$ro_cwd"
 
     run env \
         HOME="$smoke_home" \
         XDG_CONFIG_HOME="$smoke_home/.config" \
+        XDG_CACHE_HOME="$smoke_home/.cache" \
         QT_QPA_PLATFORM=offscreen \
         PYTHONPATH="$REZEPTOR_ROOT/launcher${PYTHONPATH:+:$PYTHONPATH}" \
         bash -c "cd \"$ro_cwd\" && python3 - <<'PY'
+import os
 import sys
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication
 app = QApplication(sys.argv)
 import ui_fluent
+import ui_icons
 ui_fluent.apply_rezeptor_theme()
 assert not Path('config').exists(), 'wrote ./config into cwd'
+chev = ui_icons.ensure_chevron_png('down')
+cache = Path(os.environ['XDG_CACHE_HOME']).resolve()
+assert cache in chev.resolve().parents, chev
 print('ok')
 PY"
 

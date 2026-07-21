@@ -116,38 +116,49 @@ if [ ! -d "$LAUNCHER_ROOT" ]; then
     LAUNCHER_ROOT="$ROOT/usr/share/photoshopCClinux/launcher"
 fi
 if [ -d "$LAUNCHER_ROOT" ]; then
-    # HOME/XDG under workdir so qconfig can still write if save were True by mistake
-    # — but the regression we care about is mkdir("./config") relative to cwd.
+    # HOME/XDG under workdir so optional config/cache stays writable.
+    # Also freeze the launcher tree (like FUSE) — catches writes next to __file__.
     smoke_home="$WORKDIR/smoke-home"
-    mkdir -p "$smoke_home/.config"
+    mkdir -p "$smoke_home/.config" "$smoke_home/.cache"
+    chmod -R a-w "$LAUNCHER_ROOT" 2>/dev/null || true
     if ! (
         cd "$ro_cwd" || exit 1
         HOME="$smoke_home" \
         XDG_CONFIG_HOME="$smoke_home/.config" \
+        XDG_CACHE_HOME="$smoke_home/.cache" \
+        PYTHONDONTWRITEBYTECODE=1 \
         QT_QPA_PLATFORM=offscreen \
         PYTHONPATH="$LAUNCHER_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
         "$BUNDLED_PY" - <<'PY'
+import os
 import sys
 from pathlib import Path
 from PyQt6.QtWidgets import QApplication
 
 app = QApplication(sys.argv)
 import ui_fluent
+import ui_icons
 
 # Must not raise OSError (read-only cwd / AppImage mount)
 host = ui_fluent.apply_rezeptor_theme()
 assert isinstance(host, str) and host
-# Relative config/ must never appear next to a RO cwd
 assert not Path("config").exists(), "fluent wrote ./config into read-only cwd"
-print("apply_rezeptor_theme OK on read-only cwd")
+
+# Generated UI assets must land in XDG cache, never under the RO launcher tree
+chev = ui_icons.ensure_chevron_png("down")
+assert chev.is_file(), "chevron png missing"
+cache = Path(os.environ["XDG_CACHE_HOME"]).resolve()
+assert cache in chev.resolve().parents, f"chevron not under XDG_CACHE_HOME: {chev}"
+print("apply_rezeptor_theme + ensure_chevron_png OK on read-only launcher/cwd")
 PY
     ); then
-        echo "FAIL: apply_rezeptor_theme crashed or wrote ./config on read-only cwd" >&2
-        echo "       (this is the AppImage Errno 30 / read-only filesystem bug)" >&2
+        echo "FAIL: RO AppImage smoke crashed (theme/config or assets/ui write)" >&2
+        echo "       (Errno 30 / read-only filesystem on FUSE mount)" >&2
         fail=1
     else
-        echo "Fluent theme survives read-only cwd (AppImage mount simulation)"
+        echo "Fluent theme + chevron cache survive read-only AppImage simulation"
     fi
+    chmod -R u+w "$LAUNCHER_ROOT" 2>/dev/null || true
     chmod 755 "$ro_cwd"
 else
     echo "WARN: launcher tree missing in AppDir — skipped RO theme smoke" >&2
