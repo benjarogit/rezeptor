@@ -71,13 +71,8 @@ if ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
 else
     echo "wine64 runs inside Flatpak runtime"
 fi
-if ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
-    /app/runtime/proton-ge/GE-Proton10-28/files/bin/wine --version >/dev/null; then
-    echo "FAIL: 32-bit wine --version failed (install Compat.i386 //25.08)" >&2
-    fail=1
-else
-    echo "32-bit wine runs inside Flatpak runtime (Compat.i386)"
-fi
+# Note: flatpak-builder --run does not attach Compat.i386 — 32-bit wine is
+# verified after install from the local repo in scripts/build-flatpak.sh.
 check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x /app/runtime/winetricks/winetricks
 check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -f /app/share/rezeptor/recipes/manifest.json
 

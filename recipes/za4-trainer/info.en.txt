@@ -4,8 +4,11 @@ Author: benjarogit
 Version: v1.0–v3.21 (Plus 14 Trainer)
 
 ## Summary
-Trainer (cheat tool) for **Zombie Army 4: Dead War** (Steam AppID 694280).
+**Plus 14 / FLiNG** trainer for **Zombie Army 4: Dead War** (Steam AppID 694280).
 This is not a game installer — only the trainer is stored and launched via Proton.
+
+For the **Baracuda +13** trainer use the separate recipe:
+“Zombie Army 4 — +13 Trainer (Baracuda)”.
 
 ## Requirements
 • Steam and Zombie Army 4: Dead War are installed

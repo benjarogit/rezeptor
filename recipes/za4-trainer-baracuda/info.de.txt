@@ -1,0 +1,28 @@
+# Zombie Army 4: Dead War — +13 Trainer (Baracuda)
+
+Autor: benjarogit
+Version: build 2020.10.21.973201 (Baracuda +13, Update 02.11.2024)
+
+## Kurzbeschreibung
+Cheat-Engine-Trainer (**Baracuda +13**) für **Zombie Army 4: Dead War**
+(Steam, AppID 694280). Eigenes Rezept — der Plus-14/FLiNG-Trainer liegt unter
+„Zombie Army 4 — Plus 14 Trainer“.
+
+## Voraussetzungen
+• Steam und Zombie Army 4: Dead War sind installiert
+• Das Spiel wurde mindestens einmal mit Proton / GE-Proton gestartet
+• Die Baracuda-**.exe** liegt lokal vor
+
+## Installation
+1. „Installieren“ wählen
+2. Die Datei `… {Baracuda}.EXE` auswählen
+3. Zielordner prüfen
+
+## Nutzung
+• Zuerst das Spiel starten
+• Danach in Rezeptor „Starten“
+• Hotkeys/Optionen im Trainer-Fenster
+
+## Hinweise
+• Logs: ~/.local/share/wine-software/logs/
+• Antiviren können CE-Trainer blockieren — Temp-Ordner muss ausführbar sein

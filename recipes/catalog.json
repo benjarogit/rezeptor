@@ -41,8 +41,19 @@
       "trust": "official",
       "path": "za4-trainer",
       "summary": {
-        "de": "Trainer für Zombie Army 4: Dead War (Steam) — Spiel zuerst in Borderless starten, dann Trainer aus Rezeptor.",
-        "en": "Trainer for Zombie Army 4: Dead War (Steam) — start the game in borderless first, then launch the trainer from Rezeptor."
+        "de": "Plus-14/FLiNG-Trainer für Zombie Army 4: Dead War (Steam) — Spiel zuerst starten, dann Trainer aus Rezeptor.",
+        "en": "Plus 14 / FLiNG trainer for Zombie Army 4: Dead War (Steam) — start the game first, then launch the trainer from Rezeptor."
+      }
+    },
+    {
+      "id": "za4-trainer-baracuda",
+      "name": "Zombie Army 4 — +13 Trainer (Baracuda)",
+      "category": "Spiele",
+      "trust": "official",
+      "path": "za4-trainer-baracuda",
+      "summary": {
+        "de": "Baracuda-+13-Cheat-Engine-Trainer für Zombie Army 4: Dead War — Spiel zuerst starten, dann Trainer.",
+        "en": "Baracuda +13 Cheat Engine trainer for Zombie Army 4: Dead War — start the game first, then the trainer."
       }
     }
   ]
