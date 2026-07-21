@@ -39,7 +39,9 @@ if [ -n "${PHOTOSHOP_INSTALLER_DIR:-}" ] && [ -f "${PHOTOSHOP_INSTALLER_DIR}/Set
     ln -sfn "$PHOTOSHOP_INSTALLER_DIR/Set-up.exe" "$PROJECT_ROOT/photoshop/Set-up.exe" 2>/dev/null || true
 fi
 
-cd "$PROJECT_ROOT"
+# Never cd into the AppImage mount — it is FUSE read-only. Relative writes
+# (e.g. qfluentwidgets ./config) then die with Errno 30.
+cd "${HOME:-${TMPDIR:-/tmp}}"
 if ! "$PYTHON" -c "import PyQt6"; then
     echo "PyQt6 import failed." >&2
     exit 1

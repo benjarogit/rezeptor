@@ -71,6 +71,15 @@ if grep -q 'venv/bin/python' "$ROOT/AppRun"; then
     echo "FAIL: AppRun still points at broken venv python" >&2
     fail=1
 fi
+# cwd on the FUSE mount is read-only — AppRun must leave it (HOME/TMP).
+if grep -qE 'cd "\$PROJECT_ROOT"|cd "\$HERE"' "$ROOT/AppRun"; then
+    echo "FAIL: AppRun still cds into the AppImage mount (read-only cwd)" >&2
+    fail=1
+fi
+if ! grep -q 'cd "\${HOME' "$ROOT/AppRun"; then
+    echo "FAIL: AppRun must cd to HOME/TMP before launching GUI" >&2
+    fail=1
+fi
 
 fakebin="$WORKDIR/fakebin"
 mkdir -p "$fakebin"
@@ -95,6 +104,53 @@ if ! "$reloc/python/bin/python3" -c "import PyQt6.QtCore" >/dev/null; then
     fail=1
 else
     echo "Bundled python survives relocation"
+fi
+
+# Catch qfluentwidgets writing ./config on a read-only cwd (real AppImage FUSE).
+# chmod 555 ≈ Errno 30 on FUSE for this purpose: mkdir("config") must not run.
+ro_cwd="$WORKDIR/ro-cwd"
+mkdir -p "$ro_cwd"
+chmod 555 "$ro_cwd"
+LAUNCHER_ROOT="$ROOT/usr/share/rezeptor/launcher"
+if [ ! -d "$LAUNCHER_ROOT" ]; then
+    LAUNCHER_ROOT="$ROOT/usr/share/photoshopCClinux/launcher"
+fi
+if [ -d "$LAUNCHER_ROOT" ]; then
+    # HOME/XDG under workdir so qconfig can still write if save were True by mistake
+    # — but the regression we care about is mkdir("./config") relative to cwd.
+    smoke_home="$WORKDIR/smoke-home"
+    mkdir -p "$smoke_home/.config"
+    if ! (
+        cd "$ro_cwd" || exit 1
+        HOME="$smoke_home" \
+        XDG_CONFIG_HOME="$smoke_home/.config" \
+        QT_QPA_PLATFORM=offscreen \
+        PYTHONPATH="$LAUNCHER_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+        "$BUNDLED_PY" - <<'PY'
+import sys
+from pathlib import Path
+from PyQt6.QtWidgets import QApplication
+
+app = QApplication(sys.argv)
+import ui_fluent
+
+# Must not raise OSError (read-only cwd / AppImage mount)
+host = ui_fluent.apply_rezeptor_theme()
+assert isinstance(host, str) and host
+# Relative config/ must never appear next to a RO cwd
+assert not Path("config").exists(), "fluent wrote ./config into read-only cwd"
+print("apply_rezeptor_theme OK on read-only cwd")
+PY
+    ); then
+        echo "FAIL: apply_rezeptor_theme crashed or wrote ./config on read-only cwd" >&2
+        echo "       (this is the AppImage Errno 30 / read-only filesystem bug)" >&2
+        fail=1
+    else
+        echo "Fluent theme survives read-only cwd (AppImage mount simulation)"
+    fi
+    chmod 755 "$ro_cwd"
+else
+    echo "WARN: launcher tree missing in AppDir — skipped RO theme smoke" >&2
 fi
 
 if [ "$fail" -ne 0 ]; then

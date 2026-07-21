@@ -8,6 +8,10 @@ Quellen:
 
 from __future__ import annotations
 
+import os
+import sys
+from pathlib import Path
+
 from ui_styles import (
     ACCENT_COPPER,
     COLOR_EXPERIMENTAL,
@@ -138,14 +142,33 @@ def apply_rezeptor_theme() -> str:
         pass
 
     if FLUENT_AVAILABLE and Theme is not None and _setTheme is not None:
-        _setTheme(Theme.DARK, save=True)
-        if _setThemeColor is not None:
-            _setThemeColor(ACCENT_COPPER, save=True)
-        if _qconfig is not None:
-            try:
-                _qconfig.theme = Theme.DARK
-            except Exception:
-                pass
+        # AppImage/FUSE mounts are read-only. qfluentwidgets defaults to
+        # writing ./config next to cwd — that crashes startup (Errno 30).
+        # Force Dark in-memory only; optional config lives under XDG.
+        try:
+            if _qconfig is not None:
+                xdg = Path(
+                    os.environ.get("XDG_CONFIG_HOME")
+                    or (Path.home() / ".config")
+                )
+                cfg = xdg / "rezeptor" / "qfluentwidgets.json"
+                cfg.parent.mkdir(parents=True, exist_ok=True)
+                try:
+                    _qconfig.file = cfg
+                except Exception:
+                    pass
+            # save=False: never mkdir relative "config/" on the AppImage mount
+            _setTheme(Theme.DARK, save=False)
+            if _setThemeColor is not None:
+                _setThemeColor(ACCENT_COPPER, save=False)
+            if _qconfig is not None:
+                try:
+                    _qconfig.theme = Theme.DARK
+                except Exception:
+                    pass
+        except OSError as exc:
+            # Theme persistence must never block launch on immutable media.
+            print(f"rezeptor: fluent theme skipped ({exc})", file=sys.stderr)
 
     return get_host_stylesheet()
 

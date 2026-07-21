@@ -246,6 +246,15 @@ if ! grep -q 'usr/share/rezeptor' "$APPDIR/AppRun"; then
     echo "AppRun PROJECT_ROOT must be usr/share/rezeptor" >&2
     fail=1
 fi
+# AppImage mount is FUSE read-only — never cd into PROJECT_ROOT/HERE.
+if grep -qE 'cd "\$PROJECT_ROOT"|cd "\$HERE"' "$APPDIR/AppRun"; then
+    echo "AppRun must not cd into the AppImage mount (read-only cwd / Errno 30)" >&2
+    fail=1
+fi
+if ! grep -q 'cd "\${HOME' "$APPDIR/AppRun"; then
+    echo "AppRun must cd to HOME/TMP before launching GUI" >&2
+    fail=1
+fi
 [ "$fail" -eq 0 ] || exit 1
 echo "AppDir verification OK"
 
