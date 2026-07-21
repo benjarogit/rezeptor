@@ -1,20 +1,14 @@
 name: Release
 
-# Auslöser:
-#   - VERSION auf main ändern → Validate + Paket + AppImage + Checksums + GitHub Release
-#   - Tag v* pushen (manuell)
-#   - workflow_dispatch (Rebuild / Notfall)
+# Auslöser: NUR manuell (workflow_dispatch).
+# Kein Auto-Release bei VERSION-Push/Tag — erst wenn lokal verifiziert.
 #
 # Assets pro Release:
-#   - rezeptor-X.Y.Z.tar.gz          (Quell-/Setup-Paket)
-#   - rezeptor-X.Y.Z-x86_64.AppImage (portable)
-#   - rezeptor-X.Y.Z-x86_64.flatpak  (sandboxed; separater Job, blockiert nicht)
-#   - SHA256SUMS                     (Prüfung: sha256sum -c SHA256SUMS)
+#   - rezeptor-X.Y.Z.tar.gz
+#   - rezeptor-X.Y.Z-x86_64.AppImage
+#   - rezeptor-X.Y.Z-x86_64.flatpak
+#   - SHA256SUMS
 on:
-  push:
-    branches: [main, master]
-    paths: [VERSION]
-    tags: ['v*']
   workflow_dispatch:
     inputs:
       force:
