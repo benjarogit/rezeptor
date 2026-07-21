@@ -382,6 +382,7 @@
     "shortcuts_created": "Start-menu and desktop shortcuts created.\n\nCreate or refresh again (e.g. after deleting): More → “Add or update shortcuts…”.",
     "shortcuts_failed": "Could not create shortcuts. Check the log.",
     "shortcuts_ok": "Shortcuts created",
+    "shortcuts_removed": "Desktop and menu shortcuts removed",
     "shortcuts_later": "Add shortcuts later: More → Add or update shortcuts…",
     "not_installed_title": "Not installed",
     "source_label": "Source",

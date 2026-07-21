@@ -382,6 +382,7 @@
     "shortcuts_created": "Startmenü- und Desktop-Verknüpfung angelegt.\n\nErneut anlegen (z. B. nach Löschen): Mehr → „Verknüpfungen anlegen/aktualisieren…“.",
     "shortcuts_failed": "Verknüpfungen konnten nicht angelegt werden. Log prüfen.",
     "shortcuts_ok": "Verknüpfungen angelegt",
+    "shortcuts_removed": "Desktop- und Menü-Verknüpfungen entfernt",
     "shortcuts_later": "Verknüpfungen später: Mehr → Verknüpfungen anlegen/aktualisieren…",
     "not_installed_title": "Nicht installiert",
     "source_label": "Quelle",

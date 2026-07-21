@@ -3452,6 +3452,26 @@ class RezeptorWindow(QMainWindow):
         except (OSError, subprocess.TimeoutExpired):
             return False
 
+    def _remove_desktop_shortcuts(self, recipe_dir: Path) -> bool:
+        """Belt-and-suspenders after uninstall.sh — drop leftover Desktop icons."""
+        cli = self._desktop_cli()
+        if not cli.is_file():
+            return False
+        env = {**os.environ, **self._base_env()}
+        try:
+            result = subprocess.run(
+                ["bash", str(cli), "remove", str(recipe_dir)],
+                cwd=str(ROOT),
+                env=env,
+                capture_output=True,
+                text=True,
+                timeout=_DESKTOP_SHORTCUT_TIMEOUT_SEC,
+                check=False,
+            )
+            return result.returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            return False
+
     def _offer_desktop_shortcuts(self, done_label: str) -> None:
         QMessageBox.information(
             self,
@@ -4520,7 +4540,24 @@ class RezeptorWindow(QMainWindow):
         ) != QMessageBox.StandardButton.Yes:
             return
         extra = {"PHOTOSHOP_UNINSTALL_YES": "1", "UNINSTALL_YES": "1"}
-        self._run_async(un, extra, t("action.uninstall"))
+        recipe_dir = rd
+
+        def _after_uninstall() -> None:
+            # Purge already removes shortcuts; re-run in GUI env (correct HOME/XDG).
+            if self._remove_desktop_shortcuts(recipe_dir):
+                self._activity("ok", t("dialog.shortcuts_removed"))
+            QMessageBox.information(
+                self,
+                t("status.done"),
+                t("status.done_body", label=t("action.uninstall")),
+            )
+
+        self._run_async(
+            un,
+            extra,
+            t("action.uninstall"),
+            on_success=_after_uninstall,
+        )
 
 
 def main() -> int:

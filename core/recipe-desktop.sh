@@ -33,9 +33,32 @@ recipe_desktop::_marker() {
 }
 
 recipe_desktop::_desktop_dirs() {
-    local desk=""
+    # Alle Kandidaten (Dedup später) — Bazzite/KDE: xdg, XDG_DESKTOP_DIR, DE/EN-Namen.
+    local desk="" d
     desk="$(xdg-user-dir DESKTOP 2>/dev/null || true)"
-    printf '%s\n' "$desk" "$HOME/Schreibtisch" "$HOME/Desktop"
+    for d in \
+        "${XDG_DESKTOP_DIR:-}" \
+        "$desk" \
+        "$HOME/Schreibtisch" \
+        "$HOME/Desktop" \
+        "$HOME/desktop" \
+        "$HOME/Desktop-Ordner" \
+        "$HOME/Área de Trabalho"; do
+        [ -n "$d" ] || continue
+        printf '%s\n' "$d"
+    done
+}
+
+recipe_desktop::_unique_existing_dirs() {
+    local d seen=""
+    while IFS= read -r d; do
+        [ -n "$d" ] && [ -d "$d" ] || continue
+        case "|$seen|" in
+            *"|$d|"*) continue ;;
+        esac
+        seen="${seen}|$d"
+        printf '%s\n' "$d"
+    done
 }
 
 recipe_desktop::_icon_src() {
@@ -216,8 +239,8 @@ EOF
     command -v update-desktop-database >/dev/null 2>&1 \
         && update-desktop-database "$app_dir" 2>/dev/null || true
 
+    # Auf jedes existierende Desktop-Verzeichnis legen (nicht nur das erste).
     while IFS= read -r d; do
-        [ -n "$d" ] && [ -d "$d" ] || continue
         # Alte Doppel-Einträge vom Schreibtisch entfernen
         case "$RECIPE_ID" in
             photoshop)
@@ -231,8 +254,7 @@ EOF
         esac
         cp -f "$dest" "$d/${desk_name}" 2>/dev/null || true
         chmod +x "$d/${desk_name}" 2>/dev/null || true
-        break
-    done < <(recipe_desktop::_desktop_dirs)
+    done < <(recipe_desktop::_desktop_dirs | recipe_desktop::_unique_existing_dirs)
 
     mkdir -p "$DATA_ROOT" 2>/dev/null || true
     printf '1\n' >"$(recipe_desktop::_marker)" 2>/dev/null || true
@@ -241,6 +263,7 @@ EOF
 
 recipe_desktop::remove() {
     local app_dir icon_dir theme desk_name d s
+    [ -n "${RECIPE_ID:-}" ] || return 1
     app_dir="$(recipe_desktop::_app_dir)"
     icon_dir="$(recipe_desktop::_icon_dir)"
     theme="$(recipe_desktop::_theme_name)"
@@ -256,25 +279,30 @@ recipe_desktop::remove() {
         2>/dev/null || true
     rm -f "${app_dir}"/photoshop.desktop.bak.* 2>/dev/null || true
 
-    if [ -d "${app_dir}/wine" ] && [ -n "${RECIPE_ID:-}" ]; then
+    if [ -d "${app_dir}/wine" ]; then
         find "${app_dir}/wine" -type f \( -iname "*${RECIPE_ID}*" -o -iname '*photoshop*' -o -iname '*wiso*' \) \
             -delete 2>/dev/null || true
     fi
 
     while IFS= read -r d; do
-        [ -n "$d" ] && [ -d "$d" ] || continue
         rm -f \
             "$d/${desk_name}" \
             "$d/photoshop.desktop" \
             "$d/wiso-steuer.desktop" \
             2>/dev/null || true
         if [ "$RECIPE_ID" = "photoshop" ]; then
-            find "$d" -maxdepth 1 -type f \( -iname '*photoshop*' \) -delete 2>/dev/null || true
+            find "$d" -maxdepth 1 -type f \( -iname '*photoshop*' -o -iname '*adobe*photoshop*' \) \
+                -delete 2>/dev/null || true
         fi
         if [ "$RECIPE_ID" = "wiso-steuer" ]; then
             find "$d" -maxdepth 1 -type f \( -iname '*wiso*' \) -delete 2>/dev/null || true
         fi
-    done < <(recipe_desktop::_desktop_dirs)
+    done < <(recipe_desktop::_desktop_dirs | recipe_desktop::_unique_existing_dirs)
+
+    # Sicherheitsnetz: kanonischer Dateiname irgendwo unter $HOME (flach)
+    if [ -n "${HOME:-}" ] && [ -d "$HOME" ]; then
+        find "$HOME" -maxdepth 3 -type f -name "$desk_name" -delete 2>/dev/null || true
+    fi
 
     for s in 16 22 24 32 48 64 128 256 512; do
         rm -f "${icon_dir}/${s}x${s}/apps/${theme}.png" 2>/dev/null || true
@@ -287,8 +315,13 @@ recipe_desktop::remove() {
         && [ -d "$icon_dir" ] && gtk-update-icon-cache -f -t "$icon_dir" 2>/dev/null || true
     command -v update-desktop-database >/dev/null 2>&1 \
         && update-desktop-database "$app_dir" 2>/dev/null || true
+    # KDE: Menü-/Desktop-Cache anstoßen (falls vorhanden)
+    command -v kbuildsycoca6 >/dev/null 2>&1 && kbuildsycoca6 --noincremental 2>/dev/null || true
+    command -v kbuildsycoca5 >/dev/null 2>&1 && kbuildsycoca5 --noincremental 2>/dev/null || true
 
-    rm -f "$(recipe_desktop::_marker)" 2>/dev/null || true
+    if [ -n "${DATA_ROOT:-}" ]; then
+        rm -f "$(recipe_desktop::_marker)" 2>/dev/null || true
+    fi
     return 0
 }
 
