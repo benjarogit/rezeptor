@@ -4259,10 +4259,13 @@ class RezeptorWindow(QMainWindow):
         if needs_source_dialog(meta):
             pending = load_recipe_install_env(self._settings, rid)
             if not has_recipe_install_source(pending):
-                # Keine Quelle (oder bewusst geleert) → Dialog speichert nur.
-                self._prompt_and_save_source()
-                return
-            extra = dict(pending or {})
+                # Install-CTA: Quelle wählen, dann direkt weiterinstallieren.
+                saved = self._prompt_and_save_source()
+                if not saved:
+                    return
+                extra = dict(saved)
+            else:
+                extra = dict(pending or {})
             if not self._prepare_install_env(extra):
                 return
 

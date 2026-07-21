@@ -581,7 +581,9 @@ class RecipeSourceDialog(QDialog):
         primary_row.addWidget(self.primary_edit, stretch=1)
         primary_row.addWidget(self.primary_btn)
         primary_row.addWidget(self.primary_clear)
-        primary_wrap = QWidget()
+        # Parent = self: wraps that stay out of the form must not be GC'd
+        # (otherwise QLineEdit C++ objects die → crash in build_env on Wayland).
+        primary_wrap = QWidget(self)
         primary_wrap.setLayout(primary_row)
 
         target_row = QHBoxLayout()
@@ -590,14 +592,14 @@ class RecipeSourceDialog(QDialog):
         target_row.addWidget(self.target_edit, stretch=1)
         target_row.addWidget(self.target_btn)
         target_row.addWidget(self.target_clear)
-        target_wrap = QWidget()
+        target_wrap = QWidget(self)
         target_wrap.setLayout(target_row)
 
         fix_row = QHBoxLayout()
         fix_row.setContentsMargins(0, 0, 0, 0)
         fix_row.addWidget(self.fix_edit, stretch=1)
         fix_row.addWidget(self.fix_btn)
-        fix_wrap = QWidget()
+        fix_wrap = QWidget(self)
         fix_wrap.setLayout(fix_row)
 
         # Einheitlich: Quelle / Ziel (Rezept-Details stehen im Intro oben).
@@ -619,6 +621,10 @@ class RecipeSourceDialog(QDialog):
             self.fix_edit.hide()
             self.fix_btn.hide()
             fix_wrap.hide()
+
+        self._result_primary: str | None = None
+        self._result_target: str | None = None
+        self._result_fix: str | None = None
 
         layout.addLayout(form)
         self._sync_primary_tips()
@@ -873,14 +879,28 @@ class RecipeSourceDialog(QDialog):
             self.fix_edit.setText(exe)
         self._fit_to_content()
 
+    @staticmethod
+    def _edit_text(edit: QLineEdit) -> str:
+        try:
+            return edit.text().strip()
+        except RuntimeError:
+            # SIP: C++ widget already deleted (orphaned wrap GC, Wayland teardown)
+            return ""
+
     def _normalize_primary(self) -> str:
-        raw = self.primary_edit.text().strip()
+        raw = self._edit_text(self.primary_edit)
         if self._source_kind == "folder" and raw and not self._pick_archive:
             return normalize_folder_source(self._rid, normalize_user_path(raw, self._root))
         return normalize_user_path(raw, self._root) if raw else raw
 
     def _normalize_target(self) -> str:
-        return normalize_user_path(self.target_edit.text(), self._root)
+        return normalize_user_path(self._edit_text(self.target_edit), self._root)
+
+    def _commit_paths(self, *, primary: str, target: str = "", fix: str = "") -> None:
+        """Freeze paths before accept() — never re-read widgets after the dialog closes."""
+        self._result_primary = primary
+        self._result_target = target
+        self._result_fix = fix
 
     def _update_version_hint(self, path: str) -> None:
         """Show version/guarantee feedback only after a source path is set."""
@@ -962,14 +982,18 @@ class RecipeSourceDialog(QDialog):
     def _on_accept(self) -> None:
         kind = self._source_kind
         if kind == "folder" and self._pick_archive:
-            primary = normalize_user_path(self.primary_edit.text().strip(), self._root)
+            primary = normalize_user_path(self._edit_text(self.primary_edit), self._root)
         else:
             primary = self._normalize_primary()
         # Leer = Konfiguration verwerfen / Dialog schließen (kein Zwang zur Quelle).
         if not primary:
-            self.primary_edit.clear()
-            if self._show_target:
-                self.target_edit.clear()
+            try:
+                self.primary_edit.clear()
+                if self._show_target:
+                    self.target_edit.clear()
+            except RuntimeError:
+                pass
+            self._commit_paths(primary="", target="", fix="")
             self.accept()
             return
         if kind == "folder":
@@ -987,11 +1011,15 @@ class RecipeSourceDialog(QDialog):
                     t("source.need_folder", path=primary),
                 )
                 return
-            if self._fix_kind == "required" and not self.fix_edit.text().strip():
+            fix_raw = (
+                self._edit_text(self.fix_edit) if self._fix_kind != "none" else ""
+            )
+            if self._fix_kind == "required" and not fix_raw:
                 QMessageBox.warning(
                     self, t("dialog.missing"), t("source.need_fix")
                 )
                 return
+            target = ""
             if self._show_target:
                 target = self._normalize_target()
                 if not target:
@@ -1007,17 +1035,26 @@ class RecipeSourceDialog(QDialog):
                         t("source.target_invalid", parent=parent),
                     )
                     return
-                self.target_edit.setText(target)
-            self.primary_edit.setText(primary)
+                try:
+                    self.target_edit.setText(target)
+                except RuntimeError:
+                    pass
+            try:
+                self.primary_edit.setText(primary)
+            except RuntimeError:
+                pass
+            fix = normalize_user_path(fix_raw, self._root) if fix_raw else ""
+            self._commit_paths(primary=primary, target=target, fix=fix)
             self.accept()
             return
-        primary = normalize_user_path(self.primary_edit.text().strip(), self._root)
+        primary = normalize_user_path(self._edit_text(self.primary_edit), self._root)
         if kind == "installer":
             if not Path(primary).is_file():
                 QMessageBox.warning(
                     self, t("dialog.missing"), t("source.need_exe")
                 )
                 return
+            target = ""
             if self._show_target:
                 target = self._normalize_target()
                 if not target:
@@ -1033,8 +1070,15 @@ class RecipeSourceDialog(QDialog):
                         t("source.target_invalid", parent=parent),
                     )
                     return
-                self.target_edit.setText(target)
-            self.primary_edit.setText(primary)
+                try:
+                    self.target_edit.setText(target)
+                except RuntimeError:
+                    pass
+            try:
+                self.primary_edit.setText(primary)
+            except RuntimeError:
+                pass
+            self._commit_paths(primary=primary, target=target)
             self.accept()
             return
         if kind == "archive":
@@ -1045,6 +1089,7 @@ class RecipeSourceDialog(QDialog):
                 return
             if not self._resolve_archive_passwords(primary):
                 return
+            target = ""
             if self._show_target:
                 target = self._normalize_target()
                 if not target:
@@ -1052,19 +1097,35 @@ class RecipeSourceDialog(QDialog):
                         self, t("dialog.missing"), t("source.need_target")
                     )
                     return
-                self.target_edit.setText(target)
-            self.primary_edit.setText(primary)
+                try:
+                    self.target_edit.setText(target)
+                except RuntimeError:
+                    pass
+            try:
+                self.primary_edit.setText(primary)
+            except RuntimeError:
+                pass
+            self._commit_paths(primary=primary, target=target)
             self.accept()
             return
         self.reject()
 
     def primary_path(self) -> str:
+        if self._result_primary is not None:
+            return self._result_primary
         return self._normalize_primary()
 
     def fix_path(self) -> str:
-        return normalize_user_path(self.fix_edit.text().strip(), self._root)
+        if self._result_fix is not None:
+            return self._result_fix
+        if self._fix_kind == "none":
+            return ""
+        raw = self._edit_text(self.fix_edit)
+        return normalize_user_path(raw, self._root) if raw else ""
 
     def target_path(self) -> str:
+        if self._result_target is not None:
+            return self._result_target
         return self._normalize_target()
 
     def _attach_archive_passwords(self, extra: dict[str, str]) -> None:
