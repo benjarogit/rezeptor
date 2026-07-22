@@ -14,8 +14,9 @@ Photoshop, Steuerprogramme (WISO), Steam-Spiele mit Online-Fix, Trainer und mehr
 
 > **Nachfolgeprojekt.**  
 > Weiterentwicklung nur noch hier. Die älteren Repositories
-> [photoshopCClinux](https://github.com/benjarogit/photoshopCClinux) und
-> [wiso-steuer-portable-linux](https://github.com/benjarogit/wiso-steuer-portable-linux)
+> [photoshopCClinux](https://github.com/benjarogit/photoshopCClinux),
+> [wiso-steuer-portable-linux](https://github.com/benjarogit/wiso-steuer-portable-linux) und
+> [crkcachy](https://github.com/benjarogit/crkcachy)
 > sind archiviert — Issues und PRs bitte in **diesem** Repo öffnen.
 
 ## Was du bekommst

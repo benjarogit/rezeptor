@@ -14,8 +14,9 @@ Photoshop, tax software (WISO), Steam games with online fixes, trainers, and mor
 
 > **This is the successor project.**  
 > Development continues here only. The older repositories
-> [photoshopCClinux](https://github.com/benjarogit/photoshopCClinux) and
-> [wiso-steuer-portable-linux](https://github.com/benjarogit/wiso-steuer-portable-linux)
+> [photoshopCClinux](https://github.com/benjarogit/photoshopCClinux),
+> [wiso-steuer-portable-linux](https://github.com/benjarogit/wiso-steuer-portable-linux), and
+> [crkcachy](https://github.com/benjarogit/crkcachy)
 > are archived — please open new issues and pull requests in **this** repo.
 
 ## What you get

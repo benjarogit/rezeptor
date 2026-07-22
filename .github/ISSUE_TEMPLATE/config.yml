@@ -1,18 +1,17 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 📚 Documentation
-    url: https://github.com/benjarogit/rezeptor/blob/main/README.md
-    about: Read the full installation and troubleshooting guide
-  - name: 🇩🇪 Deutsche Dokumentation
-    url: https://github.com/benjarogit/rezeptor/blob/main/README.de.md
-    about: Deutsche Installations- und Fehlerbehebungsanleitung
-  - name: 📦 Recipe authoring guide
-    url: https://github.com/benjarogit/rezeptor/blob/main/docs/en/RECIPE-AUTHORING.md
+  - name: Documentation (Deutsch)
+    url: https://benjarogit.github.io/rezeptor/
+    about: Schnellstart, Benutzerhandbuch, Rezept-Autoren
+  - name: Documentation (English)
+    url: https://benjarogit.github.io/rezeptor/en/
+    about: Getting started, user guide, recipe authoring
+  - name: Contributing guide
+    url: https://github.com/benjarogit/rezeptor/blob/main/docs/en/CONTRIBUTING.md
+    about: Dev setup, quality gate, PR expectations
+  - name: Recipe authoring
+    url: https://benjarogit.github.io/rezeptor/en/RECIPE-AUTHORING/
     about: Write a community recipe, then open a Recipe Submission issue
-  - name: 🔧 Troubleshooting Script
-    url: https://github.com/benjarogit/rezeptor/blob/main/core/troubleshoot.sh
-    about: Run ./troubleshoot.sh for automatic diagnostics
-  - name: 🐛 Original Project Issues
-    url: https://github.com/Gictorbit/photoshopCClinux/issues
-    about: Check if your issue was already solved in the original project
-
+  - name: Security vulnerability
+    url: https://github.com/benjarogit/rezeptor/security/advisories/new
+    about: Private report — do not file a public issue
