@@ -7,9 +7,6 @@ Version: v1.0–v3.21 (Plus 14 Trainer)
 **Plus-14 / FLiNG**-Trainer für **Zombie Army 4: Dead War** (Steam, AppID 694280).
 Kein Spiel-Installer — es wird nur der Trainer abgelegt und über Proton gestartet.
 
-Für den **Baracuda +13**-Trainer gibt es ein eigenes Rezept:
-„Zombie Army 4 — +13 Trainer (Baracuda)“.
-
 ## Voraussetzungen
 • Steam und Zombie Army 4: Dead War sind installiert
 • Das Spiel wurde mindestens einmal mit Proton bzw. GE-Proton gestartet (dabei entsteht der Steam-Datenordner „compatdata“)
