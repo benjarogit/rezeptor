@@ -36,6 +36,19 @@ launch_process_patterns: ["Adobe Premiere Pro.exe"]
 # win10 via recipe_win10::ensure; VC++ via recipe_vcrun::ensure (nicht winetricks)
 # DXVK: wine_runtime::deploy_proton_graphics_dlls — kein winetricks dxvk
 winetricks: [atmlib, corefonts, "fontsmooth=rgb", gdiplus, msxml3, msxml6, ie8]
+# Medizin-Menü (GUI): umschaltbare Rezept-Optionen → DATA_ROOT/options.env
+options:
+  - id: nvidia_libs
+    env: PREMIERE_NVIDIA_LIBS
+    type: bool
+    default: true
+    when: nvidia
+    label:
+      de: "CUDA / nvidia-libs"
+      en: "CUDA / nvidia-libs"
+    tip:
+      de: "Auf NVIDIA-Hosts CUDA/NVAPI/NVENC ins Wine-Prefix legen (Mercury GPU). Aus = Software-Pfad; danach einmal Reparieren."
+      en: "On NVIDIA hosts, install CUDA/NVAPI/NVENC into the Wine prefix (Mercury GPU). Off = software path; then run Repair once."
 env:
   WINEDEBUG: "-all,+err"
 validate: validate.sh

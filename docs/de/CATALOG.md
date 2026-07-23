@@ -42,6 +42,21 @@ Katalog-Felder:
 | `min_app_version` | Rezept braucht diese Rezeptor-Version (Core-APIs). Ältere Apps: **blocked** — App updaten. |
 | `deprecated` | Nicht neu installieren; vorhandene Daten werden nicht automatisch gelöscht. |
 
+## Rezept-Optionen (Medizin)
+
+Optionale Schalter in `recipe.yml` unter `options:` erscheinen als Button **Medizin** (Icon `kit-medical`) neben **Mehr**. Werte liegen in `{data_root}/options.env` und gelten bei Install/Reparieren/Start.
+
+```yaml
+options:
+  - id: nvidia_libs
+    env: PREMIERE_NVIDIA_LIBS
+    type: bool
+    default: true
+    when: nvidia   # optional: nur auf NVIDIA-Hosts anzeigen
+    label: { de: "CUDA / nvidia-libs", en: "CUDA / nvidia-libs" }
+    tip: { de: "…", en: "…" }
+```
+
 ## Mehrere Quellen (Multi-Source)
 
 Rezeptor kann Rezepte aus mehreren Quellen zusammenführen:

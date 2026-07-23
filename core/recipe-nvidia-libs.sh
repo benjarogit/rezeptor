@@ -155,8 +155,9 @@ recipe_nvidia_libs::install_prefix() {
     printf 'NVIDIA_LIBS_TAG=%s\nINSTALLED_AT=%s\n' \
         "${NVIDIA_LIBS_TAG:-}" "$(date -Iseconds 2>/dev/null || date)" \
         >"$prefix/.rezeptor-nvidia-libs"
+    # Marker only — user toggle lives in options.env (Medizin-Menü), not forced here.
     if [ -n "${DATA_ROOT:-}" ]; then
-        printf 'PREMIERE_NVIDIA_LIBS=1\nNVIDIA_LIBS_TAG=%s\n' "${NVIDIA_LIBS_TAG:-}" \
+        printf 'NVIDIA_LIBS_TAG=%s\n' "${NVIDIA_LIBS_TAG:-}" \
             >"${DATA_ROOT}/nvidia-libs.env" 2>/dev/null || true
     fi
     type output::success >/dev/null 2>&1 && output::success "nvidia-libs installiert (CUDA/NVENC)"

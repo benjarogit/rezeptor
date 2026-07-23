@@ -38,6 +38,7 @@ FA_FOLDER_OPEN = "\uf07c"
 FA_BOOK = "\uf02d"
 FA_BOOK_OPEN = "\uf518"
 FA_GITHUB = "\uf09b"  # Font Awesome Brands
+FA_KIT_MEDICAL = "\uf0fa"  # suitcase-medical / classic medkit (Free)
 
 _KIND_GLYPH = {
     "ok": FA_CHECK,
@@ -57,6 +58,8 @@ _KIND_GLYPH = {
     "book": FA_BOOK,
     "book_open": FA_BOOK_OPEN,
     "github": FA_GITHUB,
+    "kit-medical": FA_KIT_MEDICAL,
+    "medizin": FA_KIT_MEDICAL,
 }
 
 _BRAND_KINDS = frozenset({"github"})
@@ -77,6 +80,8 @@ _KIND_COLOR = {
     "kill": "#f85149",
     "more": "#a1a1aa",
     "folder": "#a1a1aa",
+    "kit-medical": "#a1a1aa",
+    "medizin": "#a1a1aa",
 }
 
 

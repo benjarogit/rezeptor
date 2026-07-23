@@ -58,6 +58,13 @@ recipe_hooks::load() {
     recipe_hooks::_source recipe.sh
     recipe_export_env "$RECIPE_YML"
     recipe_hooks::_source output.sh
+    # Rezept-Optionen (Medizin-Menü) → DATA_ROOT/options.env
+    if [ -n "${DATA_ROOT:-}" ] && [ -f "${DATA_ROOT}/options.env" ]; then
+        recipe_hooks::_source env-file.sh 2>/dev/null || true
+        if type env_file_load_export >/dev/null 2>&1; then
+            env_file_load_export "${DATA_ROOT}/options.env" 2>/dev/null || true
+        fi
+    fi
 
     case "$profile" in
         minimal) ;;

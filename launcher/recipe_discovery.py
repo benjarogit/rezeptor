@@ -29,6 +29,7 @@ _SKIP_COMPLEX_KEYS = frozenset(
         "env",
         "desktop",
         "shortcuts",
+        "options",
     }
 )
 

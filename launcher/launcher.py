@@ -174,6 +174,13 @@ from recipe_discovery import (
     launch_process_patterns_from_meta,
     parse_recipe_yml,
 )
+from recipe_options import (
+    env_overrides_for_options,
+    load_options_from_recipe_dir,
+    option_visible,
+    read_option_values,
+    write_option_value,
+)
 from recipe_paths import (
     manifest_for_recipe_dir,
     overlay_manifest_path,
@@ -1394,16 +1401,33 @@ class RezeptorWindow(QMainWindow):
             self.more_btn = PushButton(t("btn.more"))
             self._more_menu = RoundMenu(parent=self)
             self.more_btn.clicked.connect(self._popup_more_menu)
+            self.medizin_btn = PushButton(t("btn.medizin"))
+            self._medizin_menu = RoundMenu(parent=self)
+            self.medizin_btn.clicked.connect(self._popup_medizin_menu)
         else:
             self.more_btn = QToolButton()
             self.more_btn.setText(t("btn.more"))
             self.more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
             self._more_menu = QMenu(self)
             self.more_btn.setMenu(self._more_menu)
+            self.medizin_btn = QToolButton()
+            self.medizin_btn.setText(t("btn.medizin"))
+            self.medizin_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
+            self._medizin_menu = QMenu(self)
+            self.medizin_btn.setMenu(self._medizin_menu)
         self.more_btn.setObjectName("moreBtn")
         self.more_btn.setCursor(hand)
         self.more_btn.setToolTip(t("tooltip.more"))
         self._rebuild_more_menu()
+
+        self.medizin_btn.setObjectName("medizinBtn")
+        self.medizin_btn.setCursor(hand)
+        self.medizin_btn.setToolTip(t("tooltip.medizin"))
+        med_ic = fa_icon("kit-medical", 14, color=COLOR_PARCHMENT)
+        if med_ic is not None:
+            self.medizin_btn.setIcon(med_ic)
+            self.medizin_btn.setIconSize(QSize(14, 14))
+        self.medizin_btn.setVisible(False)
 
         # Versteckt: Alias falls alter Code validate_btn anspricht
         self.validate_btn = QPushButton(t("btn.validate"))
@@ -1414,6 +1438,7 @@ class RezeptorWindow(QMainWindow):
         row.addWidget(self.primary_btn)
         row.addWidget(self.trust_btn)
         row.addWidget(self.more_btn)
+        row.addWidget(self.medizin_btn)
         row.addStretch(1)
         parent_layout.addWidget(bar)
 
@@ -1424,6 +1449,91 @@ class RezeptorWindow(QMainWindow):
         action.triggered.connect(slot)
         menu.addAction(action)  # type: ignore[attr-defined]
         return action
+
+    def _popup_medizin_menu(self) -> None:
+        self._rebuild_medizin_menu()
+        btn = self.medizin_btn
+        menu = self._medizin_menu
+        if FLUENT_AVAILABLE and hasattr(menu, "exec"):
+            QTimer.singleShot(0, lambda: menu.exec(btn.mapToGlobal(btn.rect().bottomLeft())))
+        elif hasattr(menu, "popup"):
+            menu.popup(btn.mapToGlobal(btn.rect().bottomLeft()))
+
+    def _visible_recipe_options(self):
+        if not self._selected:
+            return []
+        rd = Path(self._selected.meta.get("_dir") or "")
+        opts = load_options_from_recipe_dir(rd) if rd.is_dir() else []
+        return [o for o in opts if option_visible(o)]
+
+    def _sync_medizin_button(self) -> None:
+        btn = getattr(self, "medizin_btn", None)
+        if btn is None:
+            return
+        opts = self._visible_recipe_options()
+        btn.setVisible(bool(opts) and self._selected is not None)
+        btn.setEnabled(bool(opts) and not getattr(self, "_busy", False))
+        med_ic = fa_icon("kit-medical", 14, color=COLOR_PARCHMENT)
+        if med_ic is not None:
+            btn.setIcon(med_ic)
+            btn.setIconSize(QSize(14, 14))
+
+    def _rebuild_medizin_menu(self) -> None:
+        self._medizin_menu = (
+            RoundMenu(parent=self) if FLUENT_AVAILABLE else QMenu(self)
+        )
+        menu = self._medizin_menu
+        if not FLUENT_AVAILABLE and hasattr(self, "medizin_btn"):
+            self.medizin_btn.setMenu(menu)
+        opts = self._visible_recipe_options()
+        if not opts or not self._selected:
+            self._add_menu_action(menu, t("medizin.empty"), lambda: None).setEnabled(False)
+            return
+        dr = resolve_data_root(self._selected.meta, self._selected.rid)
+        values = read_option_values(dr, opts)
+        locale = get_locale()
+        for opt in opts:
+            label = opt.label_for(locale)
+            act = QAction(label, menu)  # type: ignore[arg-type]
+            act.setCheckable(True)
+            tip = opt.tip_for(locale)
+            if tip:
+                act.setToolTip(tip)
+                act.setStatusTip(tip)
+            act.toggled.connect(
+                lambda checked, o=opt, root=dr: self._on_medizin_option_toggled(
+                    o, root, checked
+                )
+            )
+            act.blockSignals(True)
+            act.setChecked(bool(values.get(opt.id, opt.default)))
+            act.blockSignals(False)
+            menu.addAction(act)  # type: ignore[attr-defined]
+
+    def _on_medizin_option_toggled(self, opt, data_root: Path, checked: bool) -> None:
+        try:
+            write_option_value(data_root, opt, checked)
+        except OSError as exc:
+            QMessageBox.warning(
+                self,
+                t("medizin.error_title"),
+                t("medizin.error_body", error=str(exc)),
+            )
+            return
+        self._activity(
+            "info",
+            t(
+                "medizin.saved",
+                name=opt.label_for(get_locale()),
+                state=t("medizin.on") if checked else t("medizin.off"),
+            ),
+        )
+        if opt.env == "PREMIERE_NVIDIA_LIBS":
+            QMessageBox.information(
+                self,
+                t("medizin.apply_title"),
+                t("medizin.apply_repair_hint"),
+            )
 
     def _popup_more_menu(self) -> None:
         self._rebuild_more_menu()
@@ -1986,6 +2096,7 @@ class RezeptorWindow(QMainWindow):
         self.primary_btn.setVisible(True)
         self.trust_btn.setVisible(False)
         self.more_btn.setEnabled(True)
+        self._sync_medizin_button()
 
         self._refresh_home_stats()
         if hasattr(self, "_detail_stack"):
@@ -2534,6 +2645,11 @@ class RezeptorWindow(QMainWindow):
             env["DATA_ROOT"] = str(dr)
             env["WINEPREFIX"] = f"{dr}/prefix"
             env["WINE_PREFIX"] = f"{dr}/prefix"
+            rd = Path(self._selected.meta.get("_dir") or "")
+            if rd.is_dir():
+                env.update(
+                    env_overrides_for_options(dr, load_options_from_recipe_dir(rd))
+                )
         else:
             env["WINE_METHOD"] = "proton-ge"
             env["RECIPE_RUNTIME"] = "proton-ge"
@@ -2725,6 +2841,7 @@ class RezeptorWindow(QMainWindow):
             self._current_data_root = None
             self.open_path_btn.setEnabled(False)
             self.open_path_btn.setToolTip(t("tooltip.open_data_root"))
+            self._sync_medizin_button()
             return
         self._selected = self.recipes[row]
         info = self._selected
@@ -2773,6 +2890,7 @@ class RezeptorWindow(QMainWindow):
             self._apply_primary_cta(
                 info, can_launch=False, running=False, busy=self._busy
             )
+            self._sync_medizin_button()
             self._refresh_running_indicators()
             return
 
@@ -2802,6 +2920,7 @@ class RezeptorWindow(QMainWindow):
         self._apply_primary_cta(
             info, can_launch=can_launch, running=running, busy=self._busy
         )
+        self._sync_medizin_button()
         if info.state == RecipeState.PARTIAL and can_launch:
             detail = info.status_detail.strip() or t("state.installed_with_warnings")
             if detail.startswith("FAIL:"):
@@ -3241,8 +3360,10 @@ class RezeptorWindow(QMainWindow):
             for b in (
                 self.primary_btn,
                 self.more_btn,
+                getattr(self, "medizin_btn", None),
             ):
-                b.setEnabled(False)
+                if b is not None:
+                    b.setEnabled(False)
             self.action_refresh.setEnabled(False)
             self._sync_cancel_install_btn()
             return
@@ -3260,6 +3381,7 @@ class RezeptorWindow(QMainWindow):
         # busy=True deaktiviert Mehr — hier wieder an (CTA folgt über _select_recipe_index).
         if hasattr(self, "more_btn"):
             self.more_btn.setEnabled(True)
+        self._sync_medizin_button()
         self._sync_cancel_install_btn()
         if self._selected:
             self._select_recipe_index(self._selected_index)
@@ -4312,6 +4434,10 @@ class RezeptorWindow(QMainWindow):
             self._logs_refresh_btn.setText(t("logs.refresh"))
         self.more_btn.setText(t("btn.more"))
         self.more_btn.setToolTip(t("tooltip.more"))
+        if hasattr(self, "medizin_btn"):
+            self.medizin_btn.setText(t("btn.medizin"))
+            self.medizin_btn.setToolTip(t("tooltip.medizin"))
+            self._sync_medizin_button()
         if hasattr(self, "cancel_install_btn"):
             self.cancel_install_btn.setText(t("btn.cancel_install"))
             self.cancel_install_btn.setToolTip(t("tooltip.cancel_install"))

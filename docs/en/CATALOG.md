@@ -42,6 +42,21 @@ Catalog fields for sync:
 | `min_app_version` | Recipe needs this Rezeptor version (core APIs). Older apps see **blocked** — update the app. |
 | `deprecated` | Recipe should not be newly installed; installed data is not auto-deleted. |
 
+## Recipe options (Medicine / Medizin)
+
+Optional toggles in `recipe.yml` under `options:` appear as a **Medicine** button (icon `kit-medical`) next to **More**. Values persist in `{data_root}/options.env` and are exported into install/repair/launch.
+
+```yaml
+options:
+  - id: nvidia_libs
+    env: PREMIERE_NVIDIA_LIBS
+    type: bool
+    default: true
+    when: nvidia   # optional: only show on NVIDIA hosts
+    label: { de: "CUDA / nvidia-libs", en: "CUDA / nvidia-libs" }
+    tip: { de: "…", en: "…" }
+```
+
 ## Multiple sources (multi-source)
 
 Rezeptor can merge recipes from several sources:
