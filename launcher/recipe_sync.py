@@ -126,8 +126,11 @@ def _safe_tar_members(tf: tarfile.TarFile, dest: Path) -> list[tarfile.TarInfo]:
         if not name or name.startswith("/") or Path(name).is_absolute():
             raise RecipeSyncError(f"Unsafe archive path: {member.name!r}")
         parts = tuple(p for p in Path(name).parts if p not in ("", "."))
-        if not parts or any(p == ".." for p in parts):
+        if any(p == ".." for p in parts):
             raise RecipeSyncError(f"Path traversal rejected: {member.name!r}")
+        # GNU tar often stores archive root as "." / "./" — skip, not traversal
+        if not parts:
+            continue
         target = (dest / Path(*parts)).resolve()
         try:
             target.relative_to(dest_res)

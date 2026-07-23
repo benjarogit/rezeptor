@@ -42,8 +42,8 @@
     },
     "premiere": {
       "files": {
-        "info.de.txt": "sha256:096cc6d6890af044a52f0a26740f25aef7a58059ff1f35788706b9042d305df7",
-        "info.en.txt": "sha256:8e59fd89b18cc4fda91f33b3b6012e5ca310f8af406920a7e8e340d408588c07",
+        "info.de.txt": "sha256:7a6e650b02037cc9e7496387059ae85294abbe60c0a682e3ae367bf2ff094d55",
+        "info.en.txt": "sha256:0eb035576e5a3f5d0949854c341d01e1cc135de9cd1140169b23a28ec51ff65f",
         "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
         "kill.sh": "sha256:032971f2a9bbb85cad338ff3be4e31b6fb906754ebfe987d2905f1622250bf20",
         "launch.sh": "sha256:967291511517c15b3a87951688d35ec261c28395180d89adb08c9f648c55b5e2",

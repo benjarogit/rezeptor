@@ -56,7 +56,6 @@ PY
 import io
 import sys
 import tarfile
-import tempfile
 from pathlib import Path
 
 root = Path(sys.argv[1])
@@ -79,6 +78,38 @@ except RecipeSyncError as exc:
     print("ok")
 else:
     raise SystemExit("expected RecipeSyncError")
+PY
+    [ "$status" -eq 0 ]
+    [[ "$output" == *ok* ]]
+}
+
+@test "safe_extract accepts archive root dot entry" {
+    run python3 - "$ROOT" "$OVERLAY" <<'PY'
+import io
+import sys
+import tarfile
+from pathlib import Path
+
+root = Path(sys.argv[1])
+sys.path.insert(0, str(root / "launcher"))
+from recipe_sync import safe_extract_tar_gz
+
+buf = io.BytesIO()
+with tarfile.open(fileobj=buf, mode="w:gz") as tf:
+    # GNU tar style: "./" then a real file
+    d = tarfile.TarInfo(name=".")
+    d.type = tarfile.DIRTYPE
+    tf.addfile(d)
+    info = tarfile.TarInfo(name="./hello.txt")
+    data = b"hi"
+    info.size = len(data)
+    tf.addfile(info, io.BytesIO(data))
+archive = Path(sys.argv[2]) / "dot.tar.gz"
+archive.write_bytes(buf.getvalue())
+dest = Path(sys.argv[2]) / "extract-dot"
+safe_extract_tar_gz(archive, dest)
+assert (dest / "hello.txt").read_text(encoding="utf-8") == "hi"
+print("ok")
 PY
     [ "$status" -eq 0 ]
     [[ "$output" == *ok* ]]
