@@ -39,6 +39,8 @@ class CatalogEntry:
     path: str
     summary: dict[str, str] = field(default_factory=dict)
     files: list[str] = field(default_factory=list)
+    min_app_version: str = ""
+    deprecated: bool = False
 
     @property
     def is_official(self) -> bool:
@@ -118,6 +120,8 @@ def _entry_from_dict(raw: dict[str, Any]) -> CatalogEntry:
     files: list[str] = []
     if isinstance(files_raw, list):
         files = [str(f).strip() for f in files_raw if str(f).strip()]
+    dep = raw.get("deprecated")
+    deprecated = dep is True or str(dep).strip().lower() in ("1", "true", "yes")
     return CatalogEntry(
         id=rid,
         name=str(raw.get("name", rid)).strip() or rid,
@@ -126,6 +130,8 @@ def _entry_from_dict(raw: dict[str, Any]) -> CatalogEntry:
         path=str(raw.get("path", rid)).strip() or rid,
         summary=summary_map,
         files=files,
+        min_app_version=str(raw.get("min_app_version", "") or "").strip(),
+        deprecated=deprecated,
     )
 
 

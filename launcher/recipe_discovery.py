@@ -8,6 +8,12 @@ from pathlib import Path
 from typing import Any
 
 from i18n import t
+from recipe_paths import (
+    load_sync_state_safe,
+    manifest_for_recipe_dir,
+    overlay_manifest_path,
+    overlay_recipes_dir,
+)
 from recipe_trust import (
     rezeptor_dev_mode,
     sync_manifest_if_stale,
@@ -121,29 +127,10 @@ def launch_process_patterns_from_meta(meta: dict[str, str], rid: str = "") -> li
     return []
 
 
-def discover_recipes(
-    *,
-    recipes_dir: Path,
-    manifest_path: Path,
-    project_root: Path,
-    verify_trust: bool = True,
-) -> DiscoverOutcome:
-    """List recipes. If *verify_trust* is False, skip hashing (first paint / async)."""
-    found: list[RecipeInfo] = []
-    trust_failures: list[str] = []
-    manifest_sync = ""
-    if not recipes_dir.is_dir():
-        return DiscoverOutcome(recipes=found)
-    synced = False
-    sync_msg = ""
-    if verify_trust:
-        synced, sync_msg = sync_manifest_if_stale(
-            recipes_dir, manifest_path, project_root
-        )
-        if synced and sync_msg:
-            manifest_sync = sync_msg
-
+def _collect_yml_paths(recipes_dir: Path) -> list[Path]:
     yml_paths: list[Path] = []
+    if not recipes_dir.is_dir():
+        return yml_paths
     for yml in sorted(recipes_dir.glob("*/recipe.yml")):
         if yml.parent.name.startswith("_"):
             continue
@@ -156,15 +143,80 @@ def discover_recipes(
             if yml.parent.name.startswith("_"):
                 continue
             yml_paths.append(yml)
+    return yml_paths
+
+
+def merge_recipe_yml_paths(
+    bundled_recipes: Path,
+    overlay_recipes: Path | None = None,
+) -> list[Path]:
+    """Official/community ymls; overlay path wins on the same recipe id."""
+    by_id: dict[str, Path] = {}
+    for yml in _collect_yml_paths(bundled_recipes):
+        meta = parse_recipe_yml(yml)
+        rid = meta.get("id", yml.parent.name)
+        by_id[rid] = yml
+    if overlay_recipes is not None and overlay_recipes.is_dir():
+        for yml in _collect_yml_paths(overlay_recipes):
+            meta = parse_recipe_yml(yml)
+            rid = meta.get("id", yml.parent.name)
+            by_id[rid] = yml
+    return [by_id[k] for k in sorted(by_id)]
+
+
+def discover_recipes(
+    *,
+    recipes_dir: Path,
+    manifest_path: Path,
+    project_root: Path,
+    verify_trust: bool = True,
+    overlay_recipes: Path | None = None,
+    overlay_manifest: Path | None = None,
+) -> DiscoverOutcome:
+    """List recipes. If *verify_trust* is False, skip hashing (first paint / async).
+
+    When *overlay_recipes* is set (default: user overlay), those trees override
+    bundled recipes with the same id.
+    """
+    found: list[RecipeInfo] = []
+    trust_failures: list[str] = []
+    manifest_sync = ""
+    ov_recipes = (
+        overlay_recipes if overlay_recipes is not None else overlay_recipes_dir()
+    )
+    ov_manifest = (
+        overlay_manifest if overlay_manifest is not None else overlay_manifest_path()
+    )
+
+    if not recipes_dir.is_dir() and not ov_recipes.is_dir():
+        return DiscoverOutcome(recipes=found)
+
+    synced = False
+    sync_msg = ""
+    if verify_trust and recipes_dir.is_dir():
+        synced, sync_msg = sync_manifest_if_stale(
+            recipes_dir, manifest_path, project_root
+        )
+        if synced and sync_msg:
+            manifest_sync = sync_msg
+
+    yml_paths = merge_recipe_yml_paths(recipes_dir, ov_recipes)
+    deprecated_ids = set(load_sync_state_safe().get("deprecated_ids") or [])
 
     for yml in yml_paths:
         meta = parse_recipe_yml(yml)
         rid = meta.get("id", yml.parent.name)
         meta["_dir"] = str(yml.parent)
+        if recipe_is_overlay := _is_under(yml.parent, ov_recipes):
+            meta["_source"] = "overlay"
+        else:
+            meta["_source"] = "bundled"
         if "community" in yml.parent.parts and meta.get("origin", "") != "official":
             meta.setdefault("origin", "community")
+        if rid in deprecated_ids:
+            meta["deprecated"] = "true"
+
         if not verify_trust:
-            # Pending trust — scripts still blocked until async verify completes
             info = RecipeInfo(
                 rid=rid,
                 meta=meta,
@@ -175,18 +227,27 @@ def discover_recipes(
             )
             found.append(info)
             continue
-        # After an auto-regenerated manifest, hashes match disk but are not
-        # user-approved — force re-confirm (Approve / regen) before scripts run.
-        if synced:
+
+        use_manifest = manifest_for_recipe_dir(
+            yml.parent,
+            bundled_manifest=manifest_path,
+            overlay_manifest=ov_manifest,
+        )
+        # Bundled auto-sync forces re-confirm only for bundled recipes
+        if synced and not recipe_is_overlay:
             ok, reason = False, sync_msg or t("trust.reason_changed")
         else:
-            ok, reason = verify_recipe_trust(yml.parent, manifest_path)
+            ok, reason = verify_recipe_trust(yml.parent, use_manifest)
+
         info = RecipeInfo(rid=rid, meta=meta, trust_ok=ok, trust_reason=reason or "")
         if not ok:
             info.state = RecipeState.UNTRUSTED
             info.status_detail = reason or t("trust.manifest_failed")
             trust_failures.append(f"{rid}: {reason}")
+        elif rid in deprecated_ids:
+            info.status_detail = t("recipe_sync.deprecated_detail")
         found.append(info)
+
     trust_log = ""
     if trust_failures and not rezeptor_dev_mode():
         trust_log = "\n".join(trust_failures)
@@ -195,3 +256,11 @@ def discover_recipes(
         manifest_sync=manifest_sync,
         trust_log=trust_log,
     )
+
+
+def _is_under(path: Path, root: Path) -> bool:
+    try:
+        path.resolve().relative_to(root.resolve())
+        return True
+    except (ValueError, OSError):
+        return False

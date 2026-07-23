@@ -26,6 +26,7 @@ Photoshop, tax software (WISO), Steam games with online fixes, trainers, and mor
 - **Status checks** — optional validate on startup; refresh anytime (F5)
 - **Host tools check** — missing packages suggested once
 - **Catalog & sources** — official recipes plus a community path
+- **Recipe sync** — pull new/updated official recipes from the release bundle (Help → Update recipes)
 - **Data under** `~/.local/share/wine-software/`
 
 ![Rezeptor Home — dashboard with stats and GitHub/Wiki link cards](images/rezeptor-home-en.png)

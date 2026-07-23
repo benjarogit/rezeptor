@@ -23,6 +23,25 @@ Create one with:
 
 Community entries are **not** automatically vetted as official — author and content are your responsibility.
 
+## Recipe sync (official updates without app reinstall)
+
+Packaged builds ship a read-only `recipes/` tree. Rezeptor can still pull **newer official recipes** from the GitHub Release asset `rezeptor-recipes-<version>.tar.gz` (listed in `SHA256SUMS`).
+
+| Piece | Location |
+|-------|----------|
+| Overlay | `~/.local/share/rezeptor/recipes/` (wins over bundled same `id`) |
+| Overlay manifest | `~/.local/share/rezeptor/manifest.overlay.json` |
+| State | `~/.local/share/rezeptor/sync-state.json` |
+
+In the GUI: **Help → Update recipes…** (also checked quietly after startup). Changes need confirmation before apply.
+
+Catalog fields for sync:
+
+| Field | Meaning |
+|-------|---------|
+| `min_app_version` | Recipe needs this Rezeptor version (core APIs). Older apps see **blocked** — update the app. |
+| `deprecated` | Recipe should not be newly installed; installed data is not auto-deleted. |
+
 ## Multiple sources (multi-source)
 
 Rezeptor can merge recipes from several sources:
@@ -30,7 +49,8 @@ Rezeptor can merge recipes from several sources:
 | Source | Typical use |
 |--------|-------------|
 | Local repo | Official + `recipes/community/` |
-| `catalog.json` on GitHub | Remote index for installing recipes |
+| Release recipes bundle | Overlay sync for official recipes |
+| `catalog.json` on GitHub | Remote index for community / BYOS installs |
 
 !!! warning "Check trust"
     Recipes from external sources run scripts on your system.

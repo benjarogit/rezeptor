@@ -49,11 +49,13 @@ Der Generator hasht nur **Top-Level**-Ordner `recipes/<id>/` mit `recipe.yml` un
 
 ## Release-Assets
 
-GitHub Release enthält `SHA256SUMS` für `tar.gz` und AppImage (Flatpak hat eigene Bundle-Prüfsumme in den Release-Assets):
+GitHub Release enthält `SHA256SUMS` für `tar.gz`, AppImage und `rezeptor-recipes-*.tar.gz` (Flatpak ggf. separat):
 
 ```bash
 sha256sum -c SHA256SUMS
 ```
+
+Rezept-Sync lädt dieses Bundle, prüft SHA256 gegen `SHA256SUMS` und schreibt ins User-Overlay mit `manifest.overlay.json` — dieselben Hash-Regeln wie beim mitgelieferten Manifest.
 
 Kein GPG-/Cosign-Signing im Repo — Integrität über SHA256-Summen.
 

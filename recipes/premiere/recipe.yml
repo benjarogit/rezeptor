@@ -4,6 +4,7 @@ icon: "{repo}/images/AdobePremiere-icon.png"
 name: "Adobe Premiere Pro 2024"
 author: "benjarogit"
 category: "Video & Schnitt"
+min_app_version: "1.1.0"
 version_guaranteed: "24.1.0.85"
 version_label: "Adobe Premiere Pro 2024 (24.1.0.85)"
 version_detect:

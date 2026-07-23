@@ -23,6 +23,25 @@ Anlegen z. B. mit:
 
 Community-Einträge sind **nicht** automatisch offiziell geprüft — Autor und Inhalt liegen in deiner Verantwortung.
 
+## Rezept-Sync (Updates ohne App-Neuinstallation)
+
+Packaged Builds haben ein read-only `recipes/`-Verzeichnis. Neuere **offizielle** Rezepte kommen über das GitHub-Release-Asset `rezeptor-recipes-<version>.tar.gz` (Eintrag in `SHA256SUMS`).
+
+| Teil | Ort |
+|------|-----|
+| Overlay | `~/.local/share/rezeptor/recipes/` (gewinnt bei gleicher `id`) |
+| Overlay-Manifest | `~/.local/share/rezeptor/manifest.overlay.json` |
+| State | `~/.local/share/rezeptor/sync-state.json` |
+
+In der GUI: **Hilfe → Rezepte aktualisieren…** (auch leise nach dem Start). Übernahme erst nach Bestätigung.
+
+Katalog-Felder:
+
+| Feld | Bedeutung |
+|------|-----------|
+| `min_app_version` | Rezept braucht diese Rezeptor-Version (Core-APIs). Ältere Apps: **blocked** — App updaten. |
+| `deprecated` | Nicht neu installieren; vorhandene Daten werden nicht automatisch gelöscht. |
+
 ## Mehrere Quellen (Multi-Source)
 
 Rezeptor kann Rezepte aus mehreren Quellen zusammenführen:
@@ -30,7 +49,8 @@ Rezeptor kann Rezepte aus mehreren Quellen zusammenführen:
 | Quelle | Typisch |
 |--------|---------|
 | Lokales Repo | Offizielle + `recipes/community/` |
-| `catalog.json` auf GitHub | Remote-Index zum Nachinstallieren |
+| Release-Rezept-Bundle | Overlay-Sync für offizielle Rezepte |
+| `catalog.json` auf GitHub | Remote-Index für Community / BYOS |
 
 !!! warning "Vertrauen prüfen"
     Rezepte aus externen Quellen führen Skripte auf deinem System aus.

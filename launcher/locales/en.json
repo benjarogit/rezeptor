@@ -100,6 +100,8 @@
     "docs": "Developer documentation…",
     "docs_tip": "Maintainer documentation (MkDocs / local)",
     "check_update": "Check for updates…",
+    "check_recipes": "Update recipes…",
+    "check_recipes_tip": "Fetch official recipes from the latest release (without updating the app)",
     "report_bug": "Report issue on GitHub…",
     "about": "About Rezeptor…"
   },
@@ -244,6 +246,20 @@
     "rollback_confirm": "Restore backup {id}?\n\n{meta}",
     "rollback_done": "Rollback finished — please restart Rezeptor",
     "rollback_failed": "Rollback failed (exit {code})"
+  },
+  "recipe_sync": {
+    "available_title": "Recipe updates",
+    "available_body": "Bundle v{ver}: {n} change(s).\n\nNew and updated official recipes can be loaded into the local overlay (the app stays the same).",
+    "available_activity": "Recipe updates: {n} change(s) (bundle v{ver}) — Help → Update recipes",
+    "none_title": "Recipes up to date",
+    "none_body": "No recipe update needed (bundle v{ver}).",
+    "error_title": "Recipe update failed",
+    "error_body": "{error}",
+    "btn_apply": "Update recipes",
+    "btn_later": "Later",
+    "done_title": "Recipes updated",
+    "done_body": "Applied {n} recipe(s) from bundle v{ver}.",
+    "deprecated_detail": "No longer in the official catalog — data remains until uninstall"
   },
   "settings": {
     "title": "Settings",

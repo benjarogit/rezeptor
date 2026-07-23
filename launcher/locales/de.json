@@ -100,6 +100,8 @@
     "docs": "Entwickler-Dokumentation…",
     "docs_tip": "Maintainer-Dokumentation (MkDocs / lokal)",
     "check_update": "Update prüfen…",
+    "check_recipes": "Rezepte aktualisieren…",
+    "check_recipes_tip": "Offizielle Rezepte vom letzten Release nachladen (ohne App-Update)",
     "report_bug": "Fehler auf GitHub melden…",
     "about": "Über Rezeptor…"
   },
@@ -244,6 +246,20 @@
     "rollback_confirm": "Backup {id} wiederherstellen?\n\n{meta}",
     "rollback_done": "Rollback abgeschlossen — bitte Rezeptor neu starten",
     "rollback_failed": "Rollback fehlgeschlagen (Exit {code})"
+  },
+  "recipe_sync": {
+    "available_title": "Rezept-Updates",
+    "available_body": "Bundle v{ver}: {n} Änderung(en).\n\nNeue und geänderte offizielle Rezepte können ins lokale Overlay geladen werden (App bleibt unverändert).",
+    "available_activity": "Rezept-Updates: {n} Änderung(en) (Bundle v{ver}) — Hilfe → Rezepte aktualisieren",
+    "none_title": "Rezepte aktuell",
+    "none_body": "Kein Rezept-Update nötig (Bundle v{ver}).",
+    "error_title": "Rezept-Update fehlgeschlagen",
+    "error_body": "{error}",
+    "btn_apply": "Rezepte aktualisieren",
+    "btn_later": "Später",
+    "done_title": "Rezepte aktualisiert",
+    "done_body": "{n} Rezept(e) aus Bundle v{ver} übernommen.",
+    "deprecated_detail": "Nicht mehr im offiziellen Katalog — Daten bleiben bis zur Deinstallation"
   },
   "settings": {
     "title": "Einstellungen",

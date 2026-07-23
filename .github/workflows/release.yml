@@ -7,6 +7,7 @@ name: Release
 #   - rezeptor-X.Y.Z.tar.gz
 #   - rezeptor-X.Y.Z-x86_64.AppImage
 #   - rezeptor-X.Y.Z-x86_64.flatpak
+#   - rezeptor-recipes-X.Y.Z.tar.gz  (official recipe sync overlay)
 #   - SHA256SUMS
 on:
   workflow_dispatch:
@@ -78,16 +79,18 @@ jobs:
           names="$(gh release view "$tag" --json assets -q '.assets[].name' 2>/dev/null || true)"
           need_app="rezeptor-${VER}-x86_64.AppImage"
           need_tar="rezeptor-${VER}.tar.gz"
+          need_recipes="rezeptor-recipes-${VER}.tar.gz"
           need_sum="SHA256SUMS"
           ok=true
           echo "$names" | grep -qxF "$need_app" || ok=false
           echo "$names" | grep -qxF "$need_tar" || ok=false
+          echo "$names" | grep -qxF "$need_recipes" || ok=false
           echo "$names" | grep -qxF "$need_sum" || ok=false
           if [ "$ok" = true ]; then
             echo "Release ${tag} already complete — skip."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
-            echo "Missing assets (need AppImage + tar.gz + SHA256SUMS) — build."
+            echo "Missing assets (need AppImage + tar.gz + recipes + SHA256SUMS) — build."
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -153,6 +156,13 @@ jobs:
           scripts/build-release-package.sh
           test -f "rezeptor-${{ needs.validate.outputs.version }}.tar.gz"
 
+      - name: Build recipes sync bundle
+        run: |
+          set -euo pipefail
+          chmod +x scripts/build-recipes-bundle.sh
+          scripts/build-recipes-bundle.sh
+          test -f "rezeptor-recipes-${{ needs.validate.outputs.version }}.tar.gz"
+
       - name: Build AppImage
         env:
           APPIMAGE_EXTRACT_AND_RUN: "1"
@@ -187,6 +197,7 @@ jobs:
           sha256sum \
             "rezeptor-${ver}.tar.gz" \
             "rezeptor-${ver}-x86_64.AppImage" \
+            "rezeptor-recipes-${ver}.tar.gz" \
             | tee SHA256SUMS
           cat SHA256SUMS
 
@@ -202,6 +213,7 @@ jobs:
           assets=(
             "rezeptor-${VER}.tar.gz"
             "rezeptor-${VER}-x86_64.AppImage"
+            "rezeptor-recipes-${VER}.tar.gz"
             "SHA256SUMS"
           )
           for f in "${assets[@]}"; do
@@ -245,6 +257,7 @@ jobs:
           notes+='- `rezeptor-'"${VER}"'.tar.gz` — source package / Quellpaket (`tar xf` → `./setup.sh`)'$'\n'
           notes+='- `rezeptor-'"${VER}"'-x86_64.AppImage` — portable app / portable App'$'\n'
           notes+='- `rezeptor-'"${VER}"'-x86_64.flatpak` — Flatpak bundle (may follow in a separate upload)'$'\n'
+          notes+='- `rezeptor-recipes-'"${VER}"'.tar.gz` — official recipes sync bundle / offizielles Rezept-Bundle'$'\n'
           notes+='- `SHA256SUMS` — verify / prüfen: `sha256sum -c SHA256SUMS`'$'\n'
 
           # Create release shell first (no assets), then upload with retries.

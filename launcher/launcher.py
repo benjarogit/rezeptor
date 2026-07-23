@@ -174,6 +174,19 @@ from recipe_discovery import (
     launch_process_patterns_from_meta,
     parse_recipe_yml,
 )
+from recipe_paths import (
+    manifest_for_recipe_dir,
+    overlay_manifest_path,
+    overlay_recipes_dir,
+)
+from recipe_sync import (
+    RecipeSyncError,
+    RecipeSyncPlan,
+    apply_recipe_sync,
+    check_recipe_updates,
+    format_plan_summary,
+    pending_attention_count,
+)
 from recipe_trust import (
     friendly_trust_reason,
     generate_manifest,
@@ -220,6 +233,16 @@ def discover_recipes(*, verify_trust: bool = True) -> DiscoverOutcome:
         manifest_path=MANIFEST_PATH,
         project_root=ROOT,
         verify_trust=verify_trust,
+        overlay_recipes=overlay_recipes_dir(),
+        overlay_manifest=overlay_manifest_path(),
+    )
+
+
+def _recipe_manifest_path(recipe_dir: Path) -> Path:
+    return manifest_for_recipe_dir(
+        recipe_dir,
+        bundled_manifest=MANIFEST_PATH,
+        overlay_manifest=overlay_manifest_path(),
     )
 
 
@@ -978,8 +1001,10 @@ class RezeptorWindow(QMainWindow):
         self._show_home()
         # Trust + quick status off UI thread (after first paint).
         QTimer.singleShot(0, self._start_deferred_trust_verify)
+        self._recipe_sync_plan: RecipeSyncPlan | None = None
         # Netzwerk nicht auf dem UI-Thread — verzögert + Hintergrund.
         QTimer.singleShot(2500, self.check_updates_background)
+        QTimer.singleShot(4000, self.check_recipe_sync_background)
 
     def _build_menus(self) -> None:
         self.menuBar().clear()
@@ -1025,6 +1050,11 @@ class RezeptorWindow(QMainWindow):
         help_menu.addAction(act_docs)
         help_menu.addSeparator()
         help_menu.addAction(t("menu.check_update"), self.check_updates)
+        act_recipes = QAction(t("menu.check_recipes"), self)
+        act_recipes.setToolTip(t("menu.check_recipes_tip"))
+        act_recipes.setStatusTip(t("menu.check_recipes_tip"))
+        act_recipes.triggered.connect(self.check_recipe_sync)
+        help_menu.addAction(act_recipes)
         help_menu.addSeparator()
         help_menu.addAction(t("menu.report_bug"), self.report_bug)
         help_menu.addAction(t("menu.about"), self.show_about)
@@ -1888,6 +1918,9 @@ class RezeptorWindow(QMainWindow):
             for r in visible
             if r.state == RecipeState.PARTIAL or _recipe_is_untrusted(r)
         )
+        sync_n = pending_attention_count()
+        if sync_n:
+            attention += sync_n
         return {
             "recipes": len(visible),
             "installed": installed,
@@ -2083,6 +2116,102 @@ class RezeptorWindow(QMainWindow):
             QTimer.singleShot(0, apply)
 
         threading.Thread(target=work, daemon=True, name="rezeptor-update-check").start()
+
+    def check_recipe_sync_background(self) -> None:
+        """Silent recipe-bundle check — updates Home attention counter."""
+
+        def work() -> None:
+            try:
+                plan = check_recipe_updates(
+                    bundled_recipes=RECIPES_DIR,
+                    bundled_manifest=MANIFEST_PATH,
+                )
+            except RecipeSyncError:
+                return
+
+            def apply() -> None:
+                self._recipe_sync_plan = plan
+                self._refresh_home_stats()
+                if plan.has_actionable or plan.pending_count:
+                    self._activity(
+                        "info",
+                        t(
+                            "recipe_sync.available_activity",
+                            n=plan.pending_count,
+                            ver=plan.bundle_version,
+                        ),
+                    )
+
+            QTimer.singleShot(0, apply)
+
+        threading.Thread(target=work, daemon=True, name="rezeptor-recipe-sync").start()
+
+    def check_recipe_sync(self) -> None:
+        """Interactive: check GitHub recipes bundle and optionally apply."""
+        try:
+            plan = check_recipe_updates(
+                bundled_recipes=RECIPES_DIR,
+                bundled_manifest=MANIFEST_PATH,
+            )
+        except RecipeSyncError as exc:
+            QMessageBox.warning(
+                self,
+                t("recipe_sync.error_title"),
+                t("recipe_sync.error_body", error=str(exc)),
+            )
+            return
+
+        self._recipe_sync_plan = plan
+        self._refresh_home_stats()
+
+        if not plan.changes:
+            QMessageBox.information(
+                self,
+                t("recipe_sync.none_title"),
+                t("recipe_sync.none_body", ver=plan.bundle_version),
+            )
+            return
+
+        summary = format_plan_summary(plan)
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(t("recipe_sync.available_title"))
+        box.setText(
+            t(
+                "recipe_sync.available_body",
+                ver=plan.bundle_version,
+                n=plan.pending_count,
+            )
+        )
+        box.setInformativeText(summary[:4000] if summary else "")
+        apply_btn = None
+        if plan.has_actionable:
+            apply_btn = box.addButton(
+                t("recipe_sync.btn_apply"), QMessageBox.ButtonRole.AcceptRole
+            )
+        box.addButton(t("recipe_sync.btn_later"), QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if apply_btn is not None and box.clickedButton() == apply_btn:
+            self._apply_recipe_sync_plan(plan)
+
+    def _apply_recipe_sync_plan(self, plan: RecipeSyncPlan) -> None:
+        try:
+            applied = apply_recipe_sync(plan, bundled_recipes=RECIPES_DIR)
+        except RecipeSyncError as exc:
+            QMessageBox.warning(
+                self,
+                t("recipe_sync.error_title"),
+                t("recipe_sync.error_body", error=str(exc)),
+            )
+            return
+        self._apply_discover_outcome(discover_recipes())
+        self._populate_list()
+        self._refresh_home_stats()
+        QMessageBox.information(
+            self,
+            t("recipe_sync.done_title"),
+            t("recipe_sync.done_body", n=len(applied), ver=plan.bundle_version),
+        )
 
     def check_updates(self) -> None:
         latest, url = fetch_latest_release()
@@ -3210,7 +3339,7 @@ class RezeptorWindow(QMainWindow):
             return None
         # Re-verify on disk before async/launch (catches tamper after selection).
         if self._selected and rd is not None and not rezeptor_dev_mode():
-            ok, reason = verify_recipe_trust(rd, MANIFEST_PATH)
+            ok, reason = verify_recipe_trust(rd, _recipe_manifest_path(rd))
             if not ok:
                 self._selected.trust_ok = False
                 self._selected.trust_reason = reason or ""

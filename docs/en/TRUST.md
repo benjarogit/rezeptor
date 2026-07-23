@@ -49,11 +49,13 @@ The generator hashes only **top-level** dirs `recipes/<id>/` that contain `recip
 
 ## Release assets
 
-GitHub releases include `SHA256SUMS` for the `tar.gz` and AppImage (Flatpak has its own bundle checksum in the release assets):
+GitHub releases include `SHA256SUMS` for the `tar.gz`, AppImage, and `rezeptor-recipes-*.tar.gz` (Flatpak may follow in a separate upload):
 
 ```bash
 sha256sum -c SHA256SUMS
 ```
+
+Recipe sync downloads that recipes tarball, verifies its SHA256 against `SHA256SUMS`, then installs into the user overlay with a separate `manifest.overlay.json` — same hash rules as the bundled manifest.
 
 No GPG/cosign signing in the repo — integrity via SHA256 sums.
 

@@ -18,6 +18,7 @@
       "category": "Video & Schnitt",
       "trust": "official",
       "path": "premiere",
+      "min_app_version": "1.1.0",
       "summary": {
         "de": "Premiere Pro 2024 (Proton-GE). NVIDIA: CUDA via nvidia-libs. AMD/Intel: ohne CUDA — oft nur Software-Renderer.",
         "en": "Premiere Pro 2024 (Proton-GE). NVIDIA: CUDA via nvidia-libs. AMD/Intel: no CUDA — often software renderer only."

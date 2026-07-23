@@ -26,6 +26,7 @@ Photoshop, Steuerprogramme (WISO), Steam-Spiele mit Online-Fix, Trainer und mehr
 - **Statusprüfung** — optional beim Start; jederzeit neu prüfen (F5)
 - **System-Tools** — fehlende Pakete einmalig vorschlagen
 - **Katalog & Quellen** — offizielle Rezepte plus Community-Pfad
+- **Rezept-Sync** — neue/aktualisierte offizielle Rezepte vom Release-Bundle (Hilfe → Rezepte aktualisieren)
 - **Daten unter** `~/.local/share/wine-software/`
 
 ![Rezeptor Startseite — Dashboard mit Statistik und GitHub-/Wiki-Karten](images/rezeptor-home-de.png)
