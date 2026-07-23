@@ -1,0 +1,126 @@
+/* Rezeptor brand — Anthrazit / Kupfer / Pergament (docs/*/BRAND.md) */
+
+:root {
+  --rz-anthracite: #1c1c1a;
+  --rz-copper: #b87333;
+  --rz-copper-light: #c98a4d;
+  --rz-copper-dark: #9a5c28;
+  --rz-parchment: #ede6d6;
+  --rz-success: #639922;
+  --rz-amber: #d9a441;
+
+  --md-primary-fg-color: var(--rz-copper);
+  --md-primary-fg-color--light: var(--rz-copper-light);
+  --md-primary-fg-color--dark: var(--rz-copper-dark);
+  --md-accent-fg-color: var(--rz-copper);
+  --md-accent-fg-color--transparent: rgba(184, 115, 51, 0.12);
+  --md-typeset-a-color: #9a5c28;
+}
+
+[data-md-color-scheme="default"] {
+  --md-default-bg-color: #f7f3ea;
+  --md-default-fg-color: var(--rz-anthracite);
+}
+
+[data-md-color-scheme="slate"] {
+  --md-hue: 40;
+  --md-default-bg-color: var(--rz-anthracite);
+  --md-default-fg-color: var(--rz-parchment);
+  --md-primary-fg-color: var(--rz-copper);
+  --md-primary-fg-color--light: var(--rz-copper-light);
+  --md-primary-fg-color--dark: var(--rz-copper-dark);
+  --md-accent-fg-color: #d4a574;
+  --md-accent-fg-color--transparent: rgba(212, 165, 116, 0.14);
+  --md-typeset-a-color: #d4a574;
+}
+
+.md-header__button.md-logo img,
+.md-nav__title .md-nav__button.md-logo img {
+  height: 2rem;
+  width: 2rem;
+  object-fit: contain;
+}
+
+.md-header {
+  box-shadow: 0 0 0.2rem rgba(0, 0, 0, 0.08), 0 0.2rem 0.4rem rgba(0, 0, 0, 0.12);
+}
+
+/* Hero on home */
+.md-typeset .rz-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin: 0.5rem 0 1.5rem;
+  flex-wrap: wrap;
+}
+
+.md-typeset .rz-hero img {
+  width: 6.5rem;
+  height: 6.5rem;
+  object-fit: contain;
+  border-radius: 0.6rem;
+  box-shadow: 0 0.25rem 1rem rgba(184, 115, 51, 0.28);
+  background: var(--rz-anthracite);
+}
+
+.md-typeset .rz-hero .rz-hero__text {
+  flex: 1 1 14rem;
+  min-width: 0;
+}
+
+.md-typeset .rz-hero h1 {
+  margin: 0 0 0.35rem;
+}
+
+.md-typeset .rz-hero p {
+  margin: 0;
+  font-size: 0.95rem;
+  opacity: 0.92;
+}
+
+.md-typeset .grid.cards > ul > li {
+  border-radius: 0.4rem;
+  border-color: color-mix(in srgb, var(--md-primary-fg-color) 18%, transparent);
+}
+
+.md-typeset .grid.cards > ul > li:hover {
+  border-color: var(--md-accent-fg-color);
+}
+
+.md-typeset .grid.cards .lg {
+  color: var(--md-accent-fg-color);
+}
+
+.md-typeset .grid.cards .twemoji,
+.md-typeset .grid.cards svg {
+  color: var(--md-accent-fg-color);
+  fill: currentColor;
+}
+
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-color: var(--md-accent-fg-color);
+}
+
+.md-typeset .admonition.tip > .admonition-title,
+.md-typeset details.tip > summary {
+  background-color: var(--md-accent-fg-color--transparent);
+}
+
+.md-typeset .admonition.info,
+.md-typeset details.info {
+  border-color: var(--md-primary-fg-color);
+}
+
+.md-typeset .admonition.info > .admonition-title,
+.md-typeset details.info > summary {
+  background-color: color-mix(in srgb, var(--md-primary-fg-color) 12%, transparent);
+}
+
+.md-typeset .task-list-control [type="checkbox"]:checked + .task-list-indicator::before {
+  background: var(--md-accent-fg-color) !important;
+}
+
+.md-typeset :is(.emojione, .twemoji, .gemoji) svg {
+  vertical-align: -0.125em;
+}

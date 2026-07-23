@@ -1,0 +1,2573 @@
+
+<!doctype html>
+<html lang="de" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Offizielles Handbuch für Rezeptor — Nutzer- und Autoren-Doku für Windows-Software unter Proton-GE auf Linux.">
+      
+      
+        <meta name="author" content="SunnyCueq">
+      
+      
+        <link rel="canonical" href="https://benjarogit.github.io/rezeptor/CORE-API/">
+      
+      
+        <link rel="prev" href="../RECIPE-AUTHORING/">
+      
+      
+        <link rel="next" href="../VALIDATE-REPAIR/">
+      
+      
+        
+          <link rel="alternate" href="./" hreflang="de">
+        
+          <link rel="alternate" href="../en/CORE-API/" hreflang="en">
+        
+      
+      
+      <link rel="icon" href="../assets/rezeptor-icon.svg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Core-API - Rezeptor · Dokumentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+  
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+    
+      
+      
+    
+  
+  
+  <style>:root{--md-admonition-icon--note:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M11%209h2V7h-2m1%2013c-4.41%200-8-3.59-8-8s3.59-8%208-8%208%203.59%208%208-3.59%208-8%208m0-18A10%2010%200%200%200%202%2012a10%2010%200%200%200%2010%2010%2010%2010%200%200%200%2010-10A10%2010%200%200%200%2012%202m-1%2015h2v-6h-2z%22/%3E%3C/svg%3E');--md-admonition-icon--tip:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M17.66%2011.2c-.23-.3-.51-.56-.77-.82-.67-.6-1.43-1.03-2.07-1.66C13.33%207.26%2013%204.85%2013.95%203c-.95.23-1.78.75-2.49%201.32-2.59%202.08-3.61%205.75-2.39%208.9.04.1.08.2.08.33%200%20.22-.15.42-.35.5-.23.1-.47.04-.66-.12a.6.6%200%200%201-.14-.17c-1.13-1.43-1.31-3.48-.55-5.12C5.78%2010%204.87%2012.3%205%2014.47c.06.5.12%201%20.29%201.5.14.6.41%201.2.71%201.73%201.08%201.73%202.95%202.97%204.96%203.22%202.14.27%204.43-.12%206.07-1.6%201.83-1.66%202.47-4.32%201.53-6.6l-.13-.26c-.21-.46-.77-1.26-.77-1.26m-3.16%206.3c-.28.24-.74.5-1.1.6-1.12.4-2.24-.16-2.9-.82%201.19-.28%201.9-1.16%202.11-2.05.17-.8-.15-1.46-.28-2.23-.12-.74-.1-1.37.17-2.06.19.38.39.76.63%201.06.77%201%201.98%201.44%202.24%202.8.04.14.06.28.06.43.03.82-.33%201.72-.93%202.27%22/%3E%3C/svg%3E');--md-admonition-icon--warning:url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2024%2024%22%3E%3Cpath%20d%3D%22M12%202%201%2021h22M12%206l7.53%2013H4.47M11%2010v4h2v-4m-2%206v2h2v-2%22/%3E%3C/svg%3E');}</style>
+
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#core-api" class="md-skip">
+          Zum Inhalt
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Kopfzeile">
+    <a href=".." title="Rezeptor · Dokumentation" class="md-header__button md-logo" aria-label="Rezeptor · Dokumentation" data-md-component="logo">
+      
+  <img src="../assets/rezeptor-icon.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Rezeptor · Dokumentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Core-API
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Zum hellen Modus"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Zum hellen Modus" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.3 16-.7-2h-3.2l-.7 2H7.8L11 7h2l3.2 9zM20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12zm-9.15 3.96h2.3L12 9z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Zum dunklen Modus"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Zum dunklen Modus" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Systemeinstellung"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Systemeinstellung" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+      <div class="md-header__option">
+  <div class="md-select">
+    
+    <button class="md-header__button md-icon" aria-label="Sprache wechseln">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m12.87 15.07-2.54-2.51.03-.03A17.5 17.5 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2zm-2.62 7 1.62-4.33L19.12 17z"/></svg>
+    </button>
+    <div class="md-select__inner">
+      <ul class="md-select__list">
+        
+          <li class="md-select__item">
+            <a href="./" hreflang="de" class="md-select__link">
+              Deutsch
+            </a>
+          </li>
+        
+          <li class="md-select__item">
+            <a href="../en/CORE-API/" hreflang="en" class="md-select__link">
+              English
+            </a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</div>
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Suche" placeholder="Suche" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Suche">
+        
+          <a href="javascript:void(0)" class="md-search__icon md-icon" title="Teilen" aria-label="Teilen" data-clipboard data-clipboard-text="" data-md-component="search-share" tabindex="-1">
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9a3 3 0 0 0-3 3 3 3 0 0 0 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.15c-.05.21-.08.43-.08.66 0 1.61 1.31 2.91 2.92 2.91s2.92-1.3 2.92-2.91A2.92 2.92 0 0 0 18 16.08"/></svg>
+          </a>
+        
+        <button type="reset" class="md-search__icon md-icon" title="Zurücksetzen" aria-label="Zurücksetzen" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Suche wird initialisiert
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/benjarogit/rezeptor" title="Zum Repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    benjarogit/rezeptor
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Hauptnavigation" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Start
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../GETTING-STARTED/" class="md-tabs__link">
+          
+  
+  
+  Benutzer
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../ENTWICKLER/" class="md-tabs__link">
+          
+  
+  
+  Entwickeln
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../INSTALLER/" class="md-tabs__link">
+          
+  
+  
+  Muster
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../CONTRIBUTING/" class="md-tabs__link">
+          
+  
+  
+  Beitrag
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Rezeptor · Dokumentation" class="md-nav__button md-logo" aria-label="Rezeptor · Dokumentation" data-md-component="logo">
+      
+  <img src="../assets/rezeptor-icon.svg" alt="logo">
+
+    </a>
+    Rezeptor · Dokumentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/benjarogit/rezeptor" title="Zum Repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    benjarogit/rezeptor
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benutzer
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Benutzer
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../GETTING-STARTED/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schnellstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../USER-GUIDE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benutzerhandbuch
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CATALOG/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rezept-Katalog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Entwickeln
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Entwickeln
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ENTWICKLER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Übersicht
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RECIPES/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rezepte (Verweis)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROJECT-LAYOUT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Projektstruktur
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../RECIPE-AUTHORING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rezept schreiben
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core-API
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core-API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Inhaltsverzeichnis">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Inhaltsverzeichnis
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#hook-einstieg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook-Einstieg
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hook-Einstieg">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#profile-recipe_hooksload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profile (recipe_hooks::load)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#install-orchestrierung-ein-pfad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install-Orchestrierung (ein Pfad)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recipe-hookssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        recipe-hooks.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prefix-recipe-prefixsh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prefix — recipe-prefix.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#winetricks-recipe-winetrickssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Winetricks — recipe-winetricks.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#windows-10-recipe-win10sh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows 10 — recipe-win10.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validate-recipe-validatesh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validate — recipe-validate.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-recipe-installsh-recipe-install-stepssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install — recipe-install.sh / recipe-install-steps.sh
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Install — recipe-install.sh / recipe-install-steps.sh">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recipe_installprepare_source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        recipe_install::prepare_source
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recipe_install_stepsrun" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        recipe_install_steps::run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wine-runtime-wine-runtimesh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wine-Runtime — wine-runtime.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#desktop-recipe-desktopsh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Desktop — recipe-desktop.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deploy-recipe-deploysh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deploy — recipe-deploy.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pfade-env" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pfade &amp; Env
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pfade &amp; Env">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pathssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        paths.sh
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recipesh-data_root-auflosung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        recipe.sh — DATA_ROOT-Auflösung
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#env-filesh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        env-file.sh
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#securitysh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        security.sh
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gui-bridge-outputsh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GUI-Bridge — output.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#weitere-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Weitere Module
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#invarianten-kurz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invarianten (kurz)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../VALIDATE-REPAIR/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validate & Repair
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../UNINSTALL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deinstallation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TRUST/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trust & Manifest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../LAUNCHER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GUI-Launcher
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../LOG-PROTOCOL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Log-Protokoll
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Muster
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Muster
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../INSTALLER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Offline-Installer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../WISO/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Portable (WISO)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../STEAM-WRAPPER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Steam + Online-Fix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../TRAINER/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Trainer / Einzel-EXE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Beitrag
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Beitrag
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTRIBUTING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Mitwirken
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTRIBUTING-TRANSLATIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Übersetzungen
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../I18N/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Internationalisierung
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../BRAND/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Marke
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Inhaltsverzeichnis">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Inhaltsverzeichnis
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#hook-einstieg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hook-Einstieg
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Hook-Einstieg">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#profile-recipe_hooksload" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profile (recipe_hooks::load)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#install-orchestrierung-ein-pfad" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install-Orchestrierung (ein Pfad)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#recipe-hookssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        recipe-hooks.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#prefix-recipe-prefixsh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Prefix — recipe-prefix.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#winetricks-recipe-winetrickssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Winetricks — recipe-winetricks.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#windows-10-recipe-win10sh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Windows 10 — recipe-win10.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#validate-recipe-validatesh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Validate — recipe-validate.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-recipe-installsh-recipe-install-stepssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Install — recipe-install.sh / recipe-install-steps.sh
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Install — recipe-install.sh / recipe-install-steps.sh">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#recipe_installprepare_source" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        recipe_install::prepare_source
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recipe_install_stepsrun" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        recipe_install_steps::run
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#wine-runtime-wine-runtimesh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Wine-Runtime — wine-runtime.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#desktop-recipe-desktopsh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Desktop — recipe-desktop.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deploy-recipe-deploysh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Deploy — recipe-deploy.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pfade-env" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pfade &amp; Env
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Pfade &amp; Env">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pathssh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        paths.sh
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recipesh-data_root-auflosung" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        recipe.sh — DATA_ROOT-Auflösung
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#env-filesh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        env-file.sh
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#securitysh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        security.sh
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gui-bridge-outputsh" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        GUI-Bridge — output.sh
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#weitere-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Weitere Module
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#invarianten-kurz" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Invarianten (kurz)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href=".." class="md-path__link">
+        
+  <span class="md-ellipsis">
+    Start
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      <li class="md-path__item">
+        <a href="../ENTWICKLER/" class="md-path__link">
+          
+  <span class="md-ellipsis">
+    Entwickeln
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+    <a href="https://github.com/benjarogit/rezeptor/edit/main/docs/de/CORE-API.md" title="Seite editieren" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m14.06 9 .94.94L5.92 19H5v-.92zm3.6-6c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.04 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29m-3.6 3.19L3 17.25V21h3.75L17.81 9.94z"/></svg>
+    </a>
+  
+  
+    
+      
+    
+    <a href="https://github.com/benjarogit/rezeptor/raw/main/docs/de/CORE-API.md" title="Quellcode der Seite anzeigen" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 9a3 3 0 0 1 3 3 3 3 0 0 1-3 3 3 3 0 0 1-3-3 3 3 0 0 1 3-3m0-4.5c5 0 9.27 3.11 11 7.5-1.73 4.39-6 7.5-11 7.5S2.73 16.39 1 12c1.73-4.39 6-7.5 11-7.5M3.18 12a9.821 9.821 0 0 0 17.64 0 9.821 9.821 0 0 0-17.64 0"/></svg>
+    </a>
+  
+
+
+<h1 id="core-api">Core-API<a class="headerlink" href="#core-api" title="Permanent link">&para;</a></h1>
+<p>Präzise Referenz der öffentlichen Bash-APIs unter <code>core/</code>. Rezepte sollen diese Module nutzen — nicht nachbauen.</p>
+<h2 id="hook-einstieg">Hook-Einstieg<a class="headerlink" href="#hook-einstieg" title="Permanent link">&para;</a></h2>
+<p>Jedes Hook-Skript:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">RECIPE_DIR</span><span class="o">=</span><span class="s2">&quot;</span><span class="k">$(</span><span class="nb">cd</span><span class="w"> </span><span class="s2">&quot;</span><span class="k">$(</span>dirname<span class="w"> </span><span class="s2">&quot;</span><span class="si">${</span><span class="nv">BASH_SOURCE</span><span class="p">[0]</span><span class="si">}</span><span class="s2">&quot;</span><span class="k">)</span><span class="s2">&quot;</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">pwd</span><span class="k">)</span><span class="s2">&quot;</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">source</span><span class="w"> </span><span class="s2">&quot;</span><span class="nv">$RECIPE_DIR</span><span class="s2">/../../core/recipe-hooks.sh&quot;</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>recipe_hooks::load<span class="w"> </span>&lt;profil&gt;<span class="w">   </span><span class="c1"># install|launch|validate|repair|kill|minimal</span>
+</span></code></pre></div>
+<p><code>PROJECT_ROOT</code> wird nach oben gesucht, bis <code>core/recipe-hooks.sh</code> existiert (gilt auch für <code>recipes/community/&lt;id&gt;/</code>).</p>
+<h3 id="profile-recipe_hooksload">Profile (<code>recipe_hooks::load</code>)<a class="headerlink" href="#profile-recipe_hooksload" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Profil</th>
+<th>Geladene Module (Auszug)</th>
+<th>Seiteneffekte</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>minimal</code></td>
+<td><code>paths</code>, <code>recipe</code>, <code>output</code></td>
+<td>Nur Env — für <strong>uninstall</strong></td>
+</tr>
+<tr>
+<td><code>install</code></td>
+<td>security, wine-runtime, prefix, deploy, install, install-steps, winetricks, win10, …</td>
+<td><code>wine_wrappers</code>, <code>force_prefix</code>, <code>WINEARCH=win64</code></td>
+</tr>
+<tr>
+<td><code>launch</code></td>
+<td>env-file, wine-runtime, guard, …</td>
+<td><code>wine_wrappers</code>, <code>force_prefix</code></td>
+</tr>
+<tr>
+<td><code>validate</code></td>
+<td>env-file, <code>recipe-validate</code></td>
+<td>Read-only</td>
+</tr>
+<tr>
+<td><code>repair</code></td>
+<td>wine-runtime, prefix, winetricks, win10, validate, …</td>
+<td><code>wine_wrappers</code>, <code>force_prefix</code></td>
+</tr>
+<tr>
+<td><code>kill</code></td>
+<td>wine-runtime, <code>recipe-kill</code></td>
+<td><code>force_prefix</code></td>
+</tr>
+</tbody>
+</table>
+<p>Danach läuft immer <code>recipe_hooks::load_app_module</code> (optional <code>core/recipe-&lt;id&gt;.sh</code> / <code>-install.sh</code> / <code>-launch.sh</code>).</p>
+<div class="admonition danger">
+<p class="admonition-title">Uninstall</p>
+<p>Immer <code>recipe_hooks::load minimal</code> — <strong>nie</strong> <code>load kill</code> (Proton/Hang-Risiko).</p>
+</div>
+<h3 id="install-orchestrierung-ein-pfad">Install-Orchestrierung (ein Pfad)<a class="headerlink" href="#install-orchestrierung-ein-pfad" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Pfad</th>
+<th>Status</th>
+<th>Nutzung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recipes/&lt;id&gt;/*.sh</code> + <code>recipe_hooks::*</code></td>
+<td><strong>Aktuell</strong></td>
+<td>Alle neuen und gepflegten Rezepte</td>
+</tr>
+<tr>
+<td><code>launcher()</code> in <code>core/sharedFuncs.sh</code></td>
+<td><strong>LEGACY</strong></td>
+<td>Nur historischer Photoshop-CLI-Desktop-Deploy — keine neuen Aufrufer</td>
+</tr>
+<tr>
+<td><code>photoshop::*</code>-Helfer in <code>sharedFuncs.sh</code></td>
+<td>Geteilte Utilities</td>
+<td>Von modernem <code>recipes/photoshop/*</code> bei Bedarf</td>
+</tr>
+</tbody>
+</table>
+<p>Updates laufen über <code>scripts/rezeptor-update.sh</code> (kein zweites <code>core/update.sh</code>).</p>
+<hr />
+<h2 id="recipe-hookssh"><code>recipe-hooks.sh</code><a class="headerlink" href="#recipe-hookssh" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Funktion</th>
+<th>Rolle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recipe_hooks::load</code></td>
+<td>Profil laden</td>
+</tr>
+<tr>
+<td><code>recipe_hooks::purge_recipe_data</code></td>
+<td>Desktop + gewählter + kanonischer <code>data_root</code></td>
+</tr>
+<tr>
+<td><code>recipe_hooks::force_prefix</code></td>
+<td><code>WINEPREFIX</code> / <code>WINE_PREFIX</code> = <code>$DATA_ROOT/prefix</code></td>
+</tr>
+<tr>
+<td><code>recipe_hooks::wine_wrappers</code></td>
+<td>Shell-Funktionen <code>wine</code> / <code>winetricks</code> / … → Proton</td>
+</tr>
+<tr>
+<td><code>recipe_hooks::runtime_init</code></td>
+<td><code>wine_runtime::reset; init; export_env</code></td>
+</tr>
+<tr>
+<td><code>recipe_hooks::state_set</code> / <code>state_get</code></td>
+<td>Keys in <code>$DATA_ROOT/recipe.env</code></td>
+</tr>
+<tr>
+<td><code>recipe_hooks::emit_log_paths</code></td>
+<td><code>RECIPE_LOG_FILE=</code> / <code>RECIPE_ERROR_LOG=</code> für GUI</td>
+</tr>
+<tr>
+<td><code>recipe_hooks::install_prefix</code></td>
+<td>Runtime + <code>recipe_prefix::ensure</code></td>
+</tr>
+<tr>
+<td><code>recipe_hooks::install_winetricks_from_recipe</code></td>
+<td>Pakete aus YAML + <code>recipe_win10::ensure</code></td>
+</tr>
+<tr>
+<td><code>recipe_hooks::paths_expand_tokens</code></td>
+<td><code>{repo}</code>, <code>{data_root}</code>, <code>~</code></td>
+</tr>
+<tr>
+<td><code>recipe_hooks::validate_prefix</code></td>
+<td>Prefix initialisiert?</td>
+</tr>
+<tr>
+<td><code>recipe_hooks::hint_wine_popup</code></td>
+<td><code>@warn:</code> User-Aktion (Mono/Dialoge)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="prefix-recipe-prefixsh">Prefix — <code>recipe-prefix.sh</code><a class="headerlink" href="#prefix-recipe-prefixsh" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Funktion</th>
+<th>Rolle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recipe_prefix::ensure &lt;prefix&gt;</code></td>
+<td>Anlegen/Update: <code>wineboot -i</code>/<code>-u</code>, Mono-Bootstrap, Virtual Desktop aus</td>
+</tr>
+<tr>
+<td><code>recipe_prefix::wait_ready</code></td>
+<td>Wartet auf <code>user.reg</code></td>
+</tr>
+</tbody>
+</table>
+<p>Während Bootstrap: <code>WINEDLLOVERRIDES=mscoree=d;mshtml=d;winemenubuilder.exe=d</code>.</p>
+<hr />
+<h2 id="winetricks-recipe-winetrickssh">Winetricks — <code>recipe-winetricks.sh</code><a class="headerlink" href="#winetricks-recipe-winetrickssh" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Funktion</th>
+<th>Rolle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recipe_winetricks::run &lt;log&gt; &lt;pkgs…&gt;</code></td>
+<td>Haupteinstieg; Timeouts 600 s (900 s fonts/dotnet/vcrun)</td>
+</tr>
+<tr>
+<td><code>recipe_winetricks::prepare</code></td>
+<td>Runtime + Cache</td>
+</tr>
+<tr>
+<td><code>recipe_winetricks::stabilize_prefix</code></td>
+<td><code>wineboot -u</code> mit Timeout</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Invarianten:</strong></p>
+<ul>
+<li>Aufruf <strong>nur</strong> über <code>recipe_winetricks::run</code> (nie rohes <code>winetricks</code> in Rezepten)</li>
+<li><strong>Retry nur bei Exit 139</strong> (SIGSEGV) — einmal wineserver neu, dann Retry</li>
+<li>Vor Aufruf: <code>unset -f wine wineboot</code> (Wrapper würden winetricks brechen)</li>
+<li>Kein <code>recipe_wine_silent::run</code> um winetricks (SEGV unter Proton)</li>
+<li><code>vcrun*</code> → bevorzugt <code>recipe_vcrun::ensure</code>; <code>dotnet*</code> → <code>recipe_dotnet::ensure</code>; <code>win10</code> → <code>recipe_win10::ensure</code></li>
+</ul>
+<hr />
+<h2 id="windows-10-recipe-win10sh">Windows 10 — <code>recipe-win10.sh</code><a class="headerlink" href="#windows-10-recipe-win10sh" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Funktion</th>
+<th>Rolle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recipe_win10::ensure</code></td>
+<td><code>HKCU\Software\Wine\Version=win10</code> + <code>CurrentVersion=10.0</code>, <code>CurrentBuild=19045</code></td>
+</tr>
+</tbody>
+</table>
+<p>Nur Registry — <strong>kein</strong> winetricks <code>winecfg</code> / doppelte <code>settings win10</code> <strong>und</strong> <code>win10</code>-Aufrufe.</p>
+<hr />
+<h2 id="validate-recipe-validatesh">Validate — <code>recipe-validate.sh</code><a class="headerlink" href="#validate-recipe-validatesh" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Funktion</th>
+<th>Rolle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recipe_validate::ok</code> / <code>fail</code> / <code>warn</code></td>
+<td><code>OK:</code> / <code>FAIL:</code> / <code>WARN:</code></td>
+</tr>
+<tr>
+<td><code>recipe_validate::prefix_initialized</code></td>
+<td><code>user.reg</code> vorhanden</td>
+</tr>
+<tr>
+<td><code>recipe_validate::graphics_dlls_present</code></td>
+<td>vkd3d + d3d11 in system32</td>
+</tr>
+<tr>
+<td><code>recipe_validate::windows_version</code></td>
+<td>win10 in Registry</td>
+</tr>
+<tr>
+<td><code>recipe_validate::vcrun_dll_ok</code></td>
+<td><code>msvcp140.dll</code> PE-Check</td>
+</tr>
+<tr>
+<td><code>recipe_validate::version_guaranteed_check</code></td>
+<td>Gegen <code>version_guaranteed</code></td>
+</tr>
+<tr>
+<td><code>recipe_validate::winetricks_done</code></td>
+<td>Eintrag in <code>winetricks.log</code></td>
+</tr>
+</tbody>
+</table>
+<p>Vertrag: <a href="../VALIDATE-REPAIR/">Validate &amp; Repair</a>.</p>
+<hr />
+<h2 id="install-recipe-installsh-recipe-install-stepssh">Install — <code>recipe-install.sh</code> / <code>recipe-install-steps.sh</code><a class="headerlink" href="#install-recipe-installsh-recipe-install-stepssh" title="Permanent link">&para;</a></h2>
+<h3 id="recipe_installprepare_source"><code>recipe_install::prepare_source</code><a class="headerlink" href="#recipe_installprepare_source" title="Permanent link">&para;</a></h3>
+<p>Exportiert u. a.:</p>
+<ul>
+<li><code>RECIPE_SOURCE_TYPE</code>: <code>portable_folder</code> | <code>installer_file</code> | <code>installer_folder</code></li>
+<li><code>RECIPE_WORK_ROOT</code></li>
+<li><code>RECIPE_INSTALLER_PATH</code> (falls zutreffend)</li>
+</ul>
+<p>Eingabe-Reihenfolge: <code>RECIPE_INSTALLER_PATH</code> → <code>RECIPE_ARCHIVE_PATH</code> → <code>source_kind: fixed_path</code> → <code>RECIPE_SOURCE_ROOT</code>.</p>
+<h3 id="recipe_install_stepsrun"><code>recipe_install_steps::run</code><a class="headerlink" href="#recipe_install_stepsrun" title="Permanent link">&para;</a></h3>
+<p>Liest <code>install_steps:</code> aus YAML (<code>scripts/recipe-yaml-read.py</code>).</p>
+<p><strong>Schritt-Typen:</strong> <code>prepare_source</code>, <code>require_portable</code>, <code>prefix</code>, <code>winetricks</code>, <code>deploy_graphics</code>, <code>run_installer</code>, <code>stabilize_prefix</code>, <code>win10</code>, <code>fonts_registry</code>, <code>emit_log_paths</code>, <code>module</code>, <code>copy_asset</code>, <code>env_set</code>, <code>progress</code>, <code>vcrun</code>, <code>dotnet</code>.</p>
+<p>Tokens: <code>{repo}</code>, <code>{data_root}</code>, <code>{recipe}</code>, <code>~</code>.</p>
+<p>Exit <strong>11</strong> bei Fehlschlag eines Schritts (GUI kann Retry anbieten).</p>
+<hr />
+<h2 id="wine-runtime-wine-runtimesh">Wine-Runtime — <code>wine-runtime.sh</code><a class="headerlink" href="#wine-runtime-wine-runtimesh" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Funktion</th>
+<th>Rolle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wine_runtime::init</code></td>
+<td>Proton-GE laden/beschreiben</td>
+</tr>
+<tr>
+<td><code>wine_runtime::ensure_proton_ge</code></td>
+<td>Download/Extract nach Runtime-Dir</td>
+</tr>
+<tr>
+<td><code>wine_runtime::export_env</code></td>
+<td><code>WINE</code>, <code>PROTON_PATH</code>, …</td>
+</tr>
+<tr>
+<td><code>wine_runtime::deploy_proton_graphics_dlls</code></td>
+<td>DXVK/vkd3d aus Proton → Prefix</td>
+</tr>
+<tr>
+<td><code>wine_runtime::restore_wined3d_dlls</code></td>
+<td>Zurück zu wined3d (z. B. WISO/Qt)</td>
+</tr>
+<tr>
+<td><code>wine_runtime::winetricks</code></td>
+<td><code>WINE=$_WINE_RUNTIME_BIN winetricks</code></td>
+</tr>
+<tr>
+<td><code>wine_runtime::describe</code></td>
+<td>Menschenlesbare Runtime-Zeile</td>
+</tr>
+</tbody>
+</table>
+<p>Pin: <code>core/runtime.lock</code>. System-Wine existiert im Code nur bei explizitem <code>runtime: system</code> / Env — in Rezepten <strong>verboten</strong>.</p>
+<hr />
+<h2 id="desktop-recipe-desktopsh">Desktop — <code>recipe-desktop.sh</code><a class="headerlink" href="#desktop-recipe-desktopsh" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Funktion</th>
+<th>Rolle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recipe_desktop::install</code></td>
+<td><code>~/.local/share/applications/rezeptor-&lt;id&gt;.desktop</code> + Desktop-Kopie</td>
+</tr>
+<tr>
+<td><code>recipe_desktop::remove</code></td>
+<td>Einträge + Icons entfernen</td>
+</tr>
+<tr>
+<td><code>recipe_desktop::refresh_if_present</code></td>
+<td>Neu schreiben, wenn Marker/Eintrag existiert</td>
+</tr>
+</tbody>
+</table>
+<p>Marker: <code>$DATA_ROOT/.rezeptor-desktop</code>.</p>
+<hr />
+<h2 id="deploy-recipe-deploysh">Deploy — <code>recipe-deploy.sh</code><a class="headerlink" href="#deploy-recipe-deploysh" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Funktion</th>
+<th>Rolle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recipe_deploy::sync_portable &lt;src&gt; &lt;dst&gt; &lt;mode&gt;</code></td>
+<td><code>copy</code> (Default), <code>move</code>, <code>link</code> (<code>inplace</code> = Legacy-Alias für <code>link</code>)</td>
+</tr>
+<tr>
+<td><code>recipe_deploy::detect_installer &lt;dir&gt;</code></td>
+<td>Setup-/größte EXE finden</td>
+</tr>
+</tbody>
+</table>
+<p>Schema/<code>recipe.yml</code>: <code>deploy_mode: copy|link|move</code>. Portable üblich: <code>copy</code> oder <code>link</code> (Steam).</p>
+<hr />
+<h2 id="pfade-env">Pfade &amp; Env<a class="headerlink" href="#pfade-env" title="Permanent link">&para;</a></h2>
+<h3 id="pathssh"><code>paths.sh</code><a class="headerlink" href="#pathssh" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>wine_software_base</code> → <code>~/.local/share/wine-software</code></li>
+<li><code>recipe_data_root &lt;id&gt;</code> → <code>…/&lt;id&gt;</code></li>
+<li><code>paths_init_recipe</code> → <code>DATA_ROOT</code>, <code>WINEPREFIX</code>, …</li>
+</ul>
+<h3 id="recipesh-data_root-auflosung"><code>recipe.sh</code> — <code>DATA_ROOT</code>-Auflösung<a class="headerlink" href="#recipesh-data_root-auflosung" title="Permanent link">&para;</a></h3>
+<ol>
+<li><code>canonical</code> = expandiertes <code>data_root:</code> aus YAML  </li>
+<li><code>chosen</code> = <code>RECIPE_DATA_ROOT</code> <strong>oder</strong> Inhalt von <code>$canonical/data_root.path</code>  </li>
+<li><code>DATA_ROOT = chosen || canonical</code></li>
+</ol>
+<h3 id="env-filesh"><code>env-file.sh</code><a class="headerlink" href="#env-filesh" title="Permanent link">&para;</a></h3>
+<p><code>env_file_set</code> / <code>get</code> / <code>write</code> / <code>load_export</code> — <strong>niemals</strong> <code>source recipe.env</code> (Injection-Schutz).</p>
+<h3 id="securitysh"><code>security.sh</code><a class="headerlink" href="#securitysh" title="Permanent link">&para;</a></h3>
+<p>Pfad-/URL-Validierung, <code>filesystem::safe_remove</code> für kontrollierte Löschungen. Purge nutzt eigene Guards.</p>
+<table>
+<thead>
+<tr>
+<th>Funktion</th>
+<th>Einsatz</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>security::validate_url</code></td>
+<td><code>wine_runtime::_download</code>, <code>download_component</code></td>
+</tr>
+<tr>
+<td><code>security::sanitize_input</code></td>
+<td><code>env_file_set</code> (Keys)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="gui-bridge-outputsh">GUI-Bridge — <code>output.sh</code><a class="headerlink" href="#gui-bridge-outputsh" title="Permanent link">&para;</a></h2>
+<p>Bei <code>LAUNCHER_GUI=1</code>:</p>
+<table>
+<thead>
+<tr>
+<th>Tag</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>@progress:&lt;pct&gt;</code></td>
+<td>Fortschritt 0–100</td>
+</tr>
+<tr>
+<td><code>@step:&lt;msg&gt;</code></td>
+<td>Schritt (humanisiert in der GUI)</td>
+</tr>
+<tr>
+<td><code>@ok:</code> / <code>@error:</code> / <code>@warn:</code></td>
+<td>Status</td>
+</tr>
+</tbody>
+</table>
+<p>Kurz-Hooks: <code>output::progress_begin</code> / <code>tick</code> / <code>done</code>. Siehe <a href="../LOG-PROTOCOL/">Log-Protokoll</a>.</p>
+<hr />
+<h2 id="weitere-module">Weitere Module<a class="headerlink" href="#weitere-module" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Datei</th>
+<th>API (Auszug)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recipe-vcrun.sh</code></td>
+<td><code>recipe_vcrun::ensure</code> — MS vc_redist</td>
+</tr>
+<tr>
+<td><code>recipe-dotnet.sh</code></td>
+<td><code>ensure</code>, Mono-Bootstrap</td>
+</tr>
+<tr>
+<td><code>recipe-fonts.sh</code></td>
+<td><code>registry</code>, <code>ensure</code></td>
+</tr>
+<tr>
+<td><code>recipe-kill.sh</code></td>
+<td><code>recipe_kill::run</code></td>
+</tr>
+<tr>
+<td><code>recipe-guard.sh</code></td>
+<td><code>abort_if_running</code>, Notify</td>
+</tr>
+<tr>
+<td><code>recipe-source.sh</code></td>
+<td>Archive extract (zip-slip-sicher)</td>
+</tr>
+<tr>
+<td><code>recipe-wine-silent.sh</code></td>
+<td>Offscreen/xvfb bei <code>RECIPE_WINE_SILENT=1</code></td>
+</tr>
+</tbody>
+</table>
+<p>App-spezifisch: <code>recipe-photoshop-*.sh</code>, <code>recipe-premiere-*.sh</code>, <code>recipe-adobe-setup.sh</code> (shared Adobe ESD), <code>recipe-wiso-steuer.sh</code>, …</p>
+<hr />
+<h2 id="invarianten-kurz">Invarianten (kurz)<a class="headerlink" href="#invarianten-kurz" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Prefix immer <code>$DATA_ROOT/prefix</code> — nie <code>~/.wine</code></li>
+<li>Repair ≠ Reinstall</li>
+<li>Uninstall = <code>purge_recipe_data</code> + <code>load minimal</code></li>
+<li>Winetricks nur über <code>recipe_winetricks::run</code></li>
+<li>Win10 nur über <code>recipe_win10::ensure</code></li>
+<li>Grafik nur über Proton-DLL-Deploy (oder bewusst wined3d)</li>
+<li>Env-Dateien nur über <code>env_file_*</code></li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Zurück zum Seitenanfang
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Fußzeile" >
+        
+          
+          <a href="../RECIPE-AUTHORING/" class="md-footer__link md-footer__link--prev" aria-label="Zurück: Rezept schreiben">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Zurück
+              </span>
+              <div class="md-ellipsis">
+                Rezept schreiben
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../VALIDATE-REPAIR/" class="md-footer__link md-footer__link--next" aria-label="Weiter: Validate &amp; Repair">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Weiter
+              </span>
+              <div class="md-ellipsis">
+                Validate & Repair
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 11v2h12l-5.5 5.5 1.42 1.42L19.84 12l-7.92-7.92L10.5 5.5 16 11z"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; Rezeptor contributors — GPL-2.0
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+    <a href="https://github.com/benjarogit/rezeptor" target="_blank" rel="noopener" title="GitHub" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="https://github.com/benjarogit/rezeptor/releases" target="_blank" rel="noopener" title="Releases" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M256 32c0-17.7-14.3-32-32-32s-32 14.3-32 32v210.7l-41.4-41.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l96 96c12.5 12.5 32.8 12.5 45.3 0l96-96c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 242.7zM64 320c-35.3 0-64 28.7-64 64v32c0 35.3 28.7 64 64 64h320c35.3 0 64-28.7 64-64v-32c0-35.3-28.7-64-64-64h-46.9l-56.6 56.6c-31.2 31.2-81.9 31.2-113.1 0L110.9 320zm304 56a24 24 0 1 1 0 48 24 24 0 1 1 0-48"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.tabs.sticky", "navigation.sections", "navigation.expand", "navigation.path", "navigation.top", "navigation.footer", "navigation.tracking", "search.suggest", "search.highlight", "search.share", "content.tabs.link", "content.code.copy", "content.code.annotate", "content.action.edit", "content.action.view", "content.tooltips", "toc.follow"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "In Zwischenablage kopiert", "clipboard.copy": "In Zwischenablage kopieren", "search.result.more.one": "1 weiteres Suchergebnis auf dieser Seite", "search.result.more.other": "# weitere Suchergebnisse auf dieser Seite", "search.result.none": "Keine Suchergebnisse", "search.result.one": "1 Suchergebnis", "search.result.other": "# Suchergebnisse", "search.result.placeholder": "Suchbegriff eingeben", "search.result.term.missing": "Es fehlt", "select.version": "Version ausw\u00e4hlen"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
