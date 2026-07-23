@@ -178,8 +178,6 @@ from recipe_options import (
     env_overrides_for_options,
     load_options_from_recipe_dir,
     option_visible,
-    read_option_values,
-    write_option_value,
 )
 from recipe_paths import (
     manifest_for_recipe_dir,
@@ -202,6 +200,7 @@ from recipe_trust import (
 )
 from ui_styles import COLOR_PARCHMENT, MUTED, STATE_COLORS, palette
 from ui_icons import ensure_fa_brands_font, ensure_fa_font, fa_color, fa_icon
+from ui_medizin import MedizinDialog
 from ui_progress import WaitingSpinner
 from ui_window import (
     apply_tool_window,
@@ -1402,19 +1401,13 @@ class RezeptorWindow(QMainWindow):
             self._more_menu = RoundMenu(parent=self)
             self.more_btn.clicked.connect(self._popup_more_menu)
             self.medizin_btn = PushButton(t("btn.medizin"))
-            self._medizin_menu = RoundMenu(parent=self)
-            self.medizin_btn.clicked.connect(self._popup_medizin_menu)
         else:
             self.more_btn = QToolButton()
             self.more_btn.setText(t("btn.more"))
             self.more_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
             self._more_menu = QMenu(self)
             self.more_btn.setMenu(self._more_menu)
-            self.medizin_btn = QToolButton()
-            self.medizin_btn.setText(t("btn.medizin"))
-            self.medizin_btn.setPopupMode(QToolButton.ToolButtonPopupMode.InstantPopup)
-            self._medizin_menu = QMenu(self)
-            self.medizin_btn.setMenu(self._medizin_menu)
+            self.medizin_btn = QPushButton(t("btn.medizin"))
         self.more_btn.setObjectName("moreBtn")
         self.more_btn.setCursor(hand)
         self.more_btn.setToolTip(t("tooltip.more"))
@@ -1423,6 +1416,7 @@ class RezeptorWindow(QMainWindow):
         self.medizin_btn.setObjectName("medizinBtn")
         self.medizin_btn.setCursor(hand)
         self.medizin_btn.setToolTip(t("tooltip.medizin"))
+        self.medizin_btn.clicked.connect(self._open_medizin_dialog)
         med_ic = fa_icon("kit-medical", 14, color=COLOR_PARCHMENT)
         if med_ic is not None:
             self.medizin_btn.setIcon(med_ic)
@@ -1450,15 +1444,6 @@ class RezeptorWindow(QMainWindow):
         menu.addAction(action)  # type: ignore[attr-defined]
         return action
 
-    def _popup_medizin_menu(self) -> None:
-        self._rebuild_medizin_menu()
-        btn = self.medizin_btn
-        menu = self._medizin_menu
-        if FLUENT_AVAILABLE and hasattr(menu, "exec"):
-            QTimer.singleShot(0, lambda: menu.exec(btn.mapToGlobal(btn.rect().bottomLeft())))
-        elif hasattr(menu, "popup"):
-            menu.popup(btn.mapToGlobal(btn.rect().bottomLeft()))
-
     def _visible_recipe_options(self):
         if not self._selected:
             return []
@@ -1471,6 +1456,8 @@ class RezeptorWindow(QMainWindow):
         if btn is None:
             return
         opts = self._visible_recipe_options()
+        # No ▾ — opens a dialog, not a flaky RoundMenu
+        btn.setText(t("btn.medizin"))
         btn.setVisible(bool(opts) and self._selected is not None)
         btn.setEnabled(bool(opts) and not getattr(self, "_busy", False))
         med_ic = fa_icon("kit-medical", 14, color=COLOR_PARCHMENT)
@@ -1478,62 +1465,15 @@ class RezeptorWindow(QMainWindow):
             btn.setIcon(med_ic)
             btn.setIconSize(QSize(14, 14))
 
-    def _rebuild_medizin_menu(self) -> None:
-        self._medizin_menu = (
-            RoundMenu(parent=self) if FLUENT_AVAILABLE else QMenu(self)
-        )
-        menu = self._medizin_menu
-        if not FLUENT_AVAILABLE and hasattr(self, "medizin_btn"):
-            self.medizin_btn.setMenu(menu)
+    def _open_medizin_dialog(self) -> None:
         opts = self._visible_recipe_options()
         if not opts or not self._selected:
-            self._add_menu_action(menu, t("medizin.empty"), lambda: None).setEnabled(False)
             return
         dr = resolve_data_root(self._selected.meta, self._selected.rid)
-        values = read_option_values(dr, opts)
-        locale = get_locale()
-        for opt in opts:
-            label = opt.label_for(locale)
-            act = QAction(label, menu)  # type: ignore[arg-type]
-            act.setCheckable(True)
-            tip = opt.tip_for(locale)
-            if tip:
-                act.setToolTip(tip)
-                act.setStatusTip(tip)
-            act.toggled.connect(
-                lambda checked, o=opt, root=dr: self._on_medizin_option_toggled(
-                    o, root, checked
-                )
-            )
-            act.blockSignals(True)
-            act.setChecked(bool(values.get(opt.id, opt.default)))
-            act.blockSignals(False)
-            menu.addAction(act)  # type: ignore[attr-defined]
-
-    def _on_medizin_option_toggled(self, opt, data_root: Path, checked: bool) -> None:
-        try:
-            write_option_value(data_root, opt, checked)
-        except OSError as exc:
-            QMessageBox.warning(
-                self,
-                t("medizin.error_title"),
-                t("medizin.error_body", error=str(exc)),
-            )
-            return
-        self._activity(
-            "info",
-            t(
-                "medizin.saved",
-                name=opt.label_for(get_locale()),
-                state=t("medizin.on") if checked else t("medizin.off"),
-            ),
-        )
-        if opt.env == "PREMIERE_NVIDIA_LIBS":
-            QMessageBox.information(
-                self,
-                t("medizin.apply_title"),
-                t("medizin.apply_repair_hint"),
-            )
+        dlg = MedizinDialog(opts, dr, self)
+        dlg.exec()
+        if dlg.needs_repair_hint:
+            self._activity("info", t("medizin.apply_repair_hint"))
 
     def _popup_more_menu(self) -> None:
         self._rebuild_more_menu()

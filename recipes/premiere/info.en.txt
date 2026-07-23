@@ -9,9 +9,9 @@ Adobe Premiere Pro 2024 on Proton-GE (Vulkan/DXVK) — quiet background install 
 ## GPU / graphics
 • **NVIDIA:** This recipe is tuned for it. Install/Repair automatically puts nvidia-libs (CUDA/NVAPI/NVENC) into the prefix so Mercury can use GPU acceleration (CUDA).
 • **AMD (Radeon) / Intel:** No CUDA path. Premiere runs via DXVK/Vulkan; often software renderer only or limited GPU help. That is expected, not an install failure.
-• Toggle: **Medicine** button (next to More) → “CUDA / nvidia-libs”; then run **Repair** once
-• Power user: `PREMIERE_NVIDIA_LIBS=0` / `=1` in the environment
-• In Premiere: File → Project Settings → General → Renderer → Mercury Playback Engine GPU Acceleration (CUDA) (NVIDIA only)
+• **Medizin** (next to More): lasting setting whether Install/Repair pulls nvidia-libs (CUDA) — not a one-shot button
+• Power user: `PREMIERE_NVIDIA_LIBS=0` / `=1`
+• In Premiere: File → Project Settings → General → Renderer → Mercury GPU (CUDA)
 
 ## Requirements
 • Proton-GE (used automatically)

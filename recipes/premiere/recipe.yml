@@ -44,11 +44,11 @@ options:
     default: true
     when: nvidia
     label:
-      de: "CUDA / nvidia-libs"
-      en: "CUDA / nvidia-libs"
+      de: "CUDA / nvidia-libs mit Install & Reparatur"
+      en: "CUDA / nvidia-libs with Install & Repair"
     tip:
-      de: "Auf NVIDIA-Hosts CUDA/NVAPI/NVENC ins Wine-Prefix legen (Mercury GPU). Aus = Software-Pfad; danach einmal Reparieren."
-      en: "On NVIDIA hosts, install CUDA/NVAPI/NVENC into the Wine prefix (Mercury GPU). Off = software path; then run Repair once."
+      de: "An (Standard): bei Installieren/Reparieren nvidia-libs für Mercury CUDA nachziehen. Aus: CUDA-Stack bewusst weglassen (z. B. Test/Trouble). Verschwindet nicht — bleibt deine Einstellung."
+      en: "On (default): Install/Repair keeps nvidia-libs for Mercury CUDA. Off: deliberately skip the CUDA stack (e.g. testing). Does not disappear — it stays your setting."
 env:
   WINEDEBUG: "-all,+err"
 validate: validate.sh

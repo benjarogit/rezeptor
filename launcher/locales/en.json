@@ -118,7 +118,7 @@
     "kill": "Quit",
     "cancel_install": "Cancel",
     "more": "More ▾",
-    "medizin": "Medizin ▾",
+    "medizin": "Medizin",
     "update_rezeptor": "Update Rezeptor",
     "regen_manifest": "Approve files",
     "report_bug": "Report issue…",
@@ -132,7 +132,7 @@
     "validate": "Validate only — make no changes",
     "kill": "Quit running Wine/app processes for this recipe",
     "more": "More actions — including Validate, Add or update shortcuts, Uninstall",
-    "medizin": "Recipe options (toggle defaults) — e.g. CUDA/nvidia-libs for Premiere",
+    "medizin": "Lasting recipe settings (not a one-shot install action)",
     "version_info": "Version & guarantee — click for details",
     "version_installed": "Installed: {version} — click for details",
     "runtime_proton": "Rezeptor launches with bundled Proton-GE (own Wine prefix under the data folder).",
@@ -250,14 +250,17 @@
     "rollback_failed": "Rollback failed (exit {code})"
   },
   "medizin": {
+    "dialog_title": "Medizin",
+    "dialog_intro": "Settings for this recipe. They stay saved and steer Install/Repair/Launch — they do not disappear after a run.",
+    "close": "Close",
     "empty": "No options for this recipe",
     "on": "on",
     "off": "off",
-    "saved": "Medicine: {name} → {state}",
+    "saved": "Medizin: {name} → {state}",
     "error_title": "Save option",
     "error_body": "Could not save option:\n{error}",
     "apply_title": "Option saved",
-    "apply_repair_hint": "CUDA/nvidia-libs changes apply after the next Repair (or reinstall)."
+    "apply_repair_hint": "Saved. Run Repair once so the prefix and nvidia-libs match."
   },
   "recipe_sync": {
     "available_title": "Recipe updates",

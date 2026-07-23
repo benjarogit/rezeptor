@@ -9,9 +9,9 @@ Adobe Premiere Pro 2024 unter Proton-GE (Vulkan/DXVK) — Installation läuft st
 ## GPU / Grafikkarte
 • **NVIDIA:** Rezept ist darauf ausgelegt. Beim Installieren/Reparieren werden automatisch nvidia-libs (CUDA/NVAPI/NVENC) ins Prefix gelegt — Mercury kann GPU-Beschleunigung (CUDA) nutzen.
 • **AMD (Radeon) / Intel:** Kein CUDA-Pfad. Premiere läuft über DXVK/Vulkan; oft nur Software-Renderer oder eingeschränkte GPU-Hilfe. Das ist erwartet, kein Installationsfehler.
-• Umschalten: Button **Medizin** (neben Mehr) → „CUDA / nvidia-libs“; danach einmal **Reparieren**
-• Power-User: `PREMIERE_NVIDIA_LIBS=0` / `=1` in der Umgebung
-• In Premiere: Datei → Projekteinstellungen → Allgemein → Renderer → Mercury Playback Engine GPU-Beschleunigung (CUDA) (nur NVIDIA)
+• **Medizin** (neben Mehr): dauerhafte Einstellung, ob Install/Reparatur nvidia-libs (CUDA) mitzieht — kein Einmal-Knopf, verschwindet nicht
+• Power-User: `PREMIERE_NVIDIA_LIBS=0` / `=1`
+• In Premiere: Datei → Projekteinstellungen → Allgemein → Renderer → Mercury GPU (CUDA)
 
 ## Voraussetzungen
 • Proton-GE (wird automatisch verwendet)

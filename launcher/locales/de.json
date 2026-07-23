@@ -118,7 +118,7 @@
     "kill": "Beenden",
     "cancel_install": "Abbrechen",
     "more": "Mehr ▾",
-    "medizin": "Medizin ▾",
+    "medizin": "Medizin",
     "update_rezeptor": "Rezeptor aktualisieren",
     "regen_manifest": "Dateien freigeben",
     "report_bug": "Fehler melden…",
@@ -132,7 +132,7 @@
     "validate": "Nur prüfen — nichts ändern",
     "kill": "Laufende Wine-/App-Prozesse dieses Rezepts beenden",
     "more": "Weitere Aktionen — u. a. Prüfen, Verknüpfungen nachinstallieren, Deinstallieren",
-    "medizin": "Rezept-Optionen (Defaults umschaltbar) — z. B. CUDA/nvidia-libs bei Premiere",
+    "medizin": "Dauerhafte Rezept-Einstellungen (nicht einmalig installieren)",
     "version_info": "Version & Garantie — Klick für Details",
     "version_installed": "Installiert: {version} — Klick für Details",
     "runtime_proton": "Rezeptor startet mit gebündeltem Proton-GE (eigener Wine-Prefix unter dem Datenordner).",
@@ -250,6 +250,9 @@
     "rollback_failed": "Rollback fehlgeschlagen (Exit {code})"
   },
   "medizin": {
+    "dialog_title": "Medizin",
+    "dialog_intro": "Einstellungen für dieses Rezept. Sie bleiben gespeichert und steuern Installieren/Reparieren/Start — sie verschwinden nicht nach einem Lauf.",
+    "close": "Schließen",
     "empty": "Keine Optionen für dieses Rezept",
     "on": "an",
     "off": "aus",
@@ -257,7 +260,7 @@
     "error_title": "Option speichern",
     "error_body": "Konnte Option nicht speichern:\n{error}",
     "apply_title": "Option gespeichert",
-    "apply_repair_hint": "CUDA/nvidia-libs-Änderung gilt nach dem nächsten Reparieren (oder Neuinstallieren)."
+    "apply_repair_hint": "Änderung gespeichert. Einmal Reparieren, damit Prefix und nvidia-libs dazu passen."
   },
   "recipe_sync": {
     "available_title": "Rezept-Updates",

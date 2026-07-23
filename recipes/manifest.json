@@ -42,12 +42,12 @@
     },
     "premiere": {
       "files": {
-        "info.de.txt": "sha256:51f5f3669372e226881aaf0f841e6db741bcf6d486f941b39219c9d4941c5939",
-        "info.en.txt": "sha256:76c36593ee9de290d09ecb6b1c62019eeca98fe52992ba174f42692c18859417",
+        "info.de.txt": "sha256:3480eb4925eef148c3ac4d479415f0afafa7102cc495a94506fc925b50c4ca7d",
+        "info.en.txt": "sha256:861e3394c89f227bea966e3facfef4241a383f2d13ab2fb7f1fd22272775a2db",
         "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
         "kill.sh": "sha256:032971f2a9bbb85cad338ff3be4e31b6fb906754ebfe987d2905f1622250bf20",
         "launch.sh": "sha256:967291511517c15b3a87951688d35ec261c28395180d89adb08c9f648c55b5e2",
-        "recipe.yml": "sha256:7519ed8092267c43a83a3f36cbc4aed96d697d130e73539a2f593d01266c19b7",
+        "recipe.yml": "sha256:e5a866ab9001951eb03d0f4caf8e9bd8f247b88d2c30b32decd542b3d57235bc",
         "repair.sh": "sha256:3e3df76dea88234c153df4a1fef9840dfc66b6d640ca929becc792d532641cca",
         "uninstall.sh": "sha256:2ffe490eb782496c8c9592ef0d9aad22ea7237642b336d3902d2ded9afe6d62e",
         "validate.sh": "sha256:8f510d6177bf254f6af24a581bc3b9061dc18fc344fea79129f674c1e39de898"

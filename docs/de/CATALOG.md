@@ -44,7 +44,9 @@ Katalog-Felder:
 
 ## Rezept-Optionen (Medizin)
 
-Optionale Schalter in `recipe.yml` unter `options:` erscheinen als Button **Medizin** (Icon `kit-medical`) neben **Mehr**. Werte liegen in `{data_root}/options.env` und gelten bei Install/Reparieren/Start.
+Dauerhafte Einstellungen pro Rezept (nicht „einmal installieren“). Button **Medizin** (Icon `kit-medical`) neben **Mehr** öffnet einen Dialog mit Checkbox + Erklärungstext. Werte in `{data_root}/options.env` steuern Install/Reparieren/Start.
+
+Sinnvoll nur, wenn die Option Verhalten ändert (z. B. Feature opt-out). Nicht für Aktionen, die Install/Reparatur ohnehin erledigen.
 
 ```yaml
 options:
@@ -52,8 +54,8 @@ options:
     env: PREMIERE_NVIDIA_LIBS
     type: bool
     default: true
-    when: nvidia   # optional: nur auf NVIDIA-Hosts anzeigen
-    label: { de: "CUDA / nvidia-libs", en: "CUDA / nvidia-libs" }
+    when: nvidia
+    label: { de: "…", en: "…" }
     tip: { de: "…", en: "…" }
 ```
 

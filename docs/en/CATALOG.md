@@ -42,9 +42,11 @@ Catalog fields for sync:
 | `min_app_version` | Recipe needs this Rezeptor version (core APIs). Older apps see **blocked** — update the app. |
 | `deprecated` | Recipe should not be newly installed; installed data is not auto-deleted. |
 
-## Recipe options (Medicine / Medizin)
+## Recipe options (Medizin)
 
-Optional toggles in `recipe.yml` under `options:` appear as a **Medicine** button (icon `kit-medical`) next to **More**. Values persist in `{data_root}/options.env` and are exported into install/repair/launch.
+Lasting per-recipe settings (not “install once”). The **Medizin** button (icon `kit-medical`) next to **More** opens a dialog with checkbox + explanation. Values in `{data_root}/options.env` steer install/repair/launch.
+
+Only use when the option changes behaviour (e.g. opt-out). Not for actions Install/Repair already perform.
 
 ```yaml
 options:
@@ -52,8 +54,8 @@ options:
     env: PREMIERE_NVIDIA_LIBS
     type: bool
     default: true
-    when: nvidia   # optional: only show on NVIDIA hosts
-    label: { de: "CUDA / nvidia-libs", en: "CUDA / nvidia-libs" }
+    when: nvidia
+    label: { de: "…", en: "…" }
     tip: { de: "…", en: "…" }
 ```
 
