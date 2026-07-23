@@ -113,6 +113,20 @@ recipe_validate::photoshop_app_version() {
     recipe_validate::pe_file_version "$exe"
 }
 
+recipe_validate::premiere_app_version() {
+    local exe="$1" dir base
+    [ -f "$exe" ] || return 1
+    dir="$(dirname "$exe")"
+    base="$(basename "$dir")"
+    case "$base" in
+        "Adobe Premiere Pro 2024") echo "24.1.0.85"; return 0 ;;
+        "Adobe Premiere Pro 2023") echo "23.0.0.0"; return 0 ;;
+        "Adobe Premiere Pro 2022") echo "22.0.0.0"; return 0 ;;
+        "Adobe Premiere Pro 2021") echo "15.4.1.6"; return 0 ;;
+    esac
+    recipe_validate::pe_file_version "$exe"
+}
+
 recipe_validate::version_guaranteed_check() {
     local guaranteed="$1" detected="$2" label="${3:-Version}"
     [ -n "$guaranteed" ] || return 0

@@ -1,6 +1,6 @@
 # Referenz-Muster: Offline-Installer
 
-**Zielgruppe: Rezept-Autoren.** Beispiel-Rezept: `photoshop` · Vorlage: `recipes/_template-installer/`
+**Zielgruppe: Rezept-Autoren.** Beispiel-Rezepte: `photoshop`, `premiere` · Vorlage: `recipes/_template-installer/`
 
 ## Wann dieses Muster?
 

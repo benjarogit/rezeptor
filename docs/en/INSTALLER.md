@@ -1,6 +1,6 @@
 # Reference pattern: Offline installer
 
-**Audience: recipe authors.** Example recipe: `photoshop` · Template: `recipes/_template-installer/`
+**Audience: recipe authors.** Example recipes: `photoshop`, `premiere` · Template: `recipes/_template-installer/`
 
 ## When to use this pattern
 

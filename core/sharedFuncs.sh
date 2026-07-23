@@ -2040,39 +2040,186 @@ photoshop::find_exe() {
     return 1
 }
 
-photoshop::resolve_installer_dir() {
+# Generic Adobe offline installer folder (Set-up.exe + packages/).
+# Extra drop dirs: space-separated relative to project_root (e.g. "photoshop premiere").
+# Ordner mit Set-up.exe — Root oder eine Ebene darunter (z. B. ISO: Adobe 2024/).
+adobe::find_setup_dir() {
+    local root="${1:-}" sub=""
+    [ -n "$root" ] && [ -d "$root" ] || return 1
+    root="$(cd "$root" && pwd)" || return 1
+    if [ -f "$root/Set-up.exe" ]; then
+        echo "$root"
+        return 0
+    fi
+    shopt -s nullglob 2>/dev/null || true
+    for sub in "$root"/*/Set-up.exe; do
+        [ -f "$sub" ] || continue
+        echo "$(cd "$(dirname "$sub")" && pwd)"
+        shopt -u nullglob 2>/dev/null || true
+        return 0
+    done
+    shopt -u nullglob 2>/dev/null || true
+    return 1
+}
+
+# Adobe Offline-ISO → Staging entpacken (7z/bsdtar), Set-up-Ordner zurückgeben.
+adobe::extract_iso_setup_dir() {
+    local iso="${1:-}" staging="${2:-}"
+    local dest setup_dir=""
+    [ -n "$iso" ] && [ -f "$iso" ] || return 1
+    case "${iso,,}" in
+        *.iso) ;;
+        *) return 1 ;;
+    esac
+    if [ -z "$staging" ]; then
+        staging="${CACHE_PATH:-${DATA_ROOT:-${TMPDIR:-/tmp}}/adobe-iso-$$}/extract"
+    fi
+    dest="$staging"
+    rm -rf "$dest" 2>/dev/null || true
+    mkdir -p "$dest" || return 1
+    if type recipe_source::extract_archive >/dev/null 2>&1; then
+        recipe_source::extract_archive "$iso" "$dest" || return 1
+    elif command -v bsdtar >/dev/null 2>&1; then
+        bsdtar -xf "$iso" -C "$dest" || return 1
+    elif command -v 7z >/dev/null 2>&1; then
+        7z x -y -o"$dest" "$iso" >/dev/null || return 1
+    else
+        return 1
+    fi
+    setup_dir="$(adobe::find_setup_dir "$dest")" || return 1
+    echo "$setup_dir"
+}
+
+adobe::resolve_installer_dir() {
     local project_root="${1:-${PROJECT_ROOT:-}}"
-    local candidate="" parent=""
+    local drop_dirs="${2:-photoshop premiere}"
+    local candidate="" parent="" d env_dir iso_path="" setup_dir=""
 
     # GUI / prepare_source: gewählter Ordner oder Installer-Datei
-    if [ -n "${RECIPE_WORK_ROOT:-}" ] && [ -f "${RECIPE_WORK_ROOT}/Set-up.exe" ]; then
-        echo "$(cd "${RECIPE_WORK_ROOT}" && pwd)"
+    if setup_dir="$(adobe::find_setup_dir "${RECIPE_WORK_ROOT:-}")"; then
+        echo "$setup_dir"
         return 0
     fi
-    if [ -n "${RECIPE_SOURCE_ROOT:-}" ] && [ -f "${RECIPE_SOURCE_ROOT}/Set-up.exe" ]; then
-        echo "$(cd "${RECIPE_SOURCE_ROOT}" && pwd)"
+    if setup_dir="$(adobe::find_setup_dir "${RECIPE_SOURCE_ROOT:-}")"; then
+        echo "$setup_dir"
         return 0
+    fi
+    if [ -n "${RECIPE_SOURCE_ROOT:-}" ] && [ -d "${RECIPE_SOURCE_ROOT}" ]; then
+        shopt -s nullglob 2>/dev/null || true
+        for iso_path in "${RECIPE_SOURCE_ROOT}"/*.iso "${RECIPE_SOURCE_ROOT}"/*/*.iso; do
+            [ -f "$iso_path" ] || continue
+            if setup_dir="$(adobe::extract_iso_setup_dir "$iso_path")"; then
+                echo "$setup_dir"
+                shopt -u nullglob 2>/dev/null || true
+                return 0
+            fi
+        done
+        shopt -u nullglob 2>/dev/null || true
     fi
     if [ -n "${RECIPE_INSTALLER_PATH:-}" ] && [ -f "${RECIPE_INSTALLER_PATH}" ]; then
-        parent="$(cd "$(dirname "${RECIPE_INSTALLER_PATH}")" && pwd)"
-        if [ -f "$parent/Set-up.exe" ]; then
-            echo "$parent"
+        case "${RECIPE_INSTALLER_PATH,,}" in
+            *.iso)
+                if setup_dir="$(adobe::extract_iso_setup_dir "${RECIPE_INSTALLER_PATH}")"; then
+                    echo "$setup_dir"
+                    return 0
+                fi
+                ;;
+            *)
+                parent="$(cd "$(dirname "${RECIPE_INSTALLER_PATH}")" && pwd)"
+                if setup_dir="$(adobe::find_setup_dir "$parent")"; then
+                    echo "$setup_dir"
+                    return 0
+                fi
+                ;;
+        esac
+    fi
+    if [ -n "${RECIPE_ARCHIVE_PATH:-}" ] && [ -f "${RECIPE_ARCHIVE_PATH}" ]; then
+        case "${RECIPE_ARCHIVE_PATH,,}" in
+            *.iso)
+                if setup_dir="$(adobe::extract_iso_setup_dir "${RECIPE_ARCHIVE_PATH}")"; then
+                    echo "$setup_dir"
+                    return 0
+                fi
+                ;;
+        esac
+    fi
+
+    for env_dir in \
+        "${PHOTOSHOP_INSTALLER_DIR:-}" \
+        "${PREMIERE_INSTALLER_DIR:-}" \
+        "${ADOBE_INSTALLER_DIR_HOST:-}"; do
+        [ -n "$env_dir" ] || continue
+        if [ -f "$env_dir" ]; then
+            case "${env_dir,,}" in
+                *.iso)
+                    if setup_dir="$(adobe::extract_iso_setup_dir "$env_dir")"; then
+                        echo "$setup_dir"
+                        return 0
+                    fi
+                    ;;
+            esac
+            continue
+        fi
+        if setup_dir="$(adobe::find_setup_dir "$env_dir")"; then
+            echo "$setup_dir"
             return 0
         fi
-    fi
+    done
 
-    if [ -n "${PHOTOSHOP_INSTALLER_DIR:-}" ] && [ -f "${PHOTOSHOP_INSTALLER_DIR}/Set-up.exe" ]; then
-        echo "$(cd "${PHOTOSHOP_INSTALLER_DIR}" && pwd)"
-        return 0
-    fi
-
-    candidate="$project_root/photoshop"
-    if [ -f "$candidate/Set-up.exe" ]; then
-        echo "$(cd "$candidate" && pwd)"
-        return 0
-    fi
+    for d in $drop_dirs; do
+        candidate="$project_root/$d"
+        if setup_dir="$(adobe::find_setup_dir "$candidate")"; then
+            echo "$setup_dir"
+            return 0
+        fi
+        # Drop-Dir: lose .iso im Ordner
+        shopt -s nullglob 2>/dev/null || true
+        for iso_path in "$candidate"/*.iso; do
+            [ -f "$iso_path" ] || continue
+            if setup_dir="$(adobe::extract_iso_setup_dir "$iso_path")"; then
+                echo "$setup_dir"
+                shopt -u nullglob 2>/dev/null || true
+                return 0
+            fi
+        done
+        shopt -u nullglob 2>/dev/null || true
+    done
 
     return 1
+}
+
+photoshop::resolve_installer_dir() {
+    adobe::resolve_installer_dir "${1:-${PROJECT_ROOT:-}}" "photoshop"
+}
+
+premiere::possible_exe_paths() {
+    local prefix="${1:-${WINE_PREFIX:-${WINEPREFIX:-}}}"
+    if [ -z "$prefix" ]; then
+        return 0
+    fi
+    printf '%s\n' \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Premiere Pro 2024/Adobe Premiere Pro.exe" \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Premiere Pro 2025/Adobe Premiere Pro.exe" \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Premiere Pro 2023/Adobe Premiere Pro.exe" \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Premiere Pro 2022/Adobe Premiere Pro.exe" \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Premiere Pro 2021/Adobe Premiere Pro.exe" \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Premiere Pro CC 2021/Adobe Premiere Pro.exe"
+}
+
+premiere::find_exe() {
+    local prefix="${1:-${WINE_PREFIX:-${WINEPREFIX:-}}}"
+    local path=""
+    while IFS= read -r path; do
+        if [ -f "$path" ]; then
+            echo "$path"
+            return 0
+        fi
+    done < <(premiere::possible_exe_paths "$prefix")
+    return 1
+}
+
+premiere::resolve_installer_dir() {
+    adobe::resolve_installer_dir "${1:-${PROJECT_ROOT:-}}" "premiere"
 }
 
 # ============================================================================

@@ -9,3 +9,7 @@ PROTON_GE_URL=https://github.com/GloriousEggroll/proton-ge-custom/releases/downl
 PROTON_GE_SHA256=4c5cc46e7f1af53f610e02c60bc9470db0d82e072b0072372ef588a82c4de316
 WINE_MONO_VERSION=11.1.0
 WINE_MONO_URL=https://dl.winehq.org/wine/wine-mono/11.1.0/wine-mono-11.1.0-x86.msi
+# Optional: CUDA/NVAPI im Wine-Prefix (Premiere NVIDIA) — SveSop/nvidia-libs
+NVIDIA_LIBS_TAG=v1.0.2
+NVIDIA_LIBS_URL=https://github.com/SveSop/nvidia-libs/releases/download/v1.0.2/nvidia-libs-v1.0.2.tar.xz
+NVIDIA_LIBS_SHA256=01e8bb6368d088e22d8e8f1d02497214e8db436476021725ef0c0707b7cb1738

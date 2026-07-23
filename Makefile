@@ -8,7 +8,7 @@ test:
 validate: shellcheck syntax compile recipes-check recipe-lint recipe-manifest-check
 
 shellcheck:
-	find ./core ./recipes/wiso-steuer ./recipes/photoshop ./launcher ./scripts \
+	find ./core ./recipes/wiso-steuer ./recipes/photoshop ./recipes/premiere ./launcher ./scripts \
 		-name '*.sh' -print0 \
 		| xargs -0 shellcheck -S error -e SC1091,SC2034,SC2155,SC2207
 

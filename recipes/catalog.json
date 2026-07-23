@@ -13,6 +13,17 @@
       }
     },
     {
+      "id": "premiere",
+      "name": "Adobe Premiere Pro 2024",
+      "category": "Video & Schnitt",
+      "trust": "official",
+      "path": "premiere",
+      "summary": {
+        "de": "Premiere Pro 2024 (Proton-GE). NVIDIA: CUDA via nvidia-libs. AMD/Intel: ohne CUDA — oft nur Software-Renderer.",
+        "en": "Premiere Pro 2024 (Proton-GE). NVIDIA: CUDA via nvidia-libs. AMD/Intel: no CUDA — often software renderer only."
+      }
+    },
+    {
       "id": "wiso-steuer",
       "name": "WISO Steuer (Portable)",
       "category": "Finanzen & Steuer",

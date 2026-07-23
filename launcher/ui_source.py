@@ -361,8 +361,19 @@ def default_target_dir(
 
 def normalize_folder_source(rid: str, raw: str) -> str:
     p = Path(raw)
+    if p.is_file() and p.suffix.lower() == ".iso":
+        return str(p.resolve())
     if not p.is_dir():
         return raw
+    if rid in ("photoshop", "premiere"):
+        if (p / "Set-up.exe").is_file():
+            return str(p.resolve())
+        try:
+            for child in p.iterdir():
+                if child.is_dir() and (child / "Set-up.exe").is_file():
+                    return str(child.resolve())
+        except OSError:
+            pass
     if rid == "wiso-steuer" and p.name.startswith("Steuersoftware"):
         return str(p.parent.resolve())
     return str(p.resolve())
@@ -382,22 +393,55 @@ def default_folder_source(
         game = steam_app_install_dir(appid)
         if game is not None and game.is_dir():
             return str(game)
-    if rid == "photoshop":
+    if rid in ("photoshop", "premiere"):
+        drop = "photoshop" if rid == "photoshop" else "premiere"
         candidates: list[Path] = []
         if repo_root is not None:
-            candidates.append(repo_root / "photoshop")
+            candidates.append(repo_root / drop)
+
+        def _adobe_setup_dir(p: Path) -> Path | None:
+            if p.is_file() and p.suffix.lower() == ".iso":
+                return p
+            if not p.is_dir():
+                return None
+            if (p / "Set-up.exe").is_file():
+                return p
+            try:
+                for child in p.iterdir():
+                    if child.is_dir() and (child / "Set-up.exe").is_file():
+                        return child
+            except OSError:
+                return None
+            return None
+
         for base in (Path.home() / "Downloads", Path.home() / "Dokumente"):
             if not base.is_dir():
                 continue
             try:
                 for p in sorted(base.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
-                    if p.is_dir() and (p / "Set-up.exe").is_file():
-                        candidates.append(p)
+                    found = _adobe_setup_dir(p)
+                    if found is not None:
+                        candidates.append(found)
+                    if p.is_dir():
+                        try:
+                            for iso in sorted(
+                                p.rglob("*.iso"),
+                                key=lambda x: x.stat().st_mtime,
+                                reverse=True,
+                            ):
+                                candidates.append(iso)
+                        except OSError:
+                            pass
             except OSError:
                 continue
         for cand in candidates:
-            if cand.is_dir() and (cand / "Set-up.exe").is_file():
-                return str(cand.resolve())
+            resolved = _adobe_setup_dir(cand) if cand.is_dir() else cand
+            if resolved is None:
+                continue
+            if resolved.is_file() and resolved.suffix.lower() == ".iso":
+                return str(resolved.resolve())
+            if resolved.is_dir() and (resolved / "Set-up.exe").is_file():
+                return str(resolved.resolve())
         return ""
     if rid == "wiso-steuer":
         # WISO_PORTABLE_ROOT in portable.env = installiertes Ziel (Laufzeit), nie Quelle.
@@ -1160,9 +1204,13 @@ class RecipeSourceDialog(QDialog):
                 self._attach_archive_passwords(extra)
             else:
                 root = self.primary_path()
-                extra["RECIPE_SOURCE_ROOT"] = root
-                if self._rid == "wiso-steuer":
-                    extra["WISO_PORTABLE_ROOT"] = root
+                if root.lower().endswith(".iso"):
+                    # Adobe Offline-ISO: resolve_installer_dir entpackt und findet Set-up.exe
+                    extra["RECIPE_INSTALLER_PATH"] = root
+                else:
+                    extra["RECIPE_SOURCE_ROOT"] = root
+                    if self._rid == "wiso-steuer":
+                        extra["WISO_PORTABLE_ROOT"] = root
             fix = self.fix_path()
             if fix:
                 extra["RECIPE_FIX_ROOT"] = fix

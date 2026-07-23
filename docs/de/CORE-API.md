@@ -235,7 +235,7 @@ Kurz-Hooks: `output::progress_begin` / `tick` / `done`. Siehe [Log-Protokoll](LO
 | `recipe-source.sh` | Archive extract (zip-slip-sicher) |
 | `recipe-wine-silent.sh` | Offscreen/xvfb bei `RECIPE_WINE_SILENT=1` |
 
-App-spezifisch: `recipe-photoshop-*.sh`, `recipe-wiso-steuer.sh`, …
+App-spezifisch: `recipe-photoshop-*.sh`, `recipe-premiere-*.sh`, `recipe-adobe-setup.sh` (shared Adobe ESD), `recipe-wiso-steuer.sh`, …
 
 ---
 

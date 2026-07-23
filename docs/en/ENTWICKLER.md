@@ -69,7 +69,7 @@ In the GUI always **Source** and optionally **Target** — same labels for every
 
 | Type | Shipped | Source | Target | Reference |
 |------|---------|--------|--------|-----------|
-| **Offline installer** | `photoshop` | Setup folder / `.exe` | Data folder (prefix) | [INSTALLER.md](INSTALLER.md) |
+| **Offline installer** | `photoshop`, `premiere` | Setup folder / `.exe` | Data folder (prefix) | [INSTALLER.md](INSTALLER.md) |
 | **Portable** (folder/archive) | `wiso-steuer` | Folder or zip/7z/… | Install folder | [WISO.md](WISO.md) |
 | **Steam + online fix** | `house-of-ashes` | Fix BYOS; game in Steam | Game folder (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
 | **Single EXE / trainer** | `za4-trainer` | one `.exe` | often Steam subfolder | [TRAINER.md](TRAINER.md) |

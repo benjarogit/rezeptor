@@ -7,7 +7,7 @@ not every source is equivalent.
 
 Shipped in the repository under `recipes/<id>/`, indexed in `recipes/catalog.json` (`trust: official`).
 
-Examples: Photoshop, WISO Steuer, House of Ashes, ZA4 trainer.
+Examples: Photoshop, Premiere Pro, WISO Steuer, House of Ashes, ZA4 trainer.
 
 These recipes ship with Rezeptor and are guarded by CI (`recipe-lint`, manifest checks).
 

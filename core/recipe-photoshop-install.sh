@@ -1,99 +1,23 @@
 #!/usr/bin/env bash
 # Photoshop-Installation — Proton-GE, Adobe Set-up.exe (silent), Post-Install-Konfiguration.
 
-photoshop_setup::kill_all_wineservers() {
-    # Nur Proton-wineserver dieses Prefix — kein globales pkill (andere Rezepte).
-    if type wine_runtime::wineserver >/dev/null 2>&1; then
-        wine_runtime::wineserver -k 2>/dev/null || true
-    elif [ -n "${WINE:-}" ]; then
-        "$WINE" wineserver -k 2>/dev/null || true
-    fi
-}
+if ! type adobe_setup::deploy_installer_to_c_drive >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "$(dirname "${BASH_SOURCE[0]}")/recipe-adobe-setup.sh"
+fi
 
-photoshop_setup::ie8_present() {
-    local prefix="${WINEPREFIX:-}"
-    [ -n "$prefix" ] || return 1
-    [ -f "$prefix/drive_c/Program Files/Internet Explorer/iexplore.exe" ] \
-        || [ -f "$prefix/drive_c/Program Files (x86)/Internet Explorer/iexplore.exe" ]
-}
-
-photoshop_setup::msxml_is_native() {
-    recipe_validate::msxml_is_native "$1"
-}
-
-photoshop_setup::export_adobe_installer_dll_overrides() {
-    export WINEDLLOVERRIDES="winemenubuilder.exe=d;msxml3=native,builtin;msxml6=native,builtin;mshtml=native,builtin;jscript=native,builtin;vbscript=native,builtin;urlmon=native,builtin;wininet=native,builtin;shdocvw=native,builtin;ieframe=native,builtin;actxprxy=native,builtin;browseui=native,builtin;dxtrans=native,builtin;msimtf=native,builtin;shlwapi=native,builtin;shell32=native,builtin;iertutil=native,builtin;jsproxy=native,builtin"
-}
-
-photoshop_setup::apply_adobe_network_registry() {
-    wine reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" \
-        /v AutoDetect /t REG_DWORD /d 0 /f >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    wine reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings" \
-        /v ProxyEnable /t REG_DWORD /d 0 /f >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-}
-
-photoshop_setup::fix_installer_case_symlinks() {
-    local base="${WINEPREFIX}/drive_c/AdobeSetup"
-    [ -d "$base/products" ] || return 0
-    [ -f "$base/products/Driver.xml" ] && [ ! -e "$base/products/driver.xml" ] \
-        && ln -sf Driver.xml "$base/products/driver.xml"
-    [ -f "$base/resources/Config.xml" ] && [ ! -e "$base/resources/config.xml" ] \
-        && ln -sf Config.xml "$base/resources/config.xml"
-}
-
-photoshop_setup::deploy_installer_to_c_drive() {
-    local src="$1"
-    local dest="${WINEPREFIX}/drive_c/AdobeSetup"
-    [ -n "$src" ] && [ -f "$src/Set-up.exe" ] || return 1
-    rm -rf "$dest"
-    mkdir -p "$dest"
-    cp -a "$src/." "$dest/"
-    photoshop_setup::fix_installer_case_symlinks
-    export ADOBE_INSTALLER_DIR="$dest"
-}
-
-photoshop_setup::resolve_setup_exe() {
-    if [ -n "${ADOBE_INSTALLER_DIR:-}" ] && [ -f "${ADOBE_INSTALLER_DIR}/Set-up.exe" ]; then
-        echo "${ADOBE_INSTALLER_DIR}/Set-up.exe"
-        return 0
-    fi
-    [ -f "${WINEPREFIX}/drive_c/AdobeSetup/Set-up.exe" ] \
-        && echo "${WINEPREFIX}/drive_c/AdobeSetup/Set-up.exe" && return 0
-    return 1
-}
-
-photoshop_setup::reregister_ie8_dlls() {
-    local dll dir="C:\\windows\\syswow64"
-    for dll in mshtml.dll jscript.dll vbscript.dll urlmon.dll wininet.dll ieframe.dll shdocvw.dll; do
-        wine regsvr32 /S "${dir}\\${dll}" >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    done
-}
-
-photoshop_setup::disable_virtual_desktop() {
-    local wine_bin="${WINE:-wine}"
-    # Kein Wine-„blauer Desktop“ — Photoshop als normales Fenster.
-    "$wine_bin" reg delete "HKCU\\Software\\Wine\\X11 Driver" /v Desktop /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    "$wine_bin" reg delete "HKCU\\Software\\Wine\\Explorer" /v Desktop /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    "$wine_bin" reg delete "HKCU\\Software\\Wine\\Explorer\\Desktops" /v Default /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    "$wine_bin" reg delete "HKCU\\Software\\Wine\\Explorer\\Desktop" /v Enable /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    "$wine_bin" reg add "HKCU\\Software\\Wine\\Explorer\\Desktop" /v Enable /t REG_SZ /d N /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-}
-
-photoshop_setup::prepare_adobe_installer_env() {
-    photoshop_setup::disable_virtual_desktop
-    photoshop_setup::kill_all_wineservers
-    sleep 1
-    recipe_photoshop::_ensure_native_msxml || return 1
-    photoshop_setup::apply_adobe_network_registry
-    photoshop_setup::export_adobe_installer_dll_overrides
-    recipe_win10::ensure >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    photoshop_setup::reregister_ie8_dlls
-}
+# BC wrappers — logic lives in adobe_setup::*
+photoshop_setup::kill_all_wineservers() { adobe_setup::kill_all_wineservers "$@"; }
+photoshop_setup::ie8_present() { adobe_setup::ie8_present "$@"; }
+photoshop_setup::msxml_is_native() { adobe_setup::msxml_is_native "$@"; }
+photoshop_setup::export_adobe_installer_dll_overrides() { adobe_setup::export_adobe_installer_dll_overrides "$@"; }
+photoshop_setup::apply_adobe_network_registry() { adobe_setup::apply_adobe_network_registry "$@"; }
+photoshop_setup::fix_installer_case_symlinks() { adobe_setup::fix_installer_case_symlinks "$@"; }
+photoshop_setup::deploy_installer_to_c_drive() { adobe_setup::deploy_installer_to_c_drive "$@"; }
+photoshop_setup::resolve_setup_exe() { adobe_setup::resolve_setup_exe "$@"; }
+photoshop_setup::reregister_ie8_dlls() { adobe_setup::reregister_ie8_dlls "$@"; }
+photoshop_setup::disable_virtual_desktop() { adobe_setup::disable_virtual_desktop "$@"; }
+photoshop_setup::prepare_adobe_installer_env() { adobe_setup::prepare_adobe_installer_env "$@"; }
 
 recipe_photoshop::_prefs_path() {
     local version="${1:-2021}"
@@ -128,101 +52,19 @@ recipe_photoshop::_prefix_runtime_ready() {
 }
 
 recipe_photoshop::_ensure_native_msxml() {
-    local msxml3="${WINEPREFIX}/drive_c/windows/syswow64/msxml3.dll"
-    local msxml6="${WINEPREFIX}/drive_c/windows/syswow64/msxml6.dll"
-    photoshop_setup::msxml_is_native "$msxml3" \
-        && photoshop_setup::msxml_is_native "$msxml6" && return 0
-
-    output::step "Native MSXML3/MSXML6 (Adobe-Installer)"
-    local wt_log="${LOG_DIR}/winetricks_msxml_${TIMESTAMP_ISO}.log"
-    if ! recipe_winetricks::run "$wt_log" -f msxml3 msxml6; then
-        recipe_hooks::log_err "MSXML winetricks fehlgeschlagen — $wt_log"
-        return 1
-    fi
-    wine_runtime::wine reg add "HKCU\\Software\\Wine\\DllOverrides" /v msxml3 /t REG_SZ /d "native,builtin" /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    wine_runtime::wine reg add "HKCU\\Software\\Wine\\DllOverrides" /v msxml6 /t REG_SZ /d "native,builtin" /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    wine_runtime::wine regsvr32 /S C:\\windows\\syswow64\\msxml3.dll >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    wine_runtime::wine regsvr32 /S C:\\windows\\syswow64\\msxml6.dll >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    photoshop_setup::msxml_is_native "$msxml3" && photoshop_setup::msxml_is_native "$msxml6"
+    adobe_setup::ensure_native_msxml
 }
 
 recipe_photoshop::_apply_graphics_registry() {
-    output::step "Grafik-Registry (DXVK + d2d1 builtin)"
-    local wine_bin="${WINE:-wine}" dll
-    # albakhtari/isatsam: dxvk für Start/UI. d2d1=builtin (native ohne DLL → CEP-Bruch).
-    for dll in d3d11 dxgi d3dcompiler_47 d3dcompiler_43 opcservices; do
-        "$wine_bin" reg add "HKCU\\Software\\Wine\\DllOverrides" /v "$dll" /t REG_SZ /d "native,builtin" /f \
-            >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    done
-    "$wine_bin" reg add "HKCU\\Software\\Wine\\DllOverrides" /v d2d1 /t REG_SZ /d "builtin" /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    "$wine_bin" reg add "HKCU\\Software\\Wine\\Direct3D" /v csmt /t REG_DWORD /d 1 /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    "$wine_bin" reg add "HKCU\\Software\\Wine\\Direct3D" /v shader_backend /t REG_SZ /d glsl /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    "$wine_bin" reg add "HKCU\\Software\\Wine\\Direct3D" /v DirectDrawRenderer /t REG_SZ /d opengl /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
+    adobe_setup::apply_graphics_registry
 }
 
 recipe_photoshop::_configure_ie8() {
-    output::step "IE8 (Adobe-Installer, 5–10 Min.)"
-    output::info "Silent-Install nutzt IE-Engine — IE8 muss im Prefix sein"
-    if photoshop_setup::ie8_present; then
-        output::success "IE8 bereits im Prefix"
-        photoshop_setup::reregister_ie8_dlls
-        return 0
-    fi
-    local wt_log="${LOG_DIR}/winetricks_ie8_${TIMESTAMP_ISO}.log"
-    recipe_winetricks::prepare || return 1
-    recipe_winetricks::_invoke_with_timeout "$wt_log" 900 -q ie8 || return 1
-    if ! photoshop_setup::ie8_present; then
-        recipe_hooks::log_err "IE8 fehlgeschlagen — $wt_log"
-        return 1
-    fi
-    output::success "IE8 installiert"
-    recipe_win10::ensure >>"${LOG_FILE:-/dev/null}" 2>&1 || return 1
-    photoshop_setup::reregister_ie8_dlls
-    return 0
+    adobe_setup::configure_ie8
 }
 
 recipe_photoshop::_run_adobe_installer() {
-    photoshop_setup::prepare_adobe_installer_env
-    local setup_exe setup_dir installer_args=() install_status=0
-    setup_exe="$(photoshop_setup::resolve_setup_exe)" || {
-        recipe_hooks::die "Set-up.exe nicht gefunden (C:\\AdobeSetup)"
-    }
-    setup_dir="$(dirname "$setup_exe")"
-
-    if [ "${PHOTOSHOP_INSTALLER_GUI:-0}" = "1" ]; then
-        output::info "GUI-Installer (PHOTOSHOP_INSTALLER_GUI=1)"
-        installer_args=()
-    else
-        installer_args=(--silent=1)
-        output::info "Silent-Installation (Adobe ESD) — ca. 2–4 Minuten"
-    fi
-
-    output::progress 70 "Adobe Set-up.exe"
-    (
-        cd "$setup_dir" || exit 1
-        wine "./Set-up.exe" "${installer_args[@]}" 2>&1 | tee -a "${LOG_FILE:-/dev/null}" | while IFS= read -r _line; do
-            case "$_line" in
-                Progress:*)
-                    _pct=$(echo "$_line" | grep -oE '[0-9]+' | tail -1)
-                    if [ -n "$_pct" ] && [ "${LAUNCHER_GUI:-0}" = "1" ]; then
-                        printf '@progress:%s\n' "$((70 + _pct * 25 / 100))"
-                    else
-                        echo "$_line"
-                    fi
-                    ;;
-            esac
-        done
-        exit "${PIPESTATUS[0]}"
-    ) || install_status=$?
-
-    photoshop_setup::kill_all_wineservers
-    [ "$install_status" -eq 0 ] || return "$install_status"
+    adobe_setup::run_silent_setup PHOTOSHOP_INSTALLER_GUI || return $?
 
     local exe_path
     exe_path="$(photoshop::find_exe "$WINEPREFIX" 2>/dev/null || true)"
@@ -544,20 +386,7 @@ recipe_photoshop::run_text_glatt_cli() {
 # Native MS-GDI+ (winetricks gdiplus / Win7) — gdiplus_winxp-Download ist tot (MS 404 / archive.org 429).
 # Separat vom Launch-Pfad: winetricks kann Minuten brauchen.
 recipe_photoshop::ensure_gdiplus() {
-    local wow64="${WINEPREFIX:?}/drive_c/windows/syswow64/gdiplus.dll"
-    if recipe_validate::native_pe "$wow64"; then
-        return 0
-    fi
-    local log="${LOG_DIR:-${DATA_ROOT}/logs}/winetricks_gdiplus_${TIMESTAMP_ISO:-$(date +%Y-%m-%d_%H-%M-%S)}.log"
-    mkdir -p "$(dirname "$log")"
-    output::step "gdiplus (native MS-GDI+ — Neu-Dokument / Export)"
-    recipe_winetricks::run "$log" gdiplus || {
-        recipe_hooks::log_err "gdiplus fehlgeschlagen — $log"
-        return 1
-    }
-    wine reg add "HKCU\\Software\\Wine\\DllOverrides" /v gdiplus /t REG_SZ /d "native" /f \
-        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
-    recipe_validate::native_pe "$wow64"
+    adobe_setup::ensure_gdiplus
 }
 
 recipe_photoshop::ensure_post_install_config() {

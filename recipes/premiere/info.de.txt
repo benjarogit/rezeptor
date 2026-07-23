@@ -1,0 +1,33 @@
+# Adobe Premiere Pro 2024
+
+Autor: benjarogit
+Version: 24.1.0.85 (Offline-Installer / ISO)
+
+## Kurzbeschreibung
+Adobe Premiere Pro 2024 unter Proton-GE (Vulkan/DXVK) — Installation läuft still im Hintergrund (Offline-Installer oder ISO).
+
+## GPU / Grafikkarte
+• **NVIDIA:** Rezept ist darauf ausgelegt. Beim Installieren/Reparieren werden automatisch nvidia-libs (CUDA/NVAPI/NVENC) ins Prefix gelegt — Mercury kann GPU-Beschleunigung (CUDA) nutzen.
+• **AMD (Radeon) / Intel:** Kein CUDA-Pfad. Premiere läuft über DXVK/Vulkan; oft nur Software-Renderer oder eingeschränkte GPU-Hilfe. Das ist erwartet, kein Installationsfehler.
+• Abschalten (NVIDIA): `PREMIERE_NVIDIA_LIBS=0` — erzwingen: `PREMIERE_NVIDIA_LIBS=1`
+• In Premiere: Mercury Playback Engine → Renderer prüfen (CUDA nur mit NVIDIA)
+
+## Voraussetzungen
+• Proton-GE (wird automatisch verwendet)
+• Adobe Offline-Installer: Ordner mit Set-up.exe und packages/ (Produkt PPRO) — oder Adobe-*.iso
+• Etwa 12–20 GB freier Speicherplatz (Installer/ISO ~2–3 GB, Prefix größer)
+• Viel RAM: unter Proton oft 16 GB+ frei nötig — sonst beendet der Kernel Premiere/Rezeptor (OOM)
+
+## Installation
+1. „Installieren“ wählen
+2. Ordner mit Set-up.exe wählen (z. B. „Adobe 2024“ aus gemounteter ISO) oder ISO-Pfad setzen
+3. Datenordner prüfen (Wine-Prefix; Standard: ~/.local/share/wine-software/premiere)
+
+## Nutzung
+• „Starten“ im Launcher oder über die Desktop-Verknüpfung
+• Der erste Start kann 1–2 Minuten dauern
+
+## Hinweise
+• Garantiert getestet: Premiere Pro 2024 v24.1.0.85
+• Andere 24.x: Best Effort (Community: 24.0.3.2 oft stabiler)
+• Logs: ~/.local/share/wine-software/logs/

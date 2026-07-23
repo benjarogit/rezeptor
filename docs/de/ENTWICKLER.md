@@ -69,7 +69,7 @@ In der GUI immer **Quelle** und ggf. **Ziel** — unabhängig vom App-Typ.
 
 | Typ | Mitgeliefert | Quelle | Ziel | Referenz |
 |-----|--------------|--------|------|----------|
-| **Offline-Installer** | `photoshop` | Setup-Ordner / `.exe` | Datenordner (Prefix) | [INSTALLER.md](INSTALLER.md) |
+| **Offline-Installer** | `photoshop`, `premiere` | Setup-Ordner / `.exe` | Datenordner (Prefix) | [INSTALLER.md](INSTALLER.md) |
 | **Portable** (Ordner/Archiv) | `wiso-steuer` | Ordner oder zip/7z/… | Installationsordner | [WISO.md](WISO.md) |
 | **Steam + Online-Fix** | `house-of-ashes` | Fix BYOS; Spiel in Steam | Spielordner (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
 | **Einzel-EXE / Trainer** | `za4-trainer` | eine `.exe` | oft Steam-Unterordner | [TRAINER.md](TRAINER.md) |

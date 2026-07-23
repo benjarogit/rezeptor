@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -245,6 +247,75 @@ def _pe_contains(exe: Path, needles: list[str]) -> bool:
     return all(_bytes_contains_ci(data, n) for n in encoded)
 
 
+def _find_7z() -> str | None:
+    return shutil.which("7z") or shutil.which("7za") or shutil.which("7zz")
+
+
+def _archive_list_members(archive: Path) -> list[str]:
+    """Mitglieder einer ISO/ZIP/7z über 7z auflisten (relativ, / normalisiert)."""
+    seven = _find_7z()
+    if seven is None or not archive.is_file():
+        return []
+    try:
+        proc = subprocess.run(
+            [seven, "l", "-ba", "-slt", str(archive)],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return []
+    if proc.returncode != 0:
+        return []
+    members: list[str] = []
+    for line in proc.stdout.splitlines():
+        if line.startswith("Path = "):
+            rel = line[7:].strip().replace("\\", "/")
+            if rel and rel != str(archive) and not rel.endswith("/"):
+                members.append(rel)
+    return members
+
+
+def _archive_extract_text(archive: Path, member: str, *, max_bytes: int = 512_000) -> str:
+    """Einzelne Textdatei aus Archiv lesen (stdout von 7z x -so)."""
+    seven = _find_7z()
+    if seven is None:
+        return ""
+    member = member.replace("\\", "/").lstrip("/")
+    try:
+        proc = subprocess.run(
+            [seven, "x", "-so", "-y", str(archive), member],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=60,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+    if proc.returncode != 0 or not proc.stdout:
+        return ""
+    data = proc.stdout[:max_bytes]
+    return data.decode("utf-8", errors="replace")
+
+
+def _glob_match_member(member: str, pattern: str) -> bool:
+    """pathlib-ähnliches Glob-Match für Archiv-Pfade (POSIX)."""
+    from fnmatch import fnmatch
+
+    pattern = pattern.replace("\\", "/").lstrip("./")
+    member = member.replace("\\", "/").lstrip("./")
+    if fnmatch(member, pattern):
+        return True
+    if pattern.startswith("**/"):
+        return fnmatch(member, pattern[3:]) or fnmatch(member, pattern)
+    # products/PPRO/application.json ↔ Adobe 2024/products/PPRO/application.json
+    if fnmatch(member, "*/" + pattern) or fnmatch(member, "*/" + pattern.lstrip("*")):
+        return True
+    return member.endswith("/" + pattern) or member.endswith(pattern)
+
+
 def _resolve_globs(root: Path, pattern: str) -> list[Path]:
     pattern = pattern.strip()
     if not pattern:
@@ -253,6 +324,15 @@ def _resolve_globs(root: Path, pattern: str) -> list[Path]:
     if pattern in (".", "./"):
         return [root] if root.exists() else []
     if root.is_file():
+        # Archiv/ISO: Treffer als virtuelle Pfade markieren (siehe _run_signal json_key)
+        suf = root.suffix.lower()
+        if suf in (".iso", ".zip", ".7z", ".rar"):
+            hits: list[Path] = []
+            for member in _archive_list_members(root):
+                if _glob_match_member(member, pattern):
+                    # sentinel: archive!member — nur für Archiv-Lesewege
+                    hits.append(Path(f"{root}!{member}"))
+            return hits
         # selected installer EXE: match against file itself or siblings
         if pattern in ("", Path(pattern).name) or root.match(pattern) or root.name == pattern:
             return [root]
@@ -284,11 +364,29 @@ def _run_signal(root: Path, rule: dict[str, Any], guaranteed: str) -> str:
         if not key or not glob_pat:
             return ""
         for path in _resolve_globs(root, glob_pat):
-            if not path.is_file():
+            text = ""
+            # Archiv-Sentinel: /path/to.iso!Adobe 2024/products/PPRO/application.json
+            s = str(path)
+            if "!" in s and root.is_file() and root.suffix.lower() in (
+                ".iso",
+                ".zip",
+                ".7z",
+                ".rar",
+            ):
+                member = s.split("!", 1)[1]
+                text = _archive_extract_text(root, member)
+            elif path.is_file():
+                try:
+                    text = path.read_text(encoding="utf-8", errors="replace")
+                except OSError:
+                    continue
+            else:
+                continue
+            if not text:
                 continue
             try:
-                data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
-            except (OSError, json.JSONDecodeError):
+                data = json.loads(text)
+            except json.JSONDecodeError:
                 continue
             if isinstance(data, dict) and key in data and data[key] is not None:
                 return str(data[key]).strip()
@@ -364,8 +462,12 @@ def _run_signal(root: Path, rule: dict[str, Any], guaranteed: str) -> str:
         if root.is_dir():
             names.extend(p.name for p in root.iterdir() if p.is_file())
         for name in names:
-            if cre.search(name):
-                return label or name
+            m = cre.search(name)
+            if not m:
+                continue
+            if m.lastindex:
+                return m.group(1).strip()
+            return label or name
         return ""
 
     if kind == "stack":

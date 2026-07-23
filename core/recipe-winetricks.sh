@@ -4,12 +4,38 @@
 WINETRICKS_WINEBOOT_WATCHDOG_SEC=60
 WINETRICKS_DEFAULT_TIMEOUT_SEC=600
 WINETRICKS_HEAVY_TIMEOUT_SEC=900
+# wineserver -w nach Adobe/explorer-/desktop kann ewig warten — hart begrenzen.
+WINETRICKS_WINESERVER_WAIT_SEC=45
 
 recipe_winetricks::prepare() {
     wine_runtime::init || return 1
     wine_runtime::export_env
     wine_runtime::cache_dir >/dev/null
     export WINEDEBUG="${WINEDEBUG:--all}"
+    # Geerbtes Session-D-Bus → oft Assertion-Abort in wine/regedit, dann hängt wineserver -w.
+    unset DBUS_SESSION_BUS_ADDRESS || true
+    export NO_AT_BRIDGE=1
+    export DBUS_FATAL_WARNINGS=0
+}
+
+# Wartet auf Prefix-Idle; bei Timeout Prefix hart beenden (kein Endlos-Hang).
+recipe_winetricks::wineserver_wait() {
+    local sec="${1:-${WINETRICKS_WINESERVER_WAIT_SEC}}"
+    local wpid="" i=0
+    wine_runtime::wineserver -w 2>/dev/null &
+    wpid=$!
+    while kill -0 "$wpid" 2>/dev/null; do
+        i=$((i + 1))
+        if [ "$i" -ge "$sec" ]; then
+            kill -TERM "$wpid" 2>/dev/null || true
+            wine_runtime::wineserver -k 2>/dev/null || true
+            wait "$wpid" 2>/dev/null || true
+            return 0
+        fi
+        sleep 1
+    done
+    wait "$wpid" 2>/dev/null || true
+    return 0
 }
 
 recipe_winetricks::stabilize_prefix() {
@@ -30,7 +56,7 @@ recipe_winetricks::stabilize_prefix() {
     ) &
     wait "$boot_pid" 2>/dev/null || true
     export WINEDLLOVERRIDES="$old_overrides"
-    wine_runtime::wineserver -w 2>/dev/null || true
+    recipe_winetricks::wineserver_wait
     sleep 1
 }
 
@@ -124,7 +150,7 @@ recipe_winetricks::run() {
             wine_runtime::wineserver -k 2>/dev/null || true
             sleep 2
             wine wineboot -u >> "${LOG_FILE:-/dev/null}" 2>&1 || true
-            wine_runtime::wineserver -w 2>/dev/null || true
+            recipe_winetricks::wineserver_wait
             sleep 2
         fi
         set +e

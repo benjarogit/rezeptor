@@ -23,6 +23,28 @@ photoshop/*.idx
 # Keep structure but ignore content
 !photoshop/.gitkeep
 
+# Premiere Pro (user-provided offline installer / ISO)
+premiere/Set-up.exe
+premiere/packages/
+premiere/products/
+premiere/resources/
+premiere/Adobe*/
+premiere/*.exe
+premiere/*.dll
+premiere/*.msi
+premiere/*.zip
+premiere/*.7z
+premiere/*.iso
+premiere/*.pima
+premiere/*.pimx
+premiere/*.sig
+premiere/*.xml
+premiere/*.json
+premiere/*.dat
+premiere/*.idx
+!premiere/.gitkeep
+!premiere/README.md
+
 # ============================================================
 # Runtime/User Data
 # ============================================================

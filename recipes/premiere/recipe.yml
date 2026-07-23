@@ -1,0 +1,47 @@
+id: premiere
+schema_version: 1
+icon: "{repo}/images/AdobePremiere-icon.png"
+name: "Adobe Premiere Pro 2024"
+author: "benjarogit"
+category: "Video & Schnitt"
+version_guaranteed: "24.1.0.85"
+version_label: "Adobe Premiere Pro 2024 (24.1.0.85)"
+version_detect:
+  - kind: json_key
+    glob: "products/PPRO/application.json"
+    key: ProductVersion
+  - kind: json_key
+    glob: "products/PPRO/Application.json"
+    key: ProductVersion
+  - kind: json_key
+    glob: "**/PPRO/application.json"
+    key: ProductVersion
+  # ISO/Archiv-Fallback: Versionsstring im Dateinamen (z. B. … v24.1.0.85.iso)
+  - kind: filename_regex
+    regex: '(?i)v?(\d+\.\d+\.\d+\.\d+)'
+notify_title: "Premiere Pro 2024"
+data_root: "~/.local/share/wine-software/premiere"
+prefix: "{data_root}/prefix"
+runtime: proton-ge
+install_type: installer_offline
+source_kind: folder
+source_formats: "iso,zip,7z"
+source_label: "Ordner mit Set-up.exe (oder Adobe-*.iso / Unterordner Adobe 2024/)"
+target_default: "~/.local/share/wine-software/premiere"
+target_label: "Datenordner (Wine-Prefix wird hier angelegt)"
+fix_kind: none
+exe_glob: "**/Adobe Premiere Pro.exe"
+launch_process_patterns: ["Adobe Premiere Pro.exe"]
+# win10 via recipe_win10::ensure; VC++ via recipe_vcrun::ensure (nicht winetricks)
+# DXVK: wine_runtime::deploy_proton_graphics_dlls — kein winetricks dxvk
+winetricks: [atmlib, corefonts, "fontsmooth=rgb", gdiplus, msxml3, msxml6, ie8]
+env:
+  WINEDEBUG: "-all,+err"
+validate: validate.sh
+launch: launch.sh
+install: install.sh
+repair: repair.sh
+kill: kill.sh
+uninstall: uninstall.sh
+install_steps:
+  - module: recipe_premiere::install

@@ -7,7 +7,7 @@ nicht jede Quelle ist gleichwertig.
 
 Im Repository unter `recipes/<id>/` gebündelt, indexiert in `recipes/catalog.json` (`trust: official`).
 
-Beispiele: Photoshop, WISO Steuer, House of Ashes, ZA4-Trainer.
+Beispiele: Photoshop, Premiere Pro, WISO Steuer, House of Ashes, ZA4-Trainer.
 
 Diese Rezepte werden mit Rezeptor ausgeliefert und durch CI (`recipe-lint`, Manifest-Check) abgesichert.
 

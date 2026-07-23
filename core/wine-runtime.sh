@@ -389,7 +389,9 @@ wine_runtime::deploy_proton_graphics_dlls() {
             cp -f "$def_wow64/$dll" "$wow64/$dll" 2>/dev/null || err=1
         fi
     done
-    for dll in d3d11.dll dxgi.dll; do
+    # d3d10core mitliefern — sonst Wine-d3d10core + DXVK-dxgi → DXGID3D10CreateDevice abort
+    # (Premiere/UXP-Panels oft schwarz).
+    for dll in d3d11.dll dxgi.dll d3d10core.dll; do
         if [ -f "$dxvk64/$dll" ]; then
             cp -f "$dxvk64/$dll" "$sys32/$dll" 2>/dev/null || err=1
         fi

@@ -40,6 +40,19 @@
         "validate.sh": "sha256:148296253f190121b7b478a18fe37b8bd3829ca73d2ac9fd14f51149ad1924a5"
       }
     },
+    "premiere": {
+      "files": {
+        "info.de.txt": "sha256:096cc6d6890af044a52f0a26740f25aef7a58059ff1f35788706b9042d305df7",
+        "info.en.txt": "sha256:8e59fd89b18cc4fda91f33b3b6012e5ca310f8af406920a7e8e340d408588c07",
+        "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
+        "kill.sh": "sha256:032971f2a9bbb85cad338ff3be4e31b6fb906754ebfe987d2905f1622250bf20",
+        "launch.sh": "sha256:967291511517c15b3a87951688d35ec261c28395180d89adb08c9f648c55b5e2",
+        "recipe.yml": "sha256:2d847e319ea5b70c750c66cfa231d7dc5efd3b9db4cce5fcd5999bc08345b100",
+        "repair.sh": "sha256:3e3df76dea88234c153df4a1fef9840dfc66b6d640ca929becc792d532641cca",
+        "uninstall.sh": "sha256:2ffe490eb782496c8c9592ef0d9aad22ea7237642b336d3902d2ded9afe6d62e",
+        "validate.sh": "sha256:8f510d6177bf254f6af24a581bc3b9061dc18fc344fea79129f674c1e39de898"
+      }
+    },
     "wiso-steuer": {
       "files": {
         "assets/wiso-mit-wine.sh": "sha256:a829a5923d8e61168431bc445bf013ee6d0d65ce02d0bbc897f954383f08de00",
