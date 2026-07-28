@@ -6,6 +6,62 @@ WINETRICKS_DEFAULT_TIMEOUT_SEC=600
 WINETRICKS_HEAVY_TIMEOUT_SEC=900
 # wineserver -w nach Adobe/explorer-/desktop kann ewig warten — hart begrenzen.
 WINETRICKS_WINESERVER_WAIT_SEC=45
+# Win7 SP1 (ie8 prereq) ist ~947 MB; deutlich kleinere Dateien sind fast sicher kaputt.
+WINETRICKS_WIN7SP1_MIN_BYTES="${WINETRICKS_WIN7SP1_MIN_BYTES:-900000000}"
+
+recipe_winetricks::_win7sp1_cache_dir() {
+    local base="${WINETRICKS_CACHE:-${XDG_CACHE_HOME:-${HOME}/.cache}/winetricks}"
+    echo "${base%/}/win7sp1"
+}
+
+recipe_winetricks::_filesize() {
+    local f="$1"
+    [ -f "$f" ] || return 1
+    /usr/bin/stat -c '%s' "$f" 2>/dev/null || stat -c '%s' "$f" 2>/dev/null || wc -c < "$f" 2>/dev/null
+}
+
+recipe_winetricks::purge_win7sp1_cache() {
+    local d f
+    d="$(recipe_winetricks::_win7sp1_cache_dir)"
+    for f in \
+        "$d/windows6.1-KB976932-X64.exe" \
+        "$d/windows6.1-kb976932-x64_74865ef2562006e51d7f9333b4a8d45b7a749dab.exe"; do
+        [ -f "$f" ] || continue
+        /bin/rm -f "$f" 2>/dev/null || rm -f "$f" 2>/dev/null || true
+    done
+}
+
+# ie8/win7sp1 lädt gern halbfertige Dateien in den Cache; die blockieren alle Folgeläufe.
+recipe_winetricks::sanitize_win7sp1_cache() {
+    local d canonical alt min sz
+    d="$(recipe_winetricks::_win7sp1_cache_dir)"
+    canonical="$d/windows6.1-KB976932-X64.exe"
+    alt="$d/windows6.1-kb976932-x64_74865ef2562006e51d7f9333b4a8d45b7a749dab.exe"
+    min="${WINETRICKS_WIN7SP1_MIN_BYTES}"
+    /bin/mkdir -p "$d" 2>/dev/null || mkdir -p "$d" 2>/dev/null || true
+
+    if [ -f "$canonical" ]; then
+        sz="$(recipe_winetricks::_filesize "$canonical" || echo 0)"
+        if [ "${sz:-0}" -lt "$min" ]; then
+            /bin/rm -f "$canonical" 2>/dev/null || rm -f "$canonical" 2>/dev/null || true
+            if type output::warning >/dev/null 2>&1; then
+                output::warning "win7sp1-Cache korrigiert (zu klein, neu laden)"
+            fi
+        fi
+    fi
+
+    if [ -f "$alt" ]; then
+        sz="$(recipe_winetricks::_filesize "$alt" || echo 0)"
+        if [ "${sz:-0}" -lt "$min" ]; then
+            /bin/rm -f "$alt" 2>/dev/null || rm -f "$alt" 2>/dev/null || true
+            if type output::warning >/dev/null 2>&1; then
+                output::warning "win7sp1-Hashcache verworfen (zu klein, neu laden)"
+            fi
+        elif [ ! -f "$canonical" ]; then
+            /bin/cp -f "$alt" "$canonical" 2>/dev/null || cp -f "$alt" "$canonical" 2>/dev/null || true
+        fi
+    fi
+}
 
 recipe_winetricks::prepare() {
     wine_runtime::init || return 1

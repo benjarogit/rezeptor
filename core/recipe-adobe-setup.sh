@@ -158,8 +158,21 @@ adobe_setup::configure_ie8() {
         return 0
     fi
     local wt_log="${LOG_DIR}/winetricks_ie8_${TIMESTAMP_ISO}.log"
+    local attempt rc=1
+    recipe_winetricks::sanitize_win7sp1_cache || true
     recipe_winetricks::prepare || return 1
-    recipe_winetricks::_invoke_with_timeout "$wt_log" 900 -q ie8 || return 1
+    for attempt in 1 2; do
+        set +e
+        recipe_winetricks::_invoke_with_timeout "$wt_log" 900 -q ie8
+        rc=$?
+        set -e
+        [ "$rc" -eq 0 ] && break
+        [ "$attempt" -eq 1 ] || break
+        output::warning "IE8-Setup fehlgeschlagen — win7sp1-Cache löschen und erneut versuchen"
+        recipe_winetricks::purge_win7sp1_cache || true
+        recipe_winetricks::sanitize_win7sp1_cache || true
+    done
+    [ "$rc" -eq 0 ] || return 1
     if ! adobe_setup::ie8_present; then
         recipe_hooks::log_err "IE8 fehlgeschlagen — $wt_log"
         return 1
