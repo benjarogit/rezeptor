@@ -108,6 +108,13 @@ _tmp="$(_extract_deb \
     "fbf5d0c0dd516770dd1910543baf9050bfb8b4cfa4baf457c8117bd8f93393c5")"
 cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libmspack.so.0"* "$APPDIR/usr/lib/"
 rm -rf "$_tmp"
+# Qt6 xcb plugin (PyQt6) needs libxcb-cursor.so.0 — often missing on minimal Ubuntu/Debian.
+# Bundle pinned bookworm .so so AppImage starts without a host apt install.
+_tmp="$(_extract_deb \
+    "http://deb.debian.org/debian/pool/main/x/xcb-util-cursor/libxcb-cursor0_0.1.4-1_amd64.deb" \
+    "a4b3c32dc008275ffcacccc1c77c030f01aad38e232e05d5ad116b76656c607c")"
+cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libxcb-cursor.so.0"* "$APPDIR/usr/lib/"
+rm -rf "$_tmp"
 chmod +x "$APPDIR/usr/bin/cabextract" "$APPDIR/usr/bin/unzip"
 
 cat > "$APPDIR/rezeptor.desktop" <<EOF

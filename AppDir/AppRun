@@ -22,6 +22,35 @@ if [ -z "${QT_QPA_PLATFORMTHEME:-}" ]; then
     esac
 fi
 
+# Qt xcb platform needs libxcb-cursor.so.0. Prefer the copy bundled under usr/lib;
+# if still missing on the host linker path, print multi-distro install hints (GUI cannot start).
+_xcb_cursor_ok=0
+if [ -e "$HERE/usr/lib/libxcb-cursor.so.0" ] || [ -e "$HERE/usr/lib/libxcb-cursor.so.0.0.0" ]; then
+    _xcb_cursor_ok=1
+elif ldconfig -p 2>/dev/null | grep -q 'libxcb-cursor\.so\.0'; then
+    _xcb_cursor_ok=1
+elif [ -e /usr/lib/libxcb-cursor.so.0 ] \
+    || [ -e /usr/lib64/libxcb-cursor.so.0 ] \
+    || [ -e /usr/lib/x86_64-linux-gnu/libxcb-cursor.so.0 ] \
+    || [ -e /lib/x86_64-linux-gnu/libxcb-cursor.so.0 ]; then
+    _xcb_cursor_ok=1
+fi
+if [ "$_xcb_cursor_ok" -ne 1 ]; then
+    cat >&2 <<'EOF'
+Rezeptor AppImage: libxcb-cursor.so.0 missing (Qt xcb platform).
+
+Install the package for your distro, then re-run this AppImage:
+
+  Debian / Ubuntu / Mint:  sudo apt install libxcb-cursor0
+  Arch / CachyOS / Manjaro: sudo pacman -S libxcb-cursor
+  Fedora / RHEL:           sudo dnf install libxcb-cursor
+  openSUSE:                sudo zypper install libxcb-cursor0
+
+Immutable (Bazzite/Silverblue/…): prefer Flatpak, or install in a writable layer / distrobox.
+EOF
+    exit 1
+fi
+
 APPIMAGE_PYTHON="$HERE/python/bin/python3"
 if [ ! -x "$APPIMAGE_PYTHON" ]; then
     echo "Bundled Python missing — rebuild AppImage (scripts/build-appimage.sh)." >&2

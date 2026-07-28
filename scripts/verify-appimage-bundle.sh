@@ -63,6 +63,18 @@ case "$pyqt_path" in
         ;;
 esac
 
+# Qt xcb platform needs libxcb-cursor (minimal Ubuntu often lacks the host package).
+if ! ls "$ROOT/usr/lib"/libxcb-cursor.so.0* >/dev/null 2>&1; then
+    echo "FAIL: AppDir missing bundled libxcb-cursor.so.0 under usr/lib" >&2
+    fail=1
+else
+    echo "Bundled libxcb-cursor present under usr/lib"
+fi
+if ! grep -q 'libxcb-cursor' "$ROOT/AppRun"; then
+    echo "FAIL: AppRun missing libxcb-cursor preflight / install hints" >&2
+    fail=1
+fi
+
 if grep -qE 'elif python3 -c "import PyQt6"|export PYTHON="python3"' "$ROOT/AppRun"; then
     echo "FAIL: AppRun still falls back to host python3" >&2
     fail=1

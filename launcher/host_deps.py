@@ -1,7 +1,8 @@
-"""Host tool checks for Rezeptor (curl/unzip/7z/…) + optional pkexec install."""
+"""Host tool checks for Rezeptor (curl/unzip/7z/Qt xcb/…) + optional pkexec install."""
 
 from __future__ import annotations
 
+import ctypes.util
 import os
 import shutil
 import subprocess
@@ -13,7 +14,7 @@ from pathlib import Path
 class HostDep:
     """One host dependency check."""
 
-    id: str  # stable id: download | tar | unzip | sevenzip | winetricks
+    id: str  # stable id: download | tar | unzip | sevenzip | winetricks | qt_xcb_cursor
     required: bool
     present: bool
     # Human label keys resolved by UI via t(f"deps.item_{id}")
@@ -24,14 +25,43 @@ def _which_any(*names: str) -> bool:
     return any(shutil.which(n) for n in names)
 
 
+def _soname_present(name: str) -> bool:
+    """True if lib{name}.so* is loadable (ldconfig / ctypes / LD_LIBRARY_PATH)."""
+    if ctypes.util.find_library(name):
+        return True
+    bases: list[Path] = []
+    for part in (os.environ.get("LD_LIBRARY_PATH") or "").split(":"):
+        if part:
+            bases.append(Path(part))
+    bases.extend(
+        (
+            Path("/usr/lib"),
+            Path("/usr/lib64"),
+            Path("/usr/lib/x86_64-linux-gnu"),
+            Path("/lib"),
+            Path("/lib64"),
+            Path("/lib/x86_64-linux-gnu"),
+        )
+    )
+    for base in bases:
+        try:
+            if any(base.glob(f"lib{name}.so*")):
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def detect_family() -> str:
-    """Return pacman | apt | dnf | unknown."""
+    """Return pacman | apt | dnf | zypper | unknown."""
     if shutil.which("pacman"):
         return "pacman"
     if shutil.which("apt-get") or shutil.which("apt"):
         return "apt"
     if shutil.which("dnf"):
         return "dnf"
+    if shutil.which("zypper"):
+        return "zypper"
     return "unknown"
 
 
@@ -66,6 +96,8 @@ def _packages_for(family: str, dep_id: str) -> tuple[str, ...]:
             "unzip": ("unzip",),
             "sevenzip": ("p7zip",),
             "winetricks": ("winetricks",),
+            # Qt6 xcb platform (AppImage/pip PyQt6); Arch package name = libxcb-cursor
+            "qt_xcb_cursor": ("libxcb-cursor",),
         },
         "apt": {
             "download": ("curl",),
@@ -73,6 +105,7 @@ def _packages_for(family: str, dep_id: str) -> tuple[str, ...]:
             "unzip": ("unzip",),
             "sevenzip": ("p7zip-full",),
             "winetricks": ("winetricks",),
+            "qt_xcb_cursor": ("libxcb-cursor0",),
         },
         "dnf": {
             "download": ("curl",),
@@ -80,6 +113,15 @@ def _packages_for(family: str, dep_id: str) -> tuple[str, ...]:
             "unzip": ("unzip",),
             "sevenzip": ("p7zip", "p7zip-plugins"),
             "winetricks": ("winetricks",),
+            "qt_xcb_cursor": ("libxcb-cursor",),
+        },
+        "zypper": {
+            "download": ("curl",),
+            "tar": ("tar",),
+            "unzip": ("unzip",),
+            "sevenzip": ("p7zip",),
+            "winetricks": ("winetricks",),
+            "qt_xcb_cursor": ("libxcb-cursor0",),
         },
     }
     fam = table.get(family) or table["pacman"]
@@ -94,6 +136,8 @@ def scan_host_deps() -> list[HostDep]:
         ("unzip", True, _which_any("unzip")),
         ("sevenzip", False, _which_any("7z", "7za")),
         ("winetricks", False, _which_any("winetricks")),
+        # Required for GUI: Qt xcb plugin loads libxcb-cursor.so.0 (often missing on minimal Ubuntu)
+        ("qt_xcb_cursor", True, _soname_present("xcb-cursor")),
     ]
     out: list[HostDep] = []
     for dep_id, required, present in checks:
@@ -136,7 +180,15 @@ def install_command(missing: list[HostDep]) -> str:
         return f"sudo apt-get install -y {joined}"
     if family == "dnf":
         return f"sudo dnf install -y {joined}"
-    return f"# Install manually: {joined}"
+    if family == "zypper":
+        return f"sudo zypper --non-interactive install {joined}"
+    return (
+        f"# Install manually ({joined}). Examples:\n"
+        f"#   Debian/Ubuntu: sudo apt install libxcb-cursor0\n"
+        f"#   Arch/CachyOS:  sudo pacman -S libxcb-cursor\n"
+        f"#   Fedora:        sudo dnf install libxcb-cursor\n"
+        f"#   openSUSE:      sudo zypper install libxcb-cursor0"
+    )
 
 
 def install_argv(missing: list[HostDep]) -> list[str] | None:
@@ -157,6 +209,8 @@ def install_argv(missing: list[HostDep]) -> list[str] | None:
         return ["apt-get", "install", "-y", *pkgs]
     if family == "dnf":
         return ["dnf", "install", "-y", *pkgs]
+    if family == "zypper":
+        return ["zypper", "--non-interactive", "install", *pkgs]
     return None
 
 

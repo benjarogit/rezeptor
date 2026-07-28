@@ -12,8 +12,23 @@ Rezeptor installiert und startet Windows-Software unter Linux mit getesteten **R
 | Weg | Host-PyQt6 nötig? |
 |-----|-------------------|
 | Git-Clone oder **`tar.gz`** + `./setup.sh` | **Ja** — Distro-Paket `python-pyqt6` (Arch/CachyOS) bzw. Entsprechung; optional `PyQt6-Fluent-Widgets` |
-| **AppImage** (Release) | **Nein** — Python und PyQt6 sind im Bundle (empfohlen auf Bazzite / immutable Distros) |
+| **AppImage** (Release) | **Nein** — Python und PyQt6 sind im Bundle (empfohlen auf Bazzite / immutable Distros). Qt braucht weiterhin grundlegende X11-Libs; aktuelle AppImages bringen zusätzlich `libxcb-cursor` für das xcb-Plugin mit. |
 | **Flatpak** (Release) | **Nein** — Python, PyQt6 und Proton-GE sind im Bundle |
+
+Wenn ein älteres AppImage mit `libxcb-cursor.so.0: cannot open shared object file` scheitert, Paket für deine Distro installieren (oder neueres Rezeptor-AppImage):
+
+```bash
+# Debian / Ubuntu / Mint
+sudo apt install libxcb-cursor0
+# Arch / CachyOS / Manjaro
+sudo pacman -S libxcb-cursor
+# Fedora / RHEL
+sudo dnf install libxcb-cursor
+# openSUSE
+sudo zypper install libxcb-cursor0
+```
+
+Der Dialog **System prüfen** kann fehlende Host-Werkzeuge (curl, unzip, …) und `libxcb-cursor` per `pkexec` nachinstallieren — sofern die GUI schon startet.
 
 ## Installation
 
