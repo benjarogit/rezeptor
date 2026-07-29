@@ -98,7 +98,7 @@ jobs:
         if: steps.skip.outputs.skip != 'true'
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y shellcheck bats python3-yaml
+          sudo apt-get install -y shellcheck bats python3-yaml python3-pyqt6
 
       - name: Shellcheck
         if: steps.skip.outputs.skip != 'true'

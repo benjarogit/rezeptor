@@ -1,6 +1,11 @@
 #!/usr/bin/env bats
 # source_hints parsing + URL lint policy
 
+
+_require_pyqt6() {
+    python3 -c "import PyQt6" 2>/dev/null || skip "PyQt6 not installed on host"
+}
+
 load test_helper
 
 @test "minimal YAML parser reads source_hints string list" {
@@ -79,10 +84,13 @@ assert texts["photoshop-m0nkrus-220"][0] == "Photoshop", texts
 assert "22.0.0.35" in texts["photoshop-m0nkrus-220"][1], texts
 print("OK", texts)
 PY
+    if [ "$status" -ne 0 ]; then echo "$output" >&2; fi
     [ "$status" -eq 0 ]
 }
 
 @test "m0nkrus pack folder normalizes to ISO with matching version" {
+    _require_pyqt6
+
     PACK="/home/benny/Downloads/Adobe Photoshop 2021 22.1.1.138 Multilingual"
     if [ ! -d "$PACK" ]; then
         skip "pack folder not present"
@@ -100,10 +108,13 @@ root = adobe_pack_root_for_source(got)
 assert root == str(pack.resolve()), (root, pack)
 print("OK", got, root)
 PY
+    if [ "$status" -ne 0 ]; then echo "$output" >&2; fi
     [ "$status" -eq 0 ]
 }
 
 @test "adobe pack root heuristic and RECIPE_PACK_ROOT env" {
+    _require_pyqt6
+
     run python3 - <<'PY'
 import tempfile
 from pathlib import Path
@@ -129,10 +140,13 @@ with tempfile.TemporaryDirectory() as td:
     assert adobe_pack_root_for_source(str(root)) == str(root.resolve())
 print("OK")
 PY
+    if [ "$status" -ne 0 ]; then echo "$output" >&2; fi
     [ "$status" -eq 0 ]
 }
 
 @test "adobe pack folder survives accept path (not forced to ISO-as-dir)" {
+    _require_pyqt6
+
     PACK="/home/benny/Downloads/Adobe Photoshop 2021 22.1.1.138 Multilingual"
     if [ ! -d "$PACK" ]; then
         skip "pack folder not present"
@@ -163,6 +177,7 @@ assert adobe_pack_root_for_source(str(pack)) == str(pack.resolve())
 assert adobe_pack_root_for_source(iso) == str(pack.resolve())
 print("OK")
 PY
+    if [ "$status" -ne 0 ]; then echo "$output" >&2; fi
     [ "$status" -eq 0 ]
 }
 
@@ -209,6 +224,8 @@ echo OK
 }
 
 @test "ISO-only pack heuristic and m0nkrus-220 default preference" {
+    _require_pyqt6
+
     run python3 - <<'PY'
 import tempfile
 from pathlib import Path
@@ -242,10 +259,13 @@ with tempfile.TemporaryDirectory() as td:
     # Fake Downloads: monkeypatch via writing under a temp that we pass... default uses home
 print("OK")
 PY
+    if [ "$status" -ne 0 ]; then echo "$output" >&2; fi
     [ "$status" -eq 0 ]
 }
 
 @test "photoshop-m0nkrus-220 prefers Photoshop.2021 over 22.1.1.138 pack" {
+    _require_pyqt6
+
     PACK220="/home/benny/Downloads/Photoshop.2021"
     PACK138="/home/benny/Downloads/Adobe Photoshop 2021 22.1.1.138 Multilingual"
     if [ ! -d "$PACK220" ] || [ ! -d "$PACK138" ]; then
@@ -267,6 +287,7 @@ assert "22.1.1.138" not in got, got
 assert "Adobe.Photoshop.2021.Multilingual" in Path(got).name or "Photoshop.2021" in got
 print("OK", got)
 PY
+    if [ "$status" -ne 0 ]; then echo "$output" >&2; fi
     [ "$status" -eq 0 ]
 }
 
