@@ -8,8 +8,30 @@
       "trust": "official",
       "path": "photoshop",
       "summary": {
-        "de": "Adobe Photoshop CC 2021 unter Proton-GE — Installation läuft still im Hintergrund (Offline-Installer).",
-        "en": "Adobe Photoshop CC 2021 on Proton-GE — installation runs quietly in the background (offline installer)."
+        "de": "Adobe Photoshop CC 2021 unter Proton-GE — Standard-Offline-Installer (22.0.0.35).",
+        "en": "Adobe Photoshop CC 2021 on Proton-GE — standard offline installer (22.0.0.35)."
+      }
+    },
+    {
+      "id": "photoshop-m0nkrus-220",
+      "name": "Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35)",
+      "category": "Grafik & Design",
+      "trust": "official",
+      "path": "photoshop-m0nkrus-220",
+      "summary": {
+        "de": "m0nkrus-Pack Photoshop.2021 (ISO-only, 22.0.0.35) — eigenes Rezept, nicht Standard und nicht 22.1.1.138.",
+        "en": "m0nkrus pack Photoshop.2021 (ISO-only, 22.0.0.35) — separate recipe, not standard and not 22.1.1.138."
+      }
+    },
+    {
+      "id": "photoshop-m0nkrus",
+      "name": "Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138)",
+      "category": "Grafik & Design",
+      "trust": "official",
+      "path": "photoshop-m0nkrus",
+      "summary": {
+        "de": "m0nkrus-Pack 22.1.1.138 mit Neural Filters / missing_libs / GenP (optional).",
+        "en": "m0nkrus pack 22.1.1.138 with Neural Filters / missing_libs / GenP (optional)."
       }
     },
     {

@@ -13,7 +13,7 @@ OPTIONAL_HOOKS=()
 INSTALL_TYPES=(installer_offline portable_launch portable_bootstrap game_install game_portable adobe_offline portable)
 SOURCE_KINDS=(folder installer archive fixed_path)
 FIX_KINDS=(none optional required)
-ALLOWED_ROOT_SH=(install launch validate repair kill uninstall)
+ALLOWED_ROOT_SH=(install launch validate repair kill uninstall genp)
 
 errors=0
 warnings=0
@@ -141,6 +141,20 @@ lint_recipe_dir() {
     if [ -n "$vg" ]; then
         if ! grep -qE '^version_detect:' "$yml" 2>/dev/null; then
             lint_err "$base: version_guaranteed gesetzt, aber version_detect fehlt (Versionserkennung Pflicht)"
+        fi
+    fi
+
+    # source_hints: Suchbegriffe / Pack-Titel — keine URLs / Magnet-Links
+    if grep -qE '^source_hints:' "$yml" 2>/dev/null; then
+        _sh_rc=0
+        awk '
+            BEGIN { inh=0 }
+            /^source_hints:/ { inh=1; next }
+            /^[A-Za-z0-9_]+:/ { inh=0 }
+            inh && /(https?:\/\/|magnet:\?)/ { exit 2 }
+        ' "$yml" || _sh_rc=$?
+        if [ "$_sh_rc" -eq 2 ]; then
+            lint_err "$base: source_hints darf keine URLs/Magnet-Links enthalten (nur Suchtexte)"
         fi
     fi
 

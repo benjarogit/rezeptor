@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QFontMetrics, QIcon, QKeyEvent, QResizeEvent
+from PyQt6.QtGui import QFont, QFontMetrics, QIcon, QKeyEvent, QResizeEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QProgressBar,
     QPushButton,
     QSizePolicy,
     QVBoxLayout,
@@ -371,6 +372,7 @@ class RecipeSidebarCard(QFrame):
         parent: QWidget | None = None,
         *,
         recipe_id: str = "",
+        subtitle: str = "",
     ) -> None:
         super().__init__(parent)
         self._recipe_id = recipe_id
@@ -381,7 +383,9 @@ class RecipeSidebarCard(QFrame):
         self._hover_header: SidebarCategoryHeader | None = None
         self._insert_place: str = ""  # before | after
         self.setObjectName("RecipeSidebarCard")
-        self.setFixedHeight(42)
+        self._subtitle = (subtitle or "").strip()
+        self._base_h = 54 if self._subtitle else 42
+        self.setFixedHeight(self._base_h)
         self.setMinimumWidth(0)
         self.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
@@ -395,9 +399,16 @@ class RecipeSidebarCard(QFrame):
         self.customContextMenuRequested.connect(lambda _pos: self.contextMenuRequested.emit())
         self._selected = False
         self._running = False
+        self._busy_pct: int | None = None
 
-        layout = QHBoxLayout(self)
-        layout.setContentsMargins(10, 6, 10, 6)
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        row = QWidget(self)
+        row.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(10, 4, 10, 4)
         layout.setSpacing(8)
 
         def _pass_mouse(w: QWidget) -> QWidget:
@@ -407,11 +418,15 @@ class RecipeSidebarCard(QFrame):
         if FLUENT_AVAILABLE and icon is not None and not icon.isNull():
             iw = _pass_mouse(IconWidget(icon, self))
             iw.setFixedSize(20, 20)
-            layout.addWidget(iw)
+            layout.addWidget(iw, 0, Qt.AlignmentFlag.AlignVCenter)
         else:
             dot = _pass_mouse(QLabel("●", self))
             dot.setFixedWidth(16)
-            layout.addWidget(dot)
+            layout.addWidget(dot, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        text_col = QVBoxLayout()
+        text_col.setContentsMargins(0, 0, 0, 0)
+        text_col.setSpacing(0)
 
         # Plain ElidedLabel — Fluent StrongBodyLabel ignores shrink/elide in the list.
         title = _pass_mouse(ElidedLabel(name, self))
@@ -420,7 +435,20 @@ class RecipeSidebarCard(QFrame):
             "background: transparent; color: #EDE6D6; font-weight: 600;"
         )
         self._title = title
-        layout.addWidget(title, stretch=1)
+        text_col.addWidget(title)
+
+        self._sub = _pass_mouse(ElidedLabel(self._subtitle, self))
+        self._sub.setObjectName("sidebarCardSub")
+        mono = QFont("monospace")
+        mono.setStyleHint(QFont.StyleHint.TypeWriter)
+        mono.setPointSize(8)
+        self._sub.setFont(mono)
+        self._sub.setStyleSheet(
+            "background: transparent; color: #D4CDC3; font-size: 8pt;"
+        )
+        self._sub.setVisible(bool(self._subtitle))
+        text_col.addWidget(self._sub)
+        layout.addLayout(text_col, stretch=1)
 
         self._run_dot = _pass_mouse(QLabel("●", self))
         self._run_dot.setFixedWidth(12)
@@ -430,7 +458,7 @@ class RecipeSidebarCard(QFrame):
         )
         self._run_dot.setToolTip(t("state.running"))
         self._run_dot.setVisible(False)
-        layout.addWidget(self._run_dot)
+        layout.addWidget(self._run_dot, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self._state_dot = _pass_mouse(QLabel("●", self))
         self._state_dot.setFixedWidth(12)
@@ -439,13 +467,32 @@ class RecipeSidebarCard(QFrame):
             f"color: {STATE_DOT.get(state, STATE_DOT['unknown'])}; font-size: 10px;"
         )
         self._state_dot.setToolTip(_state_tip(state))
-        layout.addWidget(self._state_dot)
+        layout.addWidget(self._state_dot, 0, Qt.AlignmentFlag.AlignVCenter)
+
+        outer.addWidget(row, stretch=1)
+
+        # Kupfer-Fortschritt am unteren Kartenrand (nur beim laufenden Vorgang)
+        self._busy_bar = QProgressBar(self)
+        self._busy_bar.setObjectName("sidebarCardBusyBar")
+        self._busy_bar.setTextVisible(False)
+        self._busy_bar.setRange(0, 100)
+        self._busy_bar.setValue(0)
+        self._busy_bar.setFixedHeight(3)
+        self._busy_bar.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
+        )
+        self._busy_bar.setVisible(False)
+        outer.addWidget(self._busy_bar)
         self._theme: str = "dark"
         self._apply_border()
+        self._apply_busy_bar_style()
 
     def _set_a11y(self, name: str, state: str) -> None:
         tip = _state_tip(state)
-        self.setAccessibleName(f"{name}, {tip}" if tip else name)
+        full = name
+        if self._subtitle:
+            full = f"{name}, {self._subtitle}"
+        self.setAccessibleName(f"{full}, {tip}" if tip else full)
         self.setAccessibleDescription(tip)
 
     def keyPressEvent(self, event: QKeyEvent) -> None:
@@ -578,6 +625,44 @@ class RecipeSidebarCard(QFrame):
             self._hover_header = None
         self._insert_place = ""
 
+    def set_busy_progress(self, pct: int | None) -> None:
+        """Kupfer-Streifen am Kartenboden — nur für das Rezept mit laufendem Vorgang."""
+        if pct is None:
+            self._busy_pct = None
+            self._busy_bar.setVisible(False)
+            self._busy_bar.setValue(0)
+            self.setFixedHeight(self._base_h)
+            return
+        self._busy_pct = max(0, min(100, int(pct)))
+        self._busy_bar.setValue(self._busy_pct)
+        self._busy_bar.setVisible(True)
+        self.setFixedHeight(self._base_h + 3)
+        self._apply_busy_bar_style()
+
+    def _apply_busy_bar_style(self) -> None:
+        pct = self._busy_pct if self._busy_pct is not None else 0
+        # Unten links immer rund; rechts erst nahe 100%, damit der Chunk nicht „schwebt“
+        right = "3px" if pct >= 98 else "0px"
+        self._busy_bar.setStyleSheet(
+            f"""
+            QProgressBar#sidebarCardBusyBar {{
+                background: transparent;
+                border: none;
+                border-radius: 0px;
+                margin: 0px 2px 1px 2px;
+                max-height: 3px;
+                min-height: 3px;
+            }}
+            QProgressBar#sidebarCardBusyBar::chunk {{
+                background-color: {ACCENT_COPPER};
+                border-top-left-radius: 0px;
+                border-top-right-radius: 0px;
+                border-bottom-left-radius: 3px;
+                border-bottom-right-radius: {right};
+            }}
+            """
+        )
+
     def set_selected(self, selected: bool) -> None:
         self._selected = selected
         self._apply_border()
@@ -601,10 +686,12 @@ class RecipeSidebarCard(QFrame):
 
     def sizeHint(self) -> QSize:  # noqa: N802
         # Don't expand the scroll host to the full unelided title width.
-        return QSize(0, 42)
+        h = self._base_h + (3 if self._busy_pct is not None else 0)
+        return QSize(0, h)
 
     def minimumSizeHint(self) -> QSize:  # noqa: N802
-        return QSize(0, 42)
+        h = self._base_h + (3 if self._busy_pct is not None else 0)
+        return QSize(0, h)
 
     def _apply_border(self) -> None:
         insert = str(self.property("dropInsert") or "")

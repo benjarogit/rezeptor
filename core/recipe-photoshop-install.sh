@@ -135,7 +135,11 @@ recipe_photoshop::configure_post_install() {
     output::progress 96 "Post-Install (GPU aus, Tooltips aus, Legacy-Neu, CEP)"
 
     ps_path="$(recipe_photoshop::_install_path "$version")"
-    [ -d "$ps_path" ] || ps_path="$(photoshop::find_exe "$WINEPREFIX" | xargs -r dirname 2>/dev/null || true)"
+    if [ ! -d "$ps_path" ]; then
+        local _ps_exe=""
+        _ps_exe="$(photoshop::find_exe "$WINEPREFIX" 2>/dev/null || true)"
+        [ -n "$_ps_exe" ] && [ -f "$_ps_exe" ] && ps_path="$(dirname "$_ps_exe")"
+    fi
     [ -n "$ps_path" ] && [ -d "$ps_path" ] || return 1
 
     photoshop_setup::disable_virtual_desktop
@@ -472,6 +476,9 @@ recipe_photoshop::install() {
 
     output::progress 95 "Post-Install starten"
     recipe_photoshop::configure_post_install || _err=1
+    output::progress 96 "Pack-Extras (Neural Filters / missing_libs)"
+    recipe_hooks::_source recipe-photoshop-pack.sh
+    recipe_photoshop_pack::apply_extras || _err=1
     output::progress 97 "gdiplus / Schriften"
     recipe_photoshop::ensure_gdiplus || _err=1
     recipe_fonts::ensure "${LOG_DIR}/winetricks_fonts_${TIMESTAMP_ISO}.log" >>"${LOG_FILE:-/dev/null}" 2>&1 || _err=1

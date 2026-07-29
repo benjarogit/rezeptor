@@ -173,6 +173,8 @@ from recipe_discovery import (
     discover_recipes as _discover_recipes,
     launch_process_patterns_from_meta,
     parse_recipe_yml,
+    sidebar_card_texts,
+    sidebar_label_for_meta,
 )
 from recipe_options import (
     env_overrides_for_options,
@@ -282,6 +284,8 @@ def strip_ansi(text: str) -> str:
 # Fallback when recipe.yml has no launch_process_patterns (prefer YAML).
 LAUNCH_PROCESS_PATTERNS: dict[str, list[str]] = {
     "photoshop": ["Photoshop.exe"],
+    "photoshop-m0nkrus": ["Photoshop.exe"],
+    "photoshop-m0nkrus-220": ["Photoshop.exe"],
     "house-of-ashes": ["HouseOfAshes.exe"],
 }
 
@@ -483,6 +487,48 @@ def _proc_has_wineprefix(pid: str, prefix: Path) -> bool:
     )
 
 
+def _proc_argv0(pid: str) -> str:
+    """Erstes Cmdline-Argument (Null-getrennt) — Pfade mit Leerzeichen bleiben intakt."""
+    try:
+        raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+    except (OSError, ProcessLookupError):
+        return ""
+    if not raw:
+        return ""
+    return raw.split(b"\0", 1)[0].decode("utf-8", "replace")
+
+
+def _exe_basename(path_or_name: str) -> str:
+    s = (path_or_name or "").replace("\\", "/").rstrip("/")
+    return s.rsplit("/", 1)[-1].lower() if s else ""
+
+
+def _pattern_matches_main_exe(cmd: str, pid: str, patterns_l: list[str]) -> bool:
+    """True nur wenn argv0/comm die App-EXE ist — nicht wenn sie nur als Argument vorkommt.
+
+    AdobeIPCBroker: ``…\\AdobeIPCBroker.exe …\\Photoshop.exe`` darf nicht als Photoshop gelten.
+    """
+    del cmd  # cmdline-String mit Spaces zerstört argv0; /proc null-sep nutzen
+    argv0 = _exe_basename(_proc_argv0(pid))
+    argv0_stem = argv0[:-4] if argv0.endswith(".exe") else argv0
+    comm = _proc_comm(pid).lower().rstrip(".\x00 ")
+    comm_stem = comm[:-4] if comm.endswith(".exe") else comm
+
+    for pat in patterns_l:
+        stem = pat[:-4] if pat.endswith(".exe") else pat
+        if argv0_stem == stem or argv0 == pat:
+            return True
+        # argv0 ist eine andere EXE → dieses Pattern verwerfen
+        if argv0_stem:
+            continue
+        # Fallback: nur comm (Wine), wenn argv0 leer
+        if comm_stem == stem or (
+            len(comm_stem) >= 8 and stem.startswith(comm_stem)
+        ):
+            return True
+    return False
+
+
 def recipe_process_running(rid: str, meta: dict[str, str] | None = None) -> bool:
     """True nur bei echtem App-Prozess (Wine/Proton), nicht bei Shell-/Agent-Cmdlines."""
     patterns = launch_process_patterns(rid, meta)
@@ -533,24 +579,17 @@ def recipe_process_running(rid: str, meta: dict[str, str] | None = None) -> bool
         cmd = _proc_cmdline(ent.name)
         if not cmd or _is_noise_process(cmd):
             continue
-        cmd_l = cmd.lower()
-        if not any(pat in cmd_l for pat in patterns_l):
-            # Manche Wine-Prozesse haben nur den kurzen EXE-Namen in comm
-            comm = _proc_comm(ent.name).lower()
-            if not any(pat.rstrip(".exe") in comm or pat in comm for pat in patterns_l):
-                continue
-            cmd_l = f"{cmd_l} {comm}"
-
+        if not _pattern_matches_main_exe(cmd, ent.name, patterns_l):
+            continue
         if not _looks_like_wine_or_proton(ent.name, cmd):
             continue
 
+        cmd_l = cmd.lower()
         if steam_mode:
             if any(h and h in cmd_l for h in path_hints):
                 return True
-            # Proton-run ohne vollen Pfad in cmdline — EXE + Proton reicht
-            if any(pat in cmd_l for pat in patterns_l):
-                return True
-            continue
+            # Proton-run ohne Prefix in environ — Haupt-EXE reicht
+            return True
 
         if prefix is not None and _proc_has_wineprefix(ent.name, prefix):
             return True
@@ -949,6 +988,7 @@ class RezeptorWindow(QMainWindow):
         self._recipe_cards: list[tuple[RecipeSidebarCard, RecipeInfo]] = []
         self._process: QProcess | None = None
         self._busy = False
+        self._busy_rid: str = ""  # Rezept-ID des laufenden Vorgangs (leer = systemweit)
         self._current_op = ""  # install | repair | …
         self._cancel_requested = False
         self._install_recipe_dir: Path | None = None
@@ -1471,6 +1511,8 @@ class RezeptorWindow(QMainWindow):
             return
         dr = resolve_data_root(self._selected.meta, self._selected.rid)
         dlg = MedizinDialog(opts, dr, self)
+        # Eigenes Taskleisten-Fenster — sonst blockiert modaler Child „Alles schließen“.
+        apply_tool_window(dlg, icon=self.windowIcon(), modal=True)
         dlg.exec()
         if dlg.needs_repair_hint:
             self._activity("info", t("medizin.apply_repair_hint"))
@@ -1551,6 +1593,19 @@ class RezeptorWindow(QMainWindow):
             menu, t("menu.shortcuts"), self.run_desktop_shortcuts
         )
         act.setEnabled(installed_ish and not busy and not untrusted)
+
+        if info.rid == "photoshop-m0nkrus":
+            genp_script = Path(info.meta["_dir"]) / "genp.sh"
+            act = self._add_menu_action(
+                menu, t("menu.genp_from_pack"), self.run_genp_from_pack
+            )
+            act.setToolTip(t("menu.genp_from_pack_tip"))
+            act.setEnabled(
+                installed_ish
+                and genp_script.is_file()
+                and not busy
+                and not untrusted
+            )
 
         menu.addSeparator()
         act = self._add_menu_action(
@@ -2347,7 +2402,7 @@ class RezeptorWindow(QMainWindow):
         env = self._base_env()
         proc = QProcess(self)
         self._process = proc
-        self._set_busy(True)
+        self._set_busy(True, rid="")
         qenv = QProcessEnvironment.systemEnvironment()
         for k, v in env.items():
             qenv.insert(k, v)
@@ -2615,7 +2670,9 @@ class RezeptorWindow(QMainWindow):
             if info.rid in hidden:
                 continue
             name = (info.meta.get("name") or info.rid).lower()
-            if needle and needle not in name and needle not in info.rid.lower():
+            side = sidebar_label_for_meta(info.meta, info.rid).lower()
+            ver = (info.meta.get("version_guaranteed") or "").lower()
+            if needle and needle not in name and needle not in info.rid.lower() and needle not in side and needle not in ver:
                 continue
             matched.append((i, info))
 
@@ -2636,13 +2693,28 @@ class RezeptorWindow(QMainWindow):
         for cat in sort_categories(list(grouped.keys()), custom_cat_order):
             header = SidebarCategoryHeader(cat)
             self.recipe_cards_layout.addWidget(header)
-            for i, info in sort_recipes_in_category(grouped[cat], order):
+            cat_rows = sort_recipes_in_category(grouped[cat], order)
+            side_texts = sidebar_card_texts(
+                [(info.rid, info.meta) for _i, info in cat_rows]
+            )
+            for i, info in cat_rows:
+                title, subtitle = side_texts.get(
+                    info.rid,
+                    (sidebar_label_for_meta(info.meta, info.rid), ""),
+                )
+                tip_bits = [info.meta.get("name") or info.rid]
+                if subtitle:
+                    tip_bits.append(subtitle)
+                elif (info.meta.get("version_guaranteed") or "").strip():
+                    tip_bits.append(info.meta["version_guaranteed"].strip())
                 card = RecipeSidebarCard(
-                    info.meta.get("name", info.rid),
+                    title,
                     info.state.value,
                     recipe_icon(info.meta),
                     recipe_id=info.rid,
+                    subtitle=subtitle,
                 )
+                card.setToolTip(" · ".join(tip_bits))
                 card.apply_theme(getattr(self, "_theme", "dark"))
                 card.clicked.connect(lambda idx=i: self._select_recipe_index(idx))
                 card.contextMenuRequested.connect(
@@ -2835,8 +2907,10 @@ class RezeptorWindow(QMainWindow):
             return
 
         self.trust_btn.setVisible(False)
-        if self._busy:
+        if self._busy and self._busy_belongs_to_selected():
             detail = t("status.busy")
+        elif self._busy:
+            detail = t("status.busy_other", name=self._busy_recipe_label())
         else:
             detail = self._action_hint_for(info)
             # Validate-Detail bei PARTIAL: konkrete Ursache (ohne FAIL:-Prefix)
@@ -2861,7 +2935,7 @@ class RezeptorWindow(QMainWindow):
             info, can_launch=can_launch, running=running, busy=self._busy
         )
         self._sync_medizin_button()
-        if info.state == RecipeState.PARTIAL and can_launch:
+        if (not self._busy) and info.state == RecipeState.PARTIAL and can_launch:
             detail = info.status_detail.strip() or t("state.installed_with_warnings")
             if detail.startswith("FAIL:"):
                 detail = detail[5:].strip()
@@ -2874,6 +2948,32 @@ class RezeptorWindow(QMainWindow):
                 self.status_detail_label.setVisible(True)
                 self._status_detail_base = detail
         self._refresh_running_indicators()
+        # Laufender Install/Repair gehört nur zu einem Rezept — anderswo Übersicht, nicht Vorgang.
+        if self._busy:
+            if self._busy_belongs_to_selected():
+                self._switch_to_progress_tab()
+            else:
+                self._set_content_tab("overview")
+
+    def _busy_belongs_to_selected(self) -> bool:
+        if not self._busy or not self._selected:
+            return False
+        if not self._busy_rid:
+            return False
+        return self._selected.rid == self._busy_rid
+
+    def _busy_recipe_label(self) -> str:
+        rid = self._busy_rid
+        if not rid:
+            return "Rezeptor"
+        for info in self.recipes:
+            if info.rid == rid:
+                return (
+                    (info.meta.get("notify_title") or "").strip()
+                    or (info.meta.get("name") or "").strip()
+                    or rid
+                )
+        return rid
 
     def _refresh_running_indicators(self) -> None:
         for card, info in list(self._recipe_cards):
@@ -3124,8 +3224,22 @@ class RezeptorWindow(QMainWindow):
         self.progress.setRange(0, 100)
         self.progress.setValue(pct)
         self._update_progress_chip()
+        self._sync_sidebar_busy_progress()
         if pct >= 100 and hasattr(self, "progress_busy"):
             self.progress_busy.stop()
+
+    def _sync_sidebar_busy_progress(self) -> None:
+        """Kupfer-Streifen nur auf der Sidebar-Karte des laufenden Rezepts."""
+        rid = self._busy_rid if self._busy else ""
+        pct = self._progress_pct if self._busy else None
+        for card, info in list(getattr(self, "_recipe_cards", []) or []):
+            try:
+                if rid and info.rid == rid:
+                    card.set_busy_progress(pct if pct is not None else 0)
+                else:
+                    card.set_busy_progress(None)
+            except RuntimeError:
+                continue
 
     def _note_progress(self, pct: int) -> None:
         pct = min(100, max(0, int(pct)))
@@ -3283,9 +3397,15 @@ class RezeptorWindow(QMainWindow):
         if kind == "info":
             self._flash_status(text)
 
-    def _set_busy(self, busy: bool) -> None:
+    def _set_busy(self, busy: bool, *, rid: str | None = None) -> None:
         self._busy = busy
         if busy:
+            if rid is not None:
+                self._busy_rid = rid
+            elif self._selected is not None:
+                self._busy_rid = self._selected.rid
+            else:
+                self._busy_rid = ""
             self.progress.setVisible(True)
             if hasattr(self, "progress_pct_label"):
                 self.progress_pct_label.setVisible(True)
@@ -3294,7 +3414,14 @@ class RezeptorWindow(QMainWindow):
                 self.progress_busy.start()
             if not self._progress_stall_timer.isActive():
                 self._progress_stall_timer.start()
-            self.status_detail_label.setText(t("status.busy"))
+            if self._busy_belongs_to_selected():
+                self.status_detail_label.setText(t("status.busy"))
+            elif self._selected is not None:
+                self.status_detail_label.setText(
+                    t("status.busy_other", name=self._busy_recipe_label())
+                )
+            else:
+                self.status_detail_label.setText(t("status.busy"))
             self.status_detail_label.setVisible(True)
             self._update_progress_chip()
             for b in (
@@ -3306,7 +3433,9 @@ class RezeptorWindow(QMainWindow):
                     b.setEnabled(False)
             self.action_refresh.setEnabled(False)
             self._sync_cancel_install_btn()
+            self._sync_sidebar_busy_progress()
             return
+        self._busy_rid = ""
         self._progress_stall_timer.stop()
         if hasattr(self, "progress_busy"):
             self.progress_busy.stop()
@@ -3323,6 +3452,7 @@ class RezeptorWindow(QMainWindow):
             self.more_btn.setEnabled(True)
         self._sync_medizin_button()
         self._sync_cancel_install_btn()
+        self._sync_sidebar_busy_progress()
         if self._selected:
             self._select_recipe_index(self._selected_index)
 
@@ -3332,6 +3462,7 @@ class RezeptorWindow(QMainWindow):
             return
         show = bool(
             self._busy
+            and self._busy_belongs_to_selected()
             and self._current_op in ("install", "reinstall")
             and not self._cancel_requested
         )
@@ -3485,7 +3616,8 @@ class RezeptorWindow(QMainWindow):
         self._install_recipe_dir = (
             recipe_dir if self._current_op in ("install", "reinstall") else None
         )
-        self._set_busy(True)
+        busy_rid = self._selected.rid if self._selected else ""
+        self._set_busy(True, rid=busy_rid)
 
         proc = QProcess(self)
         self._process = proc
@@ -4209,7 +4341,11 @@ class RezeptorWindow(QMainWindow):
         self.activateWindow()
 
     def _confirm_app_quit(self) -> bool:
-        """Vorgang/Nebenfenster: App nach vorne, dann eine klare Beenden-Frage."""
+        """Vorgang/Nebenfenster: App nach vorne, dann eine klare Beenden-Frage.
+
+        Stay-on-top + ApplicationModal: sonst liegt die Frage hinter Wine/GenP und
+        Taskleisten-„Alles schließen“ wirkt wie „tut nichts“.
+        """
         self._bring_app_to_front()
         busy = bool(self._busy and self._subprocess_running())
         tools = self._visible_tool_windows()
@@ -4225,16 +4361,36 @@ class RezeptorWindow(QMainWindow):
                 body = f"{body}\n\n{t('dialog.quit_dirty_extra')}"
         else:
             return True
-        return (
-            QMessageBox.question(
-                self,
-                t("dialog.quit_title"),
-                body,
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                QMessageBox.StandardButton.No,
-            )
-            == QMessageBox.StandardButton.Yes
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Question)
+        box.setWindowTitle(t("dialog.quit_title"))
+        box.setText(body)
+        box.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
         )
+        box.setDefaultButton(QMessageBox.StandardButton.Yes)
+        box.setWindowModality(Qt.WindowModality.ApplicationModal)
+        box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        box.show()
+        box.raise_()
+        box.activateWindow()
+        return box.exec() == QMessageBox.StandardButton.Yes
+
+    def _terminate_busy_subprocess(self) -> None:
+        """Taskleisten-Quit / Alles schließen: laufenden Vorgang (inkl. GenP/Wine) beenden."""
+        proc = self._process
+        if proc is None or proc.state() == QProcess.ProcessState.NotRunning:
+            return
+        self._cancel_requested = True
+        pid = int(proc.processId())
+        if pid > 0:
+            try:
+                os.killpg(pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError, OSError):
+                proc.terminate()
+            QTimer.singleShot(1500, lambda p=proc, i=pid: self._force_kill_install(p, i))
+        else:
+            proc.terminate()
 
     def _force_close_tool_windows(self) -> None:
         for dlg in (self._recipe_view_dlg, self._docs_dlg):
@@ -4244,7 +4400,7 @@ class RezeptorWindow(QMainWindow):
                 dlg.force_close()
             else:
                 dlg.close()
-        # Modale Restfenster (Settings o. Ä.), die Taskleisten-Close blockieren.
+        # Modale Restfenster (Settings/Medizin o. Ä.), die Taskleisten-Close blockieren.
         for w in list(self.findChildren(QDialog)):
             if w is self or not w.isVisible():
                 continue
@@ -4264,13 +4420,13 @@ class RezeptorWindow(QMainWindow):
             return
         self._force_quitting = True
         self._persist_ui_layout()
+        self._terminate_busy_subprocess()
         self._force_close_tool_windows()
         event.accept()
         super().closeEvent(event)
         app = QApplication.instance()
         if app is not None:
             app.quit()
-
     @staticmethod
     def _style_secondary_label(
         label: QLabel, color: str, *, size_px: int = 12
@@ -4537,6 +4693,58 @@ class RezeptorWindow(QMainWindow):
             return
         self._prompt_and_save_source(title_key="dialog.source_title")
 
+    def run_genp_from_pack(self) -> None:
+        """m0nkrus: GenP/Cure-GUI aus dem Pack unter Proton starten."""
+        rd = self._require_trusted_recipe()
+        if rd is None or not self._selected:
+            return
+        if self._selected.rid != "photoshop-m0nkrus":
+            return
+        script = rd / "genp.sh"
+        if not script.is_file():
+            QMessageBox.warning(self, t("dialog.missing"), str(script))
+            return
+        if self._selected.state == RecipeState.NOT_INSTALLED:
+            QMessageBox.warning(
+                self, t("dialog.not_installed_title"), t("dialog.install_first")
+            )
+            return
+        if QMessageBox.question(
+            self,
+            t("dialog.genp_title"),
+            t("dialog.genp_body"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            return
+        wine_path = self._photoshop_genp_wine_path()
+        if wine_path:
+            clip = QApplication.clipboard()
+            if clip is not None:
+                clip.setText(wine_path)
+            self._activity("info", t("status.genp_path_clipboard", path=wine_path))
+        self._run_async(
+            script,
+            None,
+            t("status.genp_done"),
+            op="genp",
+            recipe_dir=rd,
+        )
+
+    def _photoshop_genp_wine_path(self) -> str:
+        """Wine-Pfad für GenP-Dateidialog (Zwischenablage — GenP setzt InitialDir selbst)."""
+        if not self._selected:
+            return ""
+        dr = resolve_data_root(self._selected.meta, self._selected.rid)
+        for rel in (
+            "drive_c/Program Files/Adobe/Adobe Photoshop 2021/Photoshop.exe",
+            "drive_c/Program Files (x86)/Adobe/Adobe Photoshop 2021/Photoshop.exe",
+        ):
+            if (dr / "prefix" / rel).is_file():
+                return "C:\\" + rel[len("drive_c/") :].replace("/", "\\")
+        return (
+            "C:\\Program Files\\Adobe\\Adobe Photoshop 2021\\Photoshop.exe"
+        )
+
     def run_repair(self) -> None:
         rd = self._require_trusted_recipe()
         if rd is None:
@@ -4617,7 +4825,9 @@ class RezeptorWindow(QMainWindow):
             self._launch_alive_reported = True
             self._running_prev[rid] = True
             return
-        if attempt < 7:
+        # Photoshop/Premiere: Launch macht Prefs/Fonts vor wine — erster Start oft >20s.
+        max_attempts = 35 if (rid.startswith("photoshop") or rid == "premiere") else 7
+        if attempt < max_attempts:
             QTimer.singleShot(
                 2500,
                 lambda: self._check_launch_alive(rid, log_path, attempt + 1),

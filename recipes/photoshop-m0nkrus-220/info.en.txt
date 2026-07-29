@@ -1,0 +1,44 @@
+# Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35)
+
+Author: benjarogit
+Version: 22.0.0.35 (offline installer, tested m0nkrus pack)
+
+## Summary
+Adobe Photoshop CC 2021 on Proton-GE — quiet background install (offline installer).
+Separate recipe for the m0nkrus pack **Photoshop.2021** (ISO-only) — not the standard `photoshop` recipe and not the **22.1.1.138** pack (`photoshop-m0nkrus`).
+
+## What to search for (BYOS)
+Rezeptor provides **no downloads and no links**. Obtain the pack yourself. Search terms:
+
+• Adobe Photoshop 2021 (v22.0) Multilingual
+• Adobe.Photoshop.2021.Multilingual
+• Photoshop.2021
+• rutracker
+• m0nkrus
+
+## Recommended source
+Pick the **pack folder** (e.g. `Photoshop.2021`) or the ISO:
+
+• `Adobe.Photoshop.2021.Multilingual.iso` — offline installer (under `Adobe 2021/`: Set-up.exe + packages/)
+• optional: `m0nkrus.nfo`, checksums (.md5 / .sha / .sfv)
+
+This pack has **no** Neural Filters / missing_libs / GenP (unlike 22.1.1.138).
+
+## Requirements
+• Proton-GE (used automatically)
+• Pack folder with Adobe `.iso` (or mounted/extracted Set-up.exe + packages/)
+• About 15 GB free disk space
+
+## Install
+1. Choose “Install”
+2. Pick pack folder `Photoshop.2021` or the ISO (often suggested under Downloads)
+3. Check the data folder (default: ~/.local/share/wine-software/photoshop-m0nkrus-220)
+
+## Use
+• “Launch” in the launcher or the desktop shortcut
+• First start may take 1–2 minutes
+
+## Notes
+• Other packs: standard `photoshop` or m0nkrus **22.1.1.138** (`photoshop-m0nkrus`)
+• Blurry fonts: run Repair or check the log
+• Logs: ~/.local/share/wine-software/logs/

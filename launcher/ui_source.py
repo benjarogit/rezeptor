@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from PyQt6.QtCore import QSize, QTimer
+from PyQt6.QtCore import QSize, Qt, QTimer
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -27,6 +27,10 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from recipe_discovery import (
+    is_adobe_offline_recipe,
+    source_hints_from_meta,
+)
 from app_support import detect_source_version, version_guarantee_mismatch
 from archive_passwords import normalize_password_list_text
 from ui_archive_passwords import ensure_archive_passwords
@@ -359,13 +363,90 @@ def default_target_dir(
     return str(documents_dir())
 
 
-def normalize_folder_source(rid: str, raw: str) -> str:
+def _adobe_pack_name_bits(d: Path) -> list[str]:
+    try:
+        return [c.name.lower() for c in d.iterdir()]
+    except OSError:
+        return []
+
+
+def _adobe_pack_has_extras(names: list[str]) -> bool:
+    return any(
+        "neural" in n or "missing_libs" in n or "genp" in n for n in names
+    )
+
+
+def _looks_like_adobe_pack_root(d: Path) -> bool:
+    """m0nkrus-style: ISO + Neural Filters / missing_libs / GenP siblings."""
+    if not d.is_dir():
+        return False
+    names = _adobe_pack_name_bits(d)
+    has_iso = any(n.endswith(".iso") for n in names)
+    return has_iso and _adobe_pack_has_extras(names)
+
+
+def _looks_like_adobe_iso_only_pack(d: Path) -> bool:
+    """ISO pack without Neural/GenP/missing_libs (e.g. Photoshop.2021)."""
+    if not d.is_dir():
+        return False
+    names = _adobe_pack_name_bits(d)
+    has_iso = any(n.endswith(".iso") for n in names)
+    return has_iso and not _adobe_pack_has_extras(names)
+
+
+def _matches_m0nkrus_220_pack(path: Path) -> bool:
+    """Pack Photoshop.2021 / Adobe.Photoshop.2021.Multilingual — not 22.1.1.138."""
+    n = path.name.lower()
+    if "22.1.1.138" in n:
+        return False
+    return (
+        n == "photoshop.2021"
+        or "adobe.photoshop.2021.multilingual" in n
+        or "photoshop.2021" in n
+    )
+
+
+def adobe_pack_root_for_source(path: str) -> str:
+    """If source is ISO or pack folder, return pack root for extras (or \"\")."""
+    p = Path(path)
+    if p.is_file() and p.suffix.lower() == ".iso":
+        parent = p.parent
+        return str(parent.resolve()) if _looks_like_adobe_pack_root(parent) else ""
+    if p.is_dir() and _looks_like_adobe_pack_root(p):
+        return str(p.resolve())
+    return ""
+
+
+def _adobe_iso_in_pack_dir(p: Path, version_hint: str = "") -> Path | None:
+    """Pack root with *.iso — pick best match (version hint, then mtime)."""
+    try:
+        isos = [
+            c
+            for c in p.iterdir()
+            if c.is_file() and c.suffix.lower() == ".iso"
+        ]
+    except OSError:
+        return None
+    if not isos:
+        return None
+    hint = (version_hint or "").strip()
+    if hint:
+        matched = [c for c in isos if hint in c.name]
+        if matched:
+            isos = matched
+    isos.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+    return isos[0]
+
+
+def normalize_folder_source(
+    rid: str, raw: str, *, version_hint: str = ""
+) -> str:
     p = Path(raw)
     if p.is_file() and p.suffix.lower() == ".iso":
         return str(p.resolve())
     if not p.is_dir():
         return raw
-    if rid in ("photoshop", "premiere"):
+    if is_adobe_offline_recipe(rid):
         if (p / "Set-up.exe").is_file():
             return str(p.resolve())
         try:
@@ -374,6 +455,10 @@ def normalize_folder_source(rid: str, raw: str) -> str:
                     return str(child.resolve())
         except OSError:
             pass
+        # Pack-Ordner (ISO + Neural Filters / GenP / 7z) → Installer-ISO
+        iso = _adobe_iso_in_pack_dir(p, version_hint)
+        if iso is not None:
+            return str(iso.resolve())
     if rid == "wiso-steuer" and p.name.startswith("Steuersoftware"):
         return str(p.parent.resolve())
     return str(p.resolve())
@@ -393,10 +478,15 @@ def default_folder_source(
         game = steam_app_install_dir(appid)
         if game is not None and game.is_dir():
             return str(game)
-    if rid in ("photoshop", "premiere"):
-        drop = "photoshop" if rid == "photoshop" else "premiere"
+    if is_adobe_offline_recipe(rid):
+        # Nur das kanonische Drop-Verzeichnis zum Standard-Rezept —
+        # Pack-Varianten (m0nkrus) erben nicht recipes/photoshop/.
+        drop = {"photoshop": "photoshop", "premiere": "premiere"}.get(rid)
         candidates: list[Path] = []
-        if repo_root is not None:
+        pack_candidates: list[Path] = []
+        iso_only_candidates: list[Path] = []
+        ver = (meta.get("version_guaranteed") or "").strip()
+        if drop and repo_root is not None:
             candidates.append(repo_root / drop)
 
         def _adobe_setup_dir(p: Path) -> Path | None:
@@ -412,29 +502,81 @@ def default_folder_source(
                         return child
             except OSError:
                 return None
-            return None
+            # Pack-Root with ISO (extras optional)
+            return _adobe_iso_in_pack_dir(p, ver)
+
+        def _shallow_isos_and_setups(root: Path) -> None:
+            """Nur 1–2 Ebenen — kein rglob (friert die GUI auf großen Bäumen ein)."""
+            try:
+                entries = sorted(
+                    root.iterdir(),
+                    key=lambda x: x.stat().st_mtime,
+                    reverse=True,
+                )
+            except OSError:
+                return
+            for p in entries:
+                if p.is_file() and p.suffix.lower() == ".iso":
+                    candidates.append(p)
+                    continue
+                if not p.is_dir():
+                    continue
+                if _looks_like_adobe_pack_root(p):
+                    pack_candidates.append(p)
+                elif _looks_like_adobe_iso_only_pack(p):
+                    iso_only_candidates.append(p)
+                found = _adobe_setup_dir(p)
+                if found is not None:
+                    candidates.append(found)
+                try:
+                    for child in p.iterdir():
+                        if child.is_file() and child.suffix.lower() == ".iso":
+                            candidates.append(child)
+                except OSError:
+                    continue
 
         for base in (Path.home() / "Downloads", Path.home() / "Dokumente"):
-            if not base.is_dir():
-                continue
-            try:
-                for p in sorted(base.iterdir(), key=lambda x: x.stat().st_mtime, reverse=True):
-                    found = _adobe_setup_dir(p)
-                    if found is not None:
-                        candidates.append(found)
-                    if p.is_dir():
-                        try:
-                            for iso in sorted(
-                                p.rglob("*.iso"),
-                                key=lambda x: x.stat().st_mtime,
-                                reverse=True,
-                            ):
-                                candidates.append(iso)
-                        except OSError:
-                            pass
-            except OSError:
-                continue
+            if base.is_dir():
+                _shallow_isos_and_setups(base)
+
+        # m0nkrus 22.0 ISO-only Pack (Photoshop.2021) — nicht 22.1.1.138
+        if rid == "photoshop-m0nkrus-220":
+            for pack in iso_only_candidates:
+                if _matches_m0nkrus_220_pack(pack):
+                    iso = _adobe_iso_in_pack_dir(pack, "")
+                    if iso is not None:
+                        return str(iso.resolve())
+            for cand in candidates:
+                if _matches_m0nkrus_220_pack(cand):
+                    resolved = (
+                        _adobe_setup_dir(cand) if cand.is_dir() else cand
+                    )
+                    if resolved is None:
+                        continue
+                    if resolved.is_file() and resolved.suffix.lower() == ".iso":
+                        return str(resolved.resolve())
+            return ""
+
+        # Empfohlen: kompletter Pack-Ordner (ISO + Neural Filters + missing_libs),
+        # aber nur wenn Versions-Hinweis im Ordnernamen passt (sonst falsches Pack).
+        if rid == "photoshop-m0nkrus" and pack_candidates and ver:
+            matched = [p for p in pack_candidates if ver in p.name]
+            if matched:
+                return str(matched[0].resolve())
+
+        # Standard-photoshop: Drop-Dir zuerst; m0nkrus-Packs nicht bevorzugen
+        if rid == "photoshop" and drop and repo_root is not None:
+            drop_path = repo_root / drop
+            setup = _adobe_setup_dir(drop_path)
+            if setup is not None and setup.is_dir() and (setup / "Set-up.exe").is_file():
+                return str(setup.resolve())
+
         for cand in candidates:
+            # Cross-Pack: Standard und 220 nicht den 138-Pack nehmen
+            if rid in ("photoshop", "photoshop-m0nkrus-220") and "22.1.1.138" in cand.name:
+                continue
+            if rid == "photoshop-m0nkrus" and _matches_m0nkrus_220_pack(cand):
+                continue
             resolved = _adobe_setup_dir(cand) if cand.is_dir() else cand
             if resolved is None:
                 continue
@@ -595,6 +737,23 @@ class RecipeSourceDialog(QDialog):
         self.version_hint.setWordWrap(True)
         self.version_hint.setVisible(False)
         layout.addWidget(self.version_hint)
+
+        hints = source_hints_from_meta(meta)
+        if hints:
+            hints_title = QLabel(t("source.hints_title"))
+            hints_title.setWordWrap(True)
+            layout.addWidget(hints_title)
+            hints_body = QLabel("\n".join(f"• {h}" for h in hints))
+            hints_body.setObjectName("muted")
+            hints_body.setWordWrap(True)
+            hints_body.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextSelectableByMouse
+            )
+            layout.addWidget(hints_body)
+            hints_note = QLabel(t("source.hints_note"))
+            hints_note.setObjectName("muted")
+            hints_note.setWordWrap(True)
+            layout.addWidget(hints_note)
 
         form = QFormLayout()
         form.setSpacing(8)
@@ -870,9 +1029,53 @@ class RecipeSourceDialog(QDialog):
             title = (self._meta.get("source_label") or "").strip() or t(
                 "source.pick_folder"
             )
+            start_dir = dialog_start_dir(start)
+            # Adobe: Ordner ODER .iso — reiner Ordner-Dialog kann keine ISO wählen.
+            if is_adobe_offline_recipe(self._rid):
+                box = QMessageBox(self)
+                box.setWindowTitle(title)
+                box.setText(t("source.adobe_pick_kind"))
+                iso_btn = box.addButton(
+                    t("source.pick_iso"), QMessageBox.ButtonRole.AcceptRole
+                )
+                dir_btn = box.addButton(
+                    t("source.pick_folder"), QMessageBox.ButtonRole.AcceptRole
+                )
+                box.addButton(QMessageBox.StandardButton.Cancel)
+                box.exec()
+                clicked = box.clickedButton()
+                if clicked is iso_btn:
+                    iso = pick_open_file(
+                        self, title, start_dir, t("source.adobe_filter")
+                    )
+                    if iso:
+                        normalized = normalize_folder_source(
+                            self._rid, iso, version_hint=self._version_guaranteed
+                        )
+                        self.primary_edit.setText(normalized)
+                        self._update_version_hint(normalized)
+                elif clicked is dir_btn:
+                    d = pick_directory(self, title, start_dir)
+                    if d:
+                        # Pack-Root sichtbar lassen (ISO wird in build_env/normalize aufgelöst)
+                        pd = Path(d)
+                        if _looks_like_adobe_pack_root(
+                            pd
+                        ) or _looks_like_adobe_iso_only_pack(pd):
+                            shown = str(pd.resolve())
+                        else:
+                            shown = normalize_folder_source(
+                                self._rid, d, version_hint=self._version_guaranteed
+                            )
+                        self.primary_edit.setText(shown)
+                        self._update_version_hint(shown)
+                self._fit_to_content()
+                return
             d = pick_directory(self, title, start)
             if d:
-                normalized = normalize_folder_source(self._rid, d)
+                normalized = normalize_folder_source(
+                    self._rid, d, version_hint=self._version_guaranteed
+                )
                 self.primary_edit.setText(normalized)
                 self._update_version_hint(normalized)
             self._fit_to_content()
@@ -934,7 +1137,19 @@ class RecipeSourceDialog(QDialog):
     def _normalize_primary(self) -> str:
         raw = self._edit_text(self.primary_edit)
         if self._source_kind == "folder" and raw and not self._pick_archive:
-            return normalize_folder_source(self._rid, normalize_user_path(raw, self._root))
+            path = normalize_user_path(raw, self._root)
+            # Pack-Root sichtbar/als Quelle behalten — ISO wird in build_env aufgelöst
+            if is_adobe_offline_recipe(self._rid):
+                pp = Path(path)
+                if _looks_like_adobe_pack_root(pp) or _looks_like_adobe_iso_only_pack(
+                    pp
+                ):
+                    return str(pp.resolve())
+            return normalize_folder_source(
+                self._rid,
+                path,
+                version_hint=self._version_guaranteed,
+            )
         return normalize_user_path(raw, self._root) if raw else raw
 
     def _normalize_target(self) -> str:
@@ -961,9 +1176,14 @@ class RecipeSourceDialog(QDialog):
             self.version_hint.clear()
             self._fit_to_content()
             return
+        probe = path
+        if self._source_kind == "folder" and not self._pick_archive:
+            probe = normalize_folder_source(
+                self._rid, path, version_hint=guaranteed
+            )
         detected = detect_source_version(
             self._rid,
-            path,
+            probe,
             recipe_dir=self._meta.get("_dir"),
             guaranteed=guaranteed,
         )
@@ -1048,13 +1268,20 @@ class RecipeSourceDialog(QDialog):
                 return
             if self._pick_archive and not self._resolve_archive_passwords(primary):
                 return
-            if not self._pick_archive and not Path(primary).is_dir():
-                QMessageBox.warning(
-                    self,
-                    t("source.folder_missing_title"),
-                    t("source.need_folder", path=primary),
+            if not self._pick_archive:
+                pp = Path(primary)
+                adobe_iso_ok = (
+                    is_adobe_offline_recipe(self._rid)
+                    and pp.is_file()
+                    and pp.suffix.lower() == ".iso"
                 )
-                return
+                if not pp.is_dir() and not adobe_iso_ok:
+                    QMessageBox.warning(
+                        self,
+                        t("source.folder_missing_title"),
+                        t("source.need_folder", path=primary),
+                    )
+                    return
             fix_raw = (
                 self._edit_text(self.fix_edit) if self._fix_kind != "none" else ""
             )
@@ -1204,11 +1431,23 @@ class RecipeSourceDialog(QDialog):
                 self._attach_archive_passwords(extra)
             else:
                 root = self.primary_path()
+                pack = adobe_pack_root_for_source(root)
+                if pack:
+                    extra["RECIPE_PACK_ROOT"] = pack
                 if root.lower().endswith(".iso"):
                     # Adobe Offline-ISO: resolve_installer_dir entpackt und findet Set-up.exe
                     extra["RECIPE_INSTALLER_PATH"] = root
                 else:
-                    extra["RECIPE_SOURCE_ROOT"] = root
+                    # Pack-Ordner ohne Normierung auf ISO, oder Set-up-Baum
+                    if pack and not (Path(root) / "Set-up.exe").is_file():
+                        iso = _adobe_iso_in_pack_dir(
+                            Path(root), self._version_guaranteed
+                        )
+                        if iso is not None:
+                            extra["RECIPE_INSTALLER_PATH"] = str(iso)
+                        extra["RECIPE_SOURCE_ROOT"] = root
+                    else:
+                        extra["RECIPE_SOURCE_ROOT"] = root
                     if self._rid == "wiso-steuer":
                         extra["WISO_PORTABLE_ROOT"] = root
             fix = self.fix_path()
@@ -1219,6 +1458,9 @@ class RecipeSourceDialog(QDialog):
             return extra
         if kind == "installer":
             extra["RECIPE_INSTALLER_PATH"] = self.primary_path()
+            pack = adobe_pack_root_for_source(self.primary_path())
+            if pack:
+                extra["RECIPE_PACK_ROOT"] = pack
             return extra
         if kind == "archive":
             extra["RECIPE_ARCHIVE_PATH"] = self.primary_path()

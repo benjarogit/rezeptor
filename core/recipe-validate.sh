@@ -99,18 +99,33 @@ recipe_validate::pe_file_version() {
     echo "$ver"
 }
 
-# Adobe Photoshop: Installationsordner ist zuverlässiger als PE-Strings
+# Adobe Photoshop: ProductVersion aus Installer-Metadaten / PE — kein fester Ordner→Version-Map
+# (sonst meldet jedes „Adobe Photoshop 2021“ fälschlich 22.0.0.35, auch m0nkrus 22.1.1.138).
 recipe_validate::photoshop_app_version() {
-    local exe="$1" dir base
+    local exe="$1" dir ver json prefix
     [ -f "$exe" ] || return 1
     dir="$(dirname "$exe")"
-    base="$(basename "$dir")"
-    case "$base" in
-        "Adobe Photoshop 2021") echo "22.0.0.35"; return 0 ;;
-        "Adobe Photoshop 2022") echo "23.0.0.0"; return 0 ;;
-        "Adobe Photoshop CC 2019") echo "20.0.0.0"; return 0 ;;
-    esac
-    recipe_validate::pe_file_version "$exe"
+    prefix="${WINEPREFIX:-${WINE_PREFIX:-}}"
+    for json in \
+        "${prefix}/drive_c/AdobeSetup/products/PHSP/application.json" \
+        "${prefix}/drive_c/AdobeSetup/products/PHSP/Application.json" \
+        "${dir}/application.json" \
+        "${dir}/Application.json"
+    do
+        [ -f "$json" ] || continue
+        ver="$(grep -oE '"ProductVersion"[[:space:]]*:[[:space:]]*"[^"]+"' "$json" 2>/dev/null \
+            | head -1 | sed -E 's/.*"ProductVersion"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/' || true)"
+        if [ -n "$ver" ]; then
+            echo "$ver"
+            return 0
+        fi
+    done
+    ver="$(recipe_validate::pe_file_version "$exe" 2>/dev/null || true)"
+    [ -n "$ver" ] && {
+        echo "$ver"
+        return 0
+    }
+    return 1
 }
 
 recipe_validate::premiere_app_version() {

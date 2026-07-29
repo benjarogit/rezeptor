@@ -128,6 +128,103 @@ def launch_process_patterns_from_meta(meta: dict[str, str], rid: str = "") -> li
     return []
 
 
+def source_hints_from_meta(meta: dict[str, str]) -> list[str]:
+    """BYOS search hints from flattened recipe meta (comma-joined list)."""
+    raw = (meta.get("source_hints") or "").strip()
+    if not raw:
+        return []
+    return [p.strip() for p in raw.replace(";", ",").split(",") if p.strip()]
+
+
+def is_adobe_offline_recipe(rid: str) -> bool:
+    """Recipes that use Adobe Set-up.exe + packages/ (folder or ISO)."""
+    return rid in (
+        "photoshop",
+        "photoshop-m0nkrus",
+        "photoshop-m0nkrus-220",
+        "premiere",
+    )
+
+
+def _sidebar_collision_key(label: str) -> str:
+    """Normalize for elide-collision: long Adobe titles look identical when truncated."""
+    s = (label or "").strip().lower()
+    s = s.rstrip(".…· ")
+    if len(s) >= 18:
+        return s[:18]
+    return s
+
+
+def sidebar_label_for_meta(meta: dict[str, str], rid: str) -> str:
+    """Primary sidebar title (before collision / subtitle split)."""
+    custom = (meta.get("sidebar_label") or "").strip()
+    if custom:
+        return custom
+    return (meta.get("name") or rid).strip() or rid
+
+
+def _short_product_title(rid: str, meta: dict[str, str]) -> str:
+    rid_l = rid.lower()
+    if "photoshop" in rid_l:
+        return "Photoshop"
+    if "premiere" in rid_l:
+        return "Premiere"
+    name = (meta.get("name") or rid).strip()
+    if len(name) > 22:
+        return name[:20].rstrip() + "…"
+    return name
+
+
+def sidebar_card_texts(
+    items: list[tuple[str, dict[str, str]]],
+) -> dict[str, tuple[str, str]]:
+    """Sidebar copy per recipe: (title, subtitle).
+
+    Title stays short; version / pack go on the small second line when useful
+    (name collision in the category, or ``version_guaranteed`` set).
+    Optional ``sidebar_label`` is the title and is never rewritten.
+    """
+    titles: dict[str, str] = {
+        rid: sidebar_label_for_meta(meta, rid) for rid, meta in items
+    }
+    locked = {
+        rid
+        for rid, meta in items
+        if (meta.get("sidebar_label") or "").strip()
+    }
+    groups: dict[str, list[str]] = {}
+    for rid, lab in titles.items():
+        groups.setdefault(_sidebar_collision_key(lab), []).append(rid)
+
+    colliding = {rid for rids in groups.values() if len(rids) > 1 for rid in rids}
+    out: dict[str, tuple[str, str]] = {}
+    for rid, meta in items:
+        ver = (meta.get("version_guaranteed") or "").strip()
+        pack = rid.split("-", 1)[1] if "-" in rid else ""
+        title = titles[rid]
+        if rid in colliding and rid not in locked:
+            title = _short_product_title(rid, meta)
+        sub_bits: list[str] = []
+        if ver and ver not in title:
+            sub_bits.append(ver)
+        if pack and pack.lower() not in title.lower() and pack.lower() not in " ".join(sub_bits).lower():
+            # Pack-Suffix nur bei Kollision / abweichender id (photoshop-m0nkrus)
+            if rid in colliding or "-" in rid:
+                sub_bits.append(pack)
+        out[rid] = (title, " · ".join(sub_bits))
+    return out
+
+
+def disambiguate_sidebar_labels(
+    items: list[tuple[str, dict[str, str]]],
+) -> dict[str, str]:
+    """Backward-compatible: single-line labels (title · subtitle)."""
+    return {
+        rid: " · ".join(p for p in texts if p)
+        for rid, texts in sidebar_card_texts(items).items()
+    }
+
+
 def _collect_yml_paths(recipes_dir: Path) -> list[Path]:
     yml_paths: list[Path] = []
     if not recipes_dir.is_dir():

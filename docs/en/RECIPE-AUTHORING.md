@@ -96,6 +96,8 @@ icon: "{repo}/images/<id>-icon.png"
 | `notify_title` | Desktop notify `-a` / title; else `name` |
 | `version_label` / `version_guaranteed` | Tested version (display + guarantee) |
 | `version_detect` | **Required with `version_guaranteed`** — declarative detection (see below) |
+| `source_hints` | Optional: search text / pack titles for BYOS (**no URLs**) |
+| `sidebar_label` | Optional: short sidebar **title**; version/pack appear on a small second line when needed |
 | `steam_appid` | Steam AppID: trainer target folder **or** game folder when `deploy_mode: link` |
 | `steam_target_folder` | Subfolder under the game dir (default `Trainer`; trainer/copy only) |
 
@@ -129,6 +131,27 @@ version_detect:
 Signals run **in order**; first hit wins. `stack` may return a partial-mismatch message.
 
 Lint: `version_guaranteed` without `version_detect` → **ERROR**.
+
+### Source hints (`source_hints`)
+
+For offline/BYOS recipes: tell the user **what to search for** — no downloads and no links.
+
+```yaml
+version_guaranteed: "22.1.1.138"
+source_hints:
+  - "Adobe Photoshop 2021 22.1.1.138 Multilingual + Neural Filters [Multi + RUS] RePack m0nkrus"
+  - "rutracker"
+  - "m0nkrus"
+```
+
+| Rule | |
+|------|--|
+| Allowed | Pack title, version, keywords (forum name, repack author) |
+| Forbidden | `http://`, `https://`, magnet links |
+
+Shown in the source dialog and recipe overview. **One recipe = one tested pack** — put different builds in separate recipes with their own `source_hints` instead of mixing guarantees.
+
+Lint: URL/magnet in `source_hints` → **ERROR**.
 
 ### Info layout (`info.de.txt` / `info.en.txt`)
 

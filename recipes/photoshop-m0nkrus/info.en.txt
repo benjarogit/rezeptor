@@ -1,0 +1,45 @@
+# Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138)
+
+Author: benjarogit
+Version: 22.1.1.138 (offline installer, tested pack)
+
+## Summary
+Adobe Photoshop CC 2021 on Proton-GE — quiet background install (offline installer).
+Separate recipe for the tested **m0nkrus** pack (not the 22.0.0.35 variant).
+
+## What to search for (BYOS)
+Rezeptor provides **no downloads and no links**. Obtain the pack yourself. Search terms:
+
+• Adobe Photoshop 2021 22.1.1.138 Multilingual + Neural Filters [Multi + RUS] RePack m0nkrus
+• rutracker
+• m0nkrus
+
+## Recommended source: pack folder
+Pick the **full pack folder** as source (not only the ISO). Typically contains:
+
+• `Adobe Photoshop 2021 22.1.1.138 Multilingual.iso` — offline installer (under `Adobe 2021/`: Set-up.exe + packages/)
+• `Neural Filters All … .exe` — SFX → PluginData (applied automatically)
+• `ps2021_missing_libs.7z` — ipp*/opencv DLLs into the Photoshop dir (applied automatically)
+• VC++ redist — hint only; runtime via recipe_vcrun
+• GenP `.rar` — not auto; if activation drops: **Medizin** or **More → GenP / Cure from pack…**
+
+## Requirements
+• Proton-GE (used automatically)
+• Pack folder with Adobe `.iso` + extras (or mounted/extracted Set-up.exe + packages/)
+• 7z for pack extras · About 15 GB free disk space
+
+## Install
+1. Choose “Install”
+2. Pick the **pack folder** (Rezeptor detects ISO + extras; often suggested under Downloads)
+3. Check the data folder (default: ~/.local/share/wine-software/photoshop-m0nkrus)
+
+## Use
+• “Launch” in the launcher or the desktop shortcut
+• First start may take 1–2 minutes
+• Neural Filters: some filters need Adobe login/cloud; the offline pack is still extracted
+
+## Notes
+• GenP: Medizin option or More → GenP / Cure — ISO is pre-patched
+• Neural Filters: models live under PluginData; in PS use Filter → Neural Filters (“Prepared” = ready, loads when opened)
+• Blurry fonts: run Repair or check the log
+• Logs: ~/.local/share/wine-software/logs/

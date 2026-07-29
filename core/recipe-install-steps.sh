@@ -53,6 +53,24 @@ elif v:
 ' "$json" "$key"
 }
 
+recipe_install_steps::_ensure_module() {
+    # recipe_photoshop::install → recipe-photoshop-install.sh / recipe-photoshop.sh
+    local name="$1"
+    local ns stem f
+    type "$name" >/dev/null 2>&1 && return 0
+    ns="${name%%::*}"
+    [ "$ns" != "$name" ] || return 1
+    stem="${ns#recipe_}"
+    stem="${stem//_/-}"
+    [ -n "${CORE_DIR:-}" ] || return 1
+    for f in "recipe-${stem}-install.sh" "recipe-${stem}-launch.sh" "recipe-${stem}.sh"; do
+        if [ -f "${CORE_DIR}/${f}" ]; then
+            recipe_hooks::_source "$f"
+        fi
+    done
+    type "$name" >/dev/null 2>&1
+}
+
 recipe_install_steps::call_module() {
     local name="$1"
     local fn="${name%%::*}"
@@ -60,6 +78,9 @@ recipe_install_steps::call_module() {
     if [ "$fn" = "$name" ] || [ -z "$meth" ]; then
         recipe_hooks::log_err "module: erwartet namespace::function (ist: $name)"
         return 1
+    fi
+    if ! type "$name" >/dev/null 2>&1; then
+        recipe_install_steps::_ensure_module "$name" || true
     fi
     if ! type "$name" >/dev/null 2>&1; then
         recipe_hooks::log_err "module: Funktion fehlt: $name"

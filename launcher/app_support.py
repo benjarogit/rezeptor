@@ -362,7 +362,11 @@ def build_issue_body(recipe_id: str, report_path: Path, session_id: str = "") ->
         report_path.read_text(encoding="utf-8", errors="replace")[-8000:]
     )
     recipe_label = recipe_id if recipe_id != "launcher" else "Rezeptor (allgemein)"
-    ps_line = f"- **Photoshop:** CC 2021\n" if recipe_id == "photoshop" else ""
+    ps_line = f"- **Photoshop:** CC 2021\n" if recipe_id in (
+        "photoshop",
+        "photoshop-m0nkrus",
+        "photoshop-m0nkrus-220",
+    ) else ""
     session_note = f"\n- **Support-Session:** `{session_id}` (nur intern)" if session_id else ""
 
     return f"""## 🐛 Problem

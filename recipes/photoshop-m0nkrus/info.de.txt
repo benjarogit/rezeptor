@@ -1,0 +1,45 @@
+# Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138)
+
+Autor: benjarogit
+Version: 22.1.1.138 (Offline-Installer, getestetes Pack)
+
+## Kurzbeschreibung
+Adobe Photoshop CC 2021 unter Proton-GE — Installation läuft still im Hintergrund (Offline-Installer).
+Eigenes Rezept für das getestete **m0nkrus**-Pack (nicht die 22.0.0.35-Variante).
+
+## Wonach suchen (BYOS)
+Rezeptor liefert **keine Downloads und keine Links**. Pack selbst besorgen. Suchbegriffe:
+
+• Adobe Photoshop 2021 22.1.1.138 Multilingual + Neural Filters [Multi + RUS] RePack m0nkrus
+• rutracker
+• m0nkrus
+
+## Empfohlene Quelle: Pack-Ordner
+Als Quelle den **kompletten Pack-Ordner** wählen (nicht nur die ISO). Darin typischerweise:
+
+• `Adobe Photoshop 2021 22.1.1.138 Multilingual.iso` — Offline-Installer (unter `Adobe 2021/`: Set-up.exe + packages/)
+• `Neural Filters All … .exe` — SFX → PluginData (wird mitinstalliert)
+• `ps2021_missing_libs.7z` — ipp*/opencv-DLLs in den Photoshop-Ordner (wird mitinstalliert)
+• VC++-Redist — Hinweis; Runtime kommt über recipe_vcrun
+• GenP `.rar` — nicht auto; bei Aktivierungsverlust: **Medizin** oder **Mehr → GenP / Cure aus Pack…**
+
+## Voraussetzungen
+• Proton-GE (wird automatisch verwendet)
+• Pack-Ordner mit Adobe-`.iso` + Extras (oder gemountetes/entpacktes Set-up.exe + packages/)
+• 7z für Pack-Extras · Etwa 15 GB freier Speicherplatz
+
+## Installation
+1. „Installieren“ wählen
+2. **Pack-Ordner** wählen (Rezeptor erkennt ISO + Extras; Vorschlag oft unter Downloads)
+3. Datenordner prüfen (Standard: ~/.local/share/wine-software/photoshop-m0nkrus)
+
+## Nutzung
+• „Starten“ im Launcher oder über die Desktop-Verknüpfung
+• Der erste Start kann 1–2 Minuten dauern
+• Neural Filters: manche Filter brauchen Adobe-Login/Cloud; Offline-Paket wird dennoch entpackt
+
+## Hinweise
+• GenP: Medizin-Option oder Mehr → GenP / Cure — ISO ist vorgepatcht
+• Neural Filters: Modelle liegen unter PluginData; in PS unter Filter → Neural Filters (Extension „Vorbereitet“ = bereit, lädt beim Öffnen)
+• Bei unscharfer Schrift: Reparieren ausführen oder das Log prüfen
+• Logs: ~/.local/share/wine-software/logs/

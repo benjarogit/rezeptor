@@ -1,0 +1,59 @@
+id: photoshop-m0nkrus
+schema_version: 1
+icon: "{repo}/images/AdobePhotoshop-icon.png"
+name: "Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138)"
+author: "benjarogit"
+category: "Grafik & Design"
+version_guaranteed: "22.1.1.138"
+version_label: "Adobe Photoshop CC 2021 (22.1.1.138, m0nkrus RePack)"
+version_detect:
+  - kind: json_key
+    glob: "products/PHSP/application.json"
+    key: ProductVersion
+  - kind: json_key
+    glob: "products/PHSP/Application.json"
+    key: ProductVersion
+  - kind: json_key
+    glob: "**/PHSP/application.json"
+    key: ProductVersion
+sidebar_label: "Photoshop"
+source_hints:
+  - "Adobe Photoshop 2021 22.1.1.138 Multilingual + Neural Filters [Multi + RUS] RePack m0nkrus"
+  - "rutracker"
+  - "m0nkrus"
+notify_title: "Photoshop CC 2021"
+data_root: "~/.local/share/wine-software/photoshop-m0nkrus"
+prefix: "{data_root}/prefix"
+runtime: proton-ge
+install_type: installer_offline
+source_kind: folder
+# Empfohlen: kompletter Pack-Ordner (ISO + Neural Filters + missing_libs). Nur-ISO geht, Extras fehlen dann.
+source_label: "Pack-Ordner empfehlen (ISO + Neural Filters + missing_libs) — oder ISO / Set-up.exe + packages/"
+target_default: "~/.local/share/wine-software/photoshop-m0nkrus"
+target_label: "Datenordner (Wine-Prefix wird hier angelegt)"
+fix_kind: none
+exe_glob: "**/Photoshop.exe"
+launch_process_patterns: [Photoshop.exe]
+# win10 via recipe_win10::ensure; VC++ via recipe_vcrun::ensure (nicht winetricks)
+winetricks: [atmlib, corefonts, "fontsmooth=rgb", gdiplus, msxml3, msxml6, ie8]
+options:
+  - id: genp_on_repair
+    env: PHOTOSHOP_GENP_ON_REPAIR
+    type: bool
+    default: false
+    label:
+      de: "Bei Reparatur GenP aus Pack starten"
+      en: "Launch GenP from pack on Repair"
+    tip:
+      de: "ISO ist vorgepatcht — Standard aus. Nur bei Aktivierungsverlust anschalten, dann einmal Reparieren. GenP: Photoshop anhaken → Pille → im Dateiname-Feld Strg+V (Pfad legt Rezeptor in die Zwischenablage). GenP-Startordner ist nicht steuerbar. Braucht GenP-.rar im Pack. Sofort: Mehr → GenP / Cure."
+      en: "ISO is pre-patched — default off. Enable only if activation drops, then Repair once. GenP: check Photoshop → Pill → Ctrl+V in filename field (Rezeptor copies the path). GenP start folder cannot be controlled. Needs GenP .rar in the pack. Immediate: More → GenP / Cure."
+env:
+  WINEDEBUG: "-all,+err"
+validate: validate.sh
+launch: launch.sh
+install: install.sh
+repair: repair.sh
+kill: kill.sh
+uninstall: uninstall.sh
+install_steps:
+  - module: recipe_photoshop::install

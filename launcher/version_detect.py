@@ -41,8 +41,33 @@ def load_recipe_mapping(recipe_yml: Path) -> dict[str, Any]:
     return _load_recipe_mapping_minimal(text)
 
 
+def _parse_string_list_block(
+    lines: list[str], start: int
+) -> tuple[list[str], int]:
+    """Parst eine YAML-Liste von Strings: `- \"foo\"` / `- foo`."""
+    items: list[str] = []
+    i = start
+    while i < len(lines):
+        raw = lines[i]
+        if raw.strip() and not raw.startswith((" ", "\t")) and not raw.lstrip().startswith(
+            "#"
+        ):
+            break
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            i += 1
+            continue
+        stripped = raw.strip()
+        if stripped.startswith("- "):
+            items.append(_unquote(stripped[2:].strip()))
+            i += 1
+            continue
+        # Fortsetzung / Nested → Stop (nur flache String-Listen)
+        break
+    return items, i
+
+
 def _load_recipe_mapping_minimal(text: str) -> dict[str, Any]:
-    # Minimal: top-level Skalare + version_detect-Liste
+    # Minimal: top-level Skalare + version_detect / source_hints Listen
     data: dict[str, Any] = {}
     lines = text.splitlines()
     i = 0
@@ -70,6 +95,16 @@ def _load_recipe_mapping_minimal(text: str) -> dict[str, Any]:
             i += 1
             continue
         if rest == "" or rest in ("|", ">"):
+            # Block-Liste von Strings (source_hints, winetricks, …)
+            peek = i + 1
+            while peek < len(lines) and (
+                not lines[peek].strip() or lines[peek].lstrip().startswith("#")
+            ):
+                peek += 1
+            if peek < len(lines) and lines[peek].lstrip().startswith("- "):
+                items, i = _parse_string_list_block(lines, i + 1)
+                data[key] = items
+                continue
             i += 1
             while i < len(lines) and (
                 not lines[i].strip()
@@ -82,6 +117,18 @@ def _load_recipe_mapping_minimal(text: str) -> dict[str, Any]:
         data[key] = _unquote(rest)
         i += 1
     return data
+
+
+def source_hints_list(data: dict[str, Any] | None) -> list[str]:
+    """Normalize recipe.yml ``source_hints`` to a clean string list."""
+    if not data:
+        return []
+    raw = data.get("source_hints")
+    if isinstance(raw, list):
+        return [str(x).strip() for x in raw if str(x).strip()]
+    if isinstance(raw, str) and raw.strip():
+        return [p.strip() for p in raw.replace(";", ",").split(",") if p.strip()]
+    return []
 
 
 def _parse_version_detect_block(

@@ -35,7 +35,7 @@ class MedizinDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(t("medizin.dialog_title"))
-        self.setModal(True)
+        # Modalität/Taskleiste setzt apply_tool_window im Launcher.
         self.setMinimumWidth(420)
         self._data_root = data_root
         self._options = options
@@ -101,7 +101,7 @@ class MedizinDialog(QDialog):
 
     def _on_toggle(self, opt: RecipeOption, checked: bool) -> None:
         write_option_value(self._data_root, opt, checked)
-        if opt.env == "PREMIERE_NVIDIA_LIBS":
+        if opt.env in ("PREMIERE_NVIDIA_LIBS", "PHOTOSHOP_GENP_ON_REPAIR"):
             self._needs_repair_hint = True
             self._hint.setText(t("medizin.apply_repair_hint"))
             self._hint.setVisible(True)

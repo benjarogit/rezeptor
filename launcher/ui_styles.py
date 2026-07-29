@@ -108,6 +108,12 @@ QLabel#sidebarCardTitle {{
     background-color: transparent;
     color: {COLOR_PARCHMENT};
 }}
+QLabel#sidebarCardSub {{
+    background-color: transparent;
+    color: {MUTED};
+    font-size: 8pt;
+    font-family: monospace;
+}}
 QLabel#sidebarSearchEmpty {{
     color: {MUTED};
     font-size: 12px;

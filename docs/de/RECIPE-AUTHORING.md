@@ -96,6 +96,8 @@ icon: "{repo}/images/<id>-icon.png"
 | `notify_title` | Desktop-Notify `-a` / Titel; sonst `name` |
 | `version_label` / `version_guaranteed` | Getestete Version (Anzeige + Garantie) |
 | `version_detect` | **Pflicht bei `version_guaranteed`** — deklarative Erkennung (siehe unten) |
+| `source_hints` | Optional: Suchtexte / Pack-Titel für BYOS (**keine URLs**) |
+| `sidebar_label` | Optional: kurzer **Titel** in der Seitenleiste; Version/Pack erscheinen bei Bedarf in einer zweiten kleinen Zeile |
 | `steam_appid` | Steam AppID: Trainer-Zielordner **oder** Spielordner bei `deploy_mode: link` |
 | `steam_target_folder` | Unterordner im Spielverzeichnis (Default `Trainer`; nur bei copy/Trainer) |
 
@@ -129,6 +131,27 @@ version_detect:
 Signale werden **der Reihe nach** versucht; erstes Ergebnis gewinnt. `stack` kann bei Teilerkennung eine Abweichungs-Meldung liefern.
 
 Lint: `version_guaranteed` ohne `version_detect` → **ERROR**.
+
+### Quellen-Hinweise (`source_hints`)
+
+Für Offline-/BYOS-Rezepte: dem Nutzer sagen, **wonach** er suchen soll — ohne Downloads und ohne Links.
+
+```yaml
+version_guaranteed: "22.1.1.138"
+source_hints:
+  - "Adobe Photoshop 2021 22.1.1.138 Multilingual + Neural Filters [Multi + RUS] RePack m0nkrus"
+  - "rutracker"
+  - "m0nkrus"
+```
+
+| Regel | |
+|-------|--|
+| Erlaubt | Pack-Titel, Version, Keywords (Forenname, Repack-Autor) |
+| Verboten | `http://`, `https://`, Magnet-Links |
+
+Anzeige in Quellen-Dialog und Rezept-Übersicht. **Ein Rezept = ein getestetes Pack** — abweichende Builds lieber als eigenes Rezept mit eigenen `source_hints`, statt mehrere Garantien zu mischen.
+
+Lint: URL/Magnet in `source_hints` → **ERROR**.
 
 ### Info-Layout (`info.de.txt` / `info.en.txt`)
 

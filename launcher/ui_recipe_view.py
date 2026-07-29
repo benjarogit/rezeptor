@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
 
 from i18n import t
 from ui_window import confirm_unsaved_changes
-from version_detect import load_recipe_mapping
+from version_detect import load_recipe_mapping, source_hints_list
 
 HOOK_NAMES = (
     "install.sh",
@@ -295,6 +295,19 @@ class RecipeViewDialog(QDialog):
                 chip_row.addWidget(_chip(" · ".join(bits)))
             chip_row.addStretch(1)
             lay.addLayout(chip_row)
+
+        hints = source_hints_list(self._data)
+        if hints:
+            lay.addWidget(QLabel(t("recipe_view.source_hints")))
+            for h in hints:
+                row = QLabel(f"• {h}")
+                row.setObjectName("muted")
+                row.setWordWrap(True)
+                lay.addWidget(row)
+            note = QLabel(t("recipe_view.source_hints_note"))
+            note.setObjectName("muted")
+            note.setWordWrap(True)
+            lay.addWidget(note)
 
         # install_steps — vertikal (horizontale Chip-Reihe quetscht zu leeren Kästen)
         steps = self._data.get("install_steps")

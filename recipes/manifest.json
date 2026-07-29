@@ -40,6 +40,33 @@
         "validate.sh": "sha256:148296253f190121b7b478a18fe37b8bd3829ca73d2ac9fd14f51149ad1924a5"
       }
     },
+    "photoshop-m0nkrus": {
+      "files": {
+        "genp.sh": "sha256:a06cd6b65058967f9cd34a44532e5d0fa94c55a786177a9bdb3742252c54c6e6",
+        "info.de.txt": "sha256:100ddcf7d620dad44307303c25fd8fa77026b9697ea0eba480155ef43d92141c",
+        "info.en.txt": "sha256:8d279200e994fef23610c970ace5403aa551de0f38445a58d59d3bd42fe1ccf6",
+        "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
+        "kill.sh": "sha256:8bb102767ac30c240e662585e13e8735caa5d93b20e7ba722be91c4423c7da52",
+        "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
+        "recipe.yml": "sha256:9317e05c110f82466f8ab1558bcae8fb26aeaea753976e862510002ee9c90ef7",
+        "repair.sh": "sha256:2606839fb643291c3d923a3c01cf9336ec999c9f3da42bf24d5dbabd0dc87dd6",
+        "uninstall.sh": "sha256:5f8ce2cbb0a7883c11e89db3f42be217e035dfdb3dce600bb78351da51536ab4",
+        "validate.sh": "sha256:148296253f190121b7b478a18fe37b8bd3829ca73d2ac9fd14f51149ad1924a5"
+      }
+    },
+    "photoshop-m0nkrus-220": {
+      "files": {
+        "info.de.txt": "sha256:8b58a755b77900226cd40e6a453ecd3257c08b01ff0d2c3969db98aa8449293e",
+        "info.en.txt": "sha256:2763688e383b459d065e45f3b3a0eab069c051ca1f33377e281da833e8a6c8e6",
+        "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
+        "kill.sh": "sha256:8bb102767ac30c240e662585e13e8735caa5d93b20e7ba722be91c4423c7da52",
+        "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
+        "recipe.yml": "sha256:8e639d2658c4e7cf68dd0d7230abe165a950e335d1e3ed9f5036e759f33bc3ea",
+        "repair.sh": "sha256:f1362b1ea8545118e9a54c74ffec72eb867775161f749897e9a09571535a14e8",
+        "uninstall.sh": "sha256:8c1c445512d2d07977e7a7f72e4f4944262a5d548f47fcb7edcea486bbedc481",
+        "validate.sh": "sha256:148296253f190121b7b478a18fe37b8bd3829ca73d2ac9fd14f51149ad1924a5"
+      }
+    },
     "premiere": {
       "files": {
         "info.de.txt": "sha256:3480eb4925eef148c3ac4d479415f0afafa7102cc495a94506fc925b50c4ca7d",
