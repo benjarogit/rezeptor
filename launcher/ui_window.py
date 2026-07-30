@@ -112,6 +112,26 @@ def _force_dismiss_dialog(dlg: QDialog, *, force: bool = True) -> None:
     dlg.close()
 
 
+def unwind_modal_dialogs(main: QWidget, *, force: bool = True, rounds: int = 12) -> int:
+    """Geschachtelte exec()-Schleifen (Hilfe-QMessageBox über Quellen-Dialog) auflösen."""
+    n = 0
+    app = QApplication.instance()
+    for _ in range(rounds):
+        modal = QApplication.activeModalWidget()
+        if modal is None or not widget_belongs_to_main(modal, main):
+            break
+        if not isinstance(modal, QDialog):
+            break
+        _force_dismiss_dialog(modal, force=force)
+        n += 1
+        if app is not None:
+            app.processEvents()
+    n += dismiss_child_dialogs(main, force=force)
+    if app is not None:
+        app.processEvents()
+    return n
+
+
 def visible_child_dialogs(parent: QWidget) -> list[QDialog]:
     """Sichtbare Kind-Dialoge (Quelle, Einstellungen, …), nicht das Parent selbst."""
     out: list[QDialog] = []
@@ -134,19 +154,23 @@ def dismiss_child_dialogs(parent: QWidget, *, force: bool = True) -> int:
             if isinstance(modal, QDialog):
                 _force_dismiss_dialog(modal, force=force)
                 n += 1
+                app.processEvents()
             else:
                 break
-    for dlg in visible_child_dialogs(parent):
+    for dlg in list(visible_child_dialogs(parent)):
         _force_dismiss_dialog(dlg, force=force)
         n += 1
+    if app is not None:
+        app.processEvents()
     return n
 
 
 def dismiss_all_top_level_windows(main: QWidget, *, force: bool = True) -> None:
     """Alle sichtbaren Rezeptor-Fenster schließen (KDE „Alle schließen“ / Taskleiste)."""
     app = QApplication.instance()
+    # Zuerst innere Modals (QMessageBox über Quellen-Dialog), sonst hängt exec().
+    unwind_modal_dialogs(main, force=force)
     if app is None:
-        dismiss_child_dialogs(main, force=force)
         return
     for w in list(app.topLevelWidgets()):
         if w is main or not w.isVisible():
@@ -157,12 +181,14 @@ def dismiss_all_top_level_windows(main: QWidget, *, force: bool = True) -> None:
             w.setProperty("rezeptor_force_close", True)
         if hasattr(w, "force_close"):
             w.force_close()
+            app.processEvents()
             continue
         if isinstance(w, QDialog):
             _force_dismiss_dialog(w, force=force)
+            app.processEvents()
             continue
         w.close()
-    dismiss_child_dialogs(main, force=force)
+    unwind_modal_dialogs(main, force=force)
     dismiss_child_dialogs(main, force=force)
 
 
@@ -209,31 +235,38 @@ class ApplicationCloseGuard(QObject):
         if w.property("rezeptor_force_close"):
             return False
 
-        if w is self._main:
-            self._main_close_at = time.monotonic()
-            dismiss_child_dialogs(self._main, force=True)
-            self._schedule_quit()
-            event.ignore()
-            return True
+        # OK/Abbrechen/done() erzeugen Close ohne WM — niemals App beenden.
+        # (Sonst schließt Hilfe-„Installer-Quelle“ → OK die ganze App.)
+        if not event.spontaneous():
+            return False
 
-        # Modale exec()-Dialoge (Quelle, Einstellungen): KDE „Alle schließen“ liefert
-        # oft nur ein Close am fokussierten Fenster — Burst reicht dann nicht.
-        if isinstance(w, QDialog) and w.isModal():
-            if self._secondary_has_unsaved(w):
-                return False
-            self._schedule_quit()
-            event.ignore()
-            return True
-
-        # Nicht-modale Tool-Fenster (Rezept-Editor): einzelnes X = nur dieses Fenster;
-        # „Alle schließen“ / Hauptfenster-Close kurz davor → App quit.
         now = time.monotonic()
         self._close_burst = [
             t for t in self._close_burst if now - t < self._BURST_SEC
         ]
         self._close_burst.append(now)
+
+        if w is self._main:
+            self._main_close_at = now
+            unwind_modal_dialogs(self._main, force=True)
+            self._schedule_quit()
+            event.ignore()
+            return True
+
+        # WM/Taskleiste auf Nebenfenster: QMessageBox-Hilfe nur schließen;
+        # echte Tool-Dialoge (Quelle, …) bzw. Burst → App beenden.
+        if isinstance(w, QMessageBox):
+            return False
+
         if self._secondary_has_unsaved(w):
             return False
+
+        # KDE „Alle schließen“ / Taskleisten-Schließen: oft nur 1 Close am Fokusfenster.
+        if isinstance(w, QDialog) and w.isModal():
+            self._schedule_quit()
+            event.ignore()
+            return True
+
         if len(self._close_burst) >= 2 or self._main_close_armed():
             self._schedule_quit()
             event.ignore()

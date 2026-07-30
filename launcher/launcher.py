@@ -217,6 +217,7 @@ from ui_window import (
     geometry_to_b64,
     install_application_close_guard,
     restore_geometry,
+    unwind_modal_dialogs,
 )
 from i18n import get_locale, set_locale, t
 from log_context import (
@@ -4491,12 +4492,15 @@ class RezeptorWindow(QMainWindow):
                 return
 
             self._force_quitting = True
+            unwind_modal_dialogs(self, force=True)
             dismiss_all_top_level_windows(self, force=True)
+            unwind_modal_dialogs(self, force=True)
             self._persist_ui_layout()
             self._terminate_busy_subprocess()
             self.close()
             app = QApplication.instance()
             if app is not None:
+                app.processEvents()
                 app.quit()
         finally:
             self._quit_pending = False
