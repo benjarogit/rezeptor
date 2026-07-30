@@ -50,6 +50,9 @@
     "home_link_wiki": "Wiki",
     "home_link_wiki_sub": "Öffentliche Doku",
     "home_link_wiki_tip": "Öffentliche Dokumentation im Browser öffnen",
+    "home_link_reddit": "Reddit",
+    "home_link_reddit_sub": "User-Bericht",
+    "home_link_reddit_tip": "User-Bericht auf Reddit öffnen — Support nur über GitHub",
     "home_pill_version": "v{version}",
     "home_pill_recipes": "{n} Rezepte",
     "sidebar_search_empty": "Keine Rezepte für „{query}\"."

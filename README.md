@@ -2,17 +2,28 @@
   <img src="images/rezeptor-icon.png" alt="Rezeptor" width="128" height="128">
 </p>
 
-# Rezeptor
+<h1 align="center">Rezeptor</h1>
 
-**Install and run Windows software on Linux** with tested recipes — powered by **Proton-GE**, managed in a simple desktop app.
+<p align="center">
+  <strong>Install and run Windows software on Linux</strong> with tested recipes —<br>
+  powered by <strong>Proton-GE</strong>, managed in a simple desktop app.
+</p>
+
+<p align="center">
+  <a href="https://github.com/benjarogit/rezeptor/releases"><img src="https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=release&color=B87333" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--2.0-blue" alt="License"></a>
+  <a href="https://benjarogit.github.io/rezeptor/"><img src="https://img.shields.io/badge/docs-Rezeptor%20Docs-B87333" alt="Docs"></a>
+  <a href="https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/"><img src="https://img.shields.io/badge/reddit-User%20report-FF4500?logo=reddit&logoColor=white" alt="Reddit user report"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/benjarogit/rezeptor/stargazers"><img src="https://img.shields.io/github/stars/benjarogit/rezeptor?style=flat&color=B87333" alt="Stars"></a>
+  <a href="https://github.com/benjarogit/rezeptor/issues"><img src="https://img.shields.io/github/issues/benjarogit/rezeptor?color=B87333" alt="Issues"></a>
+  <a href="https://github.com/benjarogit/rezeptor/commits/main"><img src="https://img.shields.io/github/last-commit/benjarogit/rezeptor?color=B87333" alt="Last commit"></a>
+  <a href="https://github.com/benjarogit/rezeptor/releases"><img src="https://img.shields.io/github/downloads/benjarogit/rezeptor/total?color=B87333" alt="Downloads"></a>
+</p>
 
 Photoshop, tax software (WISO), Steam games with online fixes, trainers, and more: each recipe knows how to install, repair, validate, launch, and uninstall cleanly.
-
-Community report: [Photoshop CC 2021 on Ubuntu (r/photoshop)](https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/) — support stays on [GitHub Issues](https://github.com/benjarogit/rezeptor/issues).
-
-[![Docs](https://img.shields.io/badge/docs-Rezeptor%20Docs-B87333)](https://benjarogit.github.io/rezeptor/)
-[![License](https://img.shields.io/badge/license-GPL--2.0-blue)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=release)](https://github.com/benjarogit/rezeptor/releases)
 
 > **This is the successor project.**  
 > Development continues here only. The older repositories
@@ -20,6 +31,8 @@ Community report: [Photoshop CC 2021 on Ubuntu (r/photoshop)](https://www.reddit
 > [wiso-steuer-portable-linux](https://github.com/benjarogit/wiso-steuer-portable-linux), and
 > [crkcachy](https://github.com/benjarogit/crkcachy)
 > are archived — please open new issues and pull requests in **this** repo.
+
+Support stays on [GitHub Issues](https://github.com/benjarogit/rezeptor/issues) (not Reddit).
 
 ## What you get
 
@@ -104,7 +117,7 @@ Pull requests that add a working recipe **or** make `core/` / the launcher more 
 
 ## Versioning
 
-Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current: **1.1.12**.
+Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current: **1.1.13**.
 
 ## Deutsch
 

@@ -196,7 +196,7 @@ extra:
       name: GitHub
     - icon: fontawesome/brands/reddit
       link: https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/
-      name: Photoshop CC 2021 on Ubuntu (r/photoshop)
+      name: User report — Photoshop CC 2021 on Ubuntu (r/photoshop)
     - icon: fontawesome/solid/download
       link: https://github.com/benjarogit/rezeptor/releases
       name: Releases

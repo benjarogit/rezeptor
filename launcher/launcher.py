@@ -88,6 +88,7 @@ if str(_LAUNCHER_DIR) not in sys.path:
 from app_support import (
     GITHUB_REPO,
     collect_report_bundle,
+    community_reddit_url,
     detect_source_version,
     detect_update_channel,
     fetch_latest_release,
@@ -1978,8 +1979,18 @@ class RezeptorWindow(QMainWindow):
                 on_click=self._open_home_wiki,
             )
         )
+        self._home_reddit_btn, self._home_reddit_title, self._home_reddit_sub = (
+            self._make_home_link_card(
+                icon_kind="reddit",
+                title_key="app.home_link_reddit",
+                subtitle_key="app.home_link_reddit_sub",
+                tip_key="app.home_link_reddit_tip",
+                on_click=self._open_home_reddit,
+            )
+        )
         links_grid.addWidget(self._home_github_btn, 0, 0)
         links_grid.addWidget(self._home_wiki_btn, 0, 1)
+        links_grid.addWidget(self._home_reddit_btn, 0, 2)
         lay.addLayout(links_grid)
         lay.addStretch(1)
         return page
@@ -2036,6 +2047,9 @@ class RezeptorWindow(QMainWindow):
 
     def _open_home_wiki(self) -> None:
         QDesktopServices.openUrl(QUrl(public_docs_url(get_locale())))
+
+    def _open_home_reddit(self) -> None:
+        QDesktopServices.openUrl(QUrl(community_reddit_url()))
 
     def _recipe_stats(self) -> dict[str, int]:
         hidden = set(self._settings.hidden_recipe_ids or [])
@@ -4598,6 +4612,13 @@ class RezeptorWindow(QMainWindow):
             self._home_wiki_title.setText(t("app.home_link_wiki"))
         if hasattr(self, "_home_wiki_sub"):
             self._home_wiki_sub.setText(t("app.home_link_wiki_sub"))
+        if hasattr(self, "_home_reddit_btn"):
+            self._home_reddit_btn.setToolTip(t("app.home_link_reddit_tip"))
+            self._home_reddit_btn.setAccessibleName(t("app.home_link_reddit"))
+        if hasattr(self, "_home_reddit_title"):
+            self._home_reddit_title.setText(t("app.home_link_reddit"))
+        if hasattr(self, "_home_reddit_sub"):
+            self._home_reddit_sub.setText(t("app.home_link_reddit_sub"))
         for key in ("recipes", "installed", "attention", "hidden"):
             cap = getattr(self, f"_home_stat_caption_{key}", None)
             if cap is not None:

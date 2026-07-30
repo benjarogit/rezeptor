@@ -16,6 +16,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 GITHUB_REPO = "benjarogit/rezeptor"
 DOCS_SITE = "https://benjarogit.github.io/rezeptor"
+# Public user report (r/photoshop) — amplify only; support stays on GitHub Issues
+COMMUNITY_REDDIT_URL = (
+    "https://www.reddit.com/r/photoshop/comments/1vau4wh/"
+    "fyi_photoshop_cc_2021_on_ubuntu_finally/"
+)
 LOG_ROOT = Path.home() / ".local/share/wine-software/logs"
 LOG_RETENTION_DAYS = 14
 LOG_MAX_FILES = 50
@@ -76,6 +81,11 @@ def public_docs_url(locale: str = "de") -> str:
     if code.startswith("en"):
         return f"{DOCS_SITE}/en/"
     return f"{DOCS_SITE}/"
+
+
+def community_reddit_url() -> str:
+    """User report on Reddit (amplify only — support stays on GitHub)."""
+    return COMMUNITY_REDDIT_URL
 
 
 def github_doc_url(rel_path: str, branch: str = "main") -> str:
