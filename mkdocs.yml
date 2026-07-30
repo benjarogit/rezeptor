@@ -24,8 +24,8 @@ theme:
   logo: assets/rezeptor-icon.svg
   favicon: assets/rezeptor-icon.svg
   font:
-    text: Roboto
-    code: Roboto Mono
+    text: Source Sans 3
+    code: JetBrains Mono
   icon:
     repo: fontawesome/brands/github
     edit: material/pencil-outline
@@ -34,27 +34,25 @@ theme:
       note: material/information-outline
       tip: material/fire
       warning: material/alert-outline
+      success: material/check-circle
+      info: material/book-open-page-variant
   palette:
-    - media: "(prefers-color-scheme)"
-      toggle:
-        icon: material/brightness-auto
-        name: Zum hellen Modus
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
+    # Produkt-UI = Dark + Kupfer → Docs starten dunkeln (Logo/Anthrazit)
+    - scheme: slate
       primary: custom
       accent: custom
       toggle:
         icon: material/brightness-7
-        name: Zum dunklen Modus
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
+        name: Zum hellen Modus
+    - scheme: default
       primary: custom
       accent: custom
       toggle:
         icon: material/brightness-4
-        name: Systemeinstellung
+        name: Zum dunklen Modus
   features:
     # navigation.instant incompatible with mkdocs-static-i18n language switcher
+    - announce.dismiss
     - navigation.tabs
     - navigation.tabs.sticky
     - navigation.sections
@@ -68,6 +66,7 @@ theme:
     - search.share
     - content.tabs.link
     - content.code.copy
+    - content.code.select
     - content.code.annotate
     - content.action.edit
     - content.action.view
@@ -159,6 +158,7 @@ nav:
 
 markdown_extensions:
   - admonition
+  - abbr
   - attr_list
   - md_in_html
   - def_list
@@ -167,6 +167,7 @@ markdown_extensions:
   - toc:
       permalink: true
   - pymdownx.details
+  - pymdownx.keys
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
