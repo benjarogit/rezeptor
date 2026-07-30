@@ -409,7 +409,10 @@ recipe_photoshop::install_desktop() {
 
 recipe_photoshop::install() {
     local _err=0 installer_dir=""
-    recipe_hooks::log_setup "Photoshop_Install"
+    # install_steps already opened ${RECIPE_ID}_Install — don't create a second empty log
+    if [ -z "${LOG_FILE:-}" ] || [ ! -f "${LOG_FILE}" ]; then
+        recipe_hooks::log_setup "Photoshop_Install"
+    fi
     recipe_hooks::_source sharedFuncs.sh
     recipe_hooks::_source recipe-fonts.sh
     recipe_hooks::_source recipe-validate.sh

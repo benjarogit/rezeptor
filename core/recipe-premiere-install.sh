@@ -110,7 +110,9 @@ recipe_premiere::fix_icu_dlls() {
 
 recipe_premiere::install() {
     local _err=0 installer_dir=""
-    recipe_hooks::log_setup "Premiere_Install"
+    if [ -z "${LOG_FILE:-}" ] || [ ! -f "${LOG_FILE}" ]; then
+        recipe_hooks::log_setup "Premiere_Install"
+    fi
     recipe_hooks::_source sharedFuncs.sh
     recipe_hooks::_source recipe-fonts.sh
     recipe_hooks::_source recipe-validate.sh

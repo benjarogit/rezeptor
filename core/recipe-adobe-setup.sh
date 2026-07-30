@@ -33,14 +33,11 @@ adobe_setup::apply_adobe_network_registry() {
         /v ProxyEnable /t REG_DWORD /d 0 /f >>"${LOG_FILE:-/dev/null}" 2>&1 || true
 }
 
-adobe_setup::_ensure_case_alias() {
-    # Adobe erwartet teils lowercase (config.xml) neben Canonical (Config.xml).
-    # Auf manchen FS/Rechten scheitert ln → Permission denied — Installation nicht hart killen.
-    local dir="$1" canonical="$2" alias_name="$3"
-    local src="$dir/$canonical" dest="$dir/$alias_name" err=""
-
-    [ -d "$dir" ] || return 0
-    [ -f "$src" ] || return 0
+# Ensure both case spellings exist (ISO often lowercases; Adobe may ask for either).
+# Symlink preferred; cp fallback if ln fails (Permission denied on some mounts).
+adobe_setup::_link_or_copy_case() {
+    local dir="$1" existing="$2" missing="$3"
+    local src="$dir/$existing" dest="$dir/$missing" err=""
 
     if [ -e "$dest" ]; then
         if [ "$src" -ef "$dest" ] 2>/dev/null; then
@@ -49,37 +46,60 @@ adobe_setup::_ensure_case_alias() {
         return 0
     fi
 
-    if ln -sfn "$canonical" "$dest" 2>/dev/null; then
-        type output::info >/dev/null 2>&1 && output::info "Case-Alias: $alias_name → $canonical"
+    if ln -sfn "$existing" "$dest" 2>/dev/null; then
+        type output::info >/dev/null 2>&1 && output::info "Case-Alias: $missing → $existing"
         return 0
     fi
-    err="$(ln -sfn "$canonical" "$dest" 2>&1 || true)"
+    err="$(ln -sfn "$existing" "$dest" 2>&1 || true)"
     if [ -n "${ERROR_LOG:-}" ]; then
-        echo "[$(date '+%H:%M:%S')] WARN: Symlink $alias_name: ${err:-failed}" >>"$ERROR_LOG"
+        echo "[$(date '+%H:%M:%S')] WARN: Symlink $missing: ${err:-failed}" >>"$ERROR_LOG"
     fi
     if cp -f "$src" "$dest" 2>/dev/null; then
         type output::info >/dev/null 2>&1 \
-            && output::info "Case-Alias: $alias_name (Kopie — Symlink nicht möglich)"
+            && output::info "Case-Alias: $missing (Kopie — Symlink nicht möglich)"
         [ -n "${ERROR_LOG:-}" ] \
-            && echo "[$(date '+%H:%M:%S')] INFO: Case-Alias $alias_name via cp" >>"$ERROR_LOG"
+            && echo "[$(date '+%H:%M:%S')] INFO: Case-Alias $missing via cp" >>"$ERROR_LOG"
         return 0
     fi
     type recipe_hooks::log_err >/dev/null 2>&1 \
-        && recipe_hooks::log_err "Case-Alias $dir/$alias_name fehlgeschlagen (${err:-cp failed}) — weiter ohne Alias"
+        && recipe_hooks::log_err "Case-Alias $dir/$missing fehlgeschlagen (${err:-cp failed}) — weiter ohne Alias"
     return 0
+}
+
+adobe_setup::_ensure_case_pair() {
+    local dir="$1" name_a="$2" name_b="$3"
+    local fa="$dir/$name_a" fb="$dir/$name_b"
+
+    [ -d "$dir" ] || return 0
+
+    if [ -f "$fa" ] && [ ! -e "$fb" ]; then
+        adobe_setup::_link_or_copy_case "$dir" "$name_a" "$name_b"
+        return 0
+    fi
+    if [ -f "$fb" ] && [ ! -e "$fa" ]; then
+        adobe_setup::_link_or_copy_case "$dir" "$name_b" "$name_a"
+        return 0
+    fi
+    return 0
+}
+
+# Back-compat wrapper (canonical, alias) — now bidirectional via pair.
+adobe_setup::_ensure_case_alias() {
+    adobe_setup::_ensure_case_pair "$1" "$2" "$3"
 }
 
 adobe_setup::fix_installer_case_symlinks() {
     local base="${WINEPREFIX}/drive_c/AdobeSetup"
     [ -d "$base" ] || return 0
-    adobe_setup::_ensure_case_alias "$base/products" "Driver.xml" "driver.xml"
-    adobe_setup::_ensure_case_alias "$base/resources" "Config.xml" "config.xml"
+    adobe_setup::_ensure_case_pair "$base/products" "Driver.xml" "driver.xml"
+    adobe_setup::_ensure_case_pair "$base/resources" "Config.xml" "config.xml"
 }
 
 adobe_setup::diagnose_failed_install() {
     local rc="${1:-?}"
     local base="${WINEPREFIX:-}/drive_c/AdobeSetup"
     local log="${ERROR_LOG:-${LOG_FILE:-/dev/null}}"
+    local drive_c="${WINEPREFIX:-}/drive_c"
     {
         echo "=== Adobe-Install Diagnose (exit=$rc) ==="
         echo "Zeit: $(date -Iseconds 2>/dev/null || date)"
@@ -115,13 +135,35 @@ adobe_setup::diagnose_failed_install() {
                     echo "  missing: $f"
                 fi
             done
+            # Case-pair sanity (ext4): one spelling without the other → Installer oft Exit 103
+            if [ -e "$base/products/driver.xml" ] && [ ! -e "$base/products/Driver.xml" ]; then
+                echo "WARN: Case-Mismatch products/: driver.xml vorhanden, Driver.xml fehlt — Case-Pair greift nicht oder Deploy zu früh"
+            fi
+            if [ -e "$base/products/Driver.xml" ] && [ ! -e "$base/products/driver.xml" ]; then
+                echo "WARN: Case-Mismatch products/: Driver.xml vorhanden, driver.xml fehlt — Case-Pair greift nicht oder Deploy zu früh"
+            fi
+            if [ -e "$base/resources/Config.xml" ] && [ ! -e "$base/resources/config.xml" ]; then
+                echo "WARN: Case-Mismatch resources/: Config.xml vorhanden, config.xml fehlt"
+            fi
+            if [ -e "$base/resources/config.xml" ] && [ ! -e "$base/resources/Config.xml" ]; then
+                echo "WARN: Case-Mismatch resources/: config.xml vorhanden, Config.xml fehlt"
+            fi
         else
             echo "AdobeSetup fehlt: $base"
         fi
-        if [ -d "${WINEPREFIX:-}/drive_c" ]; then
-            echo "Recent *.log under drive_c (max 8):"
-            find "${WINEPREFIX}/drive_c" -type f \( -iname '*.log' -o -iname '*setup*.txt' \) 2>/dev/null \
-                | head -8 | while IFS= read -r lf; do
+        if [ -d "$drive_c" ]; then
+            echo "Adobe-Installer-Logs (priorisiert, max 8):"
+            # Prefer Adobe/HDBox/PDApp/ACC/Setup over VC redistributable noise
+            {
+                find "$drive_c" -type f \( \
+                    -ipath '*/Adobe/*' -o -ipath '*/HDBox/*' -o -ipath '*/PDApp/*' \
+                    -o -ipath '*/ACC/*' -o -iname '*Setup*.log' -o -iname '*Install*.log' \
+                    -o -iname 'EMCL.log' -o -iname '*Adobe*.log' \
+                    \) 2>/dev/null | head -40
+                find "$drive_c" -type f \( -iname '*.log' -o -iname '*setup*.txt' \) 2>/dev/null \
+                    | grep -viE 'vcredist|dd_vcredist|Package Cache' \
+                    | head -20
+            } | awk 'NF && !seen[$0]++' | head -8 | while IFS= read -r lf; do
                 echo "  --- $lf (tail) ---"
                 tail -n 40 "$lf" 2>/dev/null || true
             done
