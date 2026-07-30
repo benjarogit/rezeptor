@@ -17,6 +17,8 @@ rsync -a \
     --exclude '.cache' \
     --exclude '.flatpak-builder' \
     --exclude '.audit' \
+    --exclude 'flatpak/build-flatpak' \
+    --exclude 'flatpak/repo' \
     --exclude 'AppDir-build' \
     --exclude 'AppDir' \
     --exclude 'logs' \
