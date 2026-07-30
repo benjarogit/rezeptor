@@ -19,6 +19,7 @@ copyright: Copyright &copy; Rezeptor contributors — GPL-2.0
 
 theme:
   name: material
+  custom_dir: overrides
   language: de
   logo: assets/rezeptor-icon.svg
   favicon: assets/rezeptor-icon.svg
@@ -193,6 +194,9 @@ extra:
     - icon: fontawesome/brands/github
       link: https://github.com/benjarogit/rezeptor
       name: GitHub
+    - icon: fontawesome/brands/reddit
+      link: https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/
+      name: Photoshop CC 2021 on Ubuntu (r/photoshop)
     - icon: fontawesome/solid/download
       link: https://github.com/benjarogit/rezeptor/releases
       name: Releases

@@ -107,7 +107,6 @@ Official **handbook** for Rezeptor — install, validate, launch, and cleanly re
 |-------|------|
 | Releases (AppImage / Flatpak / tar.gz) | [GitHub Releases](https://github.com/benjarogit/rezeptor/releases) |
 | Project README | [README.md](https://github.com/benjarogit/rezeptor/blob/main/README.md) |
-| Community (r/photoshop) | [Photoshop CC 2021 on Ubuntu](https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/) — support via [GitHub Issues](https://github.com/benjarogit/rezeptor/issues) only |
 | Contributing (translations) | [CONTRIBUTING-TRANSLATIONS.md](CONTRIBUTING-TRANSLATIONS.md) |
 | Brand | [BRAND.md](BRAND.md) |
 
