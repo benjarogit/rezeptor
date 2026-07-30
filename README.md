@@ -8,6 +8,8 @@
 
 Photoshop, tax software (WISO), Steam games with online fixes, trainers, and more: each recipe knows how to install, repair, validate, launch, and uninstall cleanly.
 
+Community report: [Photoshop CC 2021 on Ubuntu (r/photoshop)](https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/) — support stays on [GitHub Issues](https://github.com/benjarogit/rezeptor/issues).
+
 [![Docs](https://img.shields.io/badge/docs-Rezeptor%20Docs-B87333)](https://benjarogit.github.io/rezeptor/)
 [![License](https://img.shields.io/badge/license-GPL--2.0-blue)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=release)](https://github.com/benjarogit/rezeptor/releases)

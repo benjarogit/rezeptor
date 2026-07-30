@@ -18,6 +18,8 @@ Aktuell **7** offizielle Produktrezepte in **4** Kategorien.
 | `photoshop-m0nkrus-220` | Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35) | ISO-only-Pack Photoshop.2021 — eigenes Rezept, nicht Standard und nicht 22.1.1.138 |
 | `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Vollpack inkl. Neural Filters / missing_libs / GenP (optional) |
 
+Community-Bericht: [Photoshop CC 2021 unter Ubuntu (r/photoshop)](https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/). Support weiterhin über [GitHub Issues](https://github.com/benjarogit/rezeptor/issues).
+
 ### Video & Schnitt
 
 | ID | Name | Beschreibung |

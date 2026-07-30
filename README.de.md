@@ -8,6 +8,8 @@
 
 Photoshop, Steuerprogramme (WISO), Steam-Spiele mit Online-Fix, Trainer und mehr: Jedes Rezept weiß, wie Installation, Reparatur, Prüfung, Start und saubere Deinstallation funktionieren.
 
+Community-Bericht: [Photoshop CC 2021 unter Ubuntu (r/photoshop)](https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/) — Support weiterhin über [GitHub Issues](https://github.com/benjarogit/rezeptor/issues).
+
 [![Doku](https://img.shields.io/badge/Doku-Rezeptor%20Docs-B87333)](https://benjarogit.github.io/rezeptor/)
 [![Lizenz](https://img.shields.io/badge/Lizenz-GPL--2.0-blue)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=Release)](https://github.com/benjarogit/rezeptor/releases)

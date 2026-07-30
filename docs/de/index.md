@@ -107,6 +107,7 @@ Offizielles **Handbuch** für Rezeptor — Windows-Software unter **Proton-GE** 
 |-------|------|
 | Releases (AppImage / Flatpak / tar.gz) | [GitHub Releases](https://github.com/benjarogit/rezeptor/releases) |
 | Projekt-README | [README.md](https://github.com/benjarogit/rezeptor/blob/main/README.md) |
+| Community (r/photoshop) | [Photoshop CC 2021 on Ubuntu](https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/) — Support nur über [GitHub Issues](https://github.com/benjarogit/rezeptor/issues) |
 | Mitwirken (Übersetzungen) | [CONTRIBUTING-TRANSLATIONS.md](CONTRIBUTING-TRANSLATIONS.md) |
 | Marke | [BRAND.md](BRAND.md) |
 
