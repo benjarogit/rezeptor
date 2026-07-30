@@ -63,6 +63,20 @@ Oder ein **[Release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz
 
 ## Rezepte
 
+### Mitgelieferte offizielle Rezepte
+
+| ID | Name | Kategorie | Hinweis |
+|----|------|-----------|---------|
+| `photoshop` | Adobe Photoshop CC 2021 | Grafik & Design | Standard-Offline-Installer (22.0.0.35) |
+| `photoshop-m0nkrus-220` | Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35) | Grafik & Design | ISO-only-m0nkrus-Pack (nicht Standard / nicht 22.1.1.138) |
+| `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Grafik & Design | Vollpack + Neural / missing_libs / GenP (optional) |
+| `premiere` | Adobe Premiere Pro 2024 | Video & Schnitt | NVIDIA: CUDA via nvidia-libs |
+| `wiso-steuer` | WISO Steuer (Portable) | Finanzen & Steuer | Portable unter Proton-GE |
+| `house-of-ashes` | House of Ashes | Spiele | Steam BYOS + Online-Fix |
+| `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | Spiele | Trainer; Spiel zuerst starten |
+
+Index: [`recipes/catalog.json`](recipes/catalog.json). Details: [Rezept-Katalog (Doku)](https://benjarogit.github.io/rezeptor/de/CATALOG/).
+
 | Ort | Rolle |
 |-----|--------|
 | `recipes/<id>/` | Mitgeliefert / offiziell |
@@ -72,7 +86,7 @@ Ideen einreichen über [Recipe Submission](https://github.com/benjarogit/rezepto
 
 ## Versionierung
 
-Releases folgen **SemVer** (`MAJOR.MINOR.PATCH`). Aktuelle Linie ab **1.0.2**.
+Releases folgen **SemVer** (`MAJOR.MINOR.PATCH`). Aktuell: **1.1.6**.
 
 ## English
 

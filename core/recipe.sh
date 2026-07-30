@@ -45,8 +45,15 @@ recipe_export_env() {
     paths_init_recipe
     local rt
     rt="$(recipe_get "$yml" runtime 2>/dev/null || true)"
-    export WINE_METHOD="${rt:-proton-ge}"
-    export RECIPE_RUNTIME="$WINE_METHOD"
+    case "$rt" in
+        ""|proton-ge) rt="proton-ge" ;;
+        *)
+            # Legacy recipe.yml mit runtime: system → Proton-GE erzwingen
+            rt="proton-ge"
+            ;;
+    esac
+    export WINE_METHOD="$rt"
+    export RECIPE_RUNTIME="$rt"
     local wow64
     wow64="$(recipe_get "$yml" disable_wow64 2>/dev/null || true)"
     export RECIPE_DISABLE_WOW64="$wow64"

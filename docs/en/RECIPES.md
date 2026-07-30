@@ -1,6 +1,8 @@
 # Recipes
 
-Content moved to **[ENTWICKLER.md](ENTWICKLER.md)** (quick start, layout, recipe types).
+Bundled product recipes: see **[Recipe catalog](CATALOG.md)** — full list of official IDs.
+
+For authors (quick start, types, layout): **[ENTWICKLER.md](ENTWICKLER.md)**.
 
 | Next | |
 |------|--|

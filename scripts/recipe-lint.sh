@@ -78,8 +78,8 @@ lint_recipe_dir() {
     fix_kind="$(recipe_get "$yml" fix_kind 2>/dev/null || true)"
     source_formats="$(recipe_get "$yml" source_formats 2>/dev/null || true)"
 
-    if [ "$runtime" != "proton-ge" ] && [ "$runtime" != "system" ]; then
-        lint_err "$base: runtime muss proton-ge oder system sein (ist: $runtime)"
+    if [ "$runtime" != "proton-ge" ]; then
+        lint_err "$base: runtime muss proton-ge sein (ist: ${runtime:-<leer>})"
     fi
 
     case " $install_type " in
@@ -216,6 +216,19 @@ lint_recipe_dir() {
             lint_warn "$base: $(basename "$f"): eval gefunden"
         fi
     done
+
+    # Repair darf nicht Install als Reparatur ausführen
+    if [ -f "$dir/repair.sh" ]; then
+        if grep -qE '(^|[[:space:]])(bash[[:space:]]+)?(\./)?install\.sh|exec[[:space:]]+bash[[:space:]]+"?\$\{?RECIPE_DIR\}?/install\.sh' \
+            "$dir/repair.sh" 2>/dev/null; then
+            lint_err "$base: repair.sh darf install.sh nicht aufrufen (Repair ≠ Reinstall)"
+        fi
+    fi
+
+    # Bash recipe_get ist flat-key — Block-Skalare an Top-Level-Keys brechen den grep-Parser
+    if grep -qE '^[A-Za-z0-9_]+:[[:space:]]*[|>]' "$yml" 2>/dev/null; then
+        lint_warn "$base: recipe.yml hat Block-Skalare (|/>) — Bash recipe_get liest nur flache Keys"
+    fi
 }
 
 should_lint_dir() {

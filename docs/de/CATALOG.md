@@ -6,10 +6,19 @@ nicht jede Quelle ist gleichwertig.
 ## Offizielle Rezepte (mitgeliefert)
 
 Im Repository unter `recipes/<id>/` gebündelt, indexiert in `recipes/catalog.json` (`trust: official`).
+CI sichert sie ab (`recipe-lint`, Manifest-Check).
 
-Beispiele: Photoshop, Premiere Pro, WISO Steuer, House of Ashes, ZA4-Trainer.
+| ID | Name | Kategorie | Kurz |
+|----|------|-----------|------|
+| `photoshop` | Adobe Photoshop CC 2021 | Grafik & Design | Standard-Offline-Installer (22.0.0.35) |
+| `photoshop-m0nkrus-220` | Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35) | Grafik & Design | ISO-only-Pack Photoshop.2021 — eigenes Rezept |
+| `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Grafik & Design | Vollpack inkl. Neural / missing_libs / GenP (optional) |
+| `premiere` | Adobe Premiere Pro 2024 | Video & Schnitt | Proton-GE; NVIDIA: CUDA via nvidia-libs |
+| `wiso-steuer` | WISO Steuer (Portable) | Finanzen & Steuer | Portable kopieren und starten |
+| `house-of-ashes` | House of Ashes | Spiele | Steam BYOS + Online-Fix |
+| `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | Spiele | Trainer; Spiel zuerst starten |
 
-Diese Rezepte werden mit Rezeptor ausgeliefert und durch CI (`recipe-lint`, Manifest-Check) abgesichert.
+Vorlagen unter `recipes/_template*` und `recipes/community/` sind **keine** mitgelieferten Produktrezepte.
 
 ## Community-Rezepte
 

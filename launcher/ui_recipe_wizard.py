@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 from pathlib import Path
+
+_RECIPE_ID_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
 
 from PyQt6.QtCore import QUrl
 from PyQt6.QtGui import QDesktopServices
@@ -101,7 +104,7 @@ class RecipeWizardDialog(QDialog):
         rid = self.id_edit.text().strip()
         name = self.name_edit.text().strip() or rid
         rtype = str(self.type_combo.currentData() or "portable")
-        if not rid:
+        if not rid or not _RECIPE_ID_RE.fullmatch(rid):
             QMessageBox.warning(self, t("wizard.title"), t("wizard.err_id"))
             return
         script = self._root / "scripts" / "new-recipe.sh"

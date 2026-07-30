@@ -2631,6 +2631,8 @@ class RezeptorWindow(QMainWindow):
         if self._selected:
             env["RECIPE_ID"] = self._selected.rid
             rt = self._selected.meta.get("runtime", "proton-ge")
+            if rt != "proton-ge":
+                rt = "proton-ge"
             env["WINE_METHOD"] = rt
             env["RECIPE_RUNTIME"] = rt
             dr = resolve_data_root(
@@ -2638,6 +2640,7 @@ class RezeptorWindow(QMainWindow):
                 self._selected.rid,
             )
             env["DATA_ROOT"] = str(dr)
+            env["RECIPE_DATA_ROOT"] = str(dr)
             env["WINEPREFIX"] = f"{dr}/prefix"
             env["WINE_PREFIX"] = f"{dr}/prefix"
             rd = Path(self._selected.meta.get("_dir") or "")
@@ -3658,10 +3661,21 @@ class RezeptorWindow(QMainWindow):
                 if self._process is proc:
                     self._process = None
                 return
-            self._activity(
-                "ok" if code == 0 else "error",
-                t("status.exit_code", label=done_label, code=code),
-            )
+            if code == 0:
+                self._activity(
+                    "ok",
+                    t("status.exit_code", label=done_label, code=code),
+                )
+            else:
+                ev = LogEvent(
+                    level="error",
+                    code=E_SCRIPT_FAILED,
+                    message_key="error.E_SCRIPT_FAILED",
+                    extras={"label": done_label, "code": code},
+                    session_id=self.session_id,
+                    recipe_id=(self._selected.rid if self._selected else ""),
+                )
+                self._activity("error", ev.display_text())
             self.refresh_statuses()
             if code != 0 and dialog:
                 self._show_failure(done_label, code)
@@ -3677,7 +3691,16 @@ class RezeptorWindow(QMainWindow):
                 self._process = None
 
         def on_install_error(err: QProcess.ProcessError) -> None:
-            self._activity("error", f"install process error: {err}")
+            ev = LogEvent(
+                level="error",
+                code=E_SCRIPT_FAILED,
+                message_key="error.E_SCRIPT_FAILED",
+                detail=f"QProcess error: {err}",
+                extras={"label": done_label, "code": int(err)},
+                session_id=self.session_id,
+                recipe_id=(self._selected.rid if self._selected else ""),
+            )
+            self._activity("error", ev.display_text())
 
         proc.errorOccurred.connect(on_install_error)
         proc.finished.connect(done)

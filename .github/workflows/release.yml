@@ -340,4 +340,17 @@ jobs:
           set -euo pipefail
           asset="rezeptor-${VER}-x86_64.flatpak"
           gh release upload "$TAG" "$asset" --clobber
-          echo "Uploaded ${asset} to ${TAG}"
+          # SHA256SUMS wurde vor Flatpak geschrieben — Flatpak-Hash nachziehen
+          tmp="$(mktemp -d)"
+          trap 'rm -rf "$tmp"' EXIT
+          gh release download "$TAG" -p SHA256SUMS -D "$tmp"
+          # Alten Flatpak-Eintrag entfernen falls vorhanden, dann neu anhängen
+          if [ -f "$tmp/SHA256SUMS" ]; then
+            grep -vE "(^| )${asset}\$" "$tmp/SHA256SUMS" >"$tmp/SHA256SUMS.new" || true
+            mv "$tmp/SHA256SUMS.new" "$tmp/SHA256SUMS"
+          else
+            : >"$tmp/SHA256SUMS"
+          fi
+          sha256sum "$asset" >>"$tmp/SHA256SUMS"
+          gh release upload "$TAG" "$tmp/SHA256SUMS" --clobber
+          echo "Uploaded ${asset} + updated SHA256SUMS on ${TAG}"

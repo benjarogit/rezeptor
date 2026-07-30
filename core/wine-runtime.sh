@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 ################################################################################
-# Wine / Proton-GE runtime resolver (runtime per recipe: proton-ge | system)
+# Wine / Proton-GE runtime resolver (recipes: proton-ge only; Steam via resolve_proton_script)
 ################################################################################
 
 _WINE_RUNTIME_INITIALIZED=0
@@ -251,11 +251,11 @@ wine_runtime::init() {
 
     wine_runtime::_load_lock
 
+    # Rezepte: nur Proton-GE (kein System-Wine-Fallback). Steam-Spiele nutzen
+    # wine_runtime::resolve_proton_script für Steam-GE/Valve als Nachrang.
     if [ "${WINE_METHOD:-}" = "system" ] || [ "${RECIPE_RUNTIME:-}" = "system" ]; then
-        if wine_runtime::_apply_system_env; then
-            _WINE_RUNTIME_INITIALIZED=1
-            return 0
-        fi
+        wine_runtime::_fail "runtime=system ist nicht mehr unterstützt — recipe.yml: runtime: proton-ge"
+        return 1
     fi
 
     if wine_runtime::ensure_proton_ge; then

@@ -1,6 +1,8 @@
 # Rezepte
 
-Inhalt nach **[ENTWICKLER.md](ENTWICKLER.md)** verschoben (Schnellstart, Struktur, Rezept-Typen).
+Produktrezepte (mitgeliefert): siehe **[Rezept-Katalog](CATALOG.md)** — vollständige Liste der offiziellen IDs.
+
+Für Autoren (Schnellstart, Typen, Struktur): **[ENTWICKLER.md](ENTWICKLER.md)**.
 
 | Weiter | |
 |--------|--|

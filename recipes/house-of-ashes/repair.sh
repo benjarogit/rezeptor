@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Validate → bei Fehlern Wrapper/Pfade erneut aus GAME_DIR schreiben (kein Reinstall des Spiels).
+# Validate → bei Fehlern Wrapper/Pfade aus GAME_DIR neu schreiben (kein Reinstall).
 set -eu
 (set -o pipefail 2>/dev/null) || true
 
@@ -7,6 +7,11 @@ RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$RECIPE_DIR/../../core/recipe-hooks.sh"
 recipe_hooks::load repair
+
+GAME_EXE="HouseOfAshes.exe"
+REAL_APPID="$(recipe_get "$RECIPE_YML" steam_appid 2>/dev/null || echo 1281590)"
+FAKE_APPID="480"
+WINEDLL_OVERRIDES='OnlineFix64=n;SteamOverlay64=n;winmm=n,b;dnet=n;steam_api64=n;winhttp=n,b'
 
 output::progress_begin 3 "Reparatur"
 if bash "$RECIPE_DIR/validate.sh"; then
@@ -22,8 +27,9 @@ if [ -z "$game_dir" ] || [ ! -d "$game_dir" ]; then
     exit 1
 fi
 
-export RECIPE_SOURCE_ROOT="$game_dir"
-if ! bash "$RECIPE_DIR/install.sh"; then
+# shellcheck source=/dev/null
+source "$RECIPE_DIR/../../core/recipe-house-of-ashes.sh"
+if ! hoa::write_launch_wrapper "$game_dir"; then
     output::progress_done "Reparatur fehlgeschlagen"
     exit 1
 fi

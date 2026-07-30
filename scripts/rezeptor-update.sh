@@ -361,12 +361,26 @@ PY
 }
 
 cmd_rollback() {
-    local bid="${1:-}" dest mode path
+    local bid="${1:-}" dest mode path meta
     [ -n "$bid" ] || die "Usage: rollback <backup_id>"
+    [[ "$bid" =~ ^[A-Za-z0-9._-]+$ ]] || die "Ungültige backup_id: $bid"
     dest="$BACKUP_ROOT/$bid"
     [ -d "$dest" ] || die "Backup nicht gefunden: $bid"
-    mode="$(python3 -c "import json; print(json.load(open('$dest/meta.json')).get('mode',''))" 2>/dev/null || true)"
-    path="$(python3 -c "import json; print(json.load(open('$dest/meta.json')).get('path',''))" 2>/dev/null || true)"
+    meta="$dest/meta.json"
+    mode=""
+    path=""
+    if [ -f "$meta" ]; then
+        mode="$(python3 - "$meta" <<'PY' 2>/dev/null || true
+import json, sys
+print(json.load(open(sys.argv[1], encoding="utf-8")).get("mode", ""))
+PY
+)"
+        path="$(python3 - "$meta" <<'PY' 2>/dev/null || true
+import json, sys
+print(json.load(open(sys.argv[1], encoding="utf-8")).get("path", ""))
+PY
+)"
+    fi
     case "$mode" in
         appimage)
             [ -f "$dest/rezeptor.AppImage" ] || die "AppImage-Backup fehlt"

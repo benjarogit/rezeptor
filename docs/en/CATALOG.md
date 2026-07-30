@@ -5,11 +5,20 @@ not every source is equivalent.
 
 ## Official recipes (bundled)
 
-Shipped in the repository under `recipes/<id>/`, indexed in `recipes/catalog.json` (`trust: official`).
+Shipped under `recipes/<id>/`, indexed in `recipes/catalog.json` (`trust: official`).
+Guarded by CI (`recipe-lint`, manifest checks).
 
-Examples: Photoshop, Premiere Pro, WISO Steuer, House of Ashes, ZA4 trainer.
+| ID | Name | Category | Summary |
+|----|------|----------|---------|
+| `photoshop` | Adobe Photoshop CC 2021 | Graphics & Design | Standard offline installer (22.0.0.35) |
+| `photoshop-m0nkrus-220` | Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35) | Graphics & Design | ISO-only Photoshop.2021 pack — separate recipe |
+| `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Graphics & Design | Full pack incl. Neural / missing_libs / GenP (optional) |
+| `premiere` | Adobe Premiere Pro 2024 | Video | Proton-GE; NVIDIA: CUDA via nvidia-libs |
+| `wiso-steuer` | WISO Steuer (Portable) | Finance | Portable copy and launch |
+| `house-of-ashes` | House of Ashes | Games | Steam BYOS + online fix |
+| `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | Games | Trainer; start the game first |
 
-These recipes ship with Rezeptor and are guarded by CI (`recipe-lint`, manifest checks).
+Templates under `recipes/_template*` and `recipes/community/` are **not** bundled product recipes.
 
 ## Community recipes
 

@@ -64,7 +64,7 @@
     "steam_target_folder": { "type": "string" },
     "data_root": { "type": "string", "minLength": 1 },
     "prefix": { "type": "string" },
-    "runtime": { "enum": ["proton-ge", "system"] },
+    "runtime": { "enum": ["proton-ge"] },
     "install_type": {
       "enum": [
         "installer_offline",

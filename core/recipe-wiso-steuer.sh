@@ -48,7 +48,6 @@ recipe_wiso::ensure_graphics_x11() {
 # erst per deploy_proton_graphics_dlls reinkopieren, dann d3d11/dxgi/d2d1/d3d10core von DXVK
 # (Vulkan, bricht Qt-WebEngine) zurück auf wined3d (OpenGL, aus default_pfx) drehen.
 recipe_wiso::restore_wined3d_prefix() {
-    [ "${WINE_METHOD:-}" = "system" ] || [ "${RECIPE_RUNTIME:-}" = "system" ] && return 0
     wine_runtime::restore_wined3d_dlls
 }
 
