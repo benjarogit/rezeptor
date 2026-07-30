@@ -15,6 +15,8 @@ echo "Building release package ${NAME}.tar.gz..."
 rsync -a \
     --exclude '.git' \
     --exclude '.cache' \
+    --exclude '.flatpak-builder' \
+    --exclude '.audit' \
     --exclude 'AppDir-build' \
     --exclude 'AppDir' \
     --exclude 'logs' \
@@ -28,6 +30,7 @@ rsync -a \
     --exclude '*.AppImage.sha256' \
     --exclude 'SHA256SUMS' \
     --exclude 'rezeptor-*.tar.gz' \
+    --exclude 'rezeptor-*.flatpak' \
     --exclude 'photoshop/Set-up.exe' \
     --exclude 'photoshop/packages' \
     --exclude 'photoshop/products' \
