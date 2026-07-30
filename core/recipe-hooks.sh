@@ -283,6 +283,50 @@ recipe_hooks::emit_log_paths() {
     fi
 }
 
+# Inno Setup /LANG= Name aus Host-Locale (ohne /LANG erscheint der Sprachdialog
+# auch bei /VERYSILENT — typisch ElAmigos/Inno).
+recipe_hooks::installer_lang() {
+    local loc="${LC_MESSAGES:-${LANG:-${LC_ALL:-en_US.UTF-8}}}"
+    loc="${loc%%.*}"
+    loc="${loc%%_*}"
+    loc="${loc,,}"
+    case "$loc" in
+        de) echo german ;;
+        fr) echo french ;;
+        es) echo spanish ;;
+        it) echo italian ;;
+        pl) echo polish ;;
+        pt) echo brazilianportuguese ;;
+        ru) echo russian ;;
+        nl) echo dutch ;;
+        cs) echo czech ;;
+        hu) echo hungarian ;;
+        tr) echo turkish ;;
+        uk) echo ukrainian ;;
+        *) echo english ;;
+    esac
+}
+
+# Offline-EXE: Inno (/VERYSILENT+/LANG) → NSIS (/S) → MSI-ähnlich → GUI-Fallback.
+recipe_hooks::run_exe_silent() {
+    local exe="$1"
+    local log="${2:-${LOG_FILE:-/dev/null}}"
+    local wine_cmd="${3:-wine}"
+    local lang dir base
+    [ -f "$exe" ] || return 1
+    lang="$(recipe_hooks::installer_lang)"
+    dir="$(cd "$(dirname "$exe")" && pwd)"
+    base="$(basename "$exe")"
+    (
+        cd "$dir" || exit 1
+        "$wine_cmd" "$base" /SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART "/LANG=$lang" >>"$log" 2>&1 \
+            || "$wine_cmd" "$base" /SILENT /SUPPRESSMSGBOXES /NORESTART "/LANG=$lang" >>"$log" 2>&1 \
+            || "$wine_cmd" "$base" /S >>"$log" 2>&1 \
+            || "$wine_cmd" "$base" /quiet /norestart >>"$log" 2>&1 \
+            || "$wine_cmd" "$base" >>"$log" 2>&1
+    )
+}
+
 recipe_hooks::run_exe_installer() {
     local exe="${1:-${RECIPE_INSTALLER_PATH:-}}"
     local log="${LOG_FILE:-/dev/null}"
@@ -291,8 +335,7 @@ recipe_hooks::run_exe_installer() {
         return 1
     }
     output::step "Installer: $(basename "$exe")"
-    wine "$exe" /S >>"$log" 2>&1 || wine "$exe" /quiet /norestart >>"$log" 2>&1 \
-        || wine "$exe" >>"$log" 2>&1 || return 1
+    recipe_hooks::run_exe_silent "$exe" "$log" wine || return 1
     output::success "Installer ausgeführt"
     return 0
 }

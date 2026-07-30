@@ -263,15 +263,23 @@ recipe_updates::apply_unit() {
     }
 
     recipe_updates::_log "Update: $(basename "$exe")"
-    (
-        cd "$dir" || exit 1
-        "$wine_cmd" "$(basename "$exe")" /S >>"$log" 2>&1 \
-            || "$wine_cmd" "$(basename "$exe")" /quiet /norestart >>"$log" 2>&1 \
-            || "$wine_cmd" "$(basename "$exe")" >>"$log" 2>&1
-    ) || {
-        recipe_updates::_err "Update fehlgeschlagen: $exe"
-        return 1
-    }
+    if type recipe_hooks::run_exe_silent >/dev/null 2>&1; then
+        recipe_hooks::run_exe_silent "$exe" "$log" "$wine_cmd" || {
+            recipe_updates::_err "Update fehlgeschlagen: $exe"
+            return 1
+        }
+    else
+        (
+            cd "$dir" || exit 1
+            "$wine_cmd" "$(basename "$exe")" /SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART >>"$log" 2>&1 \
+                || "$wine_cmd" "$(basename "$exe")" /S >>"$log" 2>&1 \
+                || "$wine_cmd" "$(basename "$exe")" /quiet /norestart >>"$log" 2>&1 \
+                || "$wine_cmd" "$(basename "$exe")" >>"$log" 2>&1
+        ) || {
+            recipe_updates::_err "Update fehlgeschlagen: $exe"
+            return 1
+        }
+    fi
     recipe_updates::_ok "Update $(basename "$exe")"
     return 0
 }
