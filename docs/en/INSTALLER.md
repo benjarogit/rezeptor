@@ -9,7 +9,7 @@ Windows ships an **offline installer** (folder with `Set-up.exe` / `Setup.exe` +
 | GUI | Meaning |
 |-----|---------|
 | **Source** | Installer folder or `.exe` (BYOS — not in the repo) |
-| **Target** | Data folder / Wine prefix (`RECIPE_DATA_ROOT`) |
+| **Target** | Free install location (`RECIPE_DATA_ROOT`) — the app/game (including prefix under `{target}/prefix/…`) lives here. No forced path; only a previously chosen location is restored. |
 
 ## Typical `recipe.yml` corners
 
@@ -51,6 +51,7 @@ Variants share the Photoshop core API via thin wrappers:
 | GPU/OpenGL in Adobe apps | Recipe sets prefs via Proton graphics DLLs |
 | Source ≠ repo path | User brings the offline media; heuristic: pack folder / `Downloads/` |
 | ISO-only instead of pack | Install ok, Neural Filters / missing_libs missing |
-| Empty target | Default from `target_default` / data folder |
+| Empty target | Required choice — no silent default from `target_default` / home |
+| Move target | More → **Move target…** (`scripts/recipe-relocate.sh`) |
 
 Quick start & type overview: [ENTWICKLER.md](ENTWICKLER.md) · Spec: [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)

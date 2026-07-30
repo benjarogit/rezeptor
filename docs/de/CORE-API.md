@@ -148,6 +148,14 @@ Siehe [UPDATES.md](UPDATES.md). Kurz:
 | `recipe_updates::discover` / `apply_all` | Nummerierte Patches, State `APPLIED_UPDATES` |
 | `recipe_iso::mount` / `ensure_accessible` | Große Spiel-ISOs mounten (kein Voll-Extract) |
 
+### Ziel umziehen — `recipe-relocate.sh`
+
+| Funktion | Rolle |
+|----------|--------|
+| `recipe_relocate::move` | `DATA_ROOT` → `RECIPE_RELOCATE_TO`; `data_root.path`; dosdevices; Desktop-Refresh |
+
+CLI: `scripts/recipe-relocate.sh <recipe_dir>` mit Env `RECIPE_RELOCATE_TO`.
+
 ---
 
 ## Wine-Runtime — `wine-runtime.sh`

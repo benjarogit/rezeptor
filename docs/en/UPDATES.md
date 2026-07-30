@@ -32,8 +32,9 @@ Each unit: directory with `.exe` (+ optional `.bin`) or a single `.exe`.
 
 ## GUI
 
-- **Install:** optional update field; nested `updates/` is auto-detected.
+- **Install:** Target = free location for the software (no forced path). The dialog detects updates under the source (`updates/1 - …`) and shows a status line; the “?” info button explains the layout. Optional Update/Fix field for separate packs.
 - **More → Apply update…:** dedicated dialog for the update source only (when installed and `fix_kind != none`).
+- **More → Move target…:** move the whole data tree (including prefix) to another folder/disk; updates `data_root.path` and shortcuts.
 - Idempotency: applied IDs in `recipe.env` as `APPLIED_UPDATES=1,2,…` — re-runs skip them.
 
 ## Core API

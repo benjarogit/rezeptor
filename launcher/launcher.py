@@ -158,6 +158,8 @@ from ui_source import (
     UpdateSourceDialog,
     attach_archive_password_files,
     needs_source_dialog,
+    needs_target_dir,
+    pick_directory,
     recipe_supports_update,
     source_configure_label,
 )
@@ -1588,6 +1590,12 @@ class RezeptorWindow(QMainWindow):
             self.run_update,
             enabled=update_ok,
         )
+        relocate_ok = installed_ish and (
+            needs_target_dir(info.meta) or data_root_browsable(dr)
+        )
+        act = self._add_menu_action(menu, t("menu.relocate"), self.run_relocate)
+        act.setToolTip(t("menu.relocate_tip"))
+        act.setEnabled(relocate_ok and not busy and not untrusted and not running)
 
         menu.addSeparator()
         if needs_source_dialog(info.meta):
@@ -3619,6 +3627,7 @@ class RezeptorWindow(QMainWindow):
         *,
         op: str = "",
         recipe_dir: Path | None = None,
+        script_args: list[str] | None = None,
     ) -> None:
         if self._reject_if_subprocess_busy():
             return
@@ -3665,13 +3674,14 @@ class RezeptorWindow(QMainWindow):
         self._process = proc
         proc.setProcessEnvironment(env)
         proc.setWorkingDirectory(str(ROOT))
+        bash_args = [str(script), *(script_args or [])]
         # Neue Session → Cancel kann die Prozessgruppe inkl. Wine-Kinder killen.
         if shutil.which("setsid"):
             proc.setProgram("setsid")
-            proc.setArguments(["bash", str(script)])
+            proc.setArguments(["bash", *bash_args])
         else:
             proc.setProgram("bash")
-            proc.setArguments([str(script)])
+            proc.setArguments(bash_args)
         proc.readyReadStandardOutput.connect(
             lambda: self._feed_line(bytes(proc.readAllStandardOutput()).decode("utf-8", errors="replace"))
         )
@@ -4873,6 +4883,78 @@ class RezeptorWindow(QMainWindow):
             t("action.update"),
             op="update",
             recipe_dir=rd,
+        )
+
+    def run_relocate(self) -> None:
+        """Mehr → Ziel verschieben — DATA_ROOT inkl. Prefix umziehen."""
+        rd = self._require_trusted_recipe()
+        if rd is None or not self._selected:
+            return
+        if self._selected.state == RecipeState.NOT_INSTALLED:
+            QMessageBox.warning(
+                self, t("dialog.not_installed_title"), t("dialog.install_first")
+            )
+            return
+        if recipe_process_running(self._selected.rid, self._selected.meta):
+            QMessageBox.warning(
+                self, t("dialog.relocate_title"), t("dialog.relocate_running")
+            )
+            return
+        old = resolve_data_root(self._selected.meta, self._selected.rid)
+        if not old.is_dir():
+            QMessageBox.warning(
+                self, t("dialog.relocate_title"), t("dialog.relocate_need_target")
+            )
+            return
+        new = pick_directory(
+            self,
+            t("dialog.relocate_pick"),
+            str(old.parent if old.parent.is_dir() else old),
+        )
+        if not new:
+            return
+        new_p = Path(new)
+        try:
+            if old.resolve() == new_p.resolve():
+                QMessageBox.information(
+                    self, t("dialog.relocate_title"), t("dialog.relocate_same")
+                )
+                return
+        except OSError:
+            pass
+        name = self._selected.meta.get("name", self._selected.rid)
+        if QMessageBox.question(
+            self,
+            t("dialog.relocate_title"),
+            t("dialog.relocate_body", name=name, old=str(old), new=str(new_p)),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            return
+        script = ROOT / "scripts" / "recipe-relocate.sh"
+        if not script.is_file():
+            QMessageBox.warning(self, t("dialog.missing"), str(script))
+            return
+
+        def _after_ok() -> None:
+            self.refresh_statuses()
+            self._activity("ok", t("dialog.relocate_title") + f": {new_p}")
+            QMessageBox.information(
+                self,
+                t("dialog.relocate_title"),
+                t("status.done_body", label=t("action.relocate")),
+            )
+
+        self._run_async(
+            script,
+            {
+                "RECIPE_RELOCATE_TO": str(new_p),
+                "RECIPE_DIR": str(rd),
+            },
+            t("action.relocate"),
+            op="relocate",
+            recipe_dir=rd,
+            script_args=[str(rd)],
+            on_success=_after_ok,
         )
 
     def _repair_message(self, rid: str) -> str:

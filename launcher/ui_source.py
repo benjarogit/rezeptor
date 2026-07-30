@@ -329,6 +329,10 @@ def is_portable_install(meta: dict[str, str]) -> bool:
 def default_target_dir(
     meta: dict[str, str], rid: str = "", data_root: Path | None = None
 ) -> str:
+    """Nur zuvor gewählte / erkannte Ziele — kein YAML- oder Home-Zwangspfad.
+
+    Leer = User muss beim Install selbst wählen (außer Steam-Auto / gespeicherter Pfad).
+    """
     # Trainer / Steam: Spielordner automatisch, manuell überschreibbar
     appid = (meta.get("steam_appid") or "").strip()
     if appid:
@@ -355,12 +359,75 @@ def default_target_dir(
                 # Existiert oder Parent da (wird bei Install angelegt) → Vorschlag behalten
                 if target.is_dir() or target.parent.is_dir():
                     return str(target)
-    raw = (meta.get("target_default") or "").strip()
-    if raw:
-        return normalize_user_path(raw)
-    if data_root is not None:
-        return str(data_root)
-    return str(documents_dir())
+    # Kein Prefill aus target_default / kanonischem data_root / Dokumente.
+    return ""
+
+
+def discover_update_units(root: str | Path) -> list[tuple[str, str]]:
+    """Leichter Scan wie core/recipe-updates.sh — (id, path), sortiert numerisch."""
+    base = Path(root)
+    if not base.is_dir():
+        return []
+    try:
+        base = base.resolve()
+    except OSError:
+        return []
+
+    def _unit_id(name: str) -> str:
+        digits = ""
+        for ch in name:
+            if ch.isdigit():
+                digits += ch
+            else:
+                break
+        return digits or "1"
+
+    def _is_numbered(name: str) -> bool:
+        i = 0
+        while i < len(name) and name[i].isdigit():
+            i += 1
+        if i == 0:
+            return False
+        rest = name[i:].lstrip()
+        return rest.startswith("-")
+
+    def _dir_is_unit(d: Path) -> bool:
+        if not d.is_dir():
+            return False
+        try:
+            for child in d.iterdir():
+                if child.is_file() and child.suffix.lower() == ".exe":
+                    return True
+        except OSError:
+            return False
+        return False
+
+    def _scan_numbered(scan: Path) -> list[tuple[str, str]]:
+        out: list[tuple[str, str]] = []
+        try:
+            entries = list(scan.iterdir())
+        except OSError:
+            return out
+        for path in entries:
+            if path.is_dir() and _is_numbered(path.name) and _dir_is_unit(path):
+                out.append((_unit_id(path.name), str(path)))
+            elif path.is_file() and path.suffix.lower() == ".exe":
+                out.append((_unit_id(path.stem), str(path)))
+        out.sort(key=lambda t: (int(t[0]) if t[0].isdigit() else 10**9, t[0], t[1]))
+        return out
+
+    for sub in ("updates", "Updates", "update"):
+        nested = base / sub
+        if nested.is_dir():
+            return _scan_numbered(nested)
+
+    try:
+        children = [p for p in base.iterdir() if p.is_dir()]
+    except OSError:
+        return []
+    if any(_is_numbered(p.name) and _dir_is_unit(p) for p in children):
+        return _scan_numbered(base)
+    return []
 
 
 def _adobe_pack_name_bits(d: Path) -> list[str]:
@@ -807,18 +874,35 @@ class RecipeSourceDialog(QDialog):
 
         # Einheitlich: Quelle / Ziel (Rezept-Details stehen im Intro oben).
         form.addRow(t("source.label") + ":", primary_wrap)
+        self.update_status = QLabel("")
+        self.update_status.setObjectName("muted")
+        self.update_status.setWordWrap(True)
+        self.update_status.setVisible(False)
+        form.addRow("", self.update_status)
+
         if self._show_target:
             form.addRow(t("source.target") + ":", target_wrap)
             tip = meta.get("target_label") or t("source.target_tip")
             self.target_edit.setToolTip(tip)
             self.target_btn.setToolTip(tip)
             self.target_clear.setToolTip(t("source.clear_tip"))
+            self.target_help = QLabel(
+                t("source.target_help") + " " + t("source.space_hint")
+            )
+            self.target_help.setObjectName("muted")
+            self.target_help.setWordWrap(True)
+            form.addRow("", self.target_help)
         else:
             self.target_edit.hide()
             self.target_btn.hide()
             self.target_clear.hide()
             target_wrap.hide()
         if self._fix_kind != "none":
+            fix_info = QPushButton("?")
+            fix_info.setFixedWidth(28)
+            fix_info.setToolTip(t("source.updates_info_tip"))
+            fix_info.clicked.connect(self._show_updates_info)
+            fix_row.addWidget(fix_info)
             form.addRow(t("source.fix") + ":", fix_wrap)
         else:
             self.fix_edit.hide()
@@ -832,6 +916,8 @@ class RecipeSourceDialog(QDialog):
         layout.addLayout(form)
         self._sync_primary_tips()
         self.primary_clear.setToolTip(t("source.clear_tip"))
+        self.primary_edit.textChanged.connect(self._on_primary_changed)
+        self.fix_edit.textChanged.connect(self._refresh_update_status)
 
         self.passwords_label = QLabel(t("source.passwords"))
         self.passwords_label.setToolTip(t("source.passwords_tip"))
@@ -933,9 +1019,65 @@ class RecipeSourceDialog(QDialog):
     def _clear_primary(self) -> None:
         self.primary_edit.clear()
         self._update_version_hint("")
+        self._refresh_update_status()
 
     def _clear_target(self) -> None:
         self.target_edit.clear()
+
+    def _on_primary_changed(self, _text: str = "") -> None:
+        self._refresh_update_status()
+
+    def _show_updates_info(self) -> None:
+        QMessageBox.information(
+            self,
+            t("source.updates_info_title"),
+            t("source.updates_info_body"),
+        )
+
+    def _refresh_update_status(self) -> None:
+        """Zeigt, ob unter der Quelle (und optional Fix) Updates erkannt wurden."""
+        label = getattr(self, "update_status", None)
+        if label is None:
+            return
+        primary = self._edit_text(self.primary_edit)
+        units: list[tuple[str, str]] = []
+        scan_root = ""
+        if primary and not self._archive_mode_active():
+            p = Path(normalize_user_path(primary, self._root))
+            if p.is_dir():
+                scan_root = str(p)
+                units = discover_update_units(p)
+            elif p.is_file() and p.suffix.lower() == ".iso":
+                parent = p.parent
+                units = discover_update_units(parent)
+                scan_root = str(parent)
+        fix = self._edit_text(self.fix_edit) if self._fix_kind != "none" else ""
+        fix_units: list[tuple[str, str]] = []
+        if fix:
+            fp = Path(normalize_user_path(fix, self._root))
+            if fp.is_dir():
+                fix_units = discover_update_units(fp)
+            elif fp.is_file() and fp.suffix.lower() == ".exe":
+                fix_units = [("1", str(fp))]
+
+        parts: list[str] = []
+        cares = self._fix_kind != "none" or recipe_supports_update(self._meta)
+        if units:
+            parts.append(t("source.updates_found", n=len(units)))
+        elif scan_root and cares:
+            parts.append(t("source.updates_none"))
+        if fix_units:
+            parts.append(t("source.updates_fix_found", n=len(fix_units)))
+        elif fix and self._fix_kind != "none":
+            parts.append(t("source.updates_fix_none"))
+
+        if parts:
+            label.setText(" · ".join(parts))
+            label.setVisible(True)
+        else:
+            label.clear()
+            label.setVisible(False)
+        self._fit_to_content()
 
     def _apply_defaults(self) -> None:
         dr = Path(
@@ -949,9 +1091,7 @@ class RecipeSourceDialog(QDialog):
         elif self._source_kind == "archive" or self._pick_archive:
             self.primary_edit.setPlaceholderText(t("source.archive_ph"))
         if self._show_target:
-            if self._rid == "wiso-steuer":
-                ph = str(documents_dir() / "WISO Steuer 2026")
-            elif (self._meta.get("steam_appid") or "").strip():
+            if (self._meta.get("steam_appid") or "").strip():
                 ph = t("source.steam_target_ph")
             elif is_portable_install(self._meta):
                 ph = t("source.portable_ph")
@@ -960,6 +1100,7 @@ class RecipeSourceDialog(QDialog):
             self.target_edit.setPlaceholderText(ph)
         # Nutzer hat geleert → keine Heuristik / portable.env wieder einfüllen.
         if self._paths_cleared:
+            self._refresh_update_status()
             return
         if self._source_kind == "folder" and not self._pick_archive:
             default = default_folder_source(self._rid, dr, self._root, meta=self._meta)
@@ -967,8 +1108,13 @@ class RecipeSourceDialog(QDialog):
                 self.primary_edit.setText(default)
                 self._update_version_hint(default)
         if self._show_target:
-            self.target_edit.setText(default_target_dir(self._meta, self._rid, dr))
+            saved = default_target_dir(self._meta, self._rid, dr)
+            if saved:
+                self.target_edit.setText(saved)
+            else:
+                self.target_edit.clear()
         self._apply_pending_env()
+        self._refresh_update_status()
 
     def _apply_pending_env(self) -> None:
         """Overlay previously saved source/target from settings."""

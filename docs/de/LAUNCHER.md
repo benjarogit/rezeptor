@@ -56,6 +56,7 @@ Die GUI setzt u. a.:
 | `LAUNCHER_GUI=1` | `@step:` / `@progress:`-Tags aktiv |
 | `LAUNCHER_SESSION_ID` | Session für Reports |
 | `RECIPE_DATA_ROOT` | Gewählter Datenort |
+| `RECIPE_RELOCATE_TO` | Neues Ziel bei „Ziel verschieben…“ |
 | `RECIPE_INSTALLER_PATH` / `RECIPE_ARCHIVE_PATH` / `RECIPE_SOURCE_ROOT` | Quelle |
 | `RECIPE_UPDATE_ROOT` / `RECIPE_FIX_ROOT` | Update-/Fix-Quelle (Alias) |
 | `RECIPE_TARGET_DIR` / `RECIPE_DEPLOY_MODE` | Portable-Ziel |
@@ -84,6 +85,7 @@ Definiert in `log_context.py`, Texte unter `error.*` in Locales — siehe [I18N]
 | **Neu installieren** (GUI, bereits installiert) | `install.sh` erneut | **Kein automatisches Löschen** — Rezept entscheidet Überschreiben; für sauberen Neustart **Deinstallieren** |
 | **Reparieren** | `repair.sh` | `validate.sh` → nur Lücken beheben → erneut validieren |
 | **Update anwenden** | `update.sh` | Nur Patches (`recipe_updates::apply_all`); siehe [UPDATES.md](UPDATES.md) |
+| **Ziel verschieben** | `scripts/recipe-relocate.sh` | `DATA_ROOT` inkl. Prefix umziehen; Pointer + Shortcuts |
 
 Reinstall ist **nicht** global idempotent: es gibt keinen zentralen Pre-Install-Purge. Rezepte mit Clean-Deploy müssen das in `install.sh` dokumentieren oder Deinstall verlangen.
 

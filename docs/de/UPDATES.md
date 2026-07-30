@@ -32,8 +32,9 @@ Jede Einheit: Ordner mit `.exe` (+ optional `.bin`) oder einzelne `.exe`.
 
 ## GUI
 
-- **Installieren:** optional Update-Feld; verschachtelte `updates/` werden automatisch gefunden.
+- **Installieren:** Ziel = freier Ort der Software (kein Zwangspfad). Unter der Quelle erkennt der Dialog Updates (`updates/1 - …`) und zeigt eine Statuszeile; Info-Button „?“ erklärt die Ordnerstruktur. Optionales Update-/Fix-Feld für separate Pakete.
 - **Mehr → Update anwenden…:** eigener Dialog nur für die Update-Quelle (wenn installiert und `fix_kind != none`).
+- **Mehr → Ziel verschieben…:** gesamten Datenbaum (inkl. Prefix) auf einen anderen Ordner/eine andere Platte umziehen; `data_root.path` und Verknüpfungen werden angepasst.
 - Idempotenz: angewandte IDs in `recipe.env` als `APPLIED_UPDATES=1,2,…` — erneutes Anwenden überspringt sie.
 
 ## Core-API

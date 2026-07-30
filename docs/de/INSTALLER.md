@@ -9,7 +9,7 @@ Windows liefert einen **Offline-Installer** (Ordner mit `Set-up.exe` / `Setup.ex
 | GUI | Bedeutung |
 |-----|-----------|
 | **Quelle** | Installer-Ordner oder `.exe` (BYOS — nicht im Repo) |
-| **Ziel** | Datenordner / Wine-Prefix (`RECIPE_DATA_ROOT`) |
+| **Ziel** | Freier Installationsort (`RECIPE_DATA_ROOT`) — hier liegen danach Programm/Spiel inkl. Prefix (`{Ziel}/prefix/…`). Kein Zwangspfad; nur ein früher selbst gewählter Ort wird wieder vorgeschlagen. |
 
 ## Typische `recipe.yml`-Ecken
 
@@ -51,6 +51,7 @@ Varianten teilen die Core-API mit `photoshop` über dünne Wrapper:
 | GPU/OpenGL in Adobe-Apps | Rezept setzt Prefs über Proton-Graphics-DLLs |
 | Quelle ≠ Repo-Pfad | Nutzer bringt Offline-Medium mit; Heuristik: Pack-Ordner / `Downloads/` |
 | Nur-ISO statt Pack | Install ok, Neural Filters / missing_libs fehlen |
-| Ziel leer lassen | Default aus `target_default` / Datenordner |
+| Ziel leer | Pflichtwahl — kein stiller Default aus `target_default` / Home |
+| Ziel umziehen | Mehr → **Ziel verschieben…** (`scripts/recipe-relocate.sh`) |
 
 Schnellstart & Typenübersicht: [ENTWICKLER.md](ENTWICKLER.md) · Spezifikation: [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)

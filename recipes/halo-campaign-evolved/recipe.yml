@@ -33,8 +33,7 @@ install_type: installer_offline
 source_kind: folder
 source_label: "Pack-Ordner oder ISO (Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos)"
 source_formats: iso,zip,7z,rar
-target_default: "~/.local/share/wine-software/halo-campaign-evolved"
-target_label: "Datenordner (Wine-Prefix)"
+target_label: "Installationsordner (frei wählbar — Spiel + Prefix landen hier)"
 fix_kind: optional
 update: update.sh
 exe_glob: "**/HaloCampaignEvolved.exe"
