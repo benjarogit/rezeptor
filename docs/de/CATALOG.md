@@ -8,17 +8,36 @@ nicht jede Quelle ist gleichwertig.
 Im Repository unter `recipes/<id>/` gebündelt, indexiert in `recipes/catalog.json` (`trust: official`).
 CI sichert sie ab (`recipe-lint`, Manifest-Check).
 
-| ID | Name | Kategorie | Kurz |
-|----|------|-----------|------|
-| `photoshop` | Adobe Photoshop CC 2021 | Grafik & Design | Standard-Offline-Installer (22.0.0.35) |
-| `photoshop-m0nkrus-220` | Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35) | Grafik & Design | ISO-only-Pack Photoshop.2021 — eigenes Rezept |
-| `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Grafik & Design | Vollpack inkl. Neural / missing_libs / GenP (optional) |
-| `premiere` | Adobe Premiere Pro 2024 | Video & Schnitt | Proton-GE; NVIDIA: CUDA via nvidia-libs |
-| `wiso-steuer` | WISO Steuer (Portable) | Finanzen & Steuer | Portable kopieren und starten |
-| `house-of-ashes` | House of Ashes | Spiele | Steam BYOS + Online-Fix |
-| `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | Spiele | Trainer; Spiel zuerst starten |
+Aktuell **7** offizielle Produktrezepte in **4** Kategorien.
 
-Vorlagen unter `recipes/_template*` und `recipes/community/` sind **keine** mitgelieferten Produktrezepte.
+### Grafik & Design
+
+| ID | Name | Beschreibung |
+|----|------|--------------|
+| `photoshop` | Adobe Photoshop CC 2021 | Standard-Offline-Installer (22.0.0.35) unter Proton-GE |
+| `photoshop-m0nkrus-220` | Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35) | ISO-only-Pack Photoshop.2021 — eigenes Rezept, nicht Standard und nicht 22.1.1.138 |
+| `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Vollpack inkl. Neural Filters / missing_libs / GenP (optional) |
+
+### Video & Schnitt
+
+| ID | Name | Beschreibung |
+|----|------|--------------|
+| `premiere` | Adobe Premiere Pro 2024 | Proton-GE. NVIDIA: CUDA via nvidia-libs. AMD/Intel: oft nur Software-Renderer |
+
+### Finanzen & Steuer
+
+| ID | Name | Beschreibung |
+|----|------|--------------|
+| `wiso-steuer` | WISO Steuer (Portable) | Portable unter Proton-GE — Quelle wählen, in Zielordner kopieren, starten |
+
+### Spiele
+
+| ID | Name | Beschreibung |
+|----|------|--------------|
+| `house-of-ashes` | House of Ashes | The Dark Pictures Anthology über Proton — Steam BYOS + Online-Fix |
+| `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | FLiNG/Plus-14-Trainer; Spiel zuerst starten, dann Trainer aus Rezeptor |
+
+Vorlagen unter `recipes/_template*` und Einträge unter `recipes/community/` sind **keine** mitgelieferten Produktrezepte.
 
 ## Community-Rezepte
 

@@ -1,8 +1,16 @@
 # Rezepte
 
-Produktrezepte (mitgeliefert): siehe **[Rezept-Katalog](CATALOG.md)** — vollständige Liste der offiziellen IDs.
+## Mitgelieferte Produktrezepte
 
-Für Autoren (Schnellstart, Typen, Struktur): **[ENTWICKLER.md](ENTWICKLER.md)**.
+Vollständige Liste **nach Kategorien** (Grafik, Video, Finanzen, Spiele):
+
+→ **[Rezept-Katalog](CATALOG.md#offizielle-rezepte-mitgeliefert)**
+
+Kurz: 7 offizielle IDs — `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere`, `wiso-steuer`, `house-of-ashes`, `za4-trainer`.
+
+## Für Autoren
+
+Schnellstart, Typen, Struktur: **[ENTWICKLER.md](ENTWICKLER.md)**.
 
 | Weiter | |
 |--------|--|

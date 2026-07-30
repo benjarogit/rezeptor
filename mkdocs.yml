@@ -134,7 +134,7 @@ nav:
       - Rezept-Katalog: CATALOG.md
   - Entwickeln:
       - Übersicht: ENTWICKLER.md
-      - Rezepte (Verweis): RECIPES.md
+      - Rezepte (Übersicht): RECIPES.md
       - Projektstruktur: PROJECT-LAYOUT.md
       - Rezept schreiben: RECIPE-AUTHORING.md
       - Core-API: CORE-API.md

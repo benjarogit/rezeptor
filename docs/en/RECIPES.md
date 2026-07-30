@@ -1,8 +1,16 @@
 # Recipes
 
-Bundled product recipes: see **[Recipe catalog](CATALOG.md)** — full list of official IDs.
+## Bundled product recipes
 
-For authors (quick start, types, layout): **[ENTWICKLER.md](ENTWICKLER.md)**.
+Full list **by category** (Graphics, Video, Finance, Games):
+
+→ **[Recipe catalog](CATALOG.md#official-recipes-bundled)**
+
+Short: 7 official IDs — `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere`, `wiso-steuer`, `house-of-ashes`, `za4-trainer`.
+
+## For authors
+
+Quick start, types, layout: **[ENTWICKLER.md](ENTWICKLER.md)**.
 
 | Next | |
 |------|--|

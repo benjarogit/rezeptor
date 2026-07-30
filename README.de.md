@@ -63,7 +63,8 @@ Oder ein **[Release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz
 
 ## Rezepte
 
-### Mitgelieferte offizielle Rezepte
+<details>
+<summary><strong>Mitgelieferte offizielle Rezepte</strong> (7 — zum Aufklappen)</summary>
 
 | ID | Name | Kategorie | Hinweis |
 |----|------|-----------|---------|
@@ -75,7 +76,9 @@ Oder ein **[Release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz
 | `house-of-ashes` | House of Ashes | Spiele | Steam BYOS + Online-Fix |
 | `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | Spiele | Trainer; Spiel zuerst starten |
 
-Index: [`recipes/catalog.json`](recipes/catalog.json). Details: [Rezept-Katalog (Doku)](https://benjarogit.github.io/rezeptor/de/CATALOG/).
+</details>
+
+Volle Liste nach Kategorien: [Rezept-Katalog (Doku)](https://benjarogit.github.io/rezeptor/de/CATALOG/). Index: [`recipes/catalog.json`](recipes/catalog.json).
 
 | Ort | Rolle |
 |-----|--------|

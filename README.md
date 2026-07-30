@@ -63,19 +63,22 @@ Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`t
 
 ## Recipes
 
-### Bundled official recipes
+<details>
+<summary><strong>Bundled official recipes</strong> (7 — click to expand)</summary>
 
 | ID | Name | Category | Notes |
 |----|------|----------|--------|
-| `photoshop` | Adobe Photoshop CC 2021 | Graphics | Standard offline installer (22.0.0.35) |
-| `photoshop-m0nkrus-220` | Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35) | Graphics | ISO-only m0nkrus pack (not standard / not 22.1.1.138) |
-| `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Graphics | Full pack + Neural / missing_libs / GenP (optional) |
+| `photoshop` | Adobe Photoshop CC 2021 | Graphics & Design | Standard offline installer (22.0.0.35) |
+| `photoshop-m0nkrus-220` | Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35) | Graphics & Design | ISO-only m0nkrus pack (not standard / not 22.1.1.138) |
+| `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Graphics & Design | Full pack + Neural / missing_libs / GenP (optional) |
 | `premiere` | Adobe Premiere Pro 2024 | Video | NVIDIA: CUDA via nvidia-libs |
 | `wiso-steuer` | WISO Steuer (Portable) | Finance | Portable under Proton-GE |
 | `house-of-ashes` | House of Ashes | Games | Steam BYOS + online fix |
 | `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | Games | Trainer; start the game first |
 
-Index: [`recipes/catalog.json`](recipes/catalog.json). Details: [Recipe catalog (docs)](https://benjarogit.github.io/rezeptor/en/CATALOG/).
+</details>
+
+Full list by category: [Recipe catalog (docs)](https://benjarogit.github.io/rezeptor/en/CATALOG/). Index: [`recipes/catalog.json`](recipes/catalog.json).
 
 | Location | Role |
 |----------|------|
