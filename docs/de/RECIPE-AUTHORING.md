@@ -76,7 +76,22 @@ Parser: `scripts/recipe-yaml-read.py` · Schema: `scripts/recipe-schema-check.py
 
 ## `recipe.yml` Pflicht
 
-`id`, `name`, `icon`, `data_root`, `runtime`, `install_type`, `source_kind`, `fix_kind`, Hooks (**inkl. `uninstall`**; bei `fix_kind != none` auch **`update`**), **`install_steps`**.
+`id`, `name`, `icon`, `data_root`, `runtime`, `install_type`, `source_kind`, `fix_kind`, Hooks (**inkl. `uninstall`**; bei `fix_kind: optional|required` auch **`update`**), **`install_steps`**.
+
+### Quellen-Dialog — Baukasten
+
+| Baustein | Wann | YAML / Env |
+|----------|------|------------|
+| **Quelle** | fast immer | `source_kind`, `source_label`, `source_formats` |
+| **Ziel** | Installer, Portable, Copy-Deploy | `target_*`, frei wählbar — **nicht** bei `deploy_mode: link` |
+| **Updates** | nummerierte Patches nach Install (z. B. Halo) | `fix_kind: optional` \| `required` + Hook `update:` + `update.sh` → `RECIPE_UPDATE_ROOT` |
+| **Online-Fix** | Steam-Link + BYOS-Fix-Ordner | `fix_kind: online_fix_optional` \| `online_fix_required` + `fix_merge_path` → `RECIPE_FIX_ROOT` / `RECIPE_FIX_MERGE_PATH` |
+
+`fix_kind: none` — kein zusätzliches Feld im Dialog.
+
+**Online-Fix:** Rezeptor verteilt keine Fix-Dateien. Optionaler Ordner im Dialog; Core: `recipe_online_fix::merge` in `install.sh` / `repair.sh`. Liegen Fix-Dateien schon im Spielordner, kann das Feld leer bleiben.
+
+**Updates ≠ Online-Fix:** Updates nutzen `recipe_updates::apply_all` und nummerierte `.exe`-Pakete; Online-Fix kopiert `.dll`/`.ini` in einen festen Unterpfad des Spiels.
 
 ### Icon (Pflicht)
 
@@ -96,7 +111,7 @@ icon: "{repo}/images/<id>-icon.png"
 | `schema_version` | Format-Version (aktuell `1`; fehlend = 1) |
 | `author` | Anzeige in der Übersicht |
 | `notify_title` | Desktop-Notify `-a` / Titel; sonst `name` |
-| `version_label` / `version_guaranteed` | Getestete Version (Anzeige + Garantie) |
+| `version_label` / `version_guaranteed` | Getestete Version (Anzeige + Heilung in der GUI; YAML-Key unverändert) |
 | `version_detect` | **Pflicht bei `version_guaranteed`** — deklarative Erkennung (siehe unten) |
 | `source_hints` | Optional: Suchtexte / Pack-Titel für BYOS (**keine URLs**) |
 | `sidebar_label` | Optional: kurzer **Titel** in der Seitenleiste; Version/Pack erscheinen bei Bedarf in einer zweiten kleinen Zeile |

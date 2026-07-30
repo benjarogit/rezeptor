@@ -27,6 +27,14 @@ if [ -z "$game_dir" ] || [ ! -d "$game_dir" ]; then
     exit 1
 fi
 
+fix_src="${RECIPE_FIX_ROOT:-}"
+merge_rel="${RECIPE_FIX_MERGE_PATH:-SMG025/Binaries/Win64}"
+if [ -n "$fix_src" ] && [ -d "$fix_src" ]; then
+    # shellcheck source=/dev/null
+    source "$RECIPE_DIR/../../core/recipe-online-fix.sh"
+    recipe_online_fix::merge "$game_dir" "$fix_src" "$merge_rel" || true
+fi
+
 # shellcheck source=/dev/null
 source "$RECIPE_DIR/../../core/recipe-house-of-ashes.sh"
 if ! hoa::write_launch_wrapper "$game_dir"; then

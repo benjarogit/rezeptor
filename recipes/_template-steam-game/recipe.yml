@@ -32,7 +32,9 @@ source_label: "Spielordner (EXE + Online-Fix)"
 source_formats: ""
 steam_appid: "0"
 steam_fake_appid: "480"
-fix_kind: none
+fix_kind: online_fix_optional
+fix_merge_path: "Binaries/Win64"
+fix_label: "Online-Fix"
 exe_glob: "Game.exe"
 launch_process_patterns: [Game.exe]
 # Relativ zum Spielordner — an euren Fix anpassen

@@ -76,7 +76,22 @@ Parser: `scripts/recipe-yaml-read.py` · Schema: `scripts/recipe-schema-check.py
 
 ## Required `recipe.yml` fields
 
-`id`, `name`, `icon`, `data_root`, `runtime`, `install_type`, `source_kind`, `fix_kind`, hooks (**including `uninstall`**; when `fix_kind != none` also **`update`**), **`install_steps`**.
+`id`, `name`, `icon`, `data_root`, `runtime`, `install_type`, `source_kind`, `fix_kind`, hooks (**including `uninstall`**; when `fix_kind` is `optional` or `required` also **`update`**), **`install_steps`**.
+
+### Source dialog — building blocks
+
+| Block | When | YAML / env |
+|-------|------|------------|
+| **Source** | almost always | `source_kind`, `source_label`, `source_formats` |
+| **Target** | installer, portable, copy deploy | `target_*`, freely chosen — **not** with `deploy_mode: link` |
+| **Updates** | numbered post-install patches (e.g. Halo) | `fix_kind: optional` \| `required` + hook `update:` + `update.sh` → `RECIPE_UPDATE_ROOT` |
+| **Online fix** | Steam link + BYOS fix folder | `fix_kind: online_fix_optional` \| `online_fix_required` + `fix_merge_path` → `RECIPE_FIX_ROOT` / `RECIPE_FIX_MERGE_PATH` |
+
+`fix_kind: none` — no extra dialog field.
+
+**Online fix:** Rezeptor does not ship fix files. Optional folder in the dialog; core: `recipe_online_fix::merge` in `install.sh` / `repair.sh`. If fix files are already in the game folder, the field can stay empty.
+
+**Updates ≠ online fix:** updates use `recipe_updates::apply_all` and numbered `.exe` packs; online fix copies `.dll`/`.ini` into a fixed game subpath.
 
 ### Icon (required)
 
@@ -96,7 +111,7 @@ icon: "{repo}/images/<id>-icon.png"
 | `schema_version` | Format version (currently `1`; missing = 1) |
 | `author` | Shown in the overview |
 | `notify_title` | Desktop notify `-a` / title; else `name` |
-| `version_label` / `version_guaranteed` | Tested version (display + guarantee) |
+| `version_label` / `version_guaranteed` | Tested version (display + healing in GUI; YAML key unchanged) |
 | `version_detect` | **Required with `version_guaranteed`** — declarative detection (see below) |
 | `source_hints` | Optional: search text / pack titles for BYOS (**no URLs**) |
 | `sidebar_label` | Optional: short sidebar **title**; version/pack appear on a small second line when needed |

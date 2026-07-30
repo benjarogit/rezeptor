@@ -135,7 +135,7 @@ def update_auto_supported(channel: str) -> bool:
 
 
 VERSION_OK_RE = re.compile(
-    r"^OK: .+?:\s*(.+?)\s*\(getestet & garantiert\)\s*$"
+    r"^OK: .+?:\s*(.+?)\s*\((?:getestet & garantiert|getestete Heilung)\)\s*$"
 )
 
 
@@ -172,7 +172,7 @@ def parse_validate_version_fields(output: str) -> tuple[str, str]:
         if m:
             detected = m.group(1).strip()
             continue
-        if line.startswith("WARN:") and "garantiert" in line:
+        if line.startswith("WARN:") and ("garantiert" in line or "Heilung" in line):
             version_warn = line[5:].strip()
     return detected, version_warn
 

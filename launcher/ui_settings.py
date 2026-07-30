@@ -353,6 +353,13 @@ class SettingsDialog(QDialog):
         if self._apply_to_settings():
             self.accept()
 
+    def force_close(self) -> None:
+        """Hauptfenster-Quit: Dirty bereits behandelt — ohne zweite Nachfrage."""
+        self._dirty = False
+        self._closing = True
+        self.setProperty("rezeptor_force_close", True)
+        self.done(QDialog.DialogCode.Rejected)
+
     def reject(self) -> None:
         if self.property("rezeptor_force_close"):
             self._dirty = False

@@ -9,7 +9,8 @@ import tempfile
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtCore import QEvent, QObject, QSize, Qt, QTimer
+from PyQt6.QtGui import QCloseEvent
 from PyQt6.QtWidgets import (
     QButtonGroup,
     QDialog,
@@ -316,6 +317,72 @@ def needs_target_dir(meta: dict[str, str]) -> bool:
         "portable_bootstrap",
         "game_portable",
     )
+
+
+def fix_kind_category(kind: str) -> str:
+    """none | updates | online_fix"""
+    k = (kind or "none").strip()
+    if k in ("optional", "required"):
+        return "updates"
+    if k in ("online_fix_optional", "online_fix_required"):
+        return "online_fix"
+    return "none"
+
+
+def fix_is_required(kind: str) -> bool:
+    return (kind or "none") in ("required", "online_fix_required")
+
+
+def shows_fix_field(meta: dict[str, str]) -> bool:
+    return fix_kind_category(meta.get("fix_kind", "none")) != "none"
+
+
+def fix_field_label(meta: dict[str, str]) -> str:
+    custom = (meta.get("fix_label") or "").strip()
+    if custom:
+        return custom
+    if fix_kind_category(meta.get("fix_kind", "")) == "online_fix":
+        return t("source.online_fix")
+    return t("source.fix")
+
+
+def is_steam_link_recipe(meta: dict[str, str]) -> bool:
+    return (
+        meta.get("deploy_mode", "copy") == "link"
+        and bool((meta.get("steam_appid") or "").strip())
+    )
+
+
+def make_info_button(
+    parent: QWidget,
+    *,
+    tooltip: str,
+    title: str,
+    body: str,
+) -> QPushButton:
+    btn = QPushButton("?")
+    btn.setFixedWidth(28)
+    btn.setToolTip(tooltip)
+    btn.clicked.connect(
+        lambda: QMessageBox.information(parent, title, body)
+    )
+    return btn
+
+
+def primary_help_text(meta: dict[str, str]) -> tuple[str, str]:
+    if is_steam_link_recipe(meta):
+        return t("source.steam_link_info_title"), t("source.steam_link_info_body")
+    if meta.get("install_type") == "installer_offline":
+        return t("source.installer_source_info_title"), t(
+            "source.installer_source_info_body"
+        )
+    return t("source.primary_info_title"), t("source.primary_info_body")
+
+
+def fix_help_text(meta: dict[str, str]) -> tuple[str, str]:
+    if fix_kind_category(meta.get("fix_kind", "")) == "online_fix":
+        return t("source.online_fix_info_title"), t("source.online_fix_info_body")
+    return t("source.updates_info_title"), t("source.updates_info_body")
 
 
 def is_portable_install(meta: dict[str, str]) -> bool:
@@ -738,6 +805,36 @@ def attach_archive_password_files(
     extra["RECIPE_ARCHIVE_PASSWORD_USED_FILE"] = used_path
 
 
+class _ParentCloseDismissesDialog(QObject):
+    """Wenn das Hauptfenster schließt: modales Kind zuerst beenden (KDE-Taskleiste)."""
+
+    def __init__(self, dialog: QDialog) -> None:
+        super().__init__(dialog)
+        self._dialog = dialog
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+        if (
+            watched is self._dialog.parent()
+            and event.type() == QEvent.Type.Close
+            and self._dialog.isVisible()
+        ):
+            self._dialog.setProperty("rezeptor_force_close", True)
+            if self._dialog.isModal():
+                self._dialog.done(QDialog.DialogCode.Rejected)
+            else:
+                self._dialog.reject()
+        return super().eventFilter(watched, event)
+
+
+def _prepare_modal_source_dialog(dialog: QDialog) -> None:
+    """WindowModal + kein App-Quit — Hauptfenster darf Taskleisten-Close verarbeiten."""
+    dialog.setWindowModality(Qt.WindowModality.WindowModal)
+    dialog.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, False)
+    parent = dialog.parentWidget()
+    if parent is not None:
+        parent.installEventFilter(_ParentCloseDismissesDialog(dialog))
+
+
 class RecipeSourceDialog(QDialog):
     """Meta-driven source picker for install / reconfigure."""
 
@@ -752,6 +849,7 @@ class RecipeSourceDialog(QDialog):
         pending_env: dict[str, str] | None = None,
     ) -> None:
         super().__init__(parent)
+        _prepare_modal_source_dialog(self)
         self._rid = rid
         self._meta = meta
         self._root = root
@@ -759,6 +857,8 @@ class RecipeSourceDialog(QDialog):
         self._paths_cleared = is_recipe_install_cleared(self._pending_env)
         self._source_kind = meta.get("source_kind", "folder")
         self._fix_kind = meta.get("fix_kind", "none")
+        self._fix_category = fix_kind_category(self._fix_kind)
+        self._shows_fix = shows_fix_field(meta)
         self._version_guaranteed = meta.get("version_guaranteed", "").strip()
         self._show_target = needs_target_dir(meta)
         self._allow_archive = bool((meta.get("source_formats") or "").strip())
@@ -851,6 +951,15 @@ class RecipeSourceDialog(QDialog):
         primary_row.addWidget(self.primary_edit, stretch=1)
         primary_row.addWidget(self.primary_btn)
         primary_row.addWidget(self.primary_clear)
+        p_title, p_body = primary_help_text(meta)
+        primary_row.addWidget(
+            make_info_button(
+                self,
+                tooltip=t("source.primary_info_tip"),
+                title=p_title,
+                body=p_body,
+            )
+        )
         # Parent = self: wraps that stay out of the form must not be GC'd
         # (otherwise QLineEdit C++ objects die → crash in build_env on Wayland).
         primary_wrap = QWidget(self)
@@ -862,6 +971,14 @@ class RecipeSourceDialog(QDialog):
         target_row.addWidget(self.target_edit, stretch=1)
         target_row.addWidget(self.target_btn)
         target_row.addWidget(self.target_clear)
+        target_row.addWidget(
+            make_info_button(
+                self,
+                tooltip=t("source.target_info_tip"),
+                title=t("source.target_info_title"),
+                body=t("source.target_help") + "\n\n" + t("source.space_hint"),
+            )
+        )
         target_wrap = QWidget(self)
         target_wrap.setLayout(target_row)
 
@@ -879,6 +996,11 @@ class RecipeSourceDialog(QDialog):
         self.update_status.setWordWrap(True)
         self.update_status.setVisible(False)
         form.addRow("", self.update_status)
+        if is_steam_link_recipe(meta) and self._fix_category == "online_fix":
+            steam_hint = QLabel(t("source.steam_link_hint"))
+            steam_hint.setObjectName("muted")
+            steam_hint.setWordWrap(True)
+            form.addRow("", steam_hint)
 
         if self._show_target:
             form.addRow(t("source.target") + ":", target_wrap)
@@ -897,13 +1019,22 @@ class RecipeSourceDialog(QDialog):
             self.target_btn.hide()
             self.target_clear.hide()
             target_wrap.hide()
-        if self._fix_kind != "none":
-            fix_info = QPushButton("?")
-            fix_info.setFixedWidth(28)
-            fix_info.setToolTip(t("source.updates_info_tip"))
-            fix_info.clicked.connect(self._show_updates_info)
-            fix_row.addWidget(fix_info)
-            form.addRow(t("source.fix") + ":", fix_wrap)
+        if self._shows_fix:
+            f_title, f_body = fix_help_text(meta)
+            fix_row.addWidget(
+                make_info_button(
+                    self,
+                    tooltip=t("source.fix_info_tip"),
+                    title=f_title,
+                    body=f_body,
+                )
+            )
+            form.addRow(fix_field_label(meta) + ":", fix_wrap)
+            if self._fix_category == "online_fix":
+                self.fix_edit.setPlaceholderText(t("source.online_fix_ph"))
+                self.fix_btn.setToolTip(t("source.pick_online_fix_dir"))
+            else:
+                self.fix_edit.setPlaceholderText(t("source.fix_ph"))
         else:
             self.fix_edit.hide()
             self.fix_btn.hide()
@@ -962,6 +1093,20 @@ class RecipeSourceDialog(QDialog):
         super().showEvent(event)
         self._fit_to_content()
         QTimer.singleShot(0, self._fit_to_content)
+
+    def force_close(self) -> None:
+        """Hauptfenster-Quit: ohne zweite Nachfrage."""
+        self.setProperty("rezeptor_force_close", True)
+        self.done(QDialog.DialogCode.Rejected)
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 — Qt API
+        if self.property("rezeptor_force_close"):
+            event.accept()
+            super().closeEvent(event)
+            return
+        self.reject()
+        event.accept()
+        super().closeEvent(event)
 
     def _fit_to_content(self) -> None:
         """Fensterhöhe an Inhalt — weder Leerraum noch Überlappung."""
@@ -1027,49 +1172,64 @@ class RecipeSourceDialog(QDialog):
     def _on_primary_changed(self, _text: str = "") -> None:
         self._refresh_update_status()
 
-    def _show_updates_info(self) -> None:
-        QMessageBox.information(
-            self,
-            t("source.updates_info_title"),
-            t("source.updates_info_body"),
-        )
+    def _show_fix_info(self) -> None:
+        title, body = fix_help_text(self._meta)
+        QMessageBox.information(self, title, body)
+
+    def _online_fix_folder_ok(self, path: Path) -> bool:
+        if not path.is_dir():
+            return False
+        try:
+            return any(path.glob("*.dll")) or any(path.glob("*.ini"))
+        except OSError:
+            return False
 
     def _refresh_update_status(self) -> None:
-        """Zeigt, ob unter der Quelle (und optional Fix) Updates erkannt wurden."""
+        """Zeigt erkannte Updates (Halo) oder Online-Fix-Ordner-Status."""
         label = getattr(self, "update_status", None)
         if label is None:
             return
         primary = self._edit_text(self.primary_edit)
-        units: list[tuple[str, str]] = []
-        scan_root = ""
-        if primary and not self._archive_mode_active():
-            p = Path(normalize_user_path(primary, self._root))
-            if p.is_dir():
-                scan_root = str(p)
-                units = discover_update_units(p)
-            elif p.is_file() and p.suffix.lower() == ".iso":
-                parent = p.parent
-                units = discover_update_units(parent)
-                scan_root = str(parent)
-        fix = self._edit_text(self.fix_edit) if self._fix_kind != "none" else ""
-        fix_units: list[tuple[str, str]] = []
-        if fix:
-            fp = Path(normalize_user_path(fix, self._root))
-            if fp.is_dir():
-                fix_units = discover_update_units(fp)
-            elif fp.is_file() and fp.suffix.lower() == ".exe":
-                fix_units = [("1", str(fp))]
-
         parts: list[str] = []
-        cares = self._fix_kind != "none" or recipe_supports_update(self._meta)
-        if units:
-            parts.append(t("source.updates_found", n=len(units)))
-        elif scan_root and cares:
-            parts.append(t("source.updates_none"))
-        if fix_units:
-            parts.append(t("source.updates_fix_found", n=len(fix_units)))
-        elif fix and self._fix_kind != "none":
-            parts.append(t("source.updates_fix_none"))
+        cares_updates = (
+            recipe_supports_update(self._meta) or self._fix_category == "updates"
+        )
+        if cares_updates:
+            units: list[tuple[str, str]] = []
+            scan_root = ""
+            if primary and not self._archive_mode_active():
+                p = Path(normalize_user_path(primary, self._root))
+                if p.is_dir():
+                    scan_root = str(p)
+                    units = discover_update_units(p)
+                elif p.is_file() and p.suffix.lower() == ".iso":
+                    parent = p.parent
+                    units = discover_update_units(parent)
+                    scan_root = str(parent)
+            fix = self._edit_text(self.fix_edit) if self._shows_fix else ""
+            fix_units: list[tuple[str, str]] = []
+            if fix and self._fix_category == "updates":
+                fp = Path(normalize_user_path(fix, self._root))
+                if fp.is_dir():
+                    fix_units = discover_update_units(fp)
+                elif fp.is_file() and fp.suffix.lower() == ".exe":
+                    fix_units = [("1", str(fp))]
+            if units:
+                parts.append(t("source.updates_found", n=len(units)))
+            elif scan_root:
+                parts.append(t("source.updates_none"))
+            if fix_units:
+                parts.append(t("source.updates_fix_found", n=len(fix_units)))
+            elif fix and self._fix_category == "updates":
+                parts.append(t("source.updates_fix_none"))
+        elif self._fix_category == "online_fix":
+            fix = self._edit_text(self.fix_edit)
+            if fix:
+                fp = Path(normalize_user_path(fix, self._root))
+                if self._online_fix_folder_ok(fp):
+                    parts.append(t("source.online_fix_status_ok"))
+                else:
+                    parts.append(t("source.online_fix_status_check"))
 
         if parts:
             label.setText(" · ".join(parts))
@@ -1155,7 +1315,7 @@ class RecipeSourceDialog(QDialog):
         if target and self._show_target:
             self.target_edit.setText(target)
         fix = (pe.get("RECIPE_FIX_ROOT") or pe.get("WISO_FIX_ROOT") or "").strip()
-        if fix and self._fix_kind != "none":
+        if fix and self._shows_fix:
             self.fix_edit.setText(fix)
 
     def _pick_primary(self) -> None:
@@ -1275,8 +1435,14 @@ class RecipeSourceDialog(QDialog):
         self._fit_to_content()
 
     def _pick_fix(self) -> None:
-        """Update/Fix: Ordner oder .exe (nummerierte Update-Pakete)."""
+        """Update/Fix: Ordner oder .exe (nummerierte Update-Pakete); Online-Fix nur Ordner."""
         start = self.fix_edit.text() or str(documents_dir())
+        if self._fix_category == "online_fix":
+            d = pick_directory(self, t("source.pick_online_fix_dir"), start)
+            if d:
+                self.fix_edit.setText(d)
+            self._fit_to_content()
+            return
         box = QMessageBox(self)
         box.setWindowTitle(t("source.fix"))
         box.setText(t("source.pick_update_kind"))
@@ -1458,12 +1624,15 @@ class RecipeSourceDialog(QDialog):
                     )
                     return
             fix_raw = (
-                self._edit_text(self.fix_edit) if self._fix_kind != "none" else ""
+                self._edit_text(self.fix_edit) if self._shows_fix else ""
             )
-            if self._fix_kind == "required" and not fix_raw:
-                QMessageBox.warning(
-                    self, t("dialog.missing"), t("source.need_fix")
+            if fix_is_required(self._fix_kind) and not fix_raw:
+                need = (
+                    t("source.need_online_fix")
+                    if self._fix_category == "online_fix"
+                    else t("source.need_fix")
                 )
+                QMessageBox.warning(self, t("dialog.missing"), need)
                 return
             target = ""
             if self._show_target:
@@ -1564,7 +1733,7 @@ class RecipeSourceDialog(QDialog):
     def fix_path(self) -> str:
         if self._result_fix is not None:
             return self._result_fix
-        if self._fix_kind == "none":
+        if not self._shows_fix:
             return ""
         raw = self._edit_text(self.fix_edit)
         return normalize_user_path(raw, self._root) if raw else ""
@@ -1648,7 +1817,12 @@ class RecipeSourceDialog(QDialog):
             fix = self.fix_path()
             if fix:
                 extra["RECIPE_FIX_ROOT"] = fix
-                extra["RECIPE_UPDATE_ROOT"] = fix
+                if self._fix_category == "updates":
+                    extra["RECIPE_UPDATE_ROOT"] = fix
+                elif self._fix_category == "online_fix":
+                    merge = (self._meta.get("fix_merge_path") or "").strip()
+                    if merge:
+                        extra["RECIPE_FIX_MERGE_PATH"] = merge
                 if self._rid == "wiso-steuer":
                     extra["WISO_FIX_ROOT"] = fix
             return extra
@@ -1674,8 +1848,8 @@ def allows_iso_folder_source(meta: dict[str, str], rid: str = "") -> bool:
 
 
 def recipe_supports_update(meta: dict[str, str]) -> bool:
-    """fix_kind != none and update.sh hook present."""
-    if (meta.get("fix_kind") or "none") == "none":
+    """fix_kind optional/required and update.sh hook present."""
+    if fix_kind_category(meta.get("fix_kind", "none")) != "updates":
         return False
     upd = (meta.get("update") or "").strip()
     if not upd:
@@ -1709,6 +1883,7 @@ class UpdateSourceDialog(QDialog):
         title: str = "",
     ) -> None:
         super().__init__(parent)
+        _prepare_modal_source_dialog(self)
         self._rid = rid
         self._meta = meta
         self._root = root
@@ -1743,6 +1918,19 @@ class UpdateSourceDialog(QDialog):
         buttons.accepted.connect(self._on_accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+
+    def force_close(self) -> None:
+        self.setProperty("rezeptor_force_close", True)
+        self.done(QDialog.DialogCode.Rejected)
+
+    def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 — Qt API
+        if self.property("rezeptor_force_close"):
+            event.accept()
+            super().closeEvent(event)
+            return
+        self.reject()
+        event.accept()
+        super().closeEvent(event)
 
     def _pick(self) -> None:
         start = self.path_edit.text() or str(documents_dir())

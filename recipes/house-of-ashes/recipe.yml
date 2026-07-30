@@ -31,7 +31,9 @@ source_kind: folder
 source_label: "Spielordner (HouseOfAshes.exe + Online-Fix)"
 source_formats: ""
 steam_appid: "1281590"
-fix_kind: none
+fix_kind: online_fix_optional
+fix_merge_path: "SMG025/Binaries/Win64"
+fix_label: "Online-Fix (TDPAHOA)"
 exe_glob: "HouseOfAshes.exe"
 launch_process_patterns: [HouseOfAshes.exe]
 env: {}

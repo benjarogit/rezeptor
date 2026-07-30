@@ -146,10 +146,10 @@ else
 fi
 
 if [ "$failures" -eq 0 ]; then
-    # Version für GUI-Badge (getestet & garantiert) — stack aus recipe.yml
+    # Version für GUI-Badge (getestete Heilung) — stack aus recipe.yml
     _guaranteed="$(recipe_get "$RECIPE_YML" version_guaranteed 2>/dev/null || true)"
     if [ -n "$_guaranteed" ]; then
-        recipe_validate::ok "Version: ${_guaranteed} (getestet & garantiert)"
+        recipe_validate::ok "Version: ${_guaranteed} (getestete Heilung)"
     fi
     output::progress_done "Prüfung OK"
     exit 0

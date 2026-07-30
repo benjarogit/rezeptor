@@ -211,8 +211,10 @@ from ui_progress import WaitingSpinner
 from ui_window import (
     apply_tool_window,
     clamp_restored_geometry,
+    dismiss_all_top_level_windows,
     ensure_on_screen,
     geometry_to_b64,
+    install_application_close_guard,
     restore_geometry,
 )
 from i18n import get_locale, set_locale, t
@@ -4417,27 +4419,9 @@ class RezeptorWindow(QMainWindow):
         self.raise_()
         self.activateWindow()
 
-    def _confirm_app_quit(self) -> bool:
-        """Vorgang/Nebenfenster: App nach vorne, dann eine klare Beenden-Frage.
-
-        Stay-on-top + ApplicationModal: sonst liegt die Frage hinter Wine/GenP und
-        Taskleisten-„Alles schließen“ wirkt wie „tut nichts“.
-        """
+    def _show_quit_confirm(self, body: str) -> bool:
+        """Stay-on-top — sonst hinter modalem Quellen-Dialog / Wine unsichtbar."""
         self._bring_app_to_front()
-        busy = bool(self._busy and self._subprocess_running())
-        tools = self._visible_tool_windows()
-        dirty = any(
-            hasattr(w, "is_dirty") and w.is_dirty()  # type: ignore[misc]
-            for w in tools
-        )
-        if busy:
-            body = t("dialog.quit_busy_body")
-        elif tools:
-            body = t("dialog.quit_windows_body")
-            if dirty:
-                body = f"{body}\n\n{t('dialog.quit_dirty_extra')}"
-        else:
-            return True
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Question)
         box.setWindowTitle(t("dialog.quit_title"))
@@ -4448,10 +4432,60 @@ class RezeptorWindow(QMainWindow):
         box.setDefaultButton(QMessageBox.StandardButton.Yes)
         box.setWindowModality(Qt.WindowModality.ApplicationModal)
         box.setWindowFlag(Qt.WindowType.WindowStaysOnTopHint, True)
+        box.setWindowFlag(Qt.WindowType.Dialog, True)
         box.show()
         box.raise_()
         box.activateWindow()
+        app = QApplication.instance()
+        if app is not None:
+            app.setActiveWindow(box)
         return box.exec() == QMessageBox.StandardButton.Yes
+
+    def _confirm_busy_quit(self) -> bool:
+        return self._show_quit_confirm(t("dialog.quit_busy_body"))
+
+    def _confirm_app_quit(self) -> bool:
+        """Vorgang/Nebenfenster: App nach vorne, dann eine klare Beenden-Frage."""
+        busy = bool(self._busy and self._subprocess_running())
+        tools = self._visible_tool_windows()
+        dirty = any(
+            hasattr(w, "is_dirty") and w.is_dirty()  # type: ignore[misc]
+            for w in tools
+        )
+        if busy:
+            return self._show_quit_confirm(t("dialog.quit_busy_body"))
+        if tools:
+            body = t("dialog.quit_windows_body")
+            if dirty:
+                body = f"{body}\n\n{t('dialog.quit_dirty_extra')}"
+            return self._show_quit_confirm(body)
+        return True
+
+    def request_quit_from_wm(self, *, from_wm: bool = False) -> None:
+        """Taskleiste / „Alle schließen“ / Fenster-X — zentraler Quit-Pfad."""
+        if getattr(self, "_force_quitting", False):
+            return
+        if getattr(self, "_quit_pending", False):
+            return
+        self._quit_pending = True
+        try:
+            busy = bool(self._busy and self._subprocess_running())
+            if busy and not self._confirm_busy_quit():
+                return
+            if not from_wm and not busy and not self._confirm_app_quit():
+                self._bring_app_to_front()
+                return
+
+            dismiss_all_top_level_windows(self, force=True)
+            self._force_quitting = True
+            self._persist_ui_layout()
+            self._terminate_busy_subprocess()
+            self.close()
+            app = QApplication.instance()
+            if app is not None:
+                app.quit()
+        finally:
+            self._quit_pending = False
 
     def _terminate_busy_subprocess(self) -> None:
         """Taskleisten-Quit / Alles schließen: laufenden Vorgang (inkl. GenP/Wine) beenden."""
@@ -4470,40 +4504,15 @@ class RezeptorWindow(QMainWindow):
             proc.terminate()
 
     def _force_close_tool_windows(self) -> None:
-        for dlg in (self._recipe_view_dlg, self._docs_dlg):
-            if dlg is None:
-                continue
-            if hasattr(dlg, "force_close"):
-                dlg.force_close()
-            else:
-                dlg.close()
-        # Modale Restfenster (Settings/Medizin o. Ä.), die Taskleisten-Close blockieren.
-        for w in list(self.findChildren(QDialog)):
-            if w is self or not w.isVisible():
-                continue
-            w.setProperty("rezeptor_force_close", True)
-            w.reject()
-            w.close()
+        dismiss_all_top_level_windows(self, force=True)
 
     def closeEvent(self, event) -> None:  # type: ignore[no-untyped-def]
-        # Taskleiste / WM: bei zwei Fenstern sonst oft „Schließen“ wirkungslos.
         if getattr(self, "_force_quitting", False):
             event.accept()
             super().closeEvent(event)
             return
-        if not self._confirm_app_quit():
-            event.ignore()
-            self._bring_app_to_front()
-            return
-        self._force_quitting = True
-        self._persist_ui_layout()
-        self._terminate_busy_subprocess()
-        self._force_close_tool_windows()
-        event.accept()
-        super().closeEvent(event)
-        app = QApplication.instance()
-        if app is not None:
-            app.quit()
+        event.ignore()
+        self.request_quit_from_wm(from_wm=True)
     @staticmethod
     def _style_secondary_label(
         label: QLabel, color: str, *, size_px: int = 12
@@ -4657,6 +4666,7 @@ class RezeptorWindow(QMainWindow):
             title=t(title_key, name=meta.get("name", rid)),
             pending_env=pending,
         )
+        apply_tool_window(dlg, icon=self.windowIcon(), modal=True)
         # Parent-modaler Dialog (kein Window-Flag): Wayland/KDE ignoriert sonst oft
         # MinimumSize — nach Ordnerwahl überlappen Wählen/OK.
         dlg._fit_to_content()
@@ -4869,6 +4879,7 @@ class RezeptorWindow(QMainWindow):
             root=Path.home(),
             title=t("dialog.update_title"),
         )
+        apply_tool_window(dlg, icon=self.windowIcon(), modal=True)
         if dlg.exec() != QDialog.DialogCode.Accepted:
             return
         extra = dlg.build_env()
@@ -5179,6 +5190,7 @@ def main() -> int:
     app.setStyleSheet((host or "") + SEGMENT_TAB_STYLES)
     try:
         w = RezeptorWindow()
+        install_application_close_guard(w)
         w.show()
         QTimer.singleShot(0, w._apply_theme)
         # Volle validate.sh: Hinweisdialog in _startup_prompts (nach erstem Show).

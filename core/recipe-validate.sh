@@ -156,14 +156,14 @@ recipe_validate::version_guaranteed_check() {
     local guaranteed="$1" detected="$2" label="${3:-Version}"
     [ -n "$guaranteed" ] || return 0
     if [ -z "$detected" ]; then
-        recipe_validate::warn "$label unbekannt — garantiert: $guaranteed"
+        recipe_validate::warn "$label unbekannt — getestete Heilung: $guaranteed"
         return 0
     fi
     if [ "$guaranteed" = "$detected" ]; then
-        recipe_validate::ok "$label: $detected (getestet & garantiert)"
+        recipe_validate::ok "$label: $detected (getestete Heilung)"
         return 0
     fi
-    recipe_validate::warn "$label: $detected — garantiert ist $guaranteed (eigene Version: kein Support)"
+    recipe_validate::warn "$label: $detected — getestete Heilung ist $guaranteed (eigene Version: kein Support)"
 }
 
 # ClearType / fontsmooth=rgb — ohne das wirkt UI-Text pixelig (Wine liest REG_SZ "2").

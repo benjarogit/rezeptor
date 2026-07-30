@@ -79,7 +79,23 @@
     "source_kind": {
       "enum": ["folder", "installer", "archive", "fixed_path"]
     },
-    "fix_kind": { "enum": ["none", "optional", "required"] },
+    "fix_kind": {
+      "enum": [
+        "none",
+        "optional",
+        "required",
+        "online_fix_optional",
+        "online_fix_required"
+      ]
+    },
+    "fix_merge_path": {
+      "type": "string",
+      "description": "Relativer Zielpfad im Spielordner für Online-Fix (fix_kind online_fix_*)"
+    },
+    "fix_label": {
+      "type": "string",
+      "description": "Anzeige-Label für Fix-Feld im Quellen-Dialog"
+    },
     "source_formats": { "type": "string" },
     "source_label": { "type": "string" },
     "source_refs": {
@@ -177,6 +193,15 @@
         "required": ["fix_kind"]
       },
       "then": { "required": ["update"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "fix_kind": { "enum": ["online_fix_optional", "online_fix_required"] }
+        },
+        "required": ["fix_kind"]
+      },
+      "then": { "required": ["fix_merge_path"] }
     }
   ],
   "additionalProperties": true

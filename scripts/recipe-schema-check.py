@@ -39,7 +39,15 @@ INSTALL_TYPES = {
     "portable",
 }
 SOURCE_KINDS = {"folder", "installer", "archive", "fixed_path"}
-FIX_KINDS = {"none", "optional", "required"}
+FIX_KINDS = {
+    "none",
+    "optional",
+    "required",
+    "online_fix_optional",
+    "online_fix_required",
+}
+UPDATE_FIX_KINDS = {"optional", "required"}
+ONLINE_FIX_KINDS = {"online_fix_optional", "online_fix_required"}
 PLAIN_STEPS = {
     "prepare_source",
     "require_portable",
@@ -103,8 +111,10 @@ def validate_embedded(data: dict, label: str) -> list[str]:
     fk = data.get("fix_kind")
     if fk is not None and fk not in FIX_KINDS:
         errs.append(f"{label}: unbekannter fix_kind: {fk}")
-    if fk in ("optional", "required") and not data.get("update"):
+    if fk in UPDATE_FIX_KINDS and not data.get("update"):
         errs.append(f"{label}: fix_kind={fk} erfordert Hook update: update.sh")
+    if fk in ONLINE_FIX_KINDS and not data.get("fix_merge_path"):
+        errs.append(f"{label}: fix_kind={fk} erfordert fix_merge_path")
 
     if sk == "archive" and not data.get("source_formats"):
         errs.append(f"{label}: source_kind=archive erfordert source_formats")

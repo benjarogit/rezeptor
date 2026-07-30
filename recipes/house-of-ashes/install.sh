@@ -94,6 +94,16 @@ else
     fi
 fi
 
+output::progress 25 "Online-Fix (optional)"
+fix_src="${RECIPE_FIX_ROOT:-}"
+merge_rel="${RECIPE_FIX_MERGE_PATH:-$WIN64_REL}"
+if [ -n "$fix_src" ] && [ -d "$fix_src" ]; then
+    # shellcheck source=/dev/null
+    source "$RECIPE_DIR/../../core/recipe-online-fix.sh"
+    recipe_online_fix::merge "$src" "$fix_src" "$merge_rel" || recipe_hooks::die \
+        "Online-Fix konnte nicht kopiert werden: $fix_src"
+fi
+
 output::progress 30 "Online-Fix prüfen"
 win64="$src/$WIN64_REL"
 fail=0

@@ -12,7 +12,7 @@ REQUIRED_HOOKS=(install launch validate repair kill uninstall)
 OPTIONAL_HOOKS=(update)
 INSTALL_TYPES=(installer_offline portable_launch portable_bootstrap game_install game_portable adobe_offline portable)
 SOURCE_KINDS=(folder installer archive fixed_path)
-FIX_KINDS=(none optional required)
+FIX_KINDS=(none optional required online_fix_optional online_fix_required)
 ALLOWED_ROOT_SH=(install launch validate repair kill uninstall genp update)
 
 errors=0
@@ -103,9 +103,12 @@ lint_recipe_dir() {
     done
     [ "$ok" -eq 1 ] || lint_err "$base: unbekannter fix_kind: $fix_kind"
 
-    if [ "$fix_kind" != "none" ] && [ -n "$fix_kind" ]; then
+    if [ "$fix_kind" = "optional" ] || [ "$fix_kind" = "required" ]; then
         val="$(recipe_get "$yml" update 2>/dev/null || true)"
         [ -n "$val" ] || lint_err "$base: fix_kind=$fix_kind erfordert Hook update: update.sh"
+    elif [ "$fix_kind" = "online_fix_optional" ] || [ "$fix_kind" = "online_fix_required" ]; then
+        val="$(recipe_get "$yml" fix_merge_path 2>/dev/null || true)"
+        [ -n "$val" ] || lint_err "$base: fix_kind=$fix_kind erfordert fix_merge_path"
     fi
 
     if [ "$source_kind" = "archive" ] && [ -z "$source_formats" ]; then

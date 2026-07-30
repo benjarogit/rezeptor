@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import base64
+import time
 from typing import Literal
 
-from PyQt6.QtCore import QByteArray, Qt
+from PyQt6.QtCore import QByteArray, QEvent, QObject, Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox, QSplitter, QWidget
 
@@ -82,6 +83,156 @@ def restore_splitter(splitter: QSplitter, b64: str) -> bool:
     return bool(splitter.restoreState(data))
 
 
+def widget_belongs_to_main(w: QWidget | None, main: QWidget) -> bool:
+    """Hauptfenster oder Kind-/Tool-Fenster der App (nicht fremde Top-Level)."""
+    if w is None:
+        return False
+    if w is main:
+        return True
+    p = w.parentWidget()
+    while p is not None:
+        if p is main:
+            return True
+        p = p.parentWidget()
+    return False
+
+
+def _force_dismiss_dialog(dlg: QDialog, *, force: bool = True) -> None:
+    """Modale exec()-Schleifen zuverlässig beenden (KDE Taskleiste / Alle schließen)."""
+    if force:
+        dlg.setProperty("rezeptor_force_close", True)
+    force_fn = getattr(dlg, "force_close", None)
+    if callable(force_fn):
+        force_fn()
+        return
+    if dlg.isModal():
+        dlg.done(QDialog.DialogCode.Rejected)
+    else:
+        dlg.reject()
+    dlg.close()
+
+
+def visible_child_dialogs(parent: QWidget) -> list[QDialog]:
+    """Sichtbare Kind-Dialoge (Quelle, Einstellungen, …), nicht das Parent selbst."""
+    out: list[QDialog] = []
+    for w in parent.findChildren(QDialog):
+        if w is parent or not w.isVisible():
+            continue
+        out.append(w)
+    return out
+
+
+def dismiss_child_dialogs(parent: QWidget, *, force: bool = True) -> int:
+    """Modale Kinder schließen — Taskleisten-„Schließen“ am Hauptfenster sonst no-op."""
+    n = 0
+    app = QApplication.instance()
+    if app is not None:
+        for _ in range(8):
+            modal = QApplication.activeModalWidget()
+            if modal is None or not widget_belongs_to_main(modal, parent):
+                break
+            if isinstance(modal, QDialog):
+                _force_dismiss_dialog(modal, force=force)
+                n += 1
+            else:
+                break
+    for dlg in visible_child_dialogs(parent):
+        _force_dismiss_dialog(dlg, force=force)
+        n += 1
+    return n
+
+
+def dismiss_all_top_level_windows(main: QWidget, *, force: bool = True) -> None:
+    """Alle sichtbaren Rezeptor-Fenster schließen (KDE „Alle schließen“ / Taskleiste)."""
+    app = QApplication.instance()
+    if app is None:
+        dismiss_child_dialogs(main, force=force)
+        return
+    for w in list(app.topLevelWidgets()):
+        if w is main or not w.isVisible():
+            continue
+        if not widget_belongs_to_main(w, main):
+            continue
+        if force:
+            w.setProperty("rezeptor_force_close", True)
+        if hasattr(w, "force_close"):
+            w.force_close()
+            continue
+        if isinstance(w, QDialog):
+            _force_dismiss_dialog(w, force=force)
+            continue
+        w.close()
+    dismiss_child_dialogs(main, force=force)
+    dismiss_child_dialogs(main, force=force)
+
+
+class ApplicationCloseGuard(QObject):
+    """Fängt WM-/Taskleisten-Close ab — vor modalen exec()-Blockern und für „Alle schließen“."""
+
+    _BURST_SEC = 0.85
+
+    def __init__(self, main: QWidget) -> None:
+        super().__init__(main)
+        self._main = main
+        self._quit_scheduled = False
+        self._close_burst: list[float] = []
+        app = QApplication.instance()
+        if app is not None:
+            app.installEventFilter(self)
+
+    def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+        if event.type() != QEvent.Type.Close:
+            return False
+        w = watched
+        if not isinstance(w, QWidget) or not w.isWindow():
+            return False
+        if not widget_belongs_to_main(w, self._main):
+            return False
+        if getattr(self._main, "_force_quitting", False):
+            return False
+
+        if w is self._main:
+            dismiss_child_dialogs(self._main, force=True)
+            self._schedule_quit()
+            event.ignore()
+            return True
+
+        # Sekundärfenster: einzelnes Schließen = nur dieses Fenster.
+        # KDE „Alle schließen“: mehrere Close-Events kurz hintereinander → App quit.
+        w.setProperty("rezeptor_force_close", True)
+        now = time.monotonic()
+        self._close_burst = [
+            t for t in self._close_burst if now - t < self._BURST_SEC
+        ]
+        self._close_burst.append(now)
+        if len(self._close_burst) >= 2:
+            self._schedule_quit()
+            event.ignore()
+            return True
+        return False
+
+    def _schedule_quit(self) -> None:
+        if self._quit_scheduled:
+            return
+        self._quit_scheduled = True
+
+        def _run() -> None:
+            self._quit_scheduled = False
+            self._close_burst.clear()
+            fn = getattr(self._main, "request_quit_from_wm", None)
+            if callable(fn):
+                fn(from_wm=True)
+
+        QTimer.singleShot(0, _run)
+
+
+def install_application_close_guard(main: QWidget) -> ApplicationCloseGuard:
+    """In main() nach dem Hauptfenster aufrufen."""
+    guard = ApplicationCloseGuard(main)
+    main.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, True)
+    return guard
+
+
 def apply_tool_window(
     widget: QWidget,
     *,
@@ -110,6 +261,7 @@ def apply_tool_window(
     if delete_on_close is None:
         delete_on_close = not modal
     widget.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, delete_on_close)
+    widget.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, False)
     if icon is not None and not icon.isNull():
         widget.setWindowIcon(icon)
     if isinstance(widget, QDialog):
