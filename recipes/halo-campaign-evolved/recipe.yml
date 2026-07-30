@@ -1,0 +1,59 @@
+id: halo-campaign-evolved
+schema_version: 1
+icon: "{repo}/images/halo-campaign-evolved-icon.png"
+name: "Halo Campaign Evolved"
+author: "benjarogit"
+category: "Spiele"
+version_guaranteed: "Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos"
+version_label: "Halo Campaign Evolved — Premium Edition MULTi13 (ElAmigos)"
+version_detect:
+  - kind: pe_field
+    glob: "**/HaloCampaignEvolved.exe"
+    field: FileVersion
+  - kind: pe_field
+    glob: "**/*Halo*Evolved*.exe"
+    field: ProductVersion
+  - kind: path_regex
+    regex: "(?i)Halo.?Campaign.?Evolved"
+  - kind: path_regex
+    regex: "(?i)Halo\\.Campaign\\.Evolved\\.Premium\\.Edition\\.MULTi13"
+source_hints:
+  - "Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos"
+  - "Halo Campaign Evolved Premium Edition MULTi13 ElAmigos"
+  - "g4u"
+  - "ElAmigos"
+source_refs:
+  - label: "xrel (Suche)"
+    url: "https://www.xrel.to/search.html?xrel_search_query=Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos"
+notify_title: "Halo Campaign Evolved"
+data_root: "~/.local/share/wine-software/halo-campaign-evolved"
+prefix: "{data_root}/prefix"
+runtime: proton-ge
+install_type: installer_offline
+source_kind: folder
+source_label: "Pack-Ordner oder ISO (Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos)"
+source_formats: iso,zip,7z,rar
+target_default: "~/.local/share/wine-software/halo-campaign-evolved"
+target_label: "Datenordner (Wine-Prefix)"
+fix_kind: optional
+update: update.sh
+exe_glob: "**/HaloCampaignEvolved.exe"
+launch_process_patterns: [HaloCampaignEvolved.exe]
+winetricks: [vcrun2019]
+env:
+  WINEDEBUG: "-all"
+validate: validate.sh
+launch: launch.sh
+install: install.sh
+repair: repair.sh
+kill: kill.sh
+uninstall: uninstall.sh
+install_steps:
+  - prepare_source
+  - prefix
+  - winetricks
+  - deploy_graphics
+  - run_installer
+  - apply_updates
+  - module: recipe_halo_campaign_evolved::finalize
+  - emit_log_paths

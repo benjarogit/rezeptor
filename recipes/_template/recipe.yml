@@ -28,6 +28,8 @@ source_kind: folder
 source_label: "Quelle (Ordner oder Archiv)"
 source_formats: zip,tar.gz,tgz,7z,rar
 fix_kind: optional
+# Bei fix_kind != none: Hook update: update.sh (Mehr → Update anwenden)
+update: update.sh
 exe_glob: "**/*.exe"
 # Optional: process names for “app is running” detection (else derived from exe_glob)
 # launch_process_patterns: [App.exe]

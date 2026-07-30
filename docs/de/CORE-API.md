@@ -133,11 +133,20 @@ Eingabe-Reihenfolge: `RECIPE_INSTALLER_PATH` → `RECIPE_ARCHIVE_PATH` → `sour
 
 Liest `install_steps:` aus YAML (`scripts/recipe-yaml-read.py`).
 
-**Schritt-Typen:** `prepare_source`, `require_portable`, `prefix`, `winetricks`, `deploy_graphics`, `run_installer`, `stabilize_prefix`, `win10`, `fonts_registry`, `emit_log_paths`, `module`, `copy_asset`, `env_set`, `progress`, `vcrun`, `dotnet`.
+**Schritt-Typen:** `prepare_source`, `require_portable`, `prefix`, `winetricks`, `deploy_graphics`, `run_installer`, `apply_updates`, `stabilize_prefix`, `win10`, `fonts_registry`, `emit_log_paths`, `module`, `copy_asset`, `env_set`, `progress`, `vcrun`, `dotnet`.
 
 Tokens: `{repo}`, `{data_root}`, `{recipe}`, `~`.
 
 Exit **11** bei Fehlschlag eines Schritts (GUI kann Retry anbieten).
+
+### Updates — `recipe-updates.sh` / `recipe-iso.sh`
+
+Siehe [UPDATES.md](UPDATES.md). Kurz:
+
+| Funktion | Rolle |
+|----------|--------|
+| `recipe_updates::discover` / `apply_all` | Nummerierte Patches, State `APPLIED_UPDATES` |
+| `recipe_iso::mount` / `ensure_accessible` | Große Spiel-ISOs mounten (kein Voll-Extract) |
 
 ---
 

@@ -9,11 +9,11 @@ RECIPES="$ROOT/recipes"
 
 REQUIRED_KEYS=(id name icon data_root runtime install_type source_kind fix_kind)
 REQUIRED_HOOKS=(install launch validate repair kill uninstall)
-OPTIONAL_HOOKS=()
+OPTIONAL_HOOKS=(update)
 INSTALL_TYPES=(installer_offline portable_launch portable_bootstrap game_install game_portable adobe_offline portable)
 SOURCE_KINDS=(folder installer archive fixed_path)
 FIX_KINDS=(none optional required)
-ALLOWED_ROOT_SH=(install launch validate repair kill uninstall genp)
+ALLOWED_ROOT_SH=(install launch validate repair kill uninstall genp update)
 
 errors=0
 warnings=0
@@ -103,6 +103,11 @@ lint_recipe_dir() {
     done
     [ "$ok" -eq 1 ] || lint_err "$base: unbekannter fix_kind: $fix_kind"
 
+    if [ "$fix_kind" != "none" ] && [ -n "$fix_kind" ]; then
+        val="$(recipe_get "$yml" update 2>/dev/null || true)"
+        [ -n "$val" ] || lint_err "$base: fix_kind=$fix_kind erfordert Hook update: update.sh"
+    fi
+
     if [ "$source_kind" = "archive" ] && [ -z "$source_formats" ]; then
         lint_err "$base: source_kind=archive erfordert source_formats"
     fi
@@ -156,6 +161,30 @@ lint_recipe_dir() {
         if [ "$_sh_rc" -eq 2 ]; then
             lint_err "$base: source_hints darf keine URLs/Magnet-Links enthalten (nur Suchtexte)"
         fi
+    fi
+
+    # source_refs: nur Allowlist-Hosts (Release-Index, z. B. xrel.to)
+    if grep -qE '^source_refs:' "$yml" 2>/dev/null; then
+        while IFS= read -r _url; do
+            [ -n "$_url" ] || continue
+            case "$_url" in
+                https://www.xrel.to/*|https://xrel.to/*|http://www.xrel.to/*|http://xrel.to/*) ;;
+                *)
+                    lint_err "$base: source_refs URL nicht erlaubt (nur xrel.to): $_url"
+                    ;;
+            esac
+        done < <(
+            awk '
+                BEGIN { inr=0 }
+                /^source_refs:/ { inr=1; next }
+                /^[A-Za-z0-9_]+:/ { inr=0 }
+                inr && /url:/ {
+                    sub(/^[^:]*url:[[:space:]]*/, "")
+                    gsub(/["'\'']/, "")
+                    print
+                }
+            ' "$yml"
+        )
     fi
 
     for hook in "${REQUIRED_HOOKS[@]}"; do

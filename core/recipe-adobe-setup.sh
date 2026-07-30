@@ -33,13 +33,106 @@ adobe_setup::apply_adobe_network_registry() {
         /v ProxyEnable /t REG_DWORD /d 0 /f >>"${LOG_FILE:-/dev/null}" 2>&1 || true
 }
 
+adobe_setup::_ensure_case_alias() {
+    # Adobe erwartet teils lowercase (config.xml) neben Canonical (Config.xml).
+    # Auf manchen FS/Rechten scheitert ln → Permission denied — Installation nicht hart killen.
+    local dir="$1" canonical="$2" alias_name="$3"
+    local src="$dir/$canonical" dest="$dir/$alias_name" err=""
+
+    [ -d "$dir" ] || return 0
+    [ -f "$src" ] || return 0
+
+    if [ -e "$dest" ]; then
+        if [ "$src" -ef "$dest" ] 2>/dev/null; then
+            return 0
+        fi
+        return 0
+    fi
+
+    if ln -sfn "$canonical" "$dest" 2>/dev/null; then
+        type output::info >/dev/null 2>&1 && output::info "Case-Alias: $alias_name → $canonical"
+        return 0
+    fi
+    err="$(ln -sfn "$canonical" "$dest" 2>&1 || true)"
+    if [ -n "${ERROR_LOG:-}" ]; then
+        echo "[$(date '+%H:%M:%S')] WARN: Symlink $alias_name: ${err:-failed}" >>"$ERROR_LOG"
+    fi
+    if cp -f "$src" "$dest" 2>/dev/null; then
+        type output::info >/dev/null 2>&1 \
+            && output::info "Case-Alias: $alias_name (Kopie — Symlink nicht möglich)"
+        [ -n "${ERROR_LOG:-}" ] \
+            && echo "[$(date '+%H:%M:%S')] INFO: Case-Alias $alias_name via cp" >>"$ERROR_LOG"
+        return 0
+    fi
+    type recipe_hooks::log_err >/dev/null 2>&1 \
+        && recipe_hooks::log_err "Case-Alias $dir/$alias_name fehlgeschlagen (${err:-cp failed}) — weiter ohne Alias"
+    return 0
+}
+
 adobe_setup::fix_installer_case_symlinks() {
     local base="${WINEPREFIX}/drive_c/AdobeSetup"
-    [ -d "$base/products" ] || return 0
-    [ -f "$base/products/Driver.xml" ] && [ ! -e "$base/products/driver.xml" ] \
-        && ln -sf Driver.xml "$base/products/driver.xml"
-    [ -f "$base/resources/Config.xml" ] && [ ! -e "$base/resources/config.xml" ] \
-        && ln -sf Config.xml "$base/resources/config.xml"
+    [ -d "$base" ] || return 0
+    adobe_setup::_ensure_case_alias "$base/products" "Driver.xml" "driver.xml"
+    adobe_setup::_ensure_case_alias "$base/resources" "Config.xml" "config.xml"
+}
+
+adobe_setup::diagnose_failed_install() {
+    local rc="${1:-?}"
+    local base="${WINEPREFIX:-}/drive_c/AdobeSetup"
+    local log="${ERROR_LOG:-${LOG_FILE:-/dev/null}}"
+    {
+        echo "=== Adobe-Install Diagnose (exit=$rc) ==="
+        echo "Zeit: $(date -Iseconds 2>/dev/null || date)"
+        echo "RECIPE_ID=${RECIPE_ID:-}"
+        echo "WINEPREFIX=${WINEPREFIX:-}"
+        echo "DATA_ROOT=${DATA_ROOT:-}"
+        echo "LOG_FILE=${LOG_FILE:-}"
+        echo "ERROR_LOG=${ERROR_LOG:-}"
+        if command -v findmnt >/dev/null 2>&1 && [ -n "${WINEPREFIX:-}" ]; then
+            echo "FS: $(findmnt -no FSTYPE,OPTIONS,TARGET -T "$WINEPREFIX" 2>/dev/null || echo '?')"
+        fi
+        if command -v df >/dev/null 2>&1 && [ -n "${WINEPREFIX:-}" ]; then
+            echo "Disk:"
+            df -h "$WINEPREFIX" 2>/dev/null | tail -1 || true
+        fi
+        if [ -d "$base" ]; then
+            echo "AdobeSetup:"
+            ls -la "$base" 2>/dev/null | head -30 || true
+            echo "resources/:"
+            ls -la "$base/resources" 2>/dev/null | head -40 || true
+            echo "products/ (head):"
+            ls -la "$base/products" 2>/dev/null | head -20 || true
+            for f in \
+                "$base/resources/Config.xml" \
+                "$base/resources/config.xml" \
+                "$base/products/Driver.xml" \
+                "$base/products/driver.xml" \
+                "$base/Set-up.exe"; do
+                if [ -e "$f" ]; then
+                    echo "  present: $f ($(stat -c '%A %U:%G %s' "$f" 2>/dev/null || echo '?'))"
+                    [ -L "$f" ] && echo "    symlink → $(readlink "$f" 2>/dev/null || true)"
+                else
+                    echo "  missing: $f"
+                fi
+            done
+        else
+            echo "AdobeSetup fehlt: $base"
+        fi
+        if [ -d "${WINEPREFIX:-}/drive_c" ]; then
+            echo "Recent *.log under drive_c (max 8):"
+            find "${WINEPREFIX}/drive_c" -type f \( -iname '*.log' -o -iname '*setup*.txt' \) 2>/dev/null \
+                | head -8 | while IFS= read -r lf; do
+                echo "  --- $lf (tail) ---"
+                tail -n 40 "$lf" 2>/dev/null || true
+            done
+        fi
+        echo "=== Ende Diagnose ==="
+    } | tee -a "${LOG_FILE:-/dev/null}" >>"$log" 2>/dev/null || true
+
+    type output::error >/dev/null 2>&1 \
+        && output::error "Adobe Set-up exit $rc — Diagnose in ERROR_LOG / Install-Log"
+    type output::info >/dev/null 2>&1 \
+        && output::info "Log: ${LOG_FILE:-?} · Fehlerlog: ${ERROR_LOG:-?}"
 }
 
 adobe_setup::deploy_installer_to_c_drive() {
@@ -49,6 +142,7 @@ adobe_setup::deploy_installer_to_c_drive() {
     rm -rf "$dest"
     mkdir -p "$dest"
     cp -a "$src/." "$dest/"
+    chmod -R u+rwX "$dest" 2>/dev/null || true
     adobe_setup::fix_installer_case_symlinks
     export ADOBE_INSTALLER_DIR="$dest"
 }
@@ -227,11 +321,13 @@ adobe_setup::run_silent_setup() {
     else
         installer_args=(--silent=1)
         output::info "Silent-Installation (Adobe ESD) — kann mehrere Minuten dauern"
+        output::info "Vollständige Ausgabe landet im Install-Log; bei Fehler zusätzlich Diagnose im Fehlerlog"
     fi
 
     output::progress 70 "Adobe Set-up.exe"
     (
         cd "$setup_dir" || exit 1
+        # Alles nach LOG; Progress zusätzlich als GUI-Tag
         wine "./Set-up.exe" "${installer_args[@]}" 2>&1 | tee -a "${LOG_FILE:-/dev/null}" | while IFS= read -r _line; do
             case "$_line" in
                 Progress:*)
@@ -242,11 +338,19 @@ adobe_setup::run_silent_setup() {
                         echo "$_line"
                     fi
                     ;;
+                *[Ee][Rr][Rr][Oo][Rr]*|*[Ff]atal*|*[Ff]ailed*|Exit\ [Cc]ode*)
+                    echo "$_line"
+                    [ -n "${ERROR_LOG:-}" ] && echo "[$(date '+%H:%M:%S')] $_line" >>"$ERROR_LOG"
+                    ;;
             esac
         done
         exit "${PIPESTATUS[0]}"
     ) || install_status=$?
 
     adobe_setup::kill_all_wineservers
+    if [ "$install_status" -ne 0 ]; then
+        adobe_setup::diagnose_failed_install "$install_status"
+        recipe_hooks::emit_log_paths 2>/dev/null || true
+    fi
     return "$install_status"
 }

@@ -133,11 +133,20 @@ Input order: `RECIPE_INSTALLER_PATH` → `RECIPE_ARCHIVE_PATH` → `source_kind:
 
 Reads `install_steps:` from YAML (`scripts/recipe-yaml-read.py`).
 
-**Step types:** `prepare_source`, `require_portable`, `prefix`, `winetricks`, `deploy_graphics`, `run_installer`, `stabilize_prefix`, `win10`, `fonts_registry`, `emit_log_paths`, `module`, `copy_asset`, `env_set`, `progress`, `vcrun`, `dotnet`.
+**Step types:** `prepare_source`, `require_portable`, `prefix`, `winetricks`, `deploy_graphics`, `run_installer`, `apply_updates`, `stabilize_prefix`, `win10`, `fonts_registry`, `emit_log_paths`, `module`, `copy_asset`, `env_set`, `progress`, `vcrun`, `dotnet`.
 
 Tokens: `{repo}`, `{data_root}`, `{recipe}`, `~`.
 
 Exit **11** if a step fails (GUI may offer retry).
+
+### Updates — `recipe-updates.sh` / `recipe-iso.sh`
+
+See [UPDATES.md](UPDATES.md). Short:
+
+| Function | Role |
+|----------|------|
+| `recipe_updates::discover` / `apply_all` | Numbered patches, state `APPLIED_UPDATES` |
+| `recipe_iso::mount` / `ensure_accessible` | Mount large game ISOs (no full extract) |
 
 ---
 

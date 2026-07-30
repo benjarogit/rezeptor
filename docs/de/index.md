@@ -87,7 +87,7 @@ Offizielles **Handbuch** für Rezeptor — Windows-Software unter **Proton-GE** 
 
     ---
 
-    Installer, Portable, Steam+Fix, Trainer.
+    Installer, Portable, Steam+Fix, Updates, Trainer.
 
     [:octicons-arrow-right-24: Offline-Installer](INSTALLER.md)
 

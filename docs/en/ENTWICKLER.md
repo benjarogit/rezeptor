@@ -9,8 +9,9 @@
 | [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | Deep reference: fields, `install_steps`, `version_detect` |
 | [CORE-API.md](CORE-API.md) | Precise `core/` APIs (hooks, prefix, winetricks, …) |
 | [VALIDATE-REPAIR.md](VALIDATE-REPAIR.md) · [UNINSTALL.md](UNINSTALL.md) | Lifecycle contracts |
+| [UPDATES.md](UPDATES.md) | Post-install updates (numbered patches, GUI action) |
 | [TRUST.md](TRUST.md) · [LOG-PROTOCOL.md](LOG-PROTOCOL.md) · [LAUNCHER.md](LAUNCHER.md) | Manifest, logs, GUI |
-| **Pattern references** | [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) |
+| **Pattern references** | [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) · [UPDATES.md](UPDATES.md) |
 
 ---
 
@@ -72,6 +73,7 @@ In the GUI always **Source** and optionally **Target** — same labels for every
 | **Offline installer** | `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere` | Pack folder / setup / `.iso` | Data folder (prefix) | [INSTALLER.md](INSTALLER.md) |
 | **Portable** (folder/archive) | `wiso-steuer` | Folder or zip/7z/… | Install folder | [WISO.md](WISO.md) |
 | **Steam + online fix** | `house-of-ashes` | Fix BYOS; game in Steam | Game folder (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
+| **Offline game + updates** | `halo-campaign-evolved` | ISO / pack folder | Prefix | [UPDATES.md](UPDATES.md) |
 | **Single EXE / trainer** | `za4-trainer` | one `.exe` | often Steam subfolder | [TRAINER.md](TRAINER.md) |
 
 Templates: `recipes/_template/` (portable), `recipes/_template-installer/`, `recipes/_template-steam-game/`.  

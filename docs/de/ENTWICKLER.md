@@ -9,8 +9,9 @@
 | [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) | Tiefenreferenz: Felder, `install_steps`, `version_detect` |
 | [CORE-API.md](CORE-API.md) | Präzise `core/`-APIs (Hooks, Prefix, Winetricks, …) |
 | [VALIDATE-REPAIR.md](VALIDATE-REPAIR.md) · [UNINSTALL.md](UNINSTALL.md) | Lifecycle-Verträge |
+| [UPDATES.md](UPDATES.md) | Post-Install-Updates (nummerierte Patches, GUI-Aktion) |
 | [TRUST.md](TRUST.md) · [LOG-PROTOCOL.md](LOG-PROTOCOL.md) · [LAUNCHER.md](LAUNCHER.md) | Manifest, Logs, GUI |
-| **Muster-Referenzen** | [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) |
+| **Muster-Referenzen** | [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) · [UPDATES.md](UPDATES.md) |
 
 ---
 
@@ -72,6 +73,7 @@ In der GUI immer **Quelle** und ggf. **Ziel** — unabhängig vom App-Typ.
 | **Offline-Installer** | `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere` | Pack-Ordner / Setup / `.iso` | Datenordner (Prefix) | [INSTALLER.md](INSTALLER.md) |
 | **Portable** (Ordner/Archiv) | `wiso-steuer` | Ordner oder zip/7z/… | Installationsordner | [WISO.md](WISO.md) |
 | **Steam + Online-Fix** | `house-of-ashes` | Fix BYOS; Spiel in Steam | Spielordner (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
+| **Offline-Spiel + Updates** | `halo-campaign-evolved` | ISO / Pack-Ordner | Prefix | [UPDATES.md](UPDATES.md) |
 | **Einzel-EXE / Trainer** | `za4-trainer` | eine `.exe` | oft Steam-Unterordner | [TRAINER.md](TRAINER.md) |
 
 Vorlagen: `recipes/_template/` (Portable), `recipes/_template-installer/`, `recipes/_template-steam-game/`.  

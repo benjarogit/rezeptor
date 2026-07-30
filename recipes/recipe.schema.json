@@ -82,6 +82,19 @@
     "fix_kind": { "enum": ["none", "optional", "required"] },
     "source_formats": { "type": "string" },
     "source_label": { "type": "string" },
+    "source_refs": {
+      "type": "array",
+      "description": "Optionale Release-Index-Links (Allowlist: xrel.to) — kein Download von Rezeptor",
+      "items": {
+        "type": "object",
+        "required": ["url"],
+        "properties": {
+          "label": { "type": "string" },
+          "url": { "type": "string", "format": "uri" }
+        },
+        "additionalProperties": true
+      }
+    },
     "installer_dir": { "type": "string" },
     "deploy_mode": { "enum": ["copy", "link", "move"] },
     "target_default": { "type": "string" },
@@ -106,6 +119,10 @@
     "repair": { "type": "string" },
     "kill": { "type": "string" },
     "uninstall": { "type": "string" },
+    "update": {
+      "type": "string",
+      "description": "Hook für „Update anwenden“ — Pflicht wenn fix_kind != none"
+    },
     "install_steps": {
       "type": "array",
       "minItems": 1,
@@ -120,6 +137,7 @@
               "winetricks",
               "deploy_graphics",
               "run_installer",
+              "apply_updates",
               "stabilize_prefix",
               "win10",
               "fonts_registry",
@@ -150,6 +168,15 @@
         "required": ["source_kind"]
       },
       "then": { "required": ["installer_dir"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "fix_kind": { "enum": ["optional", "required"] }
+        },
+        "required": ["fix_kind"]
+      },
+      "then": { "required": ["update"] }
     }
   ],
   "additionalProperties": true

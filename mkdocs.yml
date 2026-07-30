@@ -119,6 +119,7 @@ plugins:
             Offline-Installer: Offline installer
             Portable (WISO): Portable (WISO)
             Steam + Online-Fix: Steam + online fix
+            Updates: Updates
             Trainer / Einzel-EXE: Trainer / single EXE
             Beitrag: Contribute
             Mitwirken: Contributing
@@ -147,6 +148,7 @@ nav:
       - Offline-Installer: INSTALLER.md
       - Portable (WISO): WISO.md
       - Steam + Online-Fix: STEAM-WRAPPER.md
+      - Updates: UPDATES.md
       - Trainer / Einzel-EXE: TRAINER.md
   - Beitrag:
       - Mitwirken: CONTRIBUTING.md

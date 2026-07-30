@@ -47,6 +47,7 @@ PLAIN_STEPS = {
     "winetricks",
     "deploy_graphics",
     "run_installer",
+    "apply_updates",
     "stabilize_prefix",
     "win10",
     "fonts_registry",
@@ -102,6 +103,8 @@ def validate_embedded(data: dict, label: str) -> list[str]:
     fk = data.get("fix_kind")
     if fk is not None and fk not in FIX_KINDS:
         errs.append(f"{label}: unbekannter fix_kind: {fk}")
+    if fk in ("optional", "required") and not data.get("update"):
+        errs.append(f"{label}: fix_kind={fk} erfordert Hook update: update.sh")
 
     if sk == "archive" and not data.get("source_formats"):
         errs.append(f"{label}: source_kind=archive erfordert source_formats")

@@ -330,13 +330,18 @@ def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
 
     if LOG_ROOT.is_dir():
         pattern = f"*{recipe_id}*" if recipe_id != "launcher" else "*.log"
-        logs = sorted(LOG_ROOT.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)[:3]
+        logs = sorted(LOG_ROOT.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)[:6]
         if not logs:
-            logs = sorted(LOG_ROOT.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True)[:3]
+            logs = sorted(LOG_ROOT.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True)[:6]
+        # Prefer *_errors.log first for diagnosis
+        logs = sorted(
+            logs,
+            key=lambda p: (0 if "_errors" in p.name else 1, -p.stat().st_mtime),
+        )
         for lf in logs:
             lines.append(f"--- {lf.name} ---")
             try:
-                raw = lf.read_text(encoding="utf-8", errors="replace").splitlines()[-60:]
+                raw = lf.read_text(encoding="utf-8", errors="replace").splitlines()[-120:]
                 cleaned: list[str] = []
                 for ln in raw:
                     h = humanize_log_line(ln) if ln.startswith("@") else ln

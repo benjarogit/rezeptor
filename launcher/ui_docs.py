@@ -40,6 +40,7 @@ DOC_CATALOG: list[tuple[str, str, str]] = [
     ("Muster: Offline-Installer", "Pattern: offline installer", "INSTALLER.md"),
     ("Muster: Portable (WISO)", "Pattern: portable (WISO)", "WISO.md"),
     ("Muster: Steam + Online-Fix", "Pattern: Steam + online fix", "STEAM-WRAPPER.md"),
+    ("Muster: Updates", "Pattern: updates", "UPDATES.md"),
     ("Muster: Einzel-EXE / Trainer", "Pattern: single EXE / trainer", "TRAINER.md"),
     ("Rezept-Katalog", "Recipe catalog", "CATALOG.md"),
     ("Internationalisierung", "Internationalization", "I18N.md"),

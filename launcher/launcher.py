@@ -155,8 +155,10 @@ from ui_recipe_wizard import (
 from ui_archive_passwords import ensure_archive_passwords
 from ui_source import (
     RecipeSourceDialog,
+    UpdateSourceDialog,
     attach_archive_password_files,
     needs_source_dialog,
+    recipe_supports_update,
     source_configure_label,
 )
 from recipe_categories import (
@@ -1580,6 +1582,12 @@ class RezeptorWindow(QMainWindow):
             self.run_kill,
             enabled=kill_ok and running and mode != "kill",
         )
+        update_ok = recipe_supports_update(info.meta) and installed_ish
+        _add(
+            t("menu.update"),
+            self.run_update,
+            enabled=update_ok,
+        )
 
         menu.addSeparator()
         if needs_source_dialog(info.meta):
@@ -2614,7 +2622,17 @@ class RezeptorWindow(QMainWindow):
         box.setIcon(QMessageBox.Icon.Critical)
         box.setWindowTitle(t("dialog.error"))
         box.setText(t("error.E_SCRIPT_FAILED", label=done_label, code=code))
-        box.setInformativeText(t("dialog.failure_info"))
+        info = t("dialog.failure_info")
+        err_path = getattr(self, "_last_error_log", "") or ""
+        log_path = getattr(self, "_last_recipe_log", "") or ""
+        extras: list[str] = []
+        if err_path:
+            extras.append(t("dialog.failure_error_log", path=err_path))
+        if log_path:
+            extras.append(t("dialog.failure_install_log", path=log_path))
+        if extras:
+            info = info + "\n\n" + "\n".join(extras)
+        box.setInformativeText(info)
         report = box.addButton(
             t("btn.report_github"), QMessageBox.ButtonRole.ActionRole
         )
@@ -3302,6 +3320,24 @@ class RezeptorWindow(QMainWindow):
             if not line or SPINNER_RE.match(line):
                 continue
 
+            if line == "RECIPE_ERROR_LOG_TAIL_BEGIN":
+                self._error_log_tail_mode = True
+                self._activity("warn", t("status.error_log_tail"))
+                continue
+            if line == "RECIPE_ERROR_LOG_TAIL_END":
+                self._error_log_tail_mode = False
+                continue
+            if getattr(self, "_error_log_tail_mode", False):
+                self._append_raw_log(line)
+                continue
+
+            if line.startswith("RECIPE_ERROR_LOG="):
+                self._last_error_log = line.split("=", 1)[-1].strip()
+                continue
+            if line.startswith("RECIPE_LOG_FILE="):
+                self._last_recipe_log = line.split("=", 1)[-1].strip()
+                continue
+
             # Strukturierte GUI-Tags → nur „Schritte“ (kein Duplikat in Live-Ausgabe)
             m = GUI_TAG_RE.match(line)
             if m:
@@ -3599,6 +3635,9 @@ class RezeptorWindow(QMainWindow):
         self.activity_list.clear()
         self._raw_log_buffer.clear()
         self._last_activity_key = None
+        self._last_error_log = ""
+        self._last_recipe_log = ""
+        self._error_log_tail_mode = False
         self._progress_pct = 0
         self._progress_anchor = 0
         self._progress_pulse = 0
@@ -4790,6 +4829,51 @@ class RezeptorWindow(QMainWindow):
             return
         self._maybe_wine_dialog_hint("repair")
         self._run_async(repair, done_label=t("action.repair"))
+
+    def run_update(self) -> None:
+        """Mehr → Update anwenden — nur Update-Quelle, kein Reinstall."""
+        rd = self._require_trusted_recipe()
+        if rd is None or not self._selected:
+            return
+        meta = self._selected.meta
+        if not recipe_supports_update(meta):
+            return
+        update_script = rd / (meta.get("update") or "update.sh")
+        if not update_script.is_file():
+            QMessageBox.warning(self, t("dialog.missing"), str(update_script))
+            return
+        if self._selected.state == RecipeState.NOT_INSTALLED:
+            QMessageBox.warning(
+                self, t("dialog.not_installed_title"), t("dialog.install_first")
+            )
+            return
+        dlg = UpdateSourceDialog(
+            self,
+            rid=self._selected.rid,
+            meta=meta,
+            root=Path.home(),
+            title=t("dialog.update_title"),
+        )
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        extra = dlg.build_env()
+        if not extra.get("RECIPE_UPDATE_ROOT"):
+            return
+        if QMessageBox.question(
+            self,
+            t("dialog.update_title"),
+            t("dialog.update_body"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            return
+        self._maybe_wine_dialog_hint("install")
+        self._run_async(
+            update_script,
+            extra,
+            t("action.update"),
+            op="update",
+            recipe_dir=rd,
+        )
 
     def _repair_message(self, rid: str) -> str:
         if rid == "wiso-steuer":

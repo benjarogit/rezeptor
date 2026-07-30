@@ -20,7 +20,7 @@
 | [TRUST.md](TRUST.md) | Katalog + Manifest |
 | [LAUNCHER.md](LAUNCHER.md) | GUI-Architektur |
 | [LOG-PROTOCOL.md](LOG-PROTOCOL.md) | `@step:` / Fehlercodes |
-| [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) | Muster |
+| [INSTALLER.md](INSTALLER.md) · [WISO.md](WISO.md) · [STEAM-WRAPPER.md](STEAM-WRAPPER.md) · [TRAINER.md](TRAINER.md) · [UPDATES.md](UPDATES.md) | Muster |
 | [I18N.md](I18N.md) · [BRAND.md](BRAND.md) · [CONTRIBUTING.md](CONTRIBUTING.md) | i18n, Marke, Mitwirken |
 
 Site-Startseite: [index.md](index.md) · Englisch: entsprechende Dateien unter `docs/en/`.

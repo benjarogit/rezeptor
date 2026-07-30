@@ -1,5 +1,19 @@
 {
   "recipes": {
+    "halo-campaign-evolved": {
+      "files": {
+        "info.de.md": "sha256:1056b46832828e205f61ab833085ca5129bb501f1ba4c605ecefe137ce0f637f",
+        "info.en.md": "sha256:9fab006179bc60b200893f449a013d437b60f844798354e5a052302342b4689a",
+        "install.sh": "sha256:aebc0bcdf72b4f5fb20a1d12145ad6b829183546e2b55e9566710b1be0323ca6",
+        "kill.sh": "sha256:e125bcef11ba5b9f71c164bf2fa78b62ef5ce0a7ddfb742a053d4c05f50c3fff",
+        "launch.sh": "sha256:472254a5e908e5452905a342c8fd9d27006b43573713b6948b1e41e6ae915d92",
+        "recipe.yml": "sha256:218841864db20b9a0cf214bfce52cfa6d27990e247e3b5484031810d5012f107",
+        "repair.sh": "sha256:d73ea62f1fc91e3c6eb7d0d97a433165ebd020d8c6c0477f9d96893631750281",
+        "uninstall.sh": "sha256:2d0370a331e4d235326da9e0daf10bd6f038b91c1fce79fe9e543b47ee42a869",
+        "update.sh": "sha256:08a20fc7d33a1fe9d69f21bcc35b6987a10a322bfaa770327da0368493a63aa1",
+        "validate.sh": "sha256:143d4f48398d048e6837ff45f98e6e871e7e10d84b51375fc539f0dd463d6c6f"
+      }
+    },
     "house-of-ashes": {
       "files": {
         "info.de.txt": "sha256:ed927c88c215af25b57fd52cf1f000889d44d62c5406216e41d1d3fb3a537fc4",

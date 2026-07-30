@@ -4,7 +4,7 @@
 # Jedes Hook-Skript:
 #   RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 #   source "$RECIPE_DIR/../../core/recipe-hooks.sh"
-#   recipe_hooks::load install   # launch | validate | repair | kill | minimal
+#   recipe_hooks::load install   # launch | validate | repair | kill | update | minimal
 set -eu
 (set -o pipefail 2>/dev/null) || true
 
@@ -75,12 +75,28 @@ recipe_hooks::load() {
             recipe_hooks::_source recipe-prefix.sh
             recipe_hooks::_source recipe-deploy.sh
             recipe_hooks::_source recipe-source.sh
+            recipe_hooks::_source recipe-iso.sh
             recipe_hooks::_source recipe-install.sh
+            recipe_hooks::_source recipe-updates.sh
             recipe_hooks::_source recipe-install-steps.sh
             recipe_hooks::_source recipe-winetricks.sh
             recipe_hooks::_source recipe-win10.sh
             recipe_hooks::_source recipe-vcrun.sh
             recipe_hooks::_source recipe-dotnet.sh
+            recipe_hooks::_source recipe-wine-silent.sh
+            recipe_hooks::wine_wrappers
+            recipe_hooks::force_prefix
+            export WINEARCH="${WINEARCH:-win64}"
+            ;;
+        update)
+            recipe_hooks::_source security.sh
+            recipe_hooks::_source env-file.sh
+            recipe_hooks::_source wine-runtime.sh
+            recipe_hooks::_source recipe-prefix.sh
+            recipe_hooks::_source recipe-source.sh
+            recipe_hooks::_source recipe-iso.sh
+            recipe_hooks::_source recipe-install.sh
+            recipe_hooks::_source recipe-updates.sh
             recipe_hooks::_source recipe-wine-silent.sh
             recipe_hooks::wine_wrappers
             recipe_hooks::force_prefix
@@ -118,7 +134,7 @@ recipe_hooks::load() {
             recipe_hooks::force_prefix
             ;;
         *)
-            recipe_hooks::die "Unbekanntes Profil: $profile (minimal|install|launch|validate|repair|kill)"
+            recipe_hooks::die "Unbekanntes Profil: $profile (minimal|install|launch|validate|repair|kill|update)"
             ;;
     esac
     recipe_hooks::load_app_module
@@ -144,7 +160,7 @@ recipe_hooks::load_app_module() {
             # Steam/Trainer/Portable brauchen keines (sonst: „Launch-Modul fehlt“).
             return 0
             ;;
-        install|repair)
+        install|repair|update)
             if [ -f "$CORE_DIR/$install_mod" ]; then
                 recipe_hooks::_source "$install_mod"
                 loaded=1
@@ -153,7 +169,8 @@ recipe_hooks::load_app_module() {
                 loaded=1
             fi
             # Optional when recipe.yml uses declarative install_steps only.
-            if [ "$loaded" -eq 0 ] && ! grep -qE '^install_steps:' "$RECIPE_YML" 2>/dev/null; then
+            if [ "$loaded" -eq 0 ] && [ "${RECIPE_HOOK_PROFILE:-}" != "update" ] \
+                && ! grep -qE '^install_steps:' "$RECIPE_YML" 2>/dev/null; then
                 recipe_hooks::die "Install-Modul fehlt: $install_mod oder $mod"
             fi
             ;;
@@ -226,6 +243,20 @@ recipe_hooks::log_setup() {
     LOG_FILE="$LOG_DIR/${prefix}_${TIMESTAMP_ISO}.log"
     ERROR_LOG="$LOG_DIR/${prefix}_${TIMESTAMP_ISO}_errors.log"
     export LOG_FILE ERROR_LOG LOG_DIR TIMESTAMP_ISO
+    : >"$LOG_FILE"
+    : >"$ERROR_LOG"
+    {
+        echo "=== Rezeptor session ==="
+        echo "time=$(date -Iseconds 2>/dev/null || date)"
+        echo "recipe=${RECIPE_ID:-} name=${RECIPE_NAME:-}"
+        echo "hook_profile=${RECIPE_HOOK_PROFILE:-}"
+        echo "data_root=${DATA_ROOT:-}"
+        echo "wineprefix=${WINEPREFIX:-}"
+        echo "session=${LAUNCHER_SESSION_ID:-}"
+        echo "host=$(uname -a 2>/dev/null || true)"
+        [ -f "${PROJECT_ROOT:-}/VERSION" ] && echo "rezeptor=$(tr -d '[:space:]' <"${PROJECT_ROOT}/VERSION")"
+        echo "========================"
+    } >>"$LOG_FILE"
     if type recipe_wine_silent::session_begin >/dev/null 2>&1 \
         && [ "${RECIPE_WINE_SILENT:-}" = "1" ]; then
         recipe_wine_silent::session_begin
@@ -237,9 +268,19 @@ recipe_hooks::log_err() {
     echo "[$(date '+%H:%M:%S')] ERROR: $*" | tee -a "${LOG_FILE:-/dev/stderr}" >> "${ERROR_LOG:-/dev/null}"
 }
 
+recipe_hooks::log_warn() {
+    echo "[$(date '+%H:%M:%S')] WARN: $*" | tee -a "${LOG_FILE:-/dev/stderr}" >> "${ERROR_LOG:-/dev/null}"
+}
+
 recipe_hooks::emit_log_paths() {
     echo "RECIPE_LOG_FILE=${LOG_FILE:-}"
     echo "RECIPE_ERROR_LOG=${ERROR_LOG:-}"
+    # GUI kann die Pfade anzeigen; Tail hilft bei Support ohne stille Adobe-Logs
+    if [ -n "${ERROR_LOG:-}" ] && [ -f "${ERROR_LOG}" ] && [ -s "${ERROR_LOG}" ]; then
+        echo "RECIPE_ERROR_LOG_TAIL_BEGIN"
+        tail -n 80 "$ERROR_LOG" 2>/dev/null || true
+        echo "RECIPE_ERROR_LOG_TAIL_END"
+    fi
 }
 
 recipe_hooks::run_exe_installer() {

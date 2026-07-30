@@ -54,6 +54,8 @@ Neue Logik **nicht** in Rezepten duplizieren — erst in `core/` zentralisieren.
 |-------|----------------|
 | `recipe-hooks.sh` | Hook-Einstieg, Profile, `purge_recipe_data` |
 | `recipe-install-steps.sh` | Deklarative `install_steps` |
+| `recipe-updates.sh` | Nummerierte Post-Install-Updates |
+| `recipe-iso.sh` | Spiel-ISO mounten (udisksctl) |
 | `recipe-prefix.sh` | Prefix anlegen/aktualisieren |
 | `recipe-winetricks.sh` | Winetricks unter Proton; Retry nur Exit 139 |
 | `recipe-win10.sh` | Windows-10-Version (Registry, kein winecfg) |

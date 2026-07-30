@@ -57,6 +57,7 @@ Die GUI setzt u. a.:
 | `LAUNCHER_SESSION_ID` | Session für Reports |
 | `RECIPE_DATA_ROOT` | Gewählter Datenort |
 | `RECIPE_INSTALLER_PATH` / `RECIPE_ARCHIVE_PATH` / `RECIPE_SOURCE_ROOT` | Quelle |
+| `RECIPE_UPDATE_ROOT` / `RECIPE_FIX_ROOT` | Update-/Fix-Quelle (Alias) |
 | `RECIPE_TARGET_DIR` / `RECIPE_DEPLOY_MODE` | Portable-Ziel |
 
 ## In-App-Doku
@@ -75,13 +76,14 @@ In `app_support.py`:
 
 Definiert in `log_context.py`, Texte unter `error.*` in Locales — siehe [I18N](I18N.md).
 
-## Install vs Reinstall vs Reparieren
+## Install vs Reinstall vs Reparieren vs Update
 
 | Aktion | Skript | Vertrag |
 |--------|--------|---------|
-| **Installieren** (erstes Mal) | `install.sh` | Volle `install_steps` |
+| **Installieren** (erstes Mal) | `install.sh` | Volle `install_steps` (optional `apply_updates`) |
 | **Neu installieren** (GUI, bereits installiert) | `install.sh` erneut | **Kein automatisches Löschen** — Rezept entscheidet Überschreiben; für sauberen Neustart **Deinstallieren** |
 | **Reparieren** | `repair.sh` | `validate.sh` → nur Lücken beheben → erneut validieren |
+| **Update anwenden** | `update.sh` | Nur Patches (`recipe_updates::apply_all`); siehe [UPDATES.md](UPDATES.md) |
 
 Reinstall ist **nicht** global idempotent: es gibt keinen zentralen Pre-Install-Purge. Rezepte mit Clean-Deploy müssen das in `install.sh` dokumentieren oder Deinstall verlangen.
 

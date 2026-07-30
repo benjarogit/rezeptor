@@ -35,6 +35,7 @@ Currently **7** official product recipes in **4** categories.
 | ID | Name | Description |
 |----|------|-------------|
 | `house-of-ashes` | House of Ashes | The Dark Pictures Anthology via Proton — Steam BYOS + online fix |
+| `halo-campaign-evolved` | Halo Campaign Evolved | Pack `Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos` — ISO + optional updates |
 | `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | FLiNG / Plus 14 trainer; start the game first, then launch from Rezeptor |
 
 Templates under `recipes/_template*` and entries under `recipes/community/` are **not** bundled product recipes.

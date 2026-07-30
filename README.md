@@ -64,7 +64,7 @@ Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`t
 ## Recipes
 
 <details>
-<summary><strong>Bundled official recipes</strong> (7 — click to expand)</summary>
+<summary><strong>Bundled official recipes</strong> (8 — click to expand)</summary>
 
 | ID | Name | Category | Notes |
 |----|------|----------|--------|
@@ -74,6 +74,7 @@ Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`t
 | `premiere` | Adobe Premiere Pro 2024 | Video | NVIDIA: CUDA via nvidia-libs |
 | `wiso-steuer` | WISO Steuer (Portable) | Finance | Portable under Proton-GE |
 | `house-of-ashes` | House of Ashes | Games | Steam BYOS + online fix |
+| `halo-campaign-evolved` | Halo Campaign Evolved | Games | MULTi13-ElAmigos pack + numbered updates |
 | `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | Games | Trainer; start the game first |
 
 </details>
@@ -89,7 +90,7 @@ Submit ideas via [Recipe Submission](https://github.com/benjarogit/rezeptor/issu
 
 ## Versioning
 
-Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current: **1.1.6**.
+Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current: **1.1.7**.
 
 ## Deutsch
 

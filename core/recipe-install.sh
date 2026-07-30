@@ -113,6 +113,18 @@ recipe_install::_expect_installer() {
     return 1
 }
 
+# Adobe ISOs werden extrahiert — Spiele-ISOs gemountet (kein 66 GiB-Extract).
+recipe_install::_use_iso_mount() {
+    local install_type="$1"
+    case "${RECIPE_ID:-}" in
+        photoshop|photoshop-m0nkrus|photoshop-m0nkrus-220|premiere) return 1 ;;
+    esac
+    case "$install_type" in
+        adobe_offline) return 1 ;;
+    esac
+    recipe_install::_expect_installer "$install_type"
+}
+
 recipe_install::_validate_install_type() {
     local install_type="$1"
     case "$install_type" in
@@ -217,6 +229,37 @@ recipe_install::prepare_source() {
             ;;
     esac
 
+    # Spiel-/Installer-ISO: Mount → Work-Root (Adobe bleibt beim Extract-Pfad)
+    if recipe_install::_use_iso_mount "$install_type"; then
+        local iso_cand=""
+        if [ -n "${installer:-}" ] && type recipe_iso::is_iso_file >/dev/null 2>&1 \
+            && recipe_iso::is_iso_file "$installer"; then
+            iso_cand="$installer"
+        elif [ -n "${installer:-}" ] && [[ "${installer,,}" == *.iso ]]; then
+            iso_cand="$installer"
+        elif [ -n "$work_root" ] && [ -d "$work_root" ]; then
+            if ! recipe_deploy::detect_installer "$work_root" >/dev/null 2>&1; then
+                if type recipe_iso::find_in_dir >/dev/null 2>&1; then
+                    iso_cand="$(recipe_iso::find_in_dir "$work_root" 2>/dev/null || true)"
+                fi
+            fi
+        fi
+        if [ -n "$iso_cand" ]; then
+            if ! type recipe_iso::mount >/dev/null 2>&1; then
+                # shellcheck source=/dev/null
+                source "${CORE_DIR:-}/recipe-iso.sh" 2>/dev/null || true
+            fi
+            if type recipe_iso::mount >/dev/null 2>&1; then
+                work_root="$(recipe_iso::mount "$iso_cand")" || return 1
+                installer=""
+                resolved="installer_folder"
+            else
+                recipe_install::_err "recipe-iso.sh nicht geladen — ISO-Mount unmöglich"
+                return 1
+            fi
+        fi
+    fi
+
     if [ "$resolved" = "installer_folder" ]; then
         recipe_install::_step "Installer im Ordner suchen"
         installer="$(recipe_deploy::detect_installer "$work_root")" || {
@@ -253,7 +296,7 @@ recipe_install::prepare_source() {
 }
 
 recipe_install::apply_fix() {
-    local fix="${1:-${RECIPE_FIX_ROOT:-}}"
+    local fix="${1:-${RECIPE_FIX_ROOT:-${RECIPE_UPDATE_ROOT:-}}}"
     local log="${2:-${LOG_FILE:-/dev/null}}"
     local wine_cmd="${3:-wine}"
 
@@ -262,6 +305,23 @@ recipe_install::apply_fix() {
         recipe_install::_err "Fix-Pfad existiert nicht: $fix"
         return 1
     }
+
+    # Geordnete Updates (nummerierte Pakete) — bevorzugter Pfad
+    if type recipe_updates::apply_all >/dev/null 2>&1; then
+        local _saved_upd="${RECIPE_UPDATE_ROOT:-}" _saved_fix="${RECIPE_FIX_ROOT:-}"
+        export RECIPE_UPDATE_ROOT="$fix"
+        export RECIPE_FIX_ROOT="$fix"
+        # Nur diesen Root scannen (keine doppelte Source-Entdeckung)
+        local _saved_src="${RECIPE_SOURCE_ROOT:-}" _saved_work="${RECIPE_WORK_ROOT:-}"
+        unset RECIPE_SOURCE_ROOT RECIPE_WORK_ROOT 2>/dev/null || true
+        recipe_updates::apply_all "$log" "$wine_cmd"
+        local rc=$?
+        [ -n "$_saved_upd" ] && export RECIPE_UPDATE_ROOT="$_saved_upd" || unset RECIPE_UPDATE_ROOT
+        [ -n "$_saved_fix" ] && export RECIPE_FIX_ROOT="$_saved_fix" || unset RECIPE_FIX_ROOT
+        [ -n "$_saved_src" ] && export RECIPE_SOURCE_ROOT="$_saved_src" || true
+        [ -n "$_saved_work" ] && export RECIPE_WORK_ROOT="$_saved_work" || true
+        return "$rc"
+    fi
 
     if [ -f "$fix" ] && [[ "${fix,,}" == *.exe ]]; then
         recipe_install::_step "Patch-Installer: $(basename "$fix")"

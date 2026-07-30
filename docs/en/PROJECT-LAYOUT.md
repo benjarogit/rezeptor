@@ -52,6 +52,8 @@ Do **not** duplicate new logic in recipes — centralize in `core/` first.
 |--------|----------------|
 | `recipe-hooks.sh` | Hook entry, profiles, `purge_recipe_data` |
 | `recipe-install-steps.sh` | Declarative `install_steps` |
+| `recipe-updates.sh` | Numbered post-install updates |
+| `recipe-iso.sh` | Mount game ISOs (udisksctl) |
 | `recipe-prefix.sh` | Create/update prefix |
 | `recipe-winetricks.sh` | Winetricks under Proton; retry only exit 139 |
 | `recipe-win10.sh` | Windows 10 version (registry, no winecfg) |

@@ -51,6 +51,7 @@ install_steps:
       src: assets/foo.sh
       dest: "{data_root}/bin/foo.sh"
   - run_installer      # installer_offline
+  - apply_updates      # optional numbered patches (see UPDATES.md)
   - win10
   - fonts_registry
 ```
@@ -63,6 +64,7 @@ install_steps:
 | `winetricks` | packages (yml or list); `vcrun*`/`dotnet*`/`win10` special-cased |
 | `deploy_graphics` | Proton graphics DLLs |
 | `run_installer` | Setup.exe |
+| `apply_updates` | Numbered updates (`recipe_updates::apply_all`) — see [UPDATES.md](UPDATES.md) |
 | `module` | `recipe_*::function` from core |
 | `copy_asset` | deploy a file |
 | `env_set` | key in portable.env / file |
@@ -74,7 +76,7 @@ Parser: `scripts/recipe-yaml-read.py` · Schema: `scripts/recipe-schema-check.py
 
 ## Required `recipe.yml` fields
 
-`id`, `name`, `icon`, `data_root`, `runtime`, `install_type`, `source_kind`, `fix_kind`, hooks (**including `uninstall`**), **`install_steps`**.
+`id`, `name`, `icon`, `data_root`, `runtime`, `install_type`, `source_kind`, `fix_kind`, hooks (**including `uninstall`**; when `fix_kind != none` also **`update`**), **`install_steps`**.
 
 ### Icon (required)
 
@@ -152,6 +154,18 @@ source_hints:
 Shown in the source dialog and recipe overview. **One recipe = one tested pack** — put different builds in separate recipes with their own `source_hints` instead of mixing guarantees.
 
 Lint: URL/magnet in `source_hints` → **ERROR**.
+
+### Release index (`source_refs`)
+
+Optional: link to an **allowed** release index (currently only `xrel.to`) — shown in the recipe view, **not** a download from Rezeptor.
+
+```yaml
+source_refs:
+  - label: "xrel (search)"
+    url: "https://www.xrel.to/search.html?xrel_search_query=Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos"
+```
+
+Lint: other hosts → **ERROR**.
 
 ### Info layout (`info.de.txt` / `info.en.txt`)
 

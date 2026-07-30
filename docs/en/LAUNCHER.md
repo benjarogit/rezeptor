@@ -57,6 +57,7 @@ The GUI sets among others:
 | `LAUNCHER_SESSION_ID` | Session for reports |
 | `RECIPE_DATA_ROOT` | Chosen data location |
 | `RECIPE_INSTALLER_PATH` / `RECIPE_ARCHIVE_PATH` / `RECIPE_SOURCE_ROOT` | Source |
+| `RECIPE_UPDATE_ROOT` / `RECIPE_FIX_ROOT` | Update/fix source (alias) |
 | `RECIPE_TARGET_DIR` / `RECIPE_DEPLOY_MODE` | Portable target |
 
 ## In-app docs
@@ -75,13 +76,14 @@ In `app_support.py`:
 
 Defined in `log_context.py`, strings under `error.*` in locales — see [I18N](I18N.md).
 
-## Install vs reinstall vs repair
+## Install vs reinstall vs repair vs update
 
 | Action | Script | Contract |
 |--------|--------|----------|
-| **Install** (first time) | `install.sh` | Full `install_steps` |
+| **Install** (first time) | `install.sh` | Full `install_steps` (optional `apply_updates`) |
 | **Reinstall** (GUI, already installed) | `install.sh` again | **No automatic wipe** — recipe decides what to overwrite; use **Uninstall** for a clean slate |
 | **Repair** | `repair.sh` | `validate.sh` → fix gaps only → validate again |
+| **Apply update** | `update.sh` | Patches only (`recipe_updates::apply_all`); see [UPDATES.md](UPDATES.md) |
 
 Reinstall is **not** idempotent by design: there is no global pre-install purge. Recipes that need a clean deploy must document it in `install.sh` or require uninstall first.
 

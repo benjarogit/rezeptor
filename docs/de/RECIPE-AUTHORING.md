@@ -51,6 +51,7 @@ install_steps:
       src: assets/foo.sh
       dest: "{data_root}/bin/foo.sh"
   - run_installer      # installer_offline
+  - apply_updates      # optionale nummerierte Patches (siehe UPDATES.md)
   - win10
   - fonts_registry
 ```
@@ -63,6 +64,7 @@ install_steps:
 | `winetricks` | Pakete (yml oder Liste); `vcrun*`/`dotnet*`/`win10` speziell |
 | `deploy_graphics` | Proton-Grafik-DLLs |
 | `run_installer` | Setup.exe |
+| `apply_updates` | Nummerierte Updates (`recipe_updates::apply_all`) — siehe [UPDATES.md](UPDATES.md) |
 | `module` | `recipe_*::funktion` aus Core |
 | `copy_asset` | Datei deployen |
 | `env_set` | Key in portable.env / Datei |
@@ -74,7 +76,7 @@ Parser: `scripts/recipe-yaml-read.py` · Schema: `scripts/recipe-schema-check.py
 
 ## `recipe.yml` Pflicht
 
-`id`, `name`, `icon`, `data_root`, `runtime`, `install_type`, `source_kind`, `fix_kind`, Hooks (**inkl. `uninstall`**), **`install_steps`**.
+`id`, `name`, `icon`, `data_root`, `runtime`, `install_type`, `source_kind`, `fix_kind`, Hooks (**inkl. `uninstall`**; bei `fix_kind != none` auch **`update`**), **`install_steps`**.
 
 ### Icon (Pflicht)
 
@@ -152,6 +154,18 @@ source_hints:
 Anzeige in Quellen-Dialog und Rezept-Übersicht. **Ein Rezept = ein getestetes Pack** — abweichende Builds lieber als eigenes Rezept mit eigenen `source_hints`, statt mehrere Garantien zu mischen.
 
 Lint: URL/Magnet in `source_hints` → **ERROR**.
+
+### Release-Index (`source_refs`)
+
+Optional: Link zu einem **erlaubten** Release-Index (aktuell nur `xrel.to`) — Anzeige in der Rezept-Ansicht, **kein** Download von Rezeptor.
+
+```yaml
+source_refs:
+  - label: "xrel (Suche)"
+    url: "https://www.xrel.to/search.html?xrel_search_query=Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos"
+```
+
+Lint: andere Hosts → **ERROR**. Details: [UPDATES.md](UPDATES.md) / Pack-Identität wie bei Photoshop.
 
 ### Info-Layout (`info.de.txt` / `info.en.txt`)
 

@@ -207,6 +207,15 @@ recipe_install_steps::step() {
             output::progress 80 "Installer ausführen"
             recipe_hooks::run_exe_installer || return 1
             ;;
+        apply_updates)
+            output::progress 90 "Updates anwenden"
+            if type recipe_updates::apply_all >/dev/null 2>&1; then
+                recipe_updates::apply_all "${LOG_FILE:-/dev/null}" wine || return 1
+            else
+                recipe_hooks::_source recipe-updates.sh
+                recipe_updates::apply_all "${LOG_FILE:-/dev/null}" wine || return 1
+            fi
+            ;;
         stabilize_prefix)
             output::progress 74 "Prefix stabilisieren"
             recipe_winetricks::stabilize_prefix
@@ -303,10 +312,12 @@ recipe_install_steps::run() {
     if [ "$rc" -ne 0 ]; then
         output::error "Installation unvollständig — Rezeptor → Reparieren"
         recipe_hooks::emit_log_paths
+        type recipe_iso::umount_recorded >/dev/null 2>&1 && recipe_iso::umount_recorded 2>/dev/null || true
         return 11
     fi
     output::success "${RECIPE_NAME:-Rezept} installiert"
     output::progress 100 "Fertig"
     recipe_hooks::emit_log_paths
+    type recipe_iso::umount_recorded >/dev/null 2>&1 && recipe_iso::umount_recorded 2>/dev/null || true
     return 0
 }

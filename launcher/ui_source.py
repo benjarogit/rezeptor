@@ -1030,11 +1030,15 @@ class RecipeSourceDialog(QDialog):
                 "source.pick_folder"
             )
             start_dir = dialog_start_dir(start)
-            # Adobe: Ordner ODER .iso — reiner Ordner-Dialog kann keine ISO wählen.
-            if is_adobe_offline_recipe(self._rid):
+            # Adobe / Spiel-ISO: Ordner ODER .iso
+            if allows_iso_folder_source(self._meta, self._rid):
                 box = QMessageBox(self)
                 box.setWindowTitle(title)
-                box.setText(t("source.adobe_pick_kind"))
+                box.setText(
+                    t("source.adobe_pick_kind")
+                    if is_adobe_offline_recipe(self._rid)
+                    else t("source.game_pick_kind")
+                )
                 iso_btn = box.addButton(
                     t("source.pick_iso"), QMessageBox.ButtonRole.AcceptRole
                 )
@@ -1045,28 +1049,36 @@ class RecipeSourceDialog(QDialog):
                 box.exec()
                 clicked = box.clickedButton()
                 if clicked is iso_btn:
-                    iso = pick_open_file(
-                        self, title, start_dir, t("source.adobe_filter")
+                    filt = (
+                        t("source.adobe_filter")
+                        if is_adobe_offline_recipe(self._rid)
+                        else t("source.game_filter")
                     )
+                    iso = pick_open_file(self, title, start_dir, filt)
                     if iso:
-                        normalized = normalize_folder_source(
-                            self._rid, iso, version_hint=self._version_guaranteed
-                        )
+                        if is_adobe_offline_recipe(self._rid):
+                            normalized = normalize_folder_source(
+                                self._rid, iso, version_hint=self._version_guaranteed
+                            )
+                        else:
+                            normalized = normalize_user_path(iso, self._root)
                         self.primary_edit.setText(normalized)
                         self._update_version_hint(normalized)
                 elif clicked is dir_btn:
                     d = pick_directory(self, title, start_dir)
                     if d:
-                        # Pack-Root sichtbar lassen (ISO wird in build_env/normalize aufgelöst)
                         pd = Path(d)
-                        if _looks_like_adobe_pack_root(
-                            pd
-                        ) or _looks_like_adobe_iso_only_pack(pd):
+                        if is_adobe_offline_recipe(self._rid) and (
+                            _looks_like_adobe_pack_root(pd)
+                            or _looks_like_adobe_iso_only_pack(pd)
+                        ):
                             shown = str(pd.resolve())
-                        else:
+                        elif is_adobe_offline_recipe(self._rid):
                             shown = normalize_folder_source(
                                 self._rid, d, version_hint=self._version_guaranteed
                             )
+                        else:
+                            shown = normalize_user_path(d, self._root)
                         self.primary_edit.setText(shown)
                         self._update_version_hint(shown)
                 self._fit_to_content()
@@ -1117,13 +1129,30 @@ class RecipeSourceDialog(QDialog):
         self._fit_to_content()
 
     def _pick_fix(self) -> None:
-        """Datei wählen — bei Abbruch kein zweiter Ordner-Dialog (wirkt wie „nicht angenommen“)."""
+        """Update/Fix: Ordner oder .exe (nummerierte Update-Pakete)."""
         start = self.fix_edit.text() or str(documents_dir())
-        exe = pick_open_file(
-            self, t("source.pick_fix_exe"), start, t("source.exe_filter")
+        box = QMessageBox(self)
+        box.setWindowTitle(t("source.fix"))
+        box.setText(t("source.pick_update_kind"))
+        dir_btn = box.addButton(
+            t("source.pick_update_folder"), QMessageBox.ButtonRole.AcceptRole
         )
-        if exe:
-            self.fix_edit.setText(exe)
+        file_btn = box.addButton(
+            t("source.pick_fix_exe"), QMessageBox.ButtonRole.AcceptRole
+        )
+        box.addButton(QMessageBox.StandardButton.Cancel)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is dir_btn:
+            d = pick_directory(self, t("source.pick_fix_dir"), start)
+            if d:
+                self.fix_edit.setText(d)
+        elif clicked is file_btn:
+            exe = pick_open_file(
+                self, t("source.pick_fix_exe"), start, t("source.exe_filter")
+            )
+            if exe:
+                self.fix_edit.setText(exe)
         self._fit_to_content()
 
     @staticmethod
@@ -1271,7 +1300,7 @@ class RecipeSourceDialog(QDialog):
             if not self._pick_archive:
                 pp = Path(primary)
                 adobe_iso_ok = (
-                    is_adobe_offline_recipe(self._rid)
+                    allows_iso_folder_source(self._meta, self._rid)
                     and pp.is_file()
                     and pp.suffix.lower() == ".iso"
                 )
@@ -1435,7 +1464,7 @@ class RecipeSourceDialog(QDialog):
                 if pack:
                     extra["RECIPE_PACK_ROOT"] = pack
                 if root.lower().endswith(".iso"):
-                    # Adobe Offline-ISO: resolve_installer_dir entpackt und findet Set-up.exe
+                    # ISO: Adobe extrahiert; Spiele mounten in prepare_source
                     extra["RECIPE_INSTALLER_PATH"] = root
                 else:
                     # Pack-Ordner ohne Normierung auf ISO, oder Set-up-Baum
@@ -1447,12 +1476,33 @@ class RecipeSourceDialog(QDialog):
                             extra["RECIPE_INSTALLER_PATH"] = str(iso)
                         extra["RECIPE_SOURCE_ROOT"] = root
                     else:
+                        # Spiel-Pack mit .iso im Ordner → Source-Root (Mount in prepare_source)
                         extra["RECIPE_SOURCE_ROOT"] = root
+                        if (
+                            not is_adobe_offline_recipe(self._rid)
+                            and allows_iso_folder_source(self._meta, self._rid)
+                        ):
+                            iso = None
+                            try:
+                                for c in sorted(Path(root).glob("*.iso")) + sorted(
+                                    Path(root).glob("*.ISO")
+                                ):
+                                    if c.is_file():
+                                        iso = c
+                                        break
+                            except OSError:
+                                iso = None
+                            if iso is not None and not (
+                                Path(root) / "setup.exe"
+                            ).is_file() and not (Path(root) / "Setup.exe").is_file():
+                                # Keep SOURCE_ROOT; prepare_source mounts ISO inside
+                                pass
                     if self._rid == "wiso-steuer":
                         extra["WISO_PORTABLE_ROOT"] = root
             fix = self.fix_path()
             if fix:
                 extra["RECIPE_FIX_ROOT"] = fix
+                extra["RECIPE_UPDATE_ROOT"] = fix
                 if self._rid == "wiso-steuer":
                     extra["WISO_FIX_ROOT"] = fix
             return extra
@@ -1469,6 +1519,27 @@ class RecipeSourceDialog(QDialog):
         return extra
 
 
+def allows_iso_folder_source(meta: dict[str, str], rid: str = "") -> bool:
+    """Folder source may also pick a .iso (Adobe or games with iso in source_formats)."""
+    if is_adobe_offline_recipe(rid or meta.get("id", "")):
+        return True
+    fmts = (meta.get("source_formats") or "").lower()
+    return "iso" in {p.strip() for p in fmts.replace(";", ",").split(",") if p.strip()}
+
+
+def recipe_supports_update(meta: dict[str, str]) -> bool:
+    """fix_kind != none and update.sh hook present."""
+    if (meta.get("fix_kind") or "none") == "none":
+        return False
+    upd = (meta.get("update") or "").strip()
+    if not upd:
+        return False
+    d = (meta.get("_dir") or "").strip()
+    if not d:
+        return True
+    return (Path(d) / upd).is_file()
+
+
 def needs_source_dialog(meta: dict[str, str]) -> bool:
     return meta.get("source_kind", "") not in ("", "fixed_path")
 
@@ -1477,3 +1548,116 @@ def source_configure_label(meta: dict[str, str]) -> str:
     """One clear menu label. Long recipe ``source_label`` stays in the dialog only."""
     _ = meta  # kind-specific wording lives in recipe.yml → dialog fields
     return t("source.configure")
+
+
+class UpdateSourceDialog(QDialog):
+    """Update-only source picker (Mehr → Update anwenden)."""
+
+    def __init__(
+        self,
+        parent: QWidget | None,
+        *,
+        rid: str,
+        meta: dict[str, str],
+        root: Path,
+        title: str = "",
+    ) -> None:
+        super().__init__(parent)
+        self._rid = rid
+        self._meta = meta
+        self._root = root
+        self._result: str = ""
+        self.setWindowTitle(title or t("source.update_title"))
+        self.setMinimumWidth(520)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(8)
+        layout.setContentsMargins(12, 12, 12, 12)
+
+        intro = QLabel(t("source.update_label"))
+        intro.setObjectName("muted")
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+
+        row = QHBoxLayout()
+        self.path_edit = QLineEdit()
+        self.path_edit.setPlaceholderText(t("source.update_label"))
+        pick = QPushButton(t("source.pick_update"))
+        pick.clicked.connect(self._pick)
+        clear = QPushButton(t("source.clear"))
+        clear.clicked.connect(self.path_edit.clear)
+        row.addWidget(self.path_edit, stretch=1)
+        row.addWidget(pick)
+        row.addWidget(clear)
+        layout.addLayout(row)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self._on_accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+    def _pick(self) -> None:
+        start = self.path_edit.text() or str(documents_dir())
+        box = QMessageBox(self)
+        box.setWindowTitle(t("source.update_title"))
+        box.setText(t("source.pick_update_kind"))
+        dir_btn = box.addButton(
+            t("source.pick_update_folder"), QMessageBox.ButtonRole.AcceptRole
+        )
+        file_btn = box.addButton(
+            t("source.pick_update_file"), QMessageBox.ButtonRole.AcceptRole
+        )
+        box.addButton(QMessageBox.StandardButton.Cancel)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked is dir_btn:
+            d = pick_directory(self, t("source.pick_update_folder"), start)
+            if d:
+                self.path_edit.setText(d)
+        elif clicked is file_btn:
+            filt = (
+                f"{t('source.file_filter_label')} "
+                "(*.exe *.iso *.zip *.7z *.rar *.tar.gz);;"
+                f"{t('source.all_files')}"
+            )
+            f = pick_open_file(self, t("source.pick_update_file"), start, filt)
+            if f:
+                self.path_edit.setText(f)
+
+    def _on_accept(self) -> None:
+        raw = self.path_edit.text().strip()
+        if not raw:
+            QMessageBox.warning(self, t("dialog.missing"), t("source.update_need"))
+            return
+        path = normalize_user_path(raw, self._root)
+        p = Path(path)
+        if not p.exists():
+            QMessageBox.warning(
+                self,
+                t("source.folder_missing_title"),
+                t("source.need_folder", path=path),
+            )
+            return
+        self._result = path
+        self.accept()
+
+    def update_path(self) -> str:
+        return self._result
+
+    def build_env(self) -> dict[str, str]:
+        path = self.update_path()
+        if not path:
+            return {}
+        extra = {
+            "RECIPE_UPDATE_ROOT": path,
+            "RECIPE_FIX_ROOT": path,
+        }
+        if Path(path).is_file() and path.lower().endswith(
+            (".zip", ".7z", ".rar", ".tar.gz", ".tgz")
+        ):
+            # Archive: install path uses RECIPE_ARCHIVE for extract elsewhere —
+            # update hook expects a root; leave as path for apply to treat as file/exe.
+            pass
+        return extra

@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
 
 from i18n import t
 from ui_window import confirm_unsaved_changes
-from version_detect import load_recipe_mapping, source_hints_list
+from version_detect import load_recipe_mapping, source_hints_list, source_refs_list
 
 HOOK_NAMES = (
     "install.sh",
@@ -305,6 +305,29 @@ class RecipeViewDialog(QDialog):
                 row.setWordWrap(True)
                 lay.addWidget(row)
             note = QLabel(t("recipe_view.source_hints_note"))
+            note.setObjectName("muted")
+            note.setWordWrap(True)
+            lay.addWidget(note)
+
+        refs = source_refs_list(self._data)
+        if refs:
+            lay.addWidget(QLabel(t("recipe_view.source_refs")))
+            for ref in refs:
+                label = ref.get("label") or "ref"
+                url = ref.get("url") or ""
+                link = QLabel(
+                    f'• <a href="{url}">{label}</a>'
+                    if url
+                    else f"• {label}"
+                )
+                link.setObjectName("muted")
+                link.setWordWrap(True)
+                link.setOpenExternalLinks(True)
+                link.setTextInteractionFlags(
+                    Qt.TextInteractionFlag.TextBrowserInteraction
+                )
+                lay.addWidget(link)
+            note = QLabel(t("recipe_view.source_refs_note"))
             note.setObjectName("muted")
             note.setWordWrap(True)
             lay.addWidget(note)

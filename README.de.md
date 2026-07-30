@@ -64,7 +64,7 @@ Oder ein **[Release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz
 ## Rezepte
 
 <details>
-<summary><strong>Mitgelieferte offizielle Rezepte</strong> (7 — zum Aufklappen)</summary>
+<summary><strong>Mitgelieferte offizielle Rezepte</strong> (8 — zum Aufklappen)</summary>
 
 | ID | Name | Kategorie | Hinweis |
 |----|------|-----------|---------|
@@ -74,6 +74,7 @@ Oder ein **[Release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz
 | `premiere` | Adobe Premiere Pro 2024 | Video & Schnitt | NVIDIA: CUDA via nvidia-libs |
 | `wiso-steuer` | WISO Steuer (Portable) | Finanzen & Steuer | Portable unter Proton-GE |
 | `house-of-ashes` | House of Ashes | Spiele | Steam BYOS + Online-Fix |
+| `halo-campaign-evolved` | Halo Campaign Evolved | Spiele | Pack MULTi13-ElAmigos + nummerierte Updates |
 | `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | Spiele | Trainer; Spiel zuerst starten |
 
 </details>
@@ -89,7 +90,7 @@ Ideen einreichen über [Recipe Submission](https://github.com/benjarogit/rezepto
 
 ## Versionierung
 
-Releases folgen **SemVer** (`MAJOR.MINOR.PATCH`). Aktuell: **1.1.6**.
+Releases folgen **SemVer** (`MAJOR.MINOR.PATCH`). Aktuell: **1.1.7**.
 
 ## English
 

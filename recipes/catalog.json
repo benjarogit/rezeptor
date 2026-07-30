@@ -69,6 +69,18 @@
       }
     },
     {
+      "id": "halo-campaign-evolved",
+      "name": "Halo Campaign Evolved",
+      "category": "Spiele",
+      "trust": "official",
+      "path": "halo-campaign-evolved",
+      "min_app_version": "1.1.7",
+      "summary": {
+        "de": "Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos unter Proton-GE — ISO mounten, Setup, optionale Updates.",
+        "en": "Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos on Proton-GE — mount ISO, setup, optional updates."
+      }
+    },
+    {
       "id": "za4-trainer",
       "name": "Zombie Army 4 — Plus 14 Trainer",
       "category": "Spiele",

@@ -30,6 +30,7 @@ _SKIP_COMPLEX_KEYS = frozenset(
         "desktop",
         "shortcuts",
         "options",
+        "source_refs",
     }
 )
 
