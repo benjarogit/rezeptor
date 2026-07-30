@@ -167,7 +167,9 @@ source_refs:
 
 Lint: andere Hosts → **ERROR**. Details: [UPDATES.md](UPDATES.md) / Pack-Identität wie bei Photoshop.
 
-### Info-Layout (`info.de.txt` / `info.en.txt`)
+### Info-Layout (`info.de.txt` / `info.en.txt` oder `.md`)
+
+GUI-Übersicht: **Pflicht** mindestens `info.de.txt` oder `info.de.md` (EN empfohlen). Markdown-Lite (`#`, `##`, `**fett**`) wird gerendert.
 
 ```
 # <Titel>

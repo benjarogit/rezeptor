@@ -167,7 +167,9 @@ source_refs:
 
 Lint: other hosts → **ERROR**.
 
-### Info layout (`info.de.txt` / `info.en.txt`)
+### Info layout (`info.de.txt` / `info.en.txt` or `.md`)
+
+GUI overview: **required** at least `info.de.txt` or `info.de.md` (EN recommended). Markdown-lite (`#`, `##`, `**bold**`) is rendered.
 
 ```
 # <Title>

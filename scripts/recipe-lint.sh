@@ -149,6 +149,14 @@ lint_recipe_dir() {
         fi
     fi
 
+    # Übersichtstext Pflicht (GUI „Keine Rezept-Beschreibung“ vermeiden)
+    if [ ! -f "$dir/info.de.txt" ] && [ ! -f "$dir/info.de.md" ]; then
+        lint_err "$base: info.de.txt oder info.de.md fehlt (Rezept-Beschreibung Pflicht)"
+    fi
+    if [ ! -f "$dir/info.en.txt" ] && [ ! -f "$dir/info.en.md" ]; then
+        lint_warn "$base: info.en.txt oder info.en.md fehlt (EN-Übersicht)"
+    fi
+
     # source_hints: Suchbegriffe / Pack-Titel — keine URLs / Magnet-Links
     if grep -qE '^source_hints:' "$yml" 2>/dev/null; then
         _sh_rc=0

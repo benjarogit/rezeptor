@@ -614,15 +614,20 @@ def recipe_icon(meta: dict[str, str]) -> QIcon:
 
 
 def recipe_info_text(rid: str, recipe_dir: Path) -> str:
+    """Load recipe overview text (info.<locale>.txt|.md, then en/de fallbacks)."""
     locale = get_locale()
-    candidates = [
-        f"info.{locale}.txt",
-        "info.en.txt",
-        "info.de.txt",
-        "info.txt",
-        f"{rid}.info.de.txt",
+    # Locale first, then en, then de — .txt and .md both allowed (Halo uses .md).
+    stems = [
+        f"info.{locale}",
+        "info.en",
+        "info.de",
+        "info",
+        f"{rid}.info.de",
     ]
-    # Prefer locale, then en, then de
+    candidates: list[str] = []
+    for stem in stems:
+        candidates.append(f"{stem}.txt")
+        candidates.append(f"{stem}.md")
     seen: set[str] = set()
     for name in candidates:
         if name in seen:
