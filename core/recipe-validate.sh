@@ -5,10 +5,18 @@ recipe_validate::ok() { echo "OK: $*"; }
 recipe_validate::fail() { echo "FAIL: $*" >&2; }
 recipe_validate::warn() { echo "WARN: $*"; }
 
-recipe_validate::msxml_is_native() {
+# Wine schreibt "Wine builtin DLL" in den DOS-Stub jeder eigenen PE-DLL.
+# `file` meldet "WINE (DLL)" erst ab 5.46 — Ubuntu 24.04 hat 5.45 und hält dort
+# jede Builtin-DLL für nativ. Deshalb Marker zuerst, `file` nur als Zusatz.
+recipe_validate::dll_is_wine_builtin() {
     local dll="$1"
-    [ -f "$dll" ] && file "$dll" 2>/dev/null | grep -q 'MS Windows' \
-        && ! file "$dll" 2>/dev/null | grep -q 'WINE (DLL)'
+    [ -f "$dll" ] || return 1
+    head -c 4096 "$dll" 2>/dev/null | grep -qa 'Wine builtin DLL' && return 0
+    file "$dll" 2>/dev/null | grep -q 'WINE (DLL)'
+}
+
+recipe_validate::msxml_is_native() {
+    recipe_validate::native_pe "$1"
 }
 
 recipe_validate::prefix_initialized() {
@@ -39,10 +47,12 @@ recipe_validate::windows_version() {
         || grep -q "CurrentVersion\"=\"${ver}\"" "$prefix/system.reg" 2>/dev/null
 }
 
+# Im Zweifel "nicht nativ" — dann wird einmal zu viel installiert statt zu wenig.
 recipe_validate::native_pe() {
     local dll="$1"
-    [ -f "$dll" ] && file "$dll" 2>/dev/null | grep -q 'PE32' \
-        && ! file "$dll" 2>/dev/null | grep -q 'WINE (DLL)'
+    [ -f "$dll" ] || return 1
+    recipe_validate::dll_is_wine_builtin "$dll" && return 1
+    head -c 2 "$dll" 2>/dev/null | grep -qa 'MZ'
 }
 
 recipe_validate::vcrun_dll_ok() {

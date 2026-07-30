@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Wine-Mono / .NET — zuerst still per msiexec; bei Dialog: User klickt Installieren.
 
+if ! type recipe_validate::dll_is_wine_builtin >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "$(dirname "${BASH_SOURCE[0]}")/recipe-validate.sh"
+fi
+
 recipe_dotnet::_load_mono_lock() {
     local root="${PROJECT_ROOT:-}"
     [ -n "$root" ] && [ -f "$root/core/runtime.lock" ] && source "$root/core/runtime.lock"
@@ -18,8 +23,7 @@ recipe_dotnet::installed() {
     if [ -d "$prefix/drive_c/windows/mono/mono-2.0/lib/mono" ]; then
         return 0
     fi
-    if [ -f "$prefix/drive_c/windows/system32/mscoree.dll" ] \
-        && ! file "$prefix/drive_c/windows/system32/mscoree.dll" 2>/dev/null | grep -q 'WINE (DLL)'; then
+    if recipe_validate::native_pe "$prefix/drive_c/windows/system32/mscoree.dll"; then
         return 0
     fi
     return 1

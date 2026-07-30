@@ -155,7 +155,7 @@ recipe_premiere::install() {
         output::progress 58 "Visual C++ Runtime (Microsoft)"
         recipe_vcrun::ensure "${LOG_DIR}/vcrun_${TIMESTAMP_ISO}.log" || _err=1
     else
-        output::success "Prefix-Komponenten bereits vorhanden"
+        output::success "Prefix-Komponenten bereits vorhanden (natives MSXML erkannt)"
     fi
 
     output::progress 62 "Proton-GE Grafik-DLLs (DXVK)"

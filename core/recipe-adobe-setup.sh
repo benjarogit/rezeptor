@@ -2,6 +2,11 @@
 # Shared Adobe offline installer helpers (Photoshop, Premiere, …).
 # Deploy Set-up.exe → C:\AdobeSetup, IE8/MSXML env, silent-install prep.
 
+if ! type recipe_validate::dll_is_wine_builtin >/dev/null 2>&1; then
+    # shellcheck source=/dev/null
+    source "$(dirname "${BASH_SOURCE[0]}")/recipe-validate.sh"
+fi
+
 adobe_setup::kill_all_wineservers() {
     # Nur Proton-wineserver dieses Prefix — kein globales pkill (andere Rezepte).
     if type wine_runtime::wineserver >/dev/null 2>&1; then
@@ -11,11 +16,12 @@ adobe_setup::kill_all_wineservers() {
     fi
 }
 
+# iexplore.exe legt Wine in jedem Prefix an — nur natives mshtml belegt echtes IE8.
 adobe_setup::ie8_present() {
     local prefix="${WINEPREFIX:-}"
     [ -n "$prefix" ] || return 1
-    [ -f "$prefix/drive_c/Program Files/Internet Explorer/iexplore.exe" ] \
-        || [ -f "$prefix/drive_c/Program Files (x86)/Internet Explorer/iexplore.exe" ]
+    recipe_validate::native_pe "$prefix/drive_c/windows/syswow64/mshtml.dll" \
+        || recipe_validate::native_pe "$prefix/drive_c/windows/system32/mshtml.dll"
 }
 
 adobe_setup::msxml_is_native() {
@@ -152,18 +158,39 @@ adobe_setup::diagnose_failed_install() {
             echo "AdobeSetup fehlt: $base"
         fi
         if [ -d "$drive_c" ]; then
+            # Fehlende native Komponenten sind die häufigste 103-Ursache — zuerst zeigen.
+            echo "Prefix-Komponenten:"
+            for _dll in windows/syswow64/msxml3.dll windows/syswow64/msxml6.dll \
+                windows/system32/msxml3.dll windows/syswow64/gdiplus.dll \
+                windows/syswow64/atmlib.dll windows/syswow64/mshtml.dll \
+                windows/syswow64/msvcp140.dll; do
+                if [ ! -f "$drive_c/$_dll" ]; then
+                    echo "  fehlt:   $_dll"
+                elif recipe_validate::dll_is_wine_builtin "$drive_c/$_dll"; then
+                    echo "  builtin: $_dll (Wine — nicht nativ)"
+                else
+                    echo "  nativ:   $_dll"
+                fi
+            done
+            [ -f "${WINEPREFIX:-}/winetricks.log" ] \
+                && echo "winetricks: $(tr '\n' ' ' <"${WINEPREFIX}/winetricks.log" 2>/dev/null)"
+            command -v file >/dev/null 2>&1 \
+                && echo "file: $(file --version 2>/dev/null | head -1)"
+
             echo "Adobe-Installer-Logs (priorisiert, max 8):"
-            # Prefer Adobe/HDBox/PDApp/ACC/Setup over VC redistributable noise
+            # Nur echte Logdateien — Paketdaten (.pima/.sig) sonst als Binärmüll im Report.
             {
-                find "$drive_c" -type f \( \
-                    -ipath '*/Adobe/*' -o -ipath '*/HDBox/*' -o -ipath '*/PDApp/*' \
-                    -o -ipath '*/ACC/*' -o -iname '*Setup*.log' -o -iname '*Install*.log' \
-                    -o -iname 'EMCL.log' -o -iname '*Adobe*.log' \
-                    \) 2>/dev/null | head -40
+                find "$drive_c" -type f \( -iname '*.log' -o -iname '*setup*.txt' \) \
+                    \( -ipath '*/Adobe/*' -o -ipath '*/HDBox/*' -o -ipath '*/PDApp/*' \
+                    -o -ipath '*/ACC/*' \) 2>/dev/null | head -40
                 find "$drive_c" -type f \( -iname '*.log' -o -iname '*setup*.txt' \) 2>/dev/null \
                     | grep -viE 'vcredist|dd_vcredist|Package Cache' \
                     | head -20
             } | awk 'NF && !seen[$0]++' | head -8 | while IFS= read -r lf; do
+                if ! grep -Iq . "$lf" 2>/dev/null; then
+                    echo "  --- $lf (binär, übersprungen) ---"
+                    continue
+                fi
                 echo "  --- $lf (tail) ---"
                 tail -n 40 "$lf" 2>/dev/null || true
             done
@@ -285,14 +312,22 @@ adobe_setup::apply_graphics_registry() {
         >>"${LOG_FILE:-/dev/null}" 2>&1 || true
 }
 
+# Der Adobe-Installer zeigt seine Oberfläche in einem IE-Steuerelement. Wines eigene
+# Engine reicht dafür bei Proton-GE; echtes IE8 kostet 5–10 Min. und ist der brüchigste
+# winetricks-Schritt — deshalb erst nach einem Fehlschlag (siehe run_silent_setup).
 adobe_setup::configure_ie8() {
-    output::step "IE8 (Adobe-Installer, 5–10 Min.)"
-    output::info "Silent-Install nutzt IE-Engine — IE8 muss im Prefix sein"
+    output::step "IE-Engine (Adobe-Installer)"
     if adobe_setup::ie8_present; then
-        output::success "IE8 bereits im Prefix"
-        adobe_setup::reregister_ie8_dlls
-        return 0
+        output::success "Natives IE8 im Prefix"
+    else
+        output::info "Wine-eigene IE-Engine — IE8 nur bei Fehlschlag des Installers"
     fi
+    adobe_setup::reregister_ie8_dlls
+    return 0
+}
+
+adobe_setup::install_ie8() {
+    output::step "IE8 nachinstallieren (5–10 Min.)"
     local wt_log="${LOG_DIR}/winetricks_ie8_${TIMESTAMP_ISO}.log"
     local attempt rc=1
     recipe_winetricks::sanitize_win7sp1_cache || true
@@ -367,10 +402,36 @@ adobe_setup::run_silent_setup() {
     fi
 
     output::progress 70 "Adobe Set-up.exe"
+    adobe_setup::_invoke_setup "$setup_dir" "${installer_args[@]}" || install_status=$?
+
+    # Scheitert der Installer und steckt nur Wines IE-Engine im Prefix: echtes IE8
+    # nachziehen und genau einmal wiederholen.
+    if [ "$install_status" -ne 0 ] && ! adobe_setup::ie8_present; then
+        output::warning "Set-up.exe exit ${install_status} — IE8 nachinstallieren und einmal wiederholen"
+        if adobe_setup::install_ie8; then
+            adobe_setup::prepare_adobe_installer_env || true
+            install_status=0
+            output::progress 70 "Adobe Set-up.exe (2. Versuch)"
+            adobe_setup::_invoke_setup "$setup_dir" "${installer_args[@]}" || install_status=$?
+        else
+            output::warning "IE8-Nachinstallation fehlgeschlagen — Diagnose folgt"
+        fi
+    fi
+
+    if [ "$install_status" -ne 0 ]; then
+        adobe_setup::diagnose_failed_install "$install_status"
+        recipe_hooks::emit_log_paths 2>/dev/null || true
+    fi
+    return "$install_status"
+}
+
+adobe_setup::_invoke_setup() {
+    local setup_dir="$1" install_status=0
+    shift
     (
         cd "$setup_dir" || exit 1
         # Alles nach LOG; Progress zusätzlich als GUI-Tag
-        wine "./Set-up.exe" "${installer_args[@]}" 2>&1 | tee -a "${LOG_FILE:-/dev/null}" | while IFS= read -r _line; do
+        wine "./Set-up.exe" "$@" 2>&1 | tee -a "${LOG_FILE:-/dev/null}" | while IFS= read -r _line; do
             case "$_line" in
                 Progress:*)
                     _pct=$(echo "$_line" | grep -oE '[0-9]+' | tail -1)
@@ -390,9 +451,5 @@ adobe_setup::run_silent_setup() {
     ) || install_status=$?
 
     adobe_setup::kill_all_wineservers
-    if [ "$install_status" -ne 0 ]; then
-        adobe_setup::diagnose_failed_install "$install_status"
-        recipe_hooks::emit_log_paths 2>/dev/null || true
-    fi
     return "$install_status"
 }
