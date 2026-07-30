@@ -176,11 +176,27 @@ class ApplicationCloseGuard(QObject):
         self._main = main
         self._quit_scheduled = False
         self._close_burst: list[float] = []
+        self._main_close_at: float | None = None
         app = QApplication.instance()
         if app is not None:
             app.installEventFilter(self)
 
+    def _main_close_armed(self) -> bool:
+        if self._main_close_at is None:
+            return False
+        return time.monotonic() - self._main_close_at < self._BURST_SEC
+
+    def _secondary_has_unsaved(self, w: QWidget) -> bool:
+        dirty_fn = getattr(w, "is_dirty", None)
+        return callable(dirty_fn) and bool(dirty_fn())
+
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
+        if event.type() == QEvent.Type.Quit:
+            if watched is QApplication.instance():
+                self._schedule_quit()
+                return True
+            return False
+
         if event.type() != QEvent.Type.Close:
             return False
         w = watched
@@ -190,22 +206,35 @@ class ApplicationCloseGuard(QObject):
             return False
         if getattr(self._main, "_force_quitting", False):
             return False
+        if w.property("rezeptor_force_close"):
+            return False
 
         if w is self._main:
+            self._main_close_at = time.monotonic()
             dismiss_child_dialogs(self._main, force=True)
             self._schedule_quit()
             event.ignore()
             return True
 
-        # Sekundärfenster: einzelnes Schließen = nur dieses Fenster.
-        # KDE „Alle schließen“: mehrere Close-Events kurz hintereinander → App quit.
-        w.setProperty("rezeptor_force_close", True)
+        # Modale exec()-Dialoge (Quelle, Einstellungen): KDE „Alle schließen“ liefert
+        # oft nur ein Close am fokussierten Fenster — Burst reicht dann nicht.
+        if isinstance(w, QDialog) and w.isModal():
+            if self._secondary_has_unsaved(w):
+                return False
+            self._schedule_quit()
+            event.ignore()
+            return True
+
+        # Nicht-modale Tool-Fenster (Rezept-Editor): einzelnes X = nur dieses Fenster;
+        # „Alle schließen“ / Hauptfenster-Close kurz davor → App quit.
         now = time.monotonic()
         self._close_burst = [
             t for t in self._close_burst if now - t < self._BURST_SEC
         ]
         self._close_burst.append(now)
-        if len(self._close_burst) >= 2:
+        if self._secondary_has_unsaved(w):
+            return False
+        if len(self._close_burst) >= 2 or self._main_close_armed():
             self._schedule_quit()
             event.ignore()
             return True

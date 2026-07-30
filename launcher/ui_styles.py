@@ -405,6 +405,7 @@ QToolButton:hover {{
 }}
 /* Kompakte Header-Chips — globales ToolButton-Padding würgt 22px-Icons sonst leer */
 QToolButton#versionInfoBtn,
+QToolButton#sourceInfoBtn,
 QToolButton#openPathBtn,
 QToolButton#healthChip {{
     padding: 2px;

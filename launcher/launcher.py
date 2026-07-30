@@ -4476,8 +4476,8 @@ class RezeptorWindow(QMainWindow):
                 self._bring_app_to_front()
                 return
 
-            dismiss_all_top_level_windows(self, force=True)
             self._force_quitting = True
+            dismiss_all_top_level_windows(self, force=True)
             self._persist_ui_layout()
             self._terminate_busy_subprocess()
             self.close()

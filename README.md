@@ -88,9 +88,21 @@ Full list by category: [Recipe catalog (docs)](https://benjarogit.github.io/reze
 
 Submit ideas via [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?template=recipe_submission.md).
 
+## Contribute recipes & improve Rezeptor
+
+Rezeptor lives from **tested recipes** and a **shared core** — you do not need to maintain a fork.
+
+| Goal | Start here |
+|------|------------|
+| **New recipe** (app/game you got running) | [Developer guide](https://benjarogit.github.io/rezeptor/en/ENTWICKLER/) · `./scripts/new-recipe.sh` · `recipes/community/<id>/` |
+| **Fix or extend core logic** (prefix, validate, install steps, launcher) | [CORE-API](https://benjarogit.github.io/rezeptor/en/CORE-API/) · [RECIPE-AUTHORING](https://benjarogit.github.io/rezeptor/en/RECIPE-AUTHORING/) |
+| **Idea without a PR yet** | [Recipe submission issue](https://github.com/benjarogit/rezeptor/issues/new?template=recipe_submission.md) or a short [discussion](https://github.com/benjarogit/rezeptor/discussions) |
+
+Pull requests that add a working recipe **or** make `core/` / the launcher more reusable for the next recipe are equally welcome. Run `./scripts/recipe-lint.sh` and `make recipes-check` before opening a PR.
+
 ## Versioning
 
-Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current: **1.1.7**.
+Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current: **1.1.12**.
 
 ## Deutsch
 

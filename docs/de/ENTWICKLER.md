@@ -39,6 +39,19 @@ GUI-Alternative: **Rezeptor → Neues Rezept…** (Dev-Modus)
 
 ---
 
+## Mitmachen
+
+Rezeptor ist kein Ein-Mann-Projekt um Photoshop — **jedes neue Rezept** und **jede Verbesserung am Rezeptsystem** hilft allen.
+
+1. **Rezept beisteuern** — App zum Laufen gebracht? `./scripts/new-recipe.sh` oder Community-Pfad `recipes/community/<id>/`, dann PR oder [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?template=recipe_submission.md).
+2. **Core schärfen** — wiederkehrende Logik gehört nach `core/recipe-*.sh` (Prefix, Winetricks, validate, Online-Fix, …), nicht in jedes Rezept kopiert. Siehe [CORE-API.md](CORE-API.md).
+3. **Launcher/GUI** — Quellen-Dialog, Validierung, Log-Humanisierung: `launcher/` + [LAUNCHER.md](LAUNCHER.md).
+4. **Diskussion** — Architektur oder Grenzfälle: [GitHub Discussions](https://github.com/benjarogit/rezeptor/discussions).
+
+**Merksatz:** Ein gutes Rezept zeigt Lücken im Core — beides im selben PR ist ideal.
+
+---
+
 ## Architektur (kurz)
 
 ```

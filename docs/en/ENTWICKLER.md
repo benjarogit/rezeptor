@@ -39,6 +39,19 @@ GUI alternative: **Rezeptor → New recipe…** (dev mode)
 
 ---
 
+## Get involved
+
+Rezeptor is not a one-app Photoshop script — **every new recipe** and **every improvement to the recipe system** helps everyone.
+
+1. **Add a recipe** — got an app running? `./scripts/new-recipe.sh` or `recipes/community/<id>/`, then open a PR or a [recipe submission issue](https://github.com/benjarogit/rezeptor/issues/new?template=recipe_submission.md).
+2. **Harden the core** — shared logic belongs in `core/recipe-*.sh` (prefix, winetricks, validate, online fix, …), not copied into every recipe. See [CORE-API.md](CORE-API.md).
+3. **Launcher / GUI** — source dialog, validation, log humanization: `launcher/` + [LAUNCHER.md](LAUNCHER.md).
+4. **Discuss** — architecture or edge cases: [GitHub Discussions](https://github.com/benjarogit/rezeptor/discussions).
+
+**Rule of thumb:** a good recipe exposes gaps in the core — fixing both in one PR is ideal.
+
+---
+
 ## Architecture (short)
 
 ```

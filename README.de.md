@@ -88,9 +88,21 @@ Volle Liste nach Kategorien: [Rezept-Katalog (Doku)](https://benjarogit.github.i
 
 Ideen einreichen über [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?template=recipe_submission.md).
 
+## Rezepte beitragen & Rezeptor verbessern
+
+Rezeptor wächst durch **erprobte Rezepte** und **gemeinsame Core-Logik** — ein eigener Fork ist nicht nötig.
+
+| Ziel | Einstieg |
+|------|----------|
+| **Neues Rezept** (App/Spiel, das bei dir läuft) | [Entwickler-Doku](https://benjarogit.github.io/rezeptor/de/ENTWICKLER/) · `./scripts/new-recipe.sh` · `recipes/community/<id>/` |
+| **Core/Launcher verbessern** (Prefix, validate, install_steps, GUI) | [CORE-API](https://benjarogit.github.io/rezeptor/de/CORE-API/) · [RECIPE-AUTHORING](https://benjarogit.github.io/rezeptor/de/RECIPE-AUTHORING/) |
+| **Idee ohne sofortigen PR** | [Recipe-Submission-Issue](https://github.com/benjarogit/rezeptor/issues/new?template=recipe_submission.md) oder [Discussion](https://github.com/benjarogit/rezeptor/discussions) |
+
+PRs mit funktionierendem Rezept **oder** wiederverwendbarer `core/`-/Launcher-Logik sind gleichermaßen willkommen. Vor dem PR: `./scripts/recipe-lint.sh` und `make recipes-check`.
+
 ## Versionierung
 
-Releases folgen **SemVer** (`MAJOR.MINOR.PATCH`). Aktuell: **1.1.7**.
+Releases folgen **SemVer** (`MAJOR.MINOR.PATCH`). Aktuell: **1.1.12**.
 
 ## English
 

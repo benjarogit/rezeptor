@@ -24,6 +24,7 @@ from PyQt6.QtWidgets import (
     QPlainTextEdit,
     QPushButton,
     QRadioButton,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -38,6 +39,8 @@ from ui_archive_passwords import ensure_archive_passwords
 from i18n import t
 from settings import is_recipe_install_cleared, load_settings, save_settings
 from steam_paths import default_trainer_target, steam_app_install_dir
+from ui_icons import fa_icon
+from ui_styles import COLOR_PARCHMENT
 
 # Default when recipe.yml omits/extends source_formats (7z covers multipart volumes).
 DEFAULT_ARCHIVE_FORMATS = "zip,tar.gz,tgz,7z,rar"
@@ -359,10 +362,21 @@ def make_info_button(
     tooltip: str,
     title: str,
     body: str,
-) -> QPushButton:
-    btn = QPushButton("?")
-    btn.setFixedWidth(28)
+) -> QToolButton:
+    """Kurzhilfe — FA-Icon wie versionInfoBtn (Text „?“ ist im Dark-QSS unsichtbar)."""
+    btn = QToolButton(parent)
+    btn.setObjectName("sourceInfoBtn")
+    btn.setAutoRaise(True)
+    btn.setCursor(Qt.CursorShape.PointingHandCursor)
+    btn.setFixedSize(28, 28)
     btn.setToolTip(tooltip)
+    btn.setAccessibleName(tooltip)
+    info_ic = fa_icon("info", 14, color=COLOR_PARCHMENT)
+    if info_ic is not None:
+        btn.setIcon(info_ic)
+        btn.setIconSize(QSize(14, 14))
+    else:
+        btn.setText("?")
     btn.clicked.connect(
         lambda: QMessageBox.information(parent, title, body)
     )
