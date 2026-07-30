@@ -146,7 +146,7 @@ See [UPDATES.md](UPDATES.md). Short:
 | Function | Role |
 |----------|------|
 | `recipe_updates::discover` / `apply_all` | Numbered patches, state `APPLIED_UPDATES` |
-| `recipe_iso::mount` / `ensure_accessible` | Mount large game ISOs (no full extract) |
+| `recipe_iso::mount` / `ensure_accessible` | Mount large game ISOs (no full extract); mount point = `RECIPE_ISO_MOUNT` (not `$()`) |
 
 ### Relocate target — `recipe-relocate.sh`
 

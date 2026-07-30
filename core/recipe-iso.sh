@@ -60,7 +60,9 @@ recipe_iso::is_iso_file() {
     [[ "${p,,}" == *.iso ]]
 }
 
-# Mount ISO via udisksctl; print mount point on stdout.
+# Mount ISO via udisksctl.
+# Mountpunkt nur über RECIPE_ISO_MOUNT (nicht via stdout/$() — GUI-Tags @step/@info
+# würden sonst den Pfad verunreinigen und detect_installer scheitern lassen).
 recipe_iso::mount() {
     local iso="$1"
     local out loop="" mount="" line dev
@@ -133,7 +135,6 @@ recipe_iso::mount() {
     export RECIPE_ISO_MOUNT="$mount"
     export RECIPE_ISO_LOOP="$loop"
     recipe_iso::_info "ISO gemountet: $mount"
-    printf '%s\n' "$mount"
     return 0
 }
 
@@ -170,6 +171,7 @@ recipe_iso::umount_recorded() {
 
 # Resolve work root from ISO file or folder containing ISO. Prints mount/dir.
 # Prefer existing setup.exe tree over mounting.
+# Nach Mount: Pfad aus RECIPE_ISO_MOUNT (mount selbst schreibt nicht auf stdout).
 recipe_iso::ensure_accessible() {
     local path="$1"
     local iso mount
@@ -177,8 +179,9 @@ recipe_iso::ensure_accessible() {
     [ -n "$path" ] || return 1
 
     if recipe_iso::is_iso_file "$path"; then
-        recipe_iso::mount "$path"
-        return $?
+        recipe_iso::mount "$path" || return 1
+        printf '%s\n' "${RECIPE_ISO_MOUNT}"
+        return 0
     fi
 
     if [ -d "$path" ]; then
@@ -190,8 +193,9 @@ recipe_iso::ensure_accessible() {
         fi
         iso="$(recipe_iso::find_in_dir "$path" 2>/dev/null || true)"
         if [ -n "$iso" ]; then
-            recipe_iso::mount "$iso"
-            return $?
+            recipe_iso::mount "$iso" || return 1
+            printf '%s\n' "${RECIPE_ISO_MOUNT}"
+            return 0
         fi
         printf '%s\n' "$(cd "$path" && pwd)"
         return 0

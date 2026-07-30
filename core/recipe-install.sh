@@ -250,7 +250,13 @@ recipe_install::prepare_source() {
                 source "${CORE_DIR:-}/recipe-iso.sh" 2>/dev/null || true
             fi
             if type recipe_iso::mount >/dev/null 2>&1; then
-                work_root="$(recipe_iso::mount "$iso_cand")" || return 1
+                # Nicht via $() — mount emittiert @step/@info auf stdout (GUI).
+                recipe_iso::mount "$iso_cand" || return 1
+                work_root="${RECIPE_ISO_MOUNT:-}"
+                [ -n "$work_root" ] && [ -d "$work_root" ] || {
+                    recipe_install::_err "ISO-Mountpunkt ungültig nach Mount"
+                    return 1
+                }
                 installer=""
                 resolved="installer_folder"
             else
