@@ -18,13 +18,13 @@
       "files": {
         "info.de.txt": "sha256:ed927c88c215af25b57fd52cf1f000889d44d62c5406216e41d1d3fb3a537fc4",
         "info.en.txt": "sha256:a37480ec4cf79186cffbcdfb59aaf8887e1a1e83fa53caf723793390bbd58974",
-        "install.sh": "sha256:2948f5fc6735e49fb81f53d53bd01c21154883605439e26ad3c70b121f84626b",
+        "install.sh": "sha256:84e4daacb30b08faf68c420dd765d06a1b02dbe9726b9d283aa309a33e315f84",
         "kill.sh": "sha256:677664cf550c9f27fcf4c100563320dfa55e725c4ed026f4e843783c2af7ca29",
         "launch.sh": "sha256:a5e49b73219795af649791d01a32b11f0d08855899e86807158444c99847f2c4",
-        "recipe.yml": "sha256:3d163ba4d7f5b48ca161c5521ab083884b1177619dd2f94849d0126979ed359f",
-        "repair.sh": "sha256:2f21bcd79aefccaf38e7b3a6f1438f55facbedba8a50a53fabf0f671cbaa1dd5",
+        "recipe.yml": "sha256:08b843ca355b804e093e882f209126033eb366e26eb43be180c622afe3f9f8bc",
+        "repair.sh": "sha256:2c83dac28af83a82795fe1eefed6255270ff8cd7da943f874bc2f6c602fd08cc",
         "uninstall.sh": "sha256:7e8047e698bff41199d1cbfb5bdaa860f7953e0527e8b0f52a602aa37a61a120",
-        "validate.sh": "sha256:63afe0bf6c049c5570d58ee26a777700938c6fcf01eafb846e0587e59d24ee52"
+        "validate.sh": "sha256:9e2fa8852bea16bf4e84cbc5d8bfe5074435f9dbbfdb0305a11b6f30a46bcac9"
       }
     },
     "photoshop": {
