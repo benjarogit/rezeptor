@@ -41,6 +41,7 @@ from settings import is_recipe_install_cleared, load_settings, save_settings
 from steam_paths import default_trainer_target, steam_app_install_dir
 from ui_icons import fa_icon
 from ui_styles import COLOR_PARCHMENT
+from ui_window import mark_force_close, mark_user_dismiss
 
 # Default when recipe.yml omits/extends source_formats (7z covers multipart volumes).
 DEFAULT_ARCHIVE_FORMATS = "zip,tar.gz,tgz,7z,rar"
@@ -1129,27 +1130,26 @@ class RecipeSourceDialog(QDialog):
 
     def force_close(self) -> None:
         """Hauptfenster-Quit: ohne zweite Nachfrage."""
-        self.setProperty("rezeptor_force_close", True)
+        mark_force_close(self)
         self.done(QDialog.DialogCode.Rejected)
 
     def accept(self) -> None:
-        self.setProperty("rezeptor_user_dismiss", True)
+        mark_user_dismiss(self)
         super().accept()
 
     def reject(self) -> None:
-        if not self.property("rezeptor_force_close"):
-            self.setProperty("rezeptor_user_dismiss", True)
+        if not getattr(self, "_rezeptor_force_close", False):
+            mark_user_dismiss(self)
         super().reject()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 — Qt API
-        if self.property("rezeptor_force_close") or self.property(
-            "rezeptor_user_dismiss"
+        if getattr(self, "_rezeptor_force_close", False) or getattr(
+            self, "_rezeptor_user_dismiss", False
         ):
             event.accept()
             super().closeEvent(event)
             return
-        # Titelleisten-X: nur Dialog abbrechen (OK/Abbrechen setzen user_dismiss).
-        self.setProperty("rezeptor_user_dismiss", True)
+        mark_user_dismiss(self)
         self.reject()
         event.accept()
         super().closeEvent(event)
@@ -1966,26 +1966,26 @@ class UpdateSourceDialog(QDialog):
         layout.addWidget(buttons)
 
     def force_close(self) -> None:
-        self.setProperty("rezeptor_force_close", True)
+        mark_force_close(self)
         self.done(QDialog.DialogCode.Rejected)
 
     def accept(self) -> None:
-        self.setProperty("rezeptor_user_dismiss", True)
+        mark_user_dismiss(self)
         super().accept()
 
     def reject(self) -> None:
-        if not self.property("rezeptor_force_close"):
-            self.setProperty("rezeptor_user_dismiss", True)
+        if not getattr(self, "_rezeptor_force_close", False):
+            mark_user_dismiss(self)
         super().reject()
 
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 — Qt API
-        if self.property("rezeptor_force_close") or self.property(
-            "rezeptor_user_dismiss"
+        if getattr(self, "_rezeptor_force_close", False) or getattr(
+            self, "_rezeptor_user_dismiss", False
         ):
             event.accept()
             super().closeEvent(event)
             return
-        self.setProperty("rezeptor_user_dismiss", True)
+        mark_user_dismiss(self)
         self.reject()
         event.accept()
         super().closeEvent(event)

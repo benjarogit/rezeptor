@@ -117,7 +117,7 @@ Pull requests that add a working recipe **or** make `core/` / the launcher more 
 
 ## Versioning
 
-Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current: **1.1.15**.
+Releases follow **SemVer** (`MAJOR.MINOR.PATCH`). Current: **1.1.16**.
 
 ## Deutsch
 

@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 
 from app_support import log_dir_stats, prune_old_logs
 from archive_passwords import normalize_password_list_text
+from ui_window import mark_force_close, mark_user_dismiss
 from i18n import available_locales, t
 from settings import RezeptorSettings, save_settings
 from ui_window import confirm_unsaved_changes
@@ -357,26 +358,26 @@ class SettingsDialog(QDialog):
         """Hauptfenster-Quit: Dirty bereits behandelt — ohne zweite Nachfrage."""
         self._dirty = False
         self._closing = True
-        self.setProperty("rezeptor_force_close", True)
+        mark_force_close(self)
         self.done(QDialog.DialogCode.Rejected)
 
     def accept(self) -> None:
-        self.setProperty("rezeptor_user_dismiss", True)
+        mark_user_dismiss(self)
         super().accept()
 
     def reject(self) -> None:
-        if self.property("rezeptor_force_close"):
+        if getattr(self, "_rezeptor_force_close", False):
             self._dirty = False
             self._closing = True
             super().reject()
             return
         if not self._prompt_close_if_dirty():
             return
-        self.setProperty("rezeptor_user_dismiss", True)
+        mark_user_dismiss(self)
         super().reject()
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        if self._closing or self.property("rezeptor_force_close"):
+        if self._closing or getattr(self, "_rezeptor_force_close", False):
             self._dirty = False
             self._closing = True
             event.accept()
@@ -385,7 +386,7 @@ class SettingsDialog(QDialog):
         if not self._prompt_close_if_dirty():
             event.ignore()
             return
-        self.setProperty("rezeptor_user_dismiss", True)
+        mark_user_dismiss(self)
         self._closing = True
         event.accept()
         super().closeEvent(event)

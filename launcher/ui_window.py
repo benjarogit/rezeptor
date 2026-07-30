@@ -97,6 +97,26 @@ def widget_belongs_to_main(w: QWidget | None, main: QWidget) -> bool:
     return False
 
 
+def mark_user_dismiss(dialog: QWidget) -> None:
+    """OK/Abbrechen — Close-Guard darf keinen App-Quit planen."""
+    dialog._rezeptor_user_dismiss = True  # type: ignore[attr-defined]
+    dialog.setProperty("rezeptor_user_dismiss", True)
+    main = dialog.parentWidget()
+    while main is not None:
+        guard = getattr(main, "_rezeptor_close_guard", None)
+        if guard is not None:
+            cancel = getattr(guard, "cancel_pending_quit", None)
+            if callable(cancel):
+                cancel()
+            break
+        main = main.parentWidget()
+
+
+def mark_force_close(dialog: QWidget) -> None:
+    dialog._rezeptor_force_close = True  # type: ignore[attr-defined]
+    dialog.setProperty("rezeptor_force_close", True)
+
+
 def _force_dismiss_dialog(dlg: QDialog, *, force: bool = True) -> None:
     """Modale exec()-Schleifen zuverlässig beenden (KDE Taskleiste / Alle schließen)."""
     if force:
@@ -201,6 +221,7 @@ class ApplicationCloseGuard(QObject):
         super().__init__(main)
         self._main = main
         self._quit_scheduled = False
+        self._quit_token = 0
         self._close_burst: list[float] = []
         self._main_close_at: float | None = None
         app = QApplication.instance()
@@ -215,6 +236,13 @@ class ApplicationCloseGuard(QObject):
     def _secondary_has_unsaved(self, w: QWidget) -> bool:
         dirty_fn = getattr(w, "is_dirty", None)
         return callable(dirty_fn) and bool(dirty_fn())
+
+    @staticmethod
+    def _flag(w: QWidget, name: str) -> bool:
+        if bool(getattr(w, f"_{name}", False)):
+            return True
+        v = w.property(name)
+        return v is True or v == 1
 
     def eventFilter(self, watched: QObject, event: QEvent) -> bool:  # noqa: N802
         if event.type() == QEvent.Type.Quit:
@@ -232,10 +260,10 @@ class ApplicationCloseGuard(QObject):
             return False
         if getattr(self._main, "_force_quitting", False):
             return False
-        if w.property("rezeptor_force_close"):
-            return False
-        # OK/Abbrechen setzen das vor accept/reject — nicht als WM-Quit werten.
-        if w.property("rezeptor_user_dismiss"):
+        # OK/Abbrechen / force_close — niemals App-Quit (sonst stirbt Install nach Quellen-OK).
+        if self._flag(w, "rezeptor_force_close") or self._flag(
+            w, "rezeptor_user_dismiss"
+        ):
             return False
 
         now = time.monotonic()
@@ -251,23 +279,23 @@ class ApplicationCloseGuard(QObject):
             event.ignore()
             return True
 
-        # Hilfe-QMessageBox: nur die Box schließen (auch wenn Wayland
-        # spontaneous=False liefert).
+        # Hilfe-QMessageBox: nur die Box schließen.
         if isinstance(w, QMessageBox):
             return False
 
         if self._secondary_has_unsaved(w):
             return False
 
-        # Taskleiste / Titelleiste auf modalem Tool-Dialog: App beenden.
-        # (KDE liefert oft nur ein Close am Fokusfenster; spontaneous ist
-        # unter Wayland unzuverlässig — deshalb user_dismiss statt spontaneous.)
-        if isinstance(w, QDialog) and w.isModal():
+        # Nur echte WM-/Taskleisten-Close (spontaneous). Button-OK ist es nicht —
+        # sonst beendet „Installieren → Quelle OK“ die ganze App.
+        wm_close = bool(event.spontaneous())
+        if isinstance(w, QDialog) and w.isModal() and wm_close:
             self._schedule_quit()
-            # Event durchlassen + Quit: Dialog darf schließen, Quit räumt Rest ab.
             return False
 
-        if len(self._close_burst) >= 2 or self._main_close_armed():
+        if wm_close and (
+            len(self._close_burst) >= 2 or self._main_close_armed()
+        ):
             self._schedule_quit()
             return False
         return False
@@ -276,22 +304,32 @@ class ApplicationCloseGuard(QObject):
         if self._quit_scheduled:
             return
         self._quit_scheduled = True
+        self._quit_token += 1
+        token = self._quit_token
 
         def _run() -> None:
             self._quit_scheduled = False
+            if token != self._quit_token:
+                return
             self._close_burst.clear()
             fn = getattr(self._main, "request_quit_from_wm", None)
             if callable(fn):
                 fn(from_wm=True)
 
-        # Zwei Ticks: erst Dialog-Close/exec unwinding, dann Quit.
-        QTimer.singleShot(0, lambda: QTimer.singleShot(0, _run))
+        QTimer.singleShot(0, _run)
+
+    def cancel_pending_quit(self) -> None:
+        """Quellen-OK / Nutzer-Dismiss: geplanten Fehl-Quit verwerfen."""
+        self._quit_token += 1
+        self._quit_scheduled = False
+        self._close_burst.clear()
 
 
 def install_application_close_guard(main: QWidget) -> ApplicationCloseGuard:
     """In main() nach dem Hauptfenster aufrufen."""
     guard = ApplicationCloseGuard(main)
     main.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, True)
+    main._rezeptor_close_guard = guard  # type: ignore[attr-defined]
     return guard
 
 

@@ -117,7 +117,7 @@ PRs mit funktionierendem Rezept **oder** wiederverwendbarer `core/`-/Launcher-Lo
 
 ## Versionierung
 
-Releases folgen **SemVer** (`MAJOR.MINOR.PATCH`). Aktuell: **1.1.15**.
+Releases folgen **SemVer** (`MAJOR.MINOR.PATCH`). Aktuell: **1.1.16**.
 
 ## English
 
