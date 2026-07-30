@@ -38,7 +38,7 @@ Each unit: directory with `.exe` (+ optional `.bin`) or a single `.exe`.
 
 ## Core API
 
-[`core/recipe-updates.sh`](../../core/recipe-updates.sh):
+See [CORE-API.md](CORE-API.md#updates--recipe-updatessh--recipe-isosh) — short:
 
 | Function | Role |
 |----------|------|
@@ -47,7 +47,7 @@ Each unit: directory with `.exe` (+ optional `.bin`) or a single `.exe`.
 | `recipe_updates::apply_all` | Run + state |
 | `recipe_updates::status` | Log/validate |
 
-Large game ISOs: [`core/recipe-iso.sh`](../../core/recipe-iso.sh) — **mount** (`udisksctl`), no full extract.
+Large game ISOs: `core/recipe-iso.sh` — **mount** (`udisksctl`), no full extract.
 
 ## Example layout
 

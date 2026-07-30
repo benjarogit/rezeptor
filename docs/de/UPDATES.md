@@ -38,7 +38,7 @@ Jede Einheit: Ordner mit `.exe` (+ optional `.bin`) oder einzelne `.exe`.
 
 ## Core-API
 
-[`core/recipe-updates.sh`](../../core/recipe-updates.sh):
+Siehe [CORE-API.md](CORE-API.md#updates--recipe-updatessh--recipe-isosh) — Kurz:
 
 | Funktion | Rolle |
 |----------|--------|
@@ -47,7 +47,7 @@ Jede Einheit: Ordner mit `.exe` (+ optional `.bin`) oder einzelne `.exe`.
 | `recipe_updates::apply_all` | Ausführen + State |
 | `recipe_updates::status` | Log/Validate |
 
-ISO großer Spiel-Packs: [`core/recipe-iso.sh`](../../core/recipe-iso.sh) — **Mount** (`udisksctl`), kein Voll-Extract.
+ISO großer Spiel-Packs: `core/recipe-iso.sh` — **Mount** (`udisksctl`), kein Voll-Extract.
 
 ## Beispiel-Layout
 
