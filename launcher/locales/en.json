@@ -570,7 +570,7 @@
     "updates_fix_found": "Detected in Update/Fix field: {n}",
     "updates_fix_none": "Update/Fix field set — check the folder layout.",
     "updates_info_title": "Updates / patches",
-    "updates_info_body": "If the source contains folders like updates/1 - … (with .exe), Rezeptor applies them automatically after install when the recipe supports it.\n\nYou can also pick a separate update pack in the Update / Fix field — e.g. when patches are not inside the install pack.\n\nLater: More → Apply update…",
+    "updates_info_body": "If the source contains folders like updates/1 - … or updates/<name>/1 - … (with .exe), Rezeptor applies them automatically after install when the recipe supports it.\n\nYou can also pick a separate update pack in the Update / Fix field — e.g. when patches are not inside the install pack.\n\nLater: More → Apply update…",
     "updates_info_tip": "Short help about updates and folder layout",
     "fix_info_tip": "Short help for this field",
     "updates_layout_hint": "Updates inside the install pack: under the source, folder updates/ with 1 - …, 2 - … (each with .exe) — all are detected automatically and installed in order. The Update / Fix field is only for patches outside the pack (optional).",

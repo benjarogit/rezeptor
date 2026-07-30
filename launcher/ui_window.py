@@ -234,10 +234,8 @@ class ApplicationCloseGuard(QObject):
             return False
         if w.property("rezeptor_force_close"):
             return False
-
-        # OK/Abbrechen/done() erzeugen Close ohne WM — niemals App beenden.
-        # (Sonst schließt Hilfe-„Installer-Quelle“ → OK die ganze App.)
-        if not event.spontaneous():
+        # OK/Abbrechen setzen das vor accept/reject — nicht als WM-Quit werten.
+        if w.property("rezeptor_user_dismiss"):
             return False
 
         now = time.monotonic()
@@ -253,24 +251,25 @@ class ApplicationCloseGuard(QObject):
             event.ignore()
             return True
 
-        # WM/Taskleiste auf Nebenfenster: QMessageBox-Hilfe nur schließen;
-        # echte Tool-Dialoge (Quelle, …) bzw. Burst → App beenden.
+        # Hilfe-QMessageBox: nur die Box schließen (auch wenn Wayland
+        # spontaneous=False liefert).
         if isinstance(w, QMessageBox):
             return False
 
         if self._secondary_has_unsaved(w):
             return False
 
-        # KDE „Alle schließen“ / Taskleisten-Schließen: oft nur 1 Close am Fokusfenster.
+        # Taskleiste / Titelleiste auf modalem Tool-Dialog: App beenden.
+        # (KDE liefert oft nur ein Close am Fokusfenster; spontaneous ist
+        # unter Wayland unzuverlässig — deshalb user_dismiss statt spontaneous.)
         if isinstance(w, QDialog) and w.isModal():
             self._schedule_quit()
-            event.ignore()
-            return True
+            # Event durchlassen + Quit: Dialog darf schließen, Quit räumt Rest ab.
+            return False
 
         if len(self._close_burst) >= 2 or self._main_close_armed():
             self._schedule_quit()
-            event.ignore()
-            return True
+            return False
         return False
 
     def _schedule_quit(self) -> None:
@@ -285,7 +284,8 @@ class ApplicationCloseGuard(QObject):
             if callable(fn):
                 fn(from_wm=True)
 
-        QTimer.singleShot(0, _run)
+        # Zwei Ticks: erst Dialog-Close/exec unwinding, dann Quit.
+        QTimer.singleShot(0, lambda: QTimer.singleShot(0, _run))
 
 
 def install_application_close_guard(main: QWidget) -> ApplicationCloseGuard:

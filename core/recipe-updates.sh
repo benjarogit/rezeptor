@@ -3,6 +3,7 @@
 #
 # Konvention unter einem Root:
 #   updates/ | Updates/ | update/   → Unterordner „1 - …“, „2 - …“
+#   auch: updates/<Paketname>/1 - …/ (ElAmigos-Wrapper ohne .exe im Zwischenordner)
 #   oder direkt nummerierte Ordner „1 - …“ unter dem Root
 #   oder einzelne .exe unter dem Root (eine Einheit)
 #
@@ -135,13 +136,26 @@ recipe_updates::_scan_root() {
 }
 
 recipe_updates::_scan_numbered_or_exes() {
-    local root="$1" path base id f
+    local root="$1" path base id f child
     shopt -s nullglob
     for path in "$root"/*; do
         if [ -d "$path" ] && recipe_updates::_dir_is_unit "$path"; then
             base="$(basename "$path")"
             id="$(recipe_updates::_unit_id "$base")"
             echo "${id}|${path}"
+        elif [ -d "$path" ]; then
+            # ElAmigos o. Ä.: updates/<Name>/1 - …/ (Wrapper ohne .exe)
+            for child in "$path"/*; do
+                if [ -d "$child" ] && recipe_updates::_dir_is_unit "$child"; then
+                    base="$(basename "$child")"
+                    id="$(recipe_updates::_unit_id "$base")"
+                    echo "${id}|${child}"
+                elif [ -f "$child" ] && [[ "${child,,}" == *.exe ]]; then
+                    base="$(basename "$child")"
+                    id="$(recipe_updates::_unit_id "$base")"
+                    echo "${id}|${child}"
+                fi
+            done
         elif [ -f "$path" ] && [[ "${path,,}" == *.exe ]]; then
             base="$(basename "$path")"
             id="$(recipe_updates::_unit_id "$base")"

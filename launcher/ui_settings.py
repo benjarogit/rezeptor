@@ -360,6 +360,10 @@ class SettingsDialog(QDialog):
         self.setProperty("rezeptor_force_close", True)
         self.done(QDialog.DialogCode.Rejected)
 
+    def accept(self) -> None:
+        self.setProperty("rezeptor_user_dismiss", True)
+        super().accept()
+
     def reject(self) -> None:
         if self.property("rezeptor_force_close"):
             self._dirty = False
@@ -368,6 +372,7 @@ class SettingsDialog(QDialog):
             return
         if not self._prompt_close_if_dirty():
             return
+        self.setProperty("rezeptor_user_dismiss", True)
         super().reject()
 
     def closeEvent(self, event: QCloseEvent) -> None:
@@ -380,6 +385,7 @@ class SettingsDialog(QDialog):
         if not self._prompt_close_if_dirty():
             event.ignore()
             return
+        self.setProperty("rezeptor_user_dismiss", True)
         self._closing = True
         event.accept()
         super().closeEvent(event)

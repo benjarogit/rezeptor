@@ -490,12 +490,31 @@ def discover_update_units(root: str | Path) -> list[tuple[str, str]]:
         except OSError:
             return out
         for path in entries:
-            if path.is_dir() and _is_numbered(path.name) and _dir_is_unit(path):
+            if path.is_dir() and _dir_is_unit(path):
                 out.append((_unit_id(path.name), str(path)))
+            elif path.is_dir():
+                # ElAmigos: updates/<Name>/1 - …/ (wrapper without .exe)
+                try:
+                    nested = list(path.iterdir())
+                except OSError:
+                    nested = []
+                for child in nested:
+                    if child.is_dir() and _dir_is_unit(child):
+                        out.append((_unit_id(child.name), str(child)))
+                    elif child.is_file() and child.suffix.lower() == ".exe":
+                        out.append((_unit_id(child.stem), str(child)))
             elif path.is_file() and path.suffix.lower() == ".exe":
                 out.append((_unit_id(path.stem), str(path)))
-        out.sort(key=lambda t: (int(t[0]) if t[0].isdigit() else 10**9, t[0], t[1]))
-        return out
+        # Dedupe by path, keep first id
+        seen: set[str] = set()
+        uniq: list[tuple[str, str]] = []
+        for uid, pth in out:
+            if pth in seen:
+                continue
+            seen.add(pth)
+            uniq.append((uid, pth))
+        uniq.sort(key=lambda t: (int(t[0]) if t[0].isdigit() else 10**9, t[0], t[1]))
+        return uniq
 
     for sub in ("updates", "Updates", "update"):
         nested = base / sub
@@ -1113,11 +1132,24 @@ class RecipeSourceDialog(QDialog):
         self.setProperty("rezeptor_force_close", True)
         self.done(QDialog.DialogCode.Rejected)
 
+    def accept(self) -> None:
+        self.setProperty("rezeptor_user_dismiss", True)
+        super().accept()
+
+    def reject(self) -> None:
+        if not self.property("rezeptor_force_close"):
+            self.setProperty("rezeptor_user_dismiss", True)
+        super().reject()
+
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 — Qt API
-        if self.property("rezeptor_force_close"):
+        if self.property("rezeptor_force_close") or self.property(
+            "rezeptor_user_dismiss"
+        ):
             event.accept()
             super().closeEvent(event)
             return
+        # Titelleisten-X: nur Dialog abbrechen (OK/Abbrechen setzen user_dismiss).
+        self.setProperty("rezeptor_user_dismiss", True)
         self.reject()
         event.accept()
         super().closeEvent(event)
@@ -1937,11 +1969,23 @@ class UpdateSourceDialog(QDialog):
         self.setProperty("rezeptor_force_close", True)
         self.done(QDialog.DialogCode.Rejected)
 
+    def accept(self) -> None:
+        self.setProperty("rezeptor_user_dismiss", True)
+        super().accept()
+
+    def reject(self) -> None:
+        if not self.property("rezeptor_force_close"):
+            self.setProperty("rezeptor_user_dismiss", True)
+        super().reject()
+
     def closeEvent(self, event: QCloseEvent) -> None:  # noqa: N802 — Qt API
-        if self.property("rezeptor_force_close"):
+        if self.property("rezeptor_force_close") or self.property(
+            "rezeptor_user_dismiss"
+        ):
             event.accept()
             super().closeEvent(event)
             return
+        self.setProperty("rezeptor_user_dismiss", True)
         self.reject()
         event.accept()
         super().closeEvent(event)

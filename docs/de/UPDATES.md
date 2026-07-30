@@ -22,7 +22,7 @@ recipe_updates::apply_all
 
 ## Erkennung (Hybrid)
 
-1. **Unter der Install-Quelle** (Auto): Ordner `updates/`, `Updates/` oder `update/` mit nummerierten Unterordnern `1 - …`, `2 - …`
+1. **Unter der Install-Quelle** (Auto): Ordner `updates/`, `Updates/` oder `update/` mit nummerierten Unterordnern `1 - …`, `2 - …` — auch mit Zwischenordner `updates/<Paketname>/1 - …/` (ElAmigos)
 2. **Oder** direkt unter dem Root: nummerierte Ordner `1 - …`
 3. **Plus** separates Feld **Update / Fix** im Quellen-Dialog (`RECIPE_UPDATE_ROOT` / Alias `RECIPE_FIX_ROOT`)
 

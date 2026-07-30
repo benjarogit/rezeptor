@@ -22,7 +22,7 @@ recipe_updates::apply_all
 
 ## Discovery (hybrid)
 
-1. **Under the install source** (auto): folder `updates/`, `Updates/`, or `update/` with numbered children `1 - …`, `2 - …`
+1. **Under the install source** (auto): folder `updates/`, `Updates/`, or `update/` with numbered children `1 - …`, `2 - …` — including a wrapper `updates/<pack name>/1 - …/` (ElAmigos)
 2. **Or** numbered folders `1 - …` directly under the root
 3. **Plus** optional **Update / Fix** field in the source dialog (`RECIPE_UPDATE_ROOT` / alias `RECIPE_FIX_ROOT`)
 

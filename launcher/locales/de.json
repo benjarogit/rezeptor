@@ -570,7 +570,7 @@
     "updates_fix_found": "Im Update-/Fix-Feld erkannt: {n}",
     "updates_fix_none": "Update-/Fix-Feld gesetzt — Ordnerstruktur prüfen.",
     "updates_info_title": "Updates / Patches",
-    "updates_info_body": "Liegen unter der Quelle Ordner wie updates/1 - … (mit .exe), wendet Rezeptor sie nach der Installation automatisch an (wenn das Rezept das unterstützt).\n\nZusätzlich kannst du im Feld „Update / Fix“ ein separates Update-Paket wählen — z. B. wenn Patches nicht im Install-Pack liegen.\n\nSpäter: Mehr → Update anwenden…",
+    "updates_info_body": "Liegen unter der Quelle Ordner wie updates/1 - … oder updates/<Name>/1 - … (mit .exe), wendet Rezeptor sie nach der Installation automatisch an (wenn das Rezept das unterstützt).\n\nZusätzlich kannst du im Feld „Update / Fix“ ein separates Update-Paket wählen — z. B. wenn Patches nicht im Install-Pack liegen.\n\nSpäter: Mehr → Update anwenden…",
     "updates_info_tip": "Kurzhilfe zu Updates und Ordnerstruktur",
     "fix_info_tip": "Kurzhilfe zu diesem Feld",
     "updates_layout_hint": "Updates im Install-Pack: unter der Quelle Ordner updates/ mit 1 - …, 2 - … (jeweils .exe) — alle werden automatisch erkannt und nacheinander installiert. Das Feld „Update / Fix“ nur, wenn Patches außerhalb des Packs liegen (optional).",

@@ -40,6 +40,18 @@ teardown() {
     [[ "$output" == *"/1 - patch"* ]]
 }
 
+@test "discover finds numbered unit under named wrapper in updates/" {
+    # ElAmigos layout: updates/<title>/1 - <title>/
+    wrap="$TMP/halo/updates/Halo Campaign Evolved update 29.07.2026"
+    mkdir -p "$wrap/1 - Halo Campaign Evolved update 29.07.2026"
+    touch "$wrap/1 - Halo Campaign Evolved update 29.07.2026/patch.exe"
+    touch "$wrap/1 - Halo Campaign Evolved update 29.07.2026/elamigos-1.bin"
+    run recipe_updates::discover "$TMP/halo"
+    [ "$status" -eq 0 ]
+    [[ "$output" == 1\|* ]]
+    [[ "$output" == *"/1 - Halo Campaign Evolved update 29.07.2026"* ]]
+}
+
 @test "discover accepts update parent with numbered child" {
     mkdir -p "$TMP/upd/1 - Halo update"
     touch "$TMP/upd/1 - Halo update/patch.exe" "$TMP/upd/1 - Halo update/elamigos-1.bin"

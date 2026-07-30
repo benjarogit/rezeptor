@@ -4502,6 +4502,8 @@ class RezeptorWindow(QMainWindow):
             if app is not None:
                 app.processEvents()
                 app.quit()
+                # Nested exec()-Schleifen (Quellen-Dialog) sonst oft hängen.
+                QTimer.singleShot(0, app.exit)
         finally:
             self._quit_pending = False
 
