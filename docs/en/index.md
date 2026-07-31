@@ -118,7 +118,7 @@ Official **handbook** for Rezeptor — install, validate, launch, and cleanly re
 
     [:octicons-arrow-right-24: Trust](TRUST.md)
 
--   :material-pattern:{ .lg .middle } __Patterns__
+-   :material-shape-outline:{ .lg .middle } __Patterns__
 
     ---
 

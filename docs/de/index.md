@@ -118,7 +118,7 @@ Offizielles **Handbuch** für Rezeptor — Windows-Software unter **Proton-GE** 
 
     [:octicons-arrow-right-24: Trust](TRUST.md)
 
--   :material-pattern:{ .lg .middle } __Muster__
+-   :material-shape-outline:{ .lg .middle } __Muster__
 
     ---
 
