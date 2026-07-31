@@ -2,8 +2,8 @@
   "recipes": {
     "halo-campaign-evolved": {
       "files": {
-        "info.de.md": "sha256:1056b46832828e205f61ab833085ca5129bb501f1ba4c605ecefe137ce0f637f",
-        "info.en.md": "sha256:9fab006179bc60b200893f449a013d437b60f844798354e5a052302342b4689a",
+        "info.de.md": "sha256:9a4f8e1cc1f64eb040dd244208ff0cc2482ce1f3e2fa4a64ef3d37e6913de617",
+        "info.en.md": "sha256:b402ebfa9628944b34b1e5162a674c9c2e65ebbc59cd09e47e4a089ebe5b8d7c",
         "install.sh": "sha256:aebc0bcdf72b4f5fb20a1d12145ad6b829183546e2b55e9566710b1be0323ca6",
         "kill.sh": "sha256:e125bcef11ba5b9f71c164bf2fa78b62ef5ce0a7ddfb742a053d4c05f50c3fff",
         "launch.sh": "sha256:472254a5e908e5452905a342c8fd9d27006b43573713b6948b1e41e6ae915d92",

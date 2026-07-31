@@ -1032,6 +1032,7 @@ class RezeptorWindow(QMainWindow):
         self._status_worker: _RecipeStatusWorker | None = None
         self._status_refresh_announce = False
         self._status_refresh_pending: tuple[bool, bool] | None = None
+        self._post_config_dir: str | None = None
 
         self._build_menus()
         self._build_status_bar()
@@ -3247,6 +3248,27 @@ class RezeptorWindow(QMainWindow):
             return
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(dr.resolve())))
 
+    def _maybe_offer_post_config(self) -> None:
+        """Nach Halo-Install: Spielordner für Nickname/Sprache anbieten."""
+        path = (self._post_config_dir or "").strip()
+        self._post_config_dir = None
+        if not path:
+            return
+        p = Path(path)
+        if not p.is_dir():
+            return
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(t("status.post_config_title"))
+        box.setText(t("status.post_config_body"))
+        open_btn = box.addButton(
+            t("status.post_config_open"), QMessageBox.ButtonRole.AcceptRole
+        )
+        box.addButton(t("status.post_config_later"), QMessageBox.ButtonRole.RejectRole)
+        box.exec()
+        if box.clickedButton() is open_btn:
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(p.resolve())))
+
     def _render_info_markdown(self) -> None:
         raw = getattr(self, "_info_raw", "") or self.info_browser.toPlainText()
         author = ""
@@ -3387,6 +3409,11 @@ class RezeptorWindow(QMainWindow):
                     self._set_step_text(msg)
                 elif tag == "step":
                     self._set_step_text(msg)
+                elif tag == "info" and msg.startswith("POST_CONFIG:"):
+                    path = msg.split(":", 1)[-1].strip()
+                    if path:
+                        self._post_config_dir = path
+                    continue
                 self._activity(tag, msg)
                 continue
 
@@ -3669,6 +3696,7 @@ class RezeptorWindow(QMainWindow):
         self._last_error_log = ""
         self._last_recipe_log = ""
         self._error_log_tail_mode = False
+        self._post_config_dir = None
         self._progress_pct = 0
         self._progress_anchor = 0
         self._progress_pulse = 0
@@ -3758,6 +3786,8 @@ class RezeptorWindow(QMainWindow):
                     t("status.done"),
                     t("status.done_body", label=done_label),
                 )
+            if code == 0 and op_kind in ("install", "reinstall"):
+                self._maybe_offer_post_config()
             if self._process is proc:
                 self._process = None
 

@@ -60,12 +60,58 @@ recipe_iso::is_iso_file() {
     [[ "${p,,}" == *.iso ]]
 }
 
-# Mount ISO via udisksctl.
-# Mountpunkt nur über RECIPE_ISO_MOUNT (nicht via stdout/$() — GUI-Tags @step/@info
-# würden sonst den Pfad verunreinigen und detect_installer scheitern lassen).
+# Unmount + loop-delete one device (best-effort).
+recipe_iso::_release_loop() {
+    local loop="$1" mount="${2:-}"
+    [ -n "$loop" ] || return 0
+    if [ -n "$mount" ] && findmnt -n "$mount" >/dev/null 2>&1; then
+        if command -v udisksctl >/dev/null 2>&1; then
+            udisksctl unmount -m "$mount" --no-user-interaction 2>/dev/null || true
+        else
+            umount "$mount" 2>/dev/null || true
+        fi
+    fi
+    if command -v udisksctl >/dev/null 2>&1; then
+        udisksctl unmount -b "$loop" --no-user-interaction 2>/dev/null || true
+        udisksctl loop-delete -b "$loop" --no-user-interaction 2>/dev/null || true
+    fi
+}
+
+# Existing loop+mount for this ISO file. Prints "LOOP|MOUNT". Keeps first, drops extras.
+recipe_iso::_existing_for_iso() {
+    local iso="$1"
+    local line loop mount keep_loop="" keep_mount="" n=0
+    [ -f "$iso" ] || return 1
+    command -v losetup >/dev/null 2>&1 || return 1
+
+    while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        loop="${line%%:*}"
+        [ -n "$loop" ] || continue
+        mount="$(findmnt -n -o TARGET -S "$loop" 2>/dev/null | head -1 || true)"
+        if [ -z "$mount" ] && [ -b "${loop}p1" ]; then
+            mount="$(findmnt -n -o TARGET -S "${loop}p1" 2>/dev/null | head -1 || true)"
+        fi
+        n=$((n + 1))
+        if [ "$n" -eq 1 ] && [ -n "$mount" ] && [ -d "$mount" ]; then
+            keep_loop="$loop"
+            keep_mount="$mount"
+            continue
+        fi
+        # Extra orphan loops for same ISO → release
+        recipe_iso::_release_loop "$loop" "$mount"
+    done < <(losetup -j "$iso" 2>/dev/null || true)
+
+    [ -n "$keep_loop" ] && [ -n "$keep_mount" ] || return 1
+    printf '%s|%s\n' "$keep_loop" "$keep_mount"
+    return 0
+}
+
+# Mount ISO via udisksctl (reuse existing loop for same file).
+# Mountpunkt nur über RECIPE_ISO_MOUNT (nicht via stdout/$()).
 recipe_iso::mount() {
     local iso="$1"
-    local out loop="" mount="" line dev
+    local out loop="" mount="" line dev existing
 
     [ -f "$iso" ] || {
         recipe_iso::_err "ISO fehlt: $iso"
@@ -76,6 +122,22 @@ recipe_iso::mount() {
     if ! command -v udisksctl >/dev/null 2>&1; then
         recipe_iso::_err "udisksctl fehlt — bitte udisks2 installieren (ISO-Mount)"
         return 1
+    fi
+
+    # Reuse / collapse orphans for this ISO
+    existing="$(recipe_iso::_existing_for_iso "$iso" 2>/dev/null || true)"
+    if [ -n "$existing" ]; then
+        loop="${existing%%|*}"
+        mount="${existing#*|}"
+        if [ -n "$loop" ] && [ -n "$mount" ] && [ -d "$mount" ]; then
+            recipe_iso::_step "ISO bereits gemountet: $(basename "$iso")"
+            recipe_iso::_record "$iso" "$mount" "$loop"
+            export RECIPE_ISO_PATH="$iso"
+            export RECIPE_ISO_MOUNT="$mount"
+            export RECIPE_ISO_LOOP="$loop"
+            recipe_iso::_info "ISO gemountet: $mount"
+            return 0
+        fi
     fi
 
     recipe_iso::_step "ISO mounten: $(basename "$iso")"

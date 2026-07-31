@@ -2,12 +2,12 @@
 
 Tested pack: **Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos** (g4u / ElAmigos).
 
-Offline installer on Proton-GE: mount ISO → `setup.exe` → optional numbered updates.
+Offline installer on Proton-GE: mount ISO → `setup.exe` (silent) → optional numbered updates.
 
 ## Source
 
-- Pack folder with the ISO, **or** the ISO file directly
-- Optional under the source: `updates/1 - …/` (auto-detect)
+- Pack folder with the ISO, **or** the ISO file — do not rename files
+- Optional under the source: `updates/` with `1 - …/` (also `updates/<Name>/1 - …/`)
 - Or separate update field / **More → Apply update**
 
 ## Updates
@@ -16,6 +16,7 @@ See [UPDATES.md](UPDATES.md). ElAmigos packs: folder `1 - Halo … update …/` 
 
 ## Notes
 
-- The ISO is **mounted** (no full extract of ~66 GiB).
-- Setup and update EXEs may show Wine dialogs — confirm paths if prompted.
+- The ISO is **mounted** (no full extract of ~66 GiB); the same volume is reused (no triple mounts).
+- Setup runs silently (Inno `/VERYSILENT` + `/LANG` + `/DIR=`). Cancel does not spawn extra installer windows.
+- **Nickname / game language:** Silent install skips the ElAmigos wizard. After install, Rezeptor can open the game folder so you can edit configs (or set them in-game after first launch).
 - BYOS: Rezeptor provides no download links — pack title is in the source dialog under “What to search for”.

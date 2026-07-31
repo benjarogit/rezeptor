@@ -307,24 +307,97 @@ recipe_hooks::installer_lang() {
     esac
 }
 
-# Offline-EXE: Inno (/VERYSILENT+/LANG) → NSIS (/S) → MSI-ähnlich → GUI-Fallback.
+# Installer-Familie: inno | nsis | msi | unknown (ein Lauf, keine Flag-Kaskade).
+recipe_hooks::installer_family() {
+    local exe="${1:-}"
+    local head
+    [ -n "$exe" ] && [ -f "$exe" ] || {
+        echo unknown
+        return 0
+    }
+    case "${exe,,}" in
+        *.msi)
+            echo msi
+            return 0
+            ;;
+    esac
+    head="$(head -c 524288 "$exe" 2>/dev/null || true)"
+    if printf '%s' "$head" | grep -aq 'Inno Setup'; then
+        echo inno
+        return 0
+    fi
+    if printf '%s' "$head" | grep -aqi 'Nullsoft\.NSIS\|Nullsoft Install System'; then
+        echo nsis
+        return 0
+    fi
+    echo unknown
+}
+
+# Windows-Installationsziel für Inno /DIR= (unter Prefix drive_c).
+recipe_hooks::installer_wine_dir() {
+    if [ -n "${RECIPE_INSTALLER_DIR:-}" ]; then
+        printf '%s\n' "$RECIPE_INSTALLER_DIR"
+        return 0
+    fi
+    case "${RECIPE_ID:-}" in
+        halo-campaign-evolved)
+            echo 'C:\Games\HaloCampaignEvolved'
+            ;;
+        *)
+            if [ -n "${RECIPE_ID:-}" ]; then
+                printf 'C:\\Games\\%s\n' "$RECIPE_ID"
+            fi
+            ;;
+    esac
+}
+
+# Offline-EXE: genau ein Aufruf je Familie — kein ||-Stapel (sonst mehrere GUIs bei Abbruch).
 recipe_hooks::run_exe_silent() {
     local exe="$1"
     local log="${2:-${LOG_FILE:-/dev/null}}"
     local wine_cmd="${3:-wine}"
-    local lang dir base
+    local lang dir base family wine_dir rc=0
     [ -f "$exe" ] || return 1
     lang="$(recipe_hooks::installer_lang)"
+    family="$(recipe_hooks::installer_family "$exe")"
     dir="$(cd "$(dirname "$exe")" && pwd)"
     base="$(basename "$exe")"
+    wine_dir="$(recipe_hooks::installer_wine_dir || true)"
+
+    type output::info >/dev/null 2>&1 && output::info "Installer-Typ: $family" || true
+
     (
         cd "$dir" || exit 1
-        "$wine_cmd" "$base" /SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART "/LANG=$lang" >>"$log" 2>&1 \
-            || "$wine_cmd" "$base" /SILENT /SUPPRESSMSGBOXES /NORESTART "/LANG=$lang" >>"$log" 2>&1 \
-            || "$wine_cmd" "$base" /S >>"$log" 2>&1 \
-            || "$wine_cmd" "$base" /quiet /norestart >>"$log" 2>&1 \
-            || "$wine_cmd" "$base" >>"$log" 2>&1
-    )
+        case "$family" in
+            inno)
+                if [ -n "$wine_dir" ]; then
+                    "$wine_cmd" "$base" /SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART \
+                        "/LANG=$lang" "/DIR=$wine_dir" >>"$log" 2>&1
+                else
+                    "$wine_cmd" "$base" /SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART \
+                        "/LANG=$lang" >>"$log" 2>&1
+                fi
+                ;;
+            msi)
+                "$wine_cmd" msiexec /i "$base" /qn /norestart >>"$log" 2>&1
+                ;;
+            nsis)
+                "$wine_cmd" "$base" /S >>"$log" 2>&1
+                ;;
+            *)
+                # Unbekannt: einmal NSIS-übliches /S — kein GUI-Fallback-Stapel
+                "$wine_cmd" "$base" /S >>"$log" 2>&1
+                ;;
+        esac
+    ) || rc=$?
+
+    if [ "$rc" -ne 0 ]; then
+        type output::error >/dev/null 2>&1 \
+            && output::error "Installer abgebrochen oder still fehlgeschlagen (exit $rc)" \
+            || echo "ERROR: Installer fehlgeschlagen (exit $rc)" >&2
+        return "$rc"
+    fi
+    return 0
 }
 
 recipe_hooks::run_exe_installer() {

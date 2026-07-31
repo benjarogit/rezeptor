@@ -301,6 +301,12 @@ recipe_install_steps::run() {
     fi
     export RECIPE_INSTALL_STEPS_RUNNING=1
 
+    # ISO-Mounts auch bei Abbruch/Kill freigeben
+    recipe_install_steps::_iso_cleanup() {
+        type recipe_iso::umount_recorded >/dev/null 2>&1 && recipe_iso::umount_recorded 2>/dev/null || true
+    }
+    trap 'recipe_install_steps::_iso_cleanup' EXIT
+
     while IFS= read -r line; do
         [ -n "$line" ] || continue
         if ! recipe_install_steps::step "$line"; then
@@ -312,12 +318,14 @@ recipe_install_steps::run() {
     if [ "$rc" -ne 0 ]; then
         output::error "Installation unvollständig — Rezeptor → Reparieren"
         recipe_hooks::emit_log_paths
-        type recipe_iso::umount_recorded >/dev/null 2>&1 && recipe_iso::umount_recorded 2>/dev/null || true
+        recipe_install_steps::_iso_cleanup
+        trap - EXIT
         return 11
     fi
     output::success "${RECIPE_NAME:-Rezept} installiert"
     output::progress 100 "Fertig"
     recipe_hooks::emit_log_paths
-    type recipe_iso::umount_recorded >/dev/null 2>&1 && recipe_iso::umount_recorded 2>/dev/null || true
+    recipe_install_steps::_iso_cleanup
+    trap - EXIT
     return 0
 }

@@ -271,10 +271,7 @@ recipe_updates::apply_unit() {
     else
         (
             cd "$dir" || exit 1
-            "$wine_cmd" "$(basename "$exe")" /SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART >>"$log" 2>&1 \
-                || "$wine_cmd" "$(basename "$exe")" /S >>"$log" 2>&1 \
-                || "$wine_cmd" "$(basename "$exe")" /quiet /norestart >>"$log" 2>&1 \
-                || "$wine_cmd" "$(basename "$exe")" >>"$log" 2>&1
+            "$wine_cmd" "$(basename "$exe")" /SP- /VERYSILENT /SUPPRESSMSGBOXES /NORESTART >>"$log" 2>&1
         ) || {
             recipe_updates::_err "Update fehlgeschlagen: $exe"
             return 1
