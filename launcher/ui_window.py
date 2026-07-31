@@ -10,6 +10,7 @@ from PyQt6.QtCore import QByteArray, QEvent, QObject, Qt, QTimer
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox, QSplitter, QWidget
 
+from diagnostics import log_call_site
 from i18n import t
 
 UnsavedChoice = Literal["save", "discard", "cancel"]
@@ -303,6 +304,7 @@ class ApplicationCloseGuard(QObject):
     def _schedule_quit(self) -> None:
         if self._quit_scheduled:
             return
+        log_call_site("QUIT-SCHEDULED")
         self._quit_scheduled = True
         self._wm_quit_armed = True
         self._quit_token += 1

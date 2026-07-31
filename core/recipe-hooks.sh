@@ -310,7 +310,6 @@ recipe_hooks::installer_lang() {
 # Installer-Familie: inno | nsis | msi | unknown (ein Lauf, keine Flag-Kaskade).
 recipe_hooks::installer_family() {
     local exe="${1:-}"
-    local head
     [ -n "$exe" ] && [ -f "$exe" ] || {
         echo unknown
         return 0
@@ -321,12 +320,14 @@ recipe_hooks::installer_family() {
             return 0
             ;;
     esac
-    head="$(head -c 524288 "$exe" 2>/dev/null || true)"
-    if printf '%s' "$head" | grep -aq 'Inno Setup'; then
+    # Prozesssubstitution statt $(head …): Command-Substitution verwirft NULL-Bytes
+    # und bash warnt dabei sichtbar in der GUI-Live-Ausgabe.
+    if grep -aq 'Inno Setup' < <(head -c 524288 "$exe" 2>/dev/null); then
         echo inno
         return 0
     fi
-    if printf '%s' "$head" | grep -aqi 'Nullsoft\.NSIS\|Nullsoft Install System'; then
+    if grep -aqi 'Nullsoft\.NSIS\|Nullsoft Install System' \
+        < <(head -c 524288 "$exe" 2>/dev/null); then
         echo nsis
         return 0
     fi
@@ -569,8 +570,31 @@ recipe_hooks::purge_recipe_data() {
         return 0
     }
 
+    # Vom Nutzer gewähltes Ziel nur löschen, wenn Rezeptor dort Daten angelegt hat.
+    # Sonst würde ein Tippfehler (z. B. Spiele-Sammelordner statt Spielordner)
+    # fremde Daten mitnehmen.
+    recipe_hooks::_is_rezeptor_data_dir() {
+        local d="${1:-}"
+        [ -n "$d" ] && [ -d "$d" ] || return 1
+        [ -e "$d/recipe.env" ] && return 0
+        [ -e "$d/data_root.path" ] && return 0
+        [ -e "$d/iso-mounts.env" ] && return 0
+        [ -d "$d/prefix" ] && return 0
+        [ -d "$d/staging" ] && return 0
+        # Leerer Ordner: nichts fremdes zu verlieren
+        [ -z "$(ls -A "$d" 2>/dev/null)" ] && return 0
+        return 1
+    }
+
     if [ -n "$chosen" ] && [ -d "$chosen" ]; then
-        recipe_hooks::_purge_dir_safe "$chosen" || true
+        if recipe_hooks::_is_rezeptor_data_dir "$chosen"; then
+            recipe_hooks::_purge_dir_safe "$chosen" || true
+        else
+            local keep="Ordner behalten (keine Rezeptor-Daten gefunden): $chosen"
+            type output::warning >/dev/null 2>&1 \
+                && output::warning "$keep" \
+                || echo "WARN: $keep" >&2
+        fi
     fi
     if [ -n "$canonical" ] && [ -d "$canonical" ]; then
         if [ -z "$chosen" ] || [ "$canonical" != "$chosen" ]; then

@@ -219,12 +219,22 @@ from ui_window import (
     restore_geometry,
     unwind_modal_dialogs,
 )
+from diagnostics import (
+    DIAG_LOG,
+    install_exception_logging,
+    install_exit_logging,
+    install_signal_logging,
+    log_call_site,
+    log_line,
+    log_session_start,
+)
 from i18n import get_locale, set_locale, t
 from log_context import (
     E_LAUNCH_NO_PROCESS,
     E_SCRIPT_FAILED,
     E_STATUS_QUERY,
     E_TRUST_MANIFEST,
+    E_UNCAUGHT,
     E_UPDATE_APPLY,
     E_UPDATE_ROLLBACK,
     LogEvent,
@@ -256,18 +266,8 @@ def _linux_child_pids(pid: int) -> list[int]:
     return out
 
 
-def signal_subprocess_tree(pid: int, sig: int) -> None:
-    """Install/Wine-Baum beenden — niemals killpg der GUI-Prozessgruppe.
-
-    QProcess+setsid: der sichtbare PID liegt oft noch in unserer PGID; killpg(pid)
-    würde Rezeptor mitabschießen (Install-Abbrechen → App weg).
-    """
-    if pid <= 0:
-        return
-    try:
-        protect = os.getpgrp()
-    except OSError:
-        protect = -1
+def _descendant_pids(pid: int) -> list[int]:
+    """PID plus alle Nachkommen aus /proc — enthält den Launcher nie."""
     seen: set[int] = set()
     stack = [pid]
     while stack:
@@ -276,18 +276,35 @@ def signal_subprocess_tree(pid: int, sig: int) -> None:
             continue
         seen.add(p)
         stack.extend(_linux_child_pids(p))
+    return sorted(seen)
+
+
+def own_process_group(pid: int) -> int:
+    """PGID nur, wenn der Prozess selbst Gruppenführer ist (setsid) — sonst 0.
+
+    Eine geratene PGID ist im Zweifel die der GUI; killpg darauf beendet Rezeptor
+    beim Install-Abbruch mit.
+    """
+    try:
+        pg = os.getpgid(pid)
+    except OSError:
+        return 0
+    if pg != pid or pg == os.getpgrp():
+        return 0
+    return pg
+
+
+def signal_subprocess_tree(pid: int, sig: int) -> None:
+    """Install-/Wine-Baum beenden: eigene Prozessgruppe plus alle Nachkommen."""
+    if pid <= 0:
+        return
+    pgid = own_process_group(pid)
+    if pgid:
         try:
-            pg = os.getpgid(p)
-        except ProcessLookupError:
-            continue
-        except OSError:
-            continue
-        if pg != protect:
-            try:
-                os.killpg(pg, sig)
-                continue
-            except (ProcessLookupError, PermissionError, OSError):
-                pass
+            os.killpg(pgid, sig)
+        except (ProcessLookupError, PermissionError, OSError):
+            pass
+    for p in _descendant_pids(pid):
         try:
             os.kill(p, sig)
         except (ProcessLookupError, PermissionError, OSError):
@@ -297,6 +314,10 @@ def signal_subprocess_tree(pid: int, sig: int) -> None:
 def _signal_qprocess_tree(proc: QProcess, sig: int) -> None:
     pid = int(proc.processId())
     if pid > 0:
+        log_line(
+            "SIGNAL-TREE",
+            f"pid={pid} pgid={own_process_group(pid)} own={os.getpgrp()} sig={sig}",
+        )
         signal_subprocess_tree(pid, sig)
     elif sig == signal.SIGTERM:
         proc.terminate()
@@ -1069,6 +1090,8 @@ class RezeptorWindow(QMainWindow):
         self._busy_rid: str = ""  # Rezept-ID des laufenden Vorgangs (leer = systemweit)
         self._current_op = ""  # install | repair | …
         self._cancel_requested = False
+        self._install_pgid = 0  # Prozessgruppe des laufenden Skripts (0 = unbekannt)
+        self._internal_error_shown = False
         self._install_recipe_dir: Path | None = None
         self._theme = "dark"
         self._raw_log_buffer: list[str] = []
@@ -3797,6 +3820,15 @@ class RezeptorWindow(QMainWindow):
         else:
             proc.setProgram("bash")
             proc.setArguments(bash_args)
+        def on_started() -> None:
+            pid = int(proc.processId())
+            self._install_pgid = own_process_group(pid)
+            log_line(
+                "PROC-START",
+                f"{script.name} pid={pid} pgid={self._install_pgid} own={os.getpgrp()}",
+            )
+
+        proc.started.connect(on_started)
         proc.readyReadStandardOutput.connect(
             lambda: self._feed_line(bytes(proc.readAllStandardOutput()).decode("utf-8", errors="replace"))
         )
@@ -3810,6 +3842,8 @@ class RezeptorWindow(QMainWindow):
             cancelled = self._cancel_requested
             op_kind = self._current_op
             install_dir = self._install_recipe_dir
+            log_line("PROC-DONE", f"{script.name} code={code} cancelled={cancelled}")
+            self._install_pgid = 0
             self._current_op = ""
             self._install_recipe_dir = None
             self._cancel_requested = False
@@ -3877,6 +3911,7 @@ class RezeptorWindow(QMainWindow):
             return
         if self._cancel_requested:
             return
+        log_call_site("CANCEL", f"op={self._current_op} pgid={self._install_pgid}")
         self._cancel_requested = True
         self._sync_cancel_install_btn()
         self._activity("warn", t("status.install_cancelled"))
@@ -3907,7 +3942,13 @@ class RezeptorWindow(QMainWindow):
         ok = False
         if uninstall.is_file():
             env = {**os.environ, **self._base_env()}
+            self._set_step_text(t("status.install_rollback_running"))
+            app = QApplication.instance()
+            if app is not None:
+                app.processEvents()
             try:
+                # start_new_session: eigene Prozessgruppe, damit ein pkill/kill im
+                # Rezept-Skript nicht die GUI-Gruppe trifft.
                 result = subprocess.run(
                     ["bash", str(uninstall)],
                     cwd=str(ROOT),
@@ -3916,6 +3957,7 @@ class RezeptorWindow(QMainWindow):
                     text=True,
                     timeout=_ROLLBACK_UNINSTALL_TIMEOUT_SEC,
                     check=False,
+                    start_new_session=True,
                 )
                 ok = result.returncode == 0
                 if result.stdout:
@@ -4565,12 +4607,31 @@ class RezeptorWindow(QMainWindow):
             return self._show_quit_confirm(body)
         return True
 
+    def report_internal_error(self, summary: str, _detail: str) -> None:
+        """Unbehandelte Exception: melden statt sterben — PyQt6 würde den Prozess abbrechen."""
+        ev = LogEvent(
+            level="error",
+            code=E_UNCAUGHT,
+            message_key="error.E_UNCAUGHT",
+            detail=summary,
+            session_id=self.session_id,
+            recipe_id=(self._selected.rid if self._selected else ""),
+        )
+        self._activity("error", ev.display_text())
+        if self._internal_error_shown:
+            return
+        self._internal_error_shown = True
+        QMessageBox.warning(
+            self, t("dialog.error"), f"{ev.display_text()}\n\n{DIAG_LOG}"
+        )
+
     def request_quit_from_wm(self, *, from_wm: bool = False) -> None:
         """Taskleiste / „Alle schließen“ / Fenster-X — zentraler Quit-Pfad."""
         if getattr(self, "_force_quitting", False):
             return
         if getattr(self, "_quit_pending", False):
             return
+        log_call_site("QUIT", f"from_wm={from_wm} busy={self._busy} op={self._current_op}")
         self._quit_pending = True
         try:
             busy = bool(self._busy and self._subprocess_running())
@@ -5290,6 +5351,9 @@ def main() -> int:
     app.setOrganizationName("Rezeptor")
     app.setDesktopFileName("rezeptor")
     app.setQuitOnLastWindowClosed(True)
+    log_session_start(read_version())
+    install_signal_logging()
+    install_exit_logging()
     ensure_fa_font()
     ensure_fa_brands_font()
     # Fusion für Host-Widgets (Combo/Listen) — sonst KDE-Blau statt Kupfer
@@ -5300,6 +5364,7 @@ def main() -> int:
     try:
         w = RezeptorWindow()
         install_application_close_guard(w)
+        install_exception_logging(w.report_internal_error)
         w.show()
         QTimer.singleShot(0, w._apply_theme)
         # Volle validate.sh: Hinweisdialog in _startup_prompts (nach erstem Show).

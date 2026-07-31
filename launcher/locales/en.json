@@ -224,6 +224,7 @@
     "error_log_tail": "Error log excerpt (diagnostics):",
     "genp_done": "GenP / Cure",
     "genp_path_clipboard": "GenP path on clipboard: {path} — paste into the filename field after the Pill (Ctrl+V).",
+    "install_rollback_running": "Cancelling — rolling back recipe data that was created …",
     "install_rolled_back": "Installation cancelled — recipe data that was created has been rolled back.",
     "install_rollback_fail": "Installation cancelled, but rollback was incomplete.\nPlease use More → Uninstall to clean up.",
     "query_error": "Status check failed: {error}"
@@ -633,7 +634,8 @@
     "E_UPDATE_ROLLBACK": "Rollback failed",
     "E_LAUNCH_NO_PROCESS": "Process not active after launch",
     "E_SCRIPT_FAILED": "{label} failed (exit {code})",
-    "E_STATUS_QUERY": "Recipe status check failed"
+    "E_STATUS_QUERY": "Recipe status check failed",
+    "E_UNCAUGHT": "Internal Rezeptor error — the operation continues, details in the log"
   },
   "info": {
     "missing": "No recipe description available.",

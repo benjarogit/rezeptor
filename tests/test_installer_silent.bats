@@ -32,6 +32,17 @@ setup() {
     [ "$output" = "inno" ]
 }
 
+@test "installer_family stays quiet on binaries with NUL bytes" {
+    local exe="$BATS_TEST_TMPDIR/nul.exe"
+    # Echte EXEs sind voller NUL-Bytes; $(head …) würde bash warnen lassen
+    printf 'MZ' >"$exe"
+    head -c 4096 </dev/zero >>"$exe"
+    printf 'Inno Setup Setup Data (6.0.0)' >>"$exe"
+    run recipe_hooks::installer_family "$exe"
+    [ "$status" -eq 0 ]
+    [ "$output" = "inno" ]
+}
+
 @test "installer_family detects msi by extension" {
     local msi="$BATS_TEST_TMPDIR/setup.msi"
     : >"$msi"

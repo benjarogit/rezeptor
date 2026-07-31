@@ -224,6 +224,7 @@
     "error_log_tail": "Fehlerlog-Auszug (Diagnose):",
     "genp_done": "GenP / Cure",
     "genp_path_clipboard": "GenP-Pfad in Zwischenablage: {path} — nach der Pille im Dateiname-Feld einfügen (Strg+V).",
+    "install_rollback_running": "Abbruch — angelegte Rezept-Daten werden zurückgenommen …",
     "install_rolled_back": "Installation abgebrochen — bereits angelegte Rezept-Daten wurden zurückgenommen.",
     "install_rollback_fail": "Installation abgebrochen, Rollback unvollständig.\nBitte unter Mehr → Deinstallieren bereinigen.",
     "query_error": "Statusprüfung fehlgeschlagen: {error}"
@@ -633,7 +634,8 @@
     "E_UPDATE_ROLLBACK": "Rollback fehlgeschlagen",
     "E_LAUNCH_NO_PROCESS": "Prozess nach Start nicht aktiv",
     "E_SCRIPT_FAILED": "{label} fehlgeschlagen (Exit {code})",
-    "E_STATUS_QUERY": "Rezept-Statusprüfung fehlgeschlagen"
+    "E_STATUS_QUERY": "Rezept-Statusprüfung fehlgeschlagen",
+    "E_UNCAUGHT": "Interner Fehler in Rezeptor — Vorgang läuft weiter, Details im Log"
   },
   "info": {
     "missing": "Keine Rezept-Beschreibung vorhanden.",

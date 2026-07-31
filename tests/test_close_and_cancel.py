@@ -13,7 +13,30 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "launcher"))
 
-from launcher import signal_subprocess_tree  # noqa: E402
+from launcher import own_process_group, signal_subprocess_tree  # noqa: E402
+
+
+def test_own_process_group_rejects_shared_group() -> None:
+    """Kind ohne setsid: PGID ist unsere — killpg darauf wuerde Rezeptor beenden."""
+    proc = subprocess.Popen(["sleep", "30"], start_new_session=False)
+    try:
+        time.sleep(0.15)
+        assert os.getpgid(proc.pid) == os.getpgrp()
+        assert own_process_group(proc.pid) == 0
+    finally:
+        proc.kill()
+        proc.wait(timeout=2)
+
+
+def test_own_process_group_accepts_group_leader() -> None:
+    """Eigene Session: PGID == PID, killpg trifft nur den Install-Baum."""
+    proc = subprocess.Popen(["sleep", "30"], start_new_session=True)
+    try:
+        time.sleep(0.15)
+        assert own_process_group(proc.pid) == proc.pid
+    finally:
+        proc.kill()
+        proc.wait(timeout=2)
 
 
 def test_signal_tree_does_not_kill_own_group() -> None:
@@ -61,6 +84,8 @@ def test_cancel_pending_quit_ignores_wm_armed() -> None:
 
 
 if __name__ == "__main__":
+    test_own_process_group_rejects_shared_group()
+    test_own_process_group_accepts_group_leader()
     test_signal_tree_does_not_kill_own_group()
     test_cancel_pending_quit_ignores_wm_armed()
     print("ok")

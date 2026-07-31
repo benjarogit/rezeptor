@@ -51,6 +51,42 @@ EOF
   [ ! -e "$canonical" ]
 }
 
+@test "purge_recipe_data keeps a foreign folder without Rezeptor data" {
+  canonical="$WINE_SOFTWARE_BASE/fake-recipe"
+  chosen="$TEST_BASE/games-collection"
+  mkdir -p "$canonical" "$chosen/Some Other Game"
+  echo "keep me" >"$chosen/Some Other Game/data.bin"
+
+  tmp_yml="$TEST_BASE/recipe.yml"
+  cat >"$tmp_yml" <<EOF
+id: fake-recipe
+data_root: "$canonical"
+name: Fake
+EOF
+
+  (
+    set -eu
+    export RECIPE_DIR="$ROOT/recipes/photoshop"
+    export PROJECT_ROOT="$ROOT"
+    export CORE_DIR="$ROOT/core"
+    export RECIPE_YML="$tmp_yml"
+    export RECIPE_ID="fake-recipe"
+    export DATA_ROOT="$chosen"
+    # shellcheck source=/dev/null
+    source "$ROOT/core/paths.sh"
+    # shellcheck source=/dev/null
+    source "$ROOT/core/recipe.sh"
+    # shellcheck source=/dev/null
+    source "$ROOT/core/recipe-hooks.sh"
+    # shellcheck source=/dev/null
+    source "$ROOT/core/recipe-desktop.sh"
+    recipe_hooks::purge_recipe_data
+  )
+
+  [ -e "$chosen/Some Other Game/data.bin" ]
+  [ ! -e "$canonical" ]
+}
+
 @test "every product recipe uninstall.sh calls purge_recipe_data" {
   missing=0
   for f in "$ROOT"/recipes/*/uninstall.sh; do
