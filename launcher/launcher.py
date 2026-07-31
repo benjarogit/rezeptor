@@ -237,6 +237,71 @@ _VALIDATE_SUBPROCESS_TIMEOUT_SEC = 25
 _ROLLBACK_UNINSTALL_TIMEOUT_SEC = 180
 _DESKTOP_SHORTCUT_TIMEOUT_SEC = 90
 _RAW_LOG_MAX_LINES = 2000
+
+
+def _linux_child_pids(pid: int) -> list[int]:
+    """Direkte Kind-PIDs aus /proc (Linux)."""
+    out: list[int] = []
+    task = Path(f"/proc/{pid}/task")
+    try:
+        for tid_dir in task.iterdir():
+            children = tid_dir / "children"
+            if not children.is_file():
+                continue
+            for tok in children.read_text(encoding="utf-8", errors="ignore").split():
+                if tok.isdigit():
+                    out.append(int(tok))
+    except OSError:
+        return []
+    return out
+
+
+def signal_subprocess_tree(pid: int, sig: int) -> None:
+    """Install/Wine-Baum beenden — niemals killpg der GUI-Prozessgruppe.
+
+    QProcess+setsid: der sichtbare PID liegt oft noch in unserer PGID; killpg(pid)
+    würde Rezeptor mitabschießen (Install-Abbrechen → App weg).
+    """
+    if pid <= 0:
+        return
+    try:
+        protect = os.getpgrp()
+    except OSError:
+        protect = -1
+    seen: set[int] = set()
+    stack = [pid]
+    while stack:
+        p = stack.pop()
+        if p <= 0 or p in seen:
+            continue
+        seen.add(p)
+        stack.extend(_linux_child_pids(p))
+        try:
+            pg = os.getpgid(p)
+        except ProcessLookupError:
+            continue
+        except OSError:
+            continue
+        if pg != protect:
+            try:
+                os.killpg(pg, sig)
+                continue
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+        try:
+            os.kill(p, sig)
+        except (ProcessLookupError, PermissionError, OSError):
+            pass
+
+
+def _signal_qprocess_tree(proc: QProcess, sig: int) -> None:
+    pid = int(proc.processId())
+    if pid > 0:
+        signal_subprocess_tree(pid, sig)
+    elif sig == signal.SIGTERM:
+        proc.terminate()
+    else:
+        proc.kill()
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*m|\x08+")
 SPINNER_RE = re.compile(r"^\[[\\/\-\|]\]\s*$")
 GUI_TAG_RE = re.compile(r"^@(step|ok|warn|error|info|progress):(.+)$")
@@ -3820,21 +3885,15 @@ class RezeptorWindow(QMainWindow):
         if proc is None or proc.state() == QProcess.ProcessState.NotRunning:
             return
         pid = int(proc.processId())
+        _signal_qprocess_tree(proc, signal.SIGTERM)
         if pid > 0:
-            try:
-                os.killpg(pid, signal.SIGTERM)
-            except (ProcessLookupError, PermissionError, OSError):
-                proc.terminate()
             QTimer.singleShot(2500, lambda p=proc, i=pid: self._force_kill_install(p, i))
-        else:
-            proc.terminate()
 
     def _force_kill_install(self, proc: QProcess, pid: int) -> None:
         if proc.state() == QProcess.ProcessState.NotRunning:
             return
-        try:
-            os.killpg(pid, signal.SIGKILL)
-        except (ProcessLookupError, PermissionError, OSError):
+        signal_subprocess_tree(pid, signal.SIGKILL)
+        if proc.state() != QProcess.ProcessState.NotRunning:
             proc.kill()
 
     def _rollback_cancelled_install(self, recipe_dir: Path | None) -> None:
@@ -4542,14 +4601,9 @@ class RezeptorWindow(QMainWindow):
             return
         self._cancel_requested = True
         pid = int(proc.processId())
+        _signal_qprocess_tree(proc, signal.SIGTERM)
         if pid > 0:
-            try:
-                os.killpg(pid, signal.SIGTERM)
-            except (ProcessLookupError, PermissionError, OSError):
-                proc.terminate()
             QTimer.singleShot(1500, lambda p=proc, i=pid: self._force_kill_install(p, i))
-        else:
-            proc.terminate()
 
     def _force_close_tool_windows(self) -> None:
         dismiss_all_top_level_windows(self, force=True)

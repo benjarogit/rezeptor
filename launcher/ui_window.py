@@ -221,6 +221,7 @@ class ApplicationCloseGuard(QObject):
         super().__init__(main)
         self._main = main
         self._quit_scheduled = False
+        self._wm_quit_armed = False
         self._quit_token = 0
         self._close_burst: list[float] = []
         self._main_close_at: float | None = None
@@ -272,6 +273,8 @@ class ApplicationCloseGuard(QObject):
         ]
         self._close_burst.append(now)
 
+        wm_close = bool(event.spontaneous())
+
         if w is self._main:
             self._main_close_at = now
             unwind_modal_dialogs(self._main, force=True)
@@ -279,31 +282,29 @@ class ApplicationCloseGuard(QObject):
             event.ignore()
             return True
 
-        # Hilfe-QMessageBox: nur die Box schließen.
-        if isinstance(w, QMessageBox):
+        # Hilfe-QMessageBox: nur die Box schließen (kein App-Quit).
+        if isinstance(w, QMessageBox) and not wm_close:
             return False
 
-        if self._secondary_has_unsaved(w):
+        if self._secondary_has_unsaved(w) and not wm_close:
             return False
 
-        # Nur echte WM-/Taskleisten-Close (spontaneous). Button-OK ist es nicht —
-        # sonst beendet „Installieren → Quelle OK“ die ganze App.
-        wm_close = bool(event.spontaneous())
-        if isinstance(w, QDialog) and w.isModal() and wm_close:
+        # Taskleisten-/WM-Close: alle Fenster beenden.
+        # force_close setzen, sonst ruft Dialog.closeEvent mark_user_dismiss auf
+        # und cancel_pending_quit verwirft den geplanten Quit (→ „Schließen tut nichts“).
+        if wm_close:
+            if isinstance(w, QDialog):
+                mark_force_close(w)
             self._schedule_quit()
             return False
 
-        if wm_close and (
-            len(self._close_burst) >= 2 or self._main_close_armed()
-        ):
-            self._schedule_quit()
-            return False
         return False
 
     def _schedule_quit(self) -> None:
         if self._quit_scheduled:
             return
         self._quit_scheduled = True
+        self._wm_quit_armed = True
         self._quit_token += 1
         token = self._quit_token
 
@@ -315,11 +316,14 @@ class ApplicationCloseGuard(QObject):
             fn = getattr(self._main, "request_quit_from_wm", None)
             if callable(fn):
                 fn(from_wm=True)
+            self._wm_quit_armed = False
 
         QTimer.singleShot(0, _run)
 
     def cancel_pending_quit(self) -> None:
-        """Quellen-OK / Nutzer-Dismiss: geplanten Fehl-Quit verwerfen."""
+        """Quellen-OK / Nutzer-Dismiss: geplanten Fehl-Quit verwerfen — nicht bei WM-Quit."""
+        if getattr(self, "_wm_quit_armed", False):
+            return
         self._quit_token += 1
         self._quit_scheduled = False
         self._close_burst.clear()
