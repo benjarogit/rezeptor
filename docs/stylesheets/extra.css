@@ -1,5 +1,5 @@
 /* Rezeptor brand — Anthrazit / Kupfer / Pergament / Siegel-Grün / Amber
-   Wahrheit: docs/*/BRAND.md · Logo: recipe card + verified seal */
+   Source of truth: docs/de/BRAND.md and docs/en/BRAND.md · Logo: recipe card + verified seal */
 
 :root {
   --rz-anthracite: #1c1c1a;
@@ -74,9 +74,10 @@
 .md-header[data-md-state],
 .md-header[data-md-state="shadow"],
 .md-header[data-md-state="hidden"] {
-  background-color: var(--rz-anthracite) !important;
+  /* Hex fallback: if brand vars fail to load, never leave sticky chrome transparent */
+  background-color: var(--rz-anthracite, #1c1c1a) !important;
   background-image: none !important;
-  color: var(--rz-parchment);
+  color: var(--rz-parchment, #ede6d6);
   box-shadow: 0 0.05rem 0 rgba(184, 115, 51, 0.35),
     0 0.2rem 0.5rem rgba(0, 0, 0, 0.22);
   /* Über Inhalt; sonst scheinen Karten/Titel durch den Sticky-Header */
@@ -90,8 +91,7 @@
 }
 
 .md-header__inner,
-.md-header__topic,
-.md-tabs {
+.md-header__topic {
   background-color: transparent;
 }
 
@@ -99,18 +99,18 @@
 .md-header__topic,
 .md-source,
 .md-source__repository {
-  color: var(--rz-parchment);
+  color: var(--rz-parchment, #ede6d6);
 }
 
 .md-header__button:hover {
   opacity: 0.92;
-  color: var(--rz-copper-light);
+  color: var(--rz-copper-light, #c9843f);
 }
 
 .md-tabs {
-  background-color: var(--rz-anthracite) !important;
+  background-color: var(--rz-anthracite, #1c1c1a) !important;
   background-image: none !important;
-  color: var(--rz-parchment);
+  color: var(--rz-parchment, #ede6d6);
   border-bottom: 1px solid rgba(184, 115, 51, 0.28);
 }
 
@@ -128,16 +128,16 @@
 /* „Zurück zum Seitenanfang“ — feste Ecke, nicht mitten über Karten */
 .md-top {
   z-index: 9;
-  background-color: var(--rz-anthracite) !important;
-  color: var(--rz-parchment) !important;
+  background-color: var(--rz-anthracite, #1c1c1a) !important;
+  color: var(--rz-parchment, #ede6d6) !important;
   border: 1px solid rgba(184, 115, 51, 0.45);
   box-shadow: 0 0.2rem 0.55rem rgba(0, 0, 0, 0.35);
 }
 
 .md-top:hover,
 .md-top:focus {
-  background-color: var(--rz-anthracite-elevated) !important;
-  color: var(--rz-copper-light) !important;
+  background-color: var(--rz-anthracite-elevated, #262622) !important;
+  color: var(--rz-copper-light, #c9843f) !important;
 }
 
 .md-tabs__link {

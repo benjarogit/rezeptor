@@ -10,18 +10,18 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/benjarogit/rezeptor/releases"><img src="https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=release&color=B87333" alt="Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--2.0-blue" alt="License"></a>
-  <a href="https://benjarogit.github.io/rezeptor/"><img src="https://img.shields.io/badge/docs-Rezeptor%20Docs-B87333" alt="Docs"></a>
-  <img src="https://img.shields.io/badge/AI-assisted-5C5C58" alt="AI-assisted">
+  <a href="https://github.com/benjarogit/rezeptor/releases"><img src="https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=release&color=B87333&logo=github&logoColor=white" alt="Release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--2.0-2B6CB0?logo=gnu&logoColor=white" alt="License"></a>
+  <a href="https://benjarogit.github.io/rezeptor/"><img src="https://img.shields.io/badge/docs-Rezeptor%20Docs-3D7A8C?logo=gitbook&logoColor=white" alt="Docs"></a>
+  <img src="https://img.shields.io/badge/AI-assisted-5C5C58?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJsMS4yIDMuNkwxNyA3bC0zLjggMS40TDEyIDEybC0xLjItMy42TDcgN2wzLjgtMS40TDEyIDJ6bTAgMTBsLjkgMi43TDE2IDE2bC0zLjEgMS4xTDEyIDIwbC0uOS0yLjlMOCAxNmwzLjEtMS4zTDEyIDEyek00IDlsLjcgMi4xTDcgMTJsLTIuMy44TDQgMTVsLS43LTIuMkwxIDEybDIuMy0uOUw0IDl6bTE2IDBsLjcgMi4xTDIzIDEybC0yLjMuOEwyMCAxNWwtLjctMi4yTDE3IDEybDIuMy0uOUwyMCA5eiIvPjwvc3ZnPg%3D%3D" alt="AI-assisted">
   <a href="https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/"><img src="https://img.shields.io/badge/reddit-User%20report-FF4500?logo=reddit&logoColor=white" alt="Reddit user report"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/benjarogit/rezeptor/stargazers"><img src="https://img.shields.io/github/stars/benjarogit/rezeptor?style=flat&color=C9A227" alt="Stars"></a>
-  <a href="https://github.com/benjarogit/rezeptor/issues"><img src="https://img.shields.io/github/issues/benjarogit/rezeptor?color=5C6B7A" alt="Issues"></a>
-  <a href="https://github.com/benjarogit/rezeptor/commits/main"><img src="https://img.shields.io/github/last-commit/benjarogit/rezeptor?color=6B7280" alt="Last commit"></a>
-  <a href="https://github.com/benjarogit/rezeptor/releases"><img src="https://img.shields.io/github/downloads/benjarogit/rezeptor/total?color=4A7C59" alt="Downloads"></a>
+  <a href="https://github.com/benjarogit/rezeptor/stargazers"><img src="https://img.shields.io/github/stars/benjarogit/rezeptor?style=flat&color=C9A227&logo=github&logoColor=white" alt="Stars"></a>
+  <a href="https://github.com/benjarogit/rezeptor/issues"><img src="https://img.shields.io/github/issues/benjarogit/rezeptor?color=5C6B7A&logo=github&logoColor=white" alt="Issues"></a>
+  <a href="https://github.com/benjarogit/rezeptor/commits/main"><img src="https://img.shields.io/github/last-commit/benjarogit/rezeptor?color=6B7280&logo=git&logoColor=white" alt="Last commit"></a>
+  <a href="https://github.com/benjarogit/rezeptor/releases"><img src="https://img.shields.io/github/downloads/benjarogit/rezeptor/total?color=4A7C59&logo=github&logoColor=white" alt="Downloads"></a>
 </p>
 
 Photoshop, tax software (WISO), Steam games with online fixes, trainers, and more: each recipe knows how to install, repair, validate, launch, and uninstall cleanly.
