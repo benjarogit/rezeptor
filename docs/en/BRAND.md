@@ -2,8 +2,9 @@
 
 ## Concept
 
-Recipe card + verification seal: stands for “tested, guaranteed recipes” instead of
-trial-and-error. The checkmark in the seal is the same one that later returns as the
+Doctor **prescription pad** (parchment card with classic **℞**) plus verification seal:
+stands for “tested, guaranteed recipes” / healing instead of trial-and-error.
+The checkmark in the seal is the same one that later returns as the
 “tested” status icon in the GUI — logo and UI share one symbol.
 
 Product UI, README, and docs stay bilingual (English + German).

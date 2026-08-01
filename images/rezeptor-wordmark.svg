@@ -1,19 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="640" height="160" viewBox="0 0 640 160" role="img" aria-label="Rezeptor">
   <rect width="640" height="160" fill="none"/>
-  <!-- Icon (scaled from app mark) -->
+  <!-- Icon (scaled from app mark — Rx pad + seal) -->
   <g transform="translate(16,20) scale(0.234)">
     <rect width="512" height="512" rx="112" fill="#1C1C1A"/>
-    <rect x="128" y="96" width="232" height="300" rx="22" fill="#EDE6D6"/>
-    <rect x="128" y="96" width="232" height="36" rx="22" fill="#B87333"/>
-    <rect x="128" y="114" width="232" height="18" fill="#B87333"/>
-    <rect x="156" y="168" width="176" height="14" rx="7" fill="#1C1C1A" opacity="0.78"/>
-    <rect x="156" y="206" width="176" height="14" rx="7" fill="#1C1C1A" opacity="0.55"/>
-    <rect x="156" y="244" width="132" height="14" rx="7" fill="#1C1C1A" opacity="0.40"/>
-    <rect x="156" y="282" width="156" height="14" rx="7" fill="#1C1C1A" opacity="0.28"/>
-    <circle cx="352" cy="352" r="88" fill="#1C1C1A"/>
-    <circle cx="352" cy="352" r="74" fill="#B87333"/>
-    <path d="M312 354 L340 382 L400 318" fill="none" stroke="#1C1C1A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="128" y="88" width="236" height="308" rx="22" fill="#EDE6D6"/>
+    <path d="M150 88 H342 A22 22 0 0 1 364 110 V124 H128 V110 A22 22 0 0 1 150 88 Z" fill="#B87333"/>
+    <rect x="128" y="110" width="236" height="14" fill="#B87333"/>
+    <g fill="#B87333" transform="translate(158,148)">
+      <path fill-rule="evenodd" d="
+        M0 0 H28 V128 H0 Z
+        M28 0 H86 C122 0 148 26 148 58 C148 90 122 116 86 116 H28 Z
+        M56 28 H86 C102 28 120 40 120 58 C120 76 102 88 86 88 H56 Z"/>
+      <path d="M52 108 L130 176 H92 L40 128 Z"/>
+      <g transform="translate(48,108)">
+        <rect x="-6" y="28" width="100" height="22" rx="4" transform="rotate(40 44 39)"/>
+        <rect x="-6" y="28" width="100" height="22" rx="4" transform="rotate(-40 44 39)"/>
+      </g>
+    </g>
+    <rect x="156" y="264" width="176" height="12" rx="6" fill="#1C1C1A" opacity="0.72"/>
+    <rect x="156" y="296" width="148" height="12" rx="6" fill="#1C1C1A" opacity="0.50"/>
+    <rect x="156" y="328" width="168" height="12" rx="6" fill="#1C1C1A" opacity="0.36"/>
+    <rect x="156" y="360" width="100" height="12" rx="6" fill="#1C1C1A" opacity="0.24"/>
+    <circle cx="356" cy="356" r="88" fill="#1C1C1A"/>
+    <circle cx="356" cy="356" r="74" fill="#B87333"/>
+    <path d="M316 358 L344 386 L404 322" fill="none" stroke="#1C1C1A" stroke-width="22"
+          stroke-linecap="round" stroke-linejoin="round"/>
   </g>
   <text x="160" y="78" font-family="Georgia, 'Times New Roman', serif" font-size="52" font-weight="600" fill="#EDE6D6">Rezeptor</text>
-  <text x="162" y="112" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#B87333">Tested Windows recipes for Linux · Proton-GE</text>
+  <text x="162" y="112" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#B87333">Tested recipes · Proton-GE</text>
 </svg>

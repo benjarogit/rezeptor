@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="Rezeptor">
-  <!-- Brand: Anthrazit #1C1C1A · Kupfer #B87333 · Pergament #EDE6D6 -->
+  <!-- Brand: Anthrazit #1C1C1A · Kupfer #B87333 · Pergament #EDE6D6
+       Motif: doctor prescription pad (℞) + verified / Heilung seal -->
   <defs>
     <linearGradient id="seal" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#C9843F"/>
@@ -13,21 +14,39 @@
   <!-- App tile -->
   <rect width="512" height="512" rx="112" fill="#1C1C1A"/>
 
-  <!-- Recipe card -->
+  <!-- Prescription pad -->
   <g filter="url(#soft)">
-    <rect x="128" y="96" width="232" height="300" rx="22" fill="#EDE6D6"/>
-    <!-- copper header strip -->
-    <rect x="128" y="96" width="232" height="36" rx="22" fill="#B87333"/>
-    <rect x="128" y="114" width="232" height="18" fill="#B87333"/>
-    <!-- lines -->
-    <rect x="156" y="168" width="176" height="14" rx="7" fill="#1C1C1A" opacity="0.78"/>
-    <rect x="156" y="206" width="176" height="14" rx="7" fill="#1C1C1A" opacity="0.55"/>
-    <rect x="156" y="244" width="132" height="14" rx="7" fill="#1C1C1A" opacity="0.40"/>
-    <rect x="156" y="282" width="156" height="14" rx="7" fill="#1C1C1A" opacity="0.28"/>
+    <rect x="128" y="88" width="236" height="308" rx="22" fill="#EDE6D6"/>
+    <!-- Copper header -->
+    <path d="M150 88 H342 A22 22 0 0 1 364 110 V124 H128 V110 A22 22 0 0 1 150 88 Z" fill="#B87333"/>
+    <rect x="128" y="110" width="236" height="14" fill="#B87333"/>
+
+    <!-- Classic ℞ (evenodd bowl + bold x for small sizes) -->
+    <g fill="#B87333" transform="translate(158,148)">
+      <!-- Stem + R bowl with counter (evenodd) -->
+      <path fill-rule="evenodd" d="
+        M0 0 H28 V128 H0 Z
+        M28 0 H86 C122 0 148 26 148 58 C148 90 122 116 86 116 H28 Z
+        M56 28 H86 C102 28 120 40 120 58 C120 76 102 88 86 88 H56 Z"/>
+      <!-- R leg -->
+      <path d="M52 108 L130 176 H92 L40 128 Z"/>
+      <!-- Prescription x — thick bars -->
+      <g transform="translate(48,108)">
+        <rect x="-6" y="28" width="100" height="22" rx="4" transform="rotate(40 44 39)"/>
+        <rect x="-6" y="28" width="100" height="22" rx="4" transform="rotate(-40 44 39)"/>
+      </g>
+    </g>
+
+    <!-- Asymmetric handwritten lines -->
+    <rect x="156" y="264" width="176" height="12" rx="6" fill="#1C1C1A" opacity="0.72"/>
+    <rect x="156" y="296" width="148" height="12" rx="6" fill="#1C1C1A" opacity="0.50"/>
+    <rect x="156" y="328" width="168" height="12" rx="6" fill="#1C1C1A" opacity="0.36"/>
+    <rect x="156" y="360" width="100" height="12" rx="6" fill="#1C1C1A" opacity="0.24"/>
   </g>
 
-  <!-- Verified seal -->
-  <circle cx="352" cy="352" r="88" fill="#1C1C1A"/>
-  <circle cx="352" cy="352" r="74" fill="url(#seal)"/>
-  <path d="M312 354 L340 382 L400 318" fill="none" stroke="#1C1C1A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Verified / Heilung seal -->
+  <circle cx="356" cy="356" r="88" fill="#1C1C1A"/>
+  <circle cx="356" cy="356" r="74" fill="url(#seal)"/>
+  <path d="M316 358 L344 386 L404 322" fill="none" stroke="#1C1C1A" stroke-width="22"
+        stroke-linecap="round" stroke-linejoin="round"/>
 </svg>

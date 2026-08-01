@@ -1,10 +1,10 @@
 # Rezeptor — Markendesign
 
 ## Idee
-Rezeptkarte + Prüfsiegel: steht für "getestete, garantierte Rezepte" statt
-Trial-and-Error. Der Haken im Siegel ist derselbe, der später als
-Status-Icon für "getestet" im GUI wiederkehrt — Logo und UI teilen sich
-ein Symbol.
+Arzt-**Rezeptblock** (Pergament-Karte mit klassischem **℞**) plus Prüfsiegel:
+steht für „getestete, garantierte Rezepte“ / Heilung statt Trial-and-Error.
+Der Haken im Siegel ist derselbe, der später als Status-Icon für „getestet“
+im GUI wiederkehrt — Logo und UI teilen sich ein Symbol.
 
 Produkt-UI, README und Dokumentation bleiben zweisprachig (Deutsch + Englisch).
 
