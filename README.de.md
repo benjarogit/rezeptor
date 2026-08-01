@@ -13,6 +13,7 @@
   <a href="https://github.com/benjarogit/rezeptor/releases"><img src="https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=Release&color=B87333" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/Lizenz-GPL--2.0-blue" alt="Lizenz"></a>
   <a href="https://benjarogit.github.io/rezeptor/"><img src="https://img.shields.io/badge/Doku-Rezeptor%20Docs-B87333" alt="Doku"></a>
+  <img src="https://img.shields.io/badge/AI-Vibe--Coding-B87333" alt="AI Vibe-Coding">
   <a href="https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/"><img src="https://img.shields.io/badge/Reddit-User--Bericht-FF4500?logo=reddit&logoColor=white" alt="Reddit User-Bericht"></a>
 </p>
 
