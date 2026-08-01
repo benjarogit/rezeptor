@@ -132,7 +132,7 @@ PY
 recipe_photoshop::configure_post_install() {
     local ps_path="" version="2021" prefs_path settings_dir ui_prefs machine_prefs
     local _err=0
-    output::progress 96 "Post-Install (GPU aus, Tooltips aus, Legacy-Neu, CEP)"
+    output::progress 96 "Post-Install (GPU/UI-Prefs nach Medizin)"
 
     ps_path="$(recipe_photoshop::_install_path "$version")"
     if [ ! -d "$ps_path" ]; then
@@ -183,16 +183,33 @@ recipe_photoshop::configure_post_install() {
         _err=1
     fi
 
-    # Legacy-Neu (CEP unter Wine kaputt). ToolTips aus = Text-Tool/Plugins nutzbar.
+    # UI-Prefs: Default = Safe. Medizin kann Home / Tooltips / modernen Neu einzeln freigeben.
     # Prefs entstehen oft erst beim ersten PS-Start — deshalb Template seeden, dann patchen.
+    recipe_photoshop::_migrate_windows_like_ui_option || true
     ui_prefs="$settings_dir/UIPrefs.psp"
     recipe_photoshop::_seed_ui_prefs "$settings_dir" || true
     if [ -f "$ui_prefs" ]; then
-        recipe_photoshop::_prefs_set_bool "$ui_prefs" useClassicFileNewDialog 1 || true
-        recipe_photoshop::_prefs_set_bool "$ui_prefs" honorUseOldFileNewDialogPref 1 || true
-        recipe_photoshop::_prefs_set_bool "$ui_prefs" autoShowHomeScreen 0 || true
-        recipe_photoshop::_prefs_set_bool "$ui_prefs" ToolTips 0 || true
-        recipe_photoshop::_prefs_set_bool "$ui_prefs" useRichToolTips 0 || true
+        if recipe_photoshop::ui_modern_new_enabled; then
+            recipe_photoshop::_prefs_set_bool "$ui_prefs" useClassicFileNewDialog 0 || true
+            recipe_photoshop::_prefs_set_bool "$ui_prefs" honorUseOldFileNewDialogPref 0 || true
+        else
+            # Legacy-Neu: CEP unter Wine oft schwarze Felder / Programmfehler.
+            recipe_photoshop::_prefs_set_bool "$ui_prefs" useClassicFileNewDialog 1 || true
+            recipe_photoshop::_prefs_set_bool "$ui_prefs" honorUseOldFileNewDialogPref 1 || true
+        fi
+        if recipe_photoshop::ui_home_screen_enabled; then
+            recipe_photoshop::_prefs_set_bool "$ui_prefs" autoShowHomeScreen 1 || true
+        else
+            recipe_photoshop::_prefs_set_bool "$ui_prefs" autoShowHomeScreen 0 || true
+        fi
+        if recipe_photoshop::ui_rich_tooltips_enabled; then
+            recipe_photoshop::_prefs_set_bool "$ui_prefs" ToolTips 1 || true
+            recipe_photoshop::_prefs_set_bool "$ui_prefs" useRichToolTips 1 || true
+        else
+            # ToolTips aus = Text-Tool/Plugins unter Wine oft erst nutzbar.
+            recipe_photoshop::_prefs_set_bool "$ui_prefs" ToolTips 0 || true
+            recipe_photoshop::_prefs_set_bool "$ui_prefs" useRichToolTips 0 || true
+        fi
     fi
 
     if ! recipe_photoshop::deploy_text_smooth_script; then
@@ -304,6 +321,60 @@ recipe_photoshop::apply_gpu_profile() {
         echo "GPU-Profil: $name"
     fi
     return 0
+}
+
+# Medizin-UI-Prefs (einzeln). Legacy PHOTOSHOP_WINDOWS_LIKE_UI=1 → alle drei an.
+recipe_photoshop::_env_bool_on() {
+    case "${1:-}" in
+        1|true|yes|on|TRUE|YES|ON) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+recipe_photoshop::_ui_opt_enabled() {
+    # $1 = aktueller Env-Wert (kann leer sein); leer + Legacy → an
+    local cur="${1-}"
+    if [ -n "$cur" ]; then
+        recipe_photoshop::_env_bool_on "$cur"
+        return $?
+    fi
+    recipe_photoshop::_env_bool_on "${PHOTOSHOP_WINDOWS_LIKE_UI:-0}"
+}
+
+recipe_photoshop::ui_home_screen_enabled() {
+    recipe_photoshop::_ui_opt_enabled "${PHOTOSHOP_UI_HOME_SCREEN-}"
+}
+
+recipe_photoshop::ui_rich_tooltips_enabled() {
+    recipe_photoshop::_ui_opt_enabled "${PHOTOSHOP_UI_RICH_TOOLTIPS-}"
+}
+
+recipe_photoshop::ui_modern_new_enabled() {
+    recipe_photoshop::_ui_opt_enabled "${PHOTOSHOP_UI_MODERN_NEW-}"
+}
+
+# Einmalig: Legacy-Flag in drei Optionen aufteilen (options.env).
+recipe_photoshop::_migrate_windows_like_ui_option() {
+    local f="${DATA_ROOT:-}/options.env"
+    [ -n "${DATA_ROOT:-}" ] && [ -f "$f" ] || return 0
+    grep -qiE '^PHOTOSHOP_WINDOWS_LIKE_UI=(1|true|yes|on)[[:space:]]*$' "$f" 2>/dev/null || return 0
+    if grep -qE '^PHOTOSHOP_UI_(HOME_SCREEN|RICH_TOOLTIPS|MODERN_NEW)=' "$f" 2>/dev/null; then
+        return 0
+    fi
+    if type env_file_set >/dev/null 2>&1; then
+        env_file_set "$f" PHOTOSHOP_UI_HOME_SCREEN 1
+        env_file_set "$f" PHOTOSHOP_UI_RICH_TOOLTIPS 1
+        env_file_set "$f" PHOTOSHOP_UI_MODERN_NEW 1
+    else
+        {
+            echo "PHOTOSHOP_UI_HOME_SCREEN=1"
+            echo "PHOTOSHOP_UI_RICH_TOOLTIPS=1"
+            echo "PHOTOSHOP_UI_MODERN_NEW=1"
+        } >>"$f"
+    fi
+    export PHOTOSHOP_UI_HOME_SCREEN=1
+    export PHOTOSHOP_UI_RICH_TOOLTIPS=1
+    export PHOTOSHOP_UI_MODERN_NEW=1
 }
 
 # UIPrefs-Template (Legacy-Neu, ToolTips aus) — sonst Programmfehler bei „Neu erstellen“.

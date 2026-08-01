@@ -92,7 +92,6 @@
     "update_tip": "Apply patches/updates in order (folder with 1 - … / 2 - … or a separate update pack)",
     "relocate": "Move target…",
     "relocate_tip": "Move the install to another folder/disk (prefix and shortcuts are updated)",
-
     "uninstall": "Uninstall",
     "view_recipe": "View recipe…",
     "view_recipe_tip": "View recipe only (read-only)",
@@ -132,7 +131,8 @@
     "update_rezeptor": "Update Rezeptor",
     "regen_manifest": "Approve files",
     "report_bug": "Report issue…",
-    "report_github": "Report on GitHub"
+    "report_github": "Report on GitHub",
+    "repair_required": "Repair now"
   },
   "tooltip": {
     "launch": "Launch the application (switches to Progress)",
@@ -167,7 +167,7 @@
     "installed_tip": "Installed — ready to launch",
     "partial_tip": "Partial — repair recommended",
     "not_installed_tip": "Not installed yet",
-    "untrusted_tip": "Recipe files changed — use More → “Approve files” (developer mode / REZEPTOR_DEV)",
+    "untrusted_tip": "Recipe files changed — use the primary “Approve files” button (developer mode / REZEPTOR_DEV)",
     "checking_tip": "Recipe file integrity is still being verified",
     "prefix_present": "Prefix present",
     "installed_with_warnings": "Installed (validation with warnings)",
@@ -236,12 +236,13 @@
     "reason_changed": "Some Rezeptor files changed and need to be approved again.",
     "reason_checking": "Checking integrity…",
     "reason_missing": "Expected Rezeptor files are missing or unreadable.",
-    "hint_dev": "Click “Approve files” to accept the local changes — then you can launch again.",
+    "hint_dev": "The highlighted “Approve files” button accepts changes for this recipe only — then use “Repair now”, otherwise fixes will not apply.",
     "hint_user": "Please update Rezeptor (Help → Check for updates), then reopen.",
     "hidden_warn": "Recipe warning: {line}",
     "resync_needed": "Recipe files changed — approve them again before install/launch. {detail}",
-    "regen_ok": "Files approved — refreshing status",
-    "regen_fail": "Could not approve files"
+    "regen_ok": "Files approved (this recipe) — refreshing status",
+    "regen_fail": "Could not approve files",
+    "force_repair_followup": "Approved for this recipe only. Please click “Repair now”."
   },
   "update": {
     "available_title": "Update available",
@@ -279,7 +280,7 @@
     "error_title": "Save option",
     "error_body": "Could not save option:\n{error}",
     "apply_title": "Option saved",
-    "apply_repair_hint": "Saved. Run Repair once so the prefix and options match."
+    "apply_repair_hint": "Saved. Please click “Repair now” — otherwise the old settings stay active."
   },
   "recipe_sync": {
     "available_title": "Recipe updates",

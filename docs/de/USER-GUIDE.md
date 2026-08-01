@@ -6,10 +6,11 @@ Bedienung der Rezeptor-GUI. Rezept-Autoren: siehe [Entwickler-Übersicht](ENTWIC
 
 | Element | Rolle |
 |---------|--------|
-| **Sidebar** | Rezeptliste (ca. 240 px), Status-Pille, Suche/Reihenfolge |
+| **Sidebar** | Rezeptliste, Statuspunkt (Warn-Icon nur bei Teilweise / nicht freigegeben), Suche/Reihenfolge |
 | **Hauptbereich** | Übersicht, Quelle/Ziel, Infotexte |
-| **Primary-CTA** | Kontextaktion (Installieren / Starten / …) |
-| **Mehr ▾** | Sekundäraktionen (Reparieren, Validieren, Deinstallieren, …) |
+| **Primary-CTA** | Kontextaktion (Installieren / Starten / Freigeben / **Jetzt reparieren** / …) |
+| **Mehr ▾** | Sekundäraktionen (Validieren, Deinstallieren, …) |
+| **Medizin** | Eigener Button neben Mehr — dauerhafte Rezept-Optionen (siehe unten) |
 | **Vorgang / Activity** | Humanisierte Log-Zeilen aus Hook-Skripten |
 
 Thema: Fluent Dark + Kupfer (`#B87333`) — siehe [Marke](BRAND.md).
@@ -25,11 +26,30 @@ Thema: Fluent Dark + Kupfer (`#B87333`) — siehe [Marke](BRAND.md).
 7. Bei Problemen: **Reparieren** (behebt Abweichungen, installiert nicht neu)
 8. **Deinstallieren** entfernt Rezeptor-State vollständig — Portable/Steam außerhalb bleiben
 
+## Medizin (Rezept-Optionen)
+
+Button **Medizin** (Verbandskasten-Icon) neben **Mehr** — nicht im Mehr-Menü.
+
+Dauerhafte Schalter pro Rezept (`options.env`). Nach dem Umschalten erscheint oft der Primary-Button **„Jetzt reparieren“** — einmal tippen, sonst bleiben die alten Einstellungen aktiv.
+
+### Photoshop (CC 2021)
+
+Unter Wine sind manche Windows-UI-Features fragil. Rezeptor setzt deshalb standardmäßig sichere Prefs (kein Startbildschirm, Tooltips aus, Legacy-Neu-Dialog). Wenn es bei dir unter Windows-Feeling stabil läuft, kannst du einzeln freigeben:
+
+| Option | Wirkung |
+|--------|---------|
+| Startbildschirm (Home) | Wie unter Windows — bei weißem/leerem Workspace wieder aus + Reparieren |
+| Animierte / ausführliche Tooltips | Kann Textwerkzeug/Plugins stören |
+| Moderner Neu-Dialog | Großer Neu-Dialog — kann schwarze Felder / weiße Fläche auslösen |
+
+Standard jeweils **aus**. Details auch in den Tipps im Medizin-Dialog.
+
 ## Status & Validierung
 
 - Optional **Validieren beim Start** (Einstellungen)
 - **F5** / Validieren: strukturierte `OK:` / `FAIL:` / `WARN:`-Ausgabe
 - Grün = getestet / bereit; Amber = Warnung; Fehler = Handlungsbedarf
+- Sidebar-Warn-Icon = Reparatur oder Freigabe nötig — nicht bei „nicht installiert“
 
 ## Einstellungen
 

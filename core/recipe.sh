@@ -57,4 +57,35 @@ recipe_export_env() {
     local wow64
     wow64="$(recipe_get "$yml" disable_wow64 2>/dev/null || true)"
     export RECIPE_DISABLE_WOW64="$wow64"
+    recipe_export_yaml_env "$yml"
+}
+
+# env:-Block aus recipe.yml (flache key: value unter env:)
+recipe_export_yaml_env() {
+    local yml="${1:?recipe.yml}"
+    local in_env=0 line key val
+    [ -f "$yml" ] || return 0
+    while IFS= read -r line || [ -n "$line" ]; do
+        line="${line%%$'\r'}"
+        if [ "$in_env" -eq 0 ]; then
+            [[ "$line" =~ ^env:[[:space:]]*$ ]] && in_env=1
+            continue
+        fi
+        if [[ "$line" =~ ^[^[:space:]#] ]]; then
+            break
+        fi
+        [[ "$line" =~ ^[[:space:]]*# ]] && continue
+        [[ "$line" =~ ^[[:space:]]*$ ]] && continue
+        if [[ "$line" =~ ^[[:space:]]*([^#:]+):[[:space:]]*(.*)$ ]]; then
+            key="${BASH_REMATCH[1]}"
+            key="${key//[[:space:]]/}"
+            val="${BASH_REMATCH[2]}"
+            val="${val%%#*}"
+            val="${val%"${val##*[![:space:]]}"}"
+            val="${val#"${val%%[![:space:]]*}"}"
+            val="${val#\"}"
+            val="${val%\"}"
+            [ -n "$key" ] && export "${key}=${val}"
+        fi
+    done <"$yml"
 }

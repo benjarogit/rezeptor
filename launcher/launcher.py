@@ -200,13 +200,20 @@ from recipe_sync import (
     pending_attention_count,
 )
 from recipe_trust import (
+    approve_recipe_manifest,
     friendly_trust_reason,
     generate_manifest,
     rezeptor_dev_mode,
     verify_recipe_trust,
 )
 from ui_styles import COLOR_PARCHMENT, MUTED, STATE_COLORS, palette
-from ui_icons import ensure_fa_brands_font, ensure_fa_font, fa_color, fa_icon
+from ui_icons import (
+    ensure_fa_brands_font,
+    ensure_fa_font,
+    fa_color,
+    fa_icon,
+    rounded_pixmap,
+)
 from ui_medizin import MedizinDialog
 from ui_progress import WaitingSpinner
 from ui_window import (
@@ -360,6 +367,21 @@ def _recipe_is_untrusted(info: RecipeInfo) -> bool:
     if _recipe_is_checking(info):
         return False
     return info.state == RecipeState.UNTRUSTED or not info.trust_ok
+
+
+def _sidebar_attention(info: RecipeInfo) -> bool:
+    """Warn-Icon nur bei Reparatur/Freigabe-Bedarf — nicht bei „nicht installiert“.
+
+    validate.sh meldet bei fehlender Installation immer FAIL-Zeilen; das ist
+    erwartet und kein Hinweis-Zustand. Versions-WARN hat eigene Pill/Dialog.
+    """
+    if _recipe_is_checking(info):
+        return False
+    if info.state in (RecipeState.PARTIAL, RecipeState.UNTRUSTED):
+        return True
+    if _recipe_is_untrusted(info):
+        return True
+    return False
 
 
 def _debug_log(message: str) -> None:
@@ -1100,7 +1122,6 @@ class RezeptorWindow(QMainWindow):
         self._wiso_mono_hint_shown = False
         self._update_available = ""
         self._launch_alive_reported = False
-        self._trust_btn: QPushButton | None = None
         self._menu_bar_built = False
         self._last_activity_key: tuple[str, str] | None = None
         self._progress_pct = 0
@@ -1121,6 +1142,8 @@ class RezeptorWindow(QMainWindow):
         self._status_refresh_announce = False
         self._status_refresh_pending: tuple[bool, bool] | None = None
         self._post_config_dir: str | None = None
+        # Nach Freigabe/Medizin: Primary = „Jetzt reparieren“, bis Repair durch ist
+        self._pending_repair_rid: str | None = None
 
         self._build_menus()
         self._build_status_bar()
@@ -1270,7 +1293,7 @@ class RezeptorWindow(QMainWindow):
         sidebar = QFrame()
         sidebar.setObjectName("sidebar")
         sidebar.setAccessibleName("Sidebar")
-        sidebar.setFixedWidth(240)
+        sidebar.setFixedWidth(268)
         sl = QVBoxLayout(sidebar)
         sl.setContentsMargins(12, 14, 12, 12)
         sl.setSpacing(10)
@@ -1301,7 +1324,7 @@ class RezeptorWindow(QMainWindow):
         )
         self.recipe_cards_host.setAutoFillBackground(False)
         self.recipe_cards_layout = QVBoxLayout(self.recipe_cards_host)
-        self.recipe_cards_layout.setContentsMargins(0, 0, 0, 0)
+        self.recipe_cards_layout.setContentsMargins(0, 0, 4, 0)
         # Tight list — 8px + ScrollArea-Viewport wirkte wie lose „Karten-Stapel“.
         self.recipe_cards_layout.setSpacing(4)
         self.recipe_cards_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -1319,10 +1342,12 @@ class RezeptorWindow(QMainWindow):
         self.recipe_cards_scroll.viewport().setAutoFillBackground(False)
         self.recipe_cards_scroll.setWidget(self.recipe_cards_host)
         self.recipe_cards_scroll.setAccessibleName(t("app.sidebar_title"))
-        # Keep host within sidebar content width so titles elide instead of spilling.
-        self.recipe_cards_host.setMaximumWidth(240 - 24)  # sidebar padding 12+12
+        # Rechter Abstand: Scrollbar einrechnen, wenn sie sichtbar/nötig ist.
+        sb = self.recipe_cards_scroll.verticalScrollBar()
+        sb.rangeChanged.connect(lambda *_: self._sync_sidebar_scroll_gap())
         sl.addWidget(self.recipe_cards_scroll, 1)
         root.addWidget(sidebar)
+        QTimer.singleShot(0, self._sync_sidebar_scroll_gap)
 
         # —— Rechte Spalte: HEADER + Navigation + INFO ——
         main = QWidget()
@@ -1347,7 +1372,9 @@ class RezeptorWindow(QMainWindow):
         self.icon_label.setFixedSize(64, 64)
         self.icon_label.setScaledContents(True)
         if REZEPTOR_ICON.is_file():
-            self.icon_label.setPixmap(QIcon(str(REZEPTOR_ICON)).pixmap(64, 64))
+            self.icon_label.setPixmap(
+                rounded_pixmap(QIcon(str(REZEPTOR_ICON)).pixmap(64, 64), 12)
+            )
         hl.addWidget(self.icon_label, alignment=Qt.AlignmentFlag.AlignTop)
 
         hc = QVBoxLayout()
@@ -1531,11 +1558,8 @@ class RezeptorWindow(QMainWindow):
         self.repair_btn = self.primary_btn
         self.kill_btn = self.primary_btn
 
-        self.trust_btn = PushButton(t("btn.update_rezeptor"))
-        self.trust_btn.setCursor(hand)
-        self.trust_btn.setVisible(False)
-        self.trust_btn.setToolTip(t("tooltip.regen_manifest"))
-        self.trust_btn.clicked.connect(self._on_trust_action)
+        # Trust-Freigabe sitzt auf dem Kupfer-Primary — kein grauer Nebenbutton.
+        self.trust_btn = None
 
         # Fluent PushButton + RoundMenu (same family as secondary buttons; no DropDown chrome)
         if FLUENT_AVAILABLE:
@@ -1572,7 +1596,6 @@ class RezeptorWindow(QMainWindow):
         self.logs_btn = None
 
         row.addWidget(self.primary_btn)
-        row.addWidget(self.trust_btn)
         row.addWidget(self.more_btn)
         row.addWidget(self.medizin_btn)
         row.addStretch(1)
@@ -1616,8 +1639,16 @@ class RezeptorWindow(QMainWindow):
         # Eigenes Taskleisten-Fenster — sonst blockiert modaler Child „Alles schließen“.
         apply_tool_window(dlg, icon=self.windowIcon(), modal=True)
         dlg.exec()
-        if dlg.needs_repair_hint:
+        if dlg.needs_repair_hint and self._selected is not None:
+            rid = self._selected.rid
+            self._pending_repair_rid = rid
             self._activity("info", t("medizin.apply_repair_hint"))
+            idx = next(
+                (i for i, r in enumerate(self.recipes) if r.rid == rid),
+                -1,
+            )
+            if idx >= 0:
+                self._on_select(idx)
 
     def _popup_more_menu(self) -> None:
         self._rebuild_more_menu()
@@ -1666,6 +1697,7 @@ class RezeptorWindow(QMainWindow):
             act = self._add_menu_action(menu, label, slot)
             act.setEnabled(bool(enabled) and not busy and not untrusted)
 
+        pending_repair = self._pending_repair_rid == info.rid
         _add(t("menu.validate"), self.run_validate, enabled=True)
         _add(
             t("menu.repair"),
@@ -1675,7 +1707,8 @@ class RezeptorWindow(QMainWindow):
         _add(
             t("menu.launch"),
             self.run_launch,
-            enabled=can_launch and mode != "launch",
+            # Freigabe/Medizin: kein Start-Umweg, solange Repair aussteht
+            enabled=can_launch and mode != "launch" and not pending_repair,
         )
         _add(
             t("menu.kill"),
@@ -1740,6 +1773,9 @@ class RezeptorWindow(QMainWindow):
         if mode == "docs":
             self.show_developer_docs()
             return
+        if mode in ("trust_approve", "trust_update"):
+            self._on_trust_action()
+            return
         if mode == "install":
             self.run_install()
         elif mode == "launch":
@@ -1772,16 +1808,33 @@ class RezeptorWindow(QMainWindow):
         running: bool,
         busy: bool,
     ) -> None:
-        """Primary-CTA: Installieren | Starten | Reparieren | Beenden."""
+        """Primary-CTA global: Freigeben | Installieren | Starten | Reparieren | Beenden.
+
+        Pflicht-Aktionen (Freigabe, Jetzt-reparieren) immer auf dem Kupfer-Primary —
+        kein grauer Nebenbutton, kein Rezept-Sonderweg.
+        """
         repair_ok = (Path(info.meta["_dir"]) / "repair.sh").is_file() and info.state in (
             RecipeState.INSTALLED,
             RecipeState.PARTIAL,
         )
         kill_ok = (Path(info.meta["_dir"]) / "kill.sh").is_file()
-        untrusted = _recipe_is_untrusted(info) or _recipe_is_checking(info)
+        checking = _recipe_is_checking(info)
+        untrusted = _recipe_is_untrusted(info)
+        pending_repair = (
+            self._pending_repair_rid == info.rid and repair_ok and not untrusted and not checking
+        )
+        git_dev = (ROOT / ".git").is_dir()
 
-        if untrusted or busy:
+        if busy:
             mode = "none"
+        elif checking:
+            mode = "none"
+        elif untrusted and git_dev:
+            mode = "trust_approve"
+        elif untrusted:
+            mode = "trust_update"
+        elif pending_repair:
+            mode = "repair"
         elif running and kill_ok:
             mode = "kill"
         elif info.state == RecipeState.NOT_INSTALLED:
@@ -1800,8 +1853,22 @@ class RezeptorWindow(QMainWindow):
         mapping = {
             "install": ("btn.install", "tooltip.install", "install"),
             "launch": ("btn.launch", "tooltip.launch", "launch"),
-            "repair": ("btn.repair", "tooltip.repair", "repair"),
+            "repair": (
+                "btn.repair_required" if pending_repair else "btn.repair",
+                "tooltip.repair",
+                "warn" if pending_repair else "repair",
+            ),
             "kill": ("btn.kill", "tooltip.kill", "kill"),
+            "trust_approve": (
+                "btn.regen_manifest",
+                "tooltip.regen_manifest",
+                "warn",
+            ),
+            "trust_update": (
+                "btn.update_rezeptor",
+                "tooltip.regen_manifest",
+                "warn",
+            ),
         }
         if mode in mapping:
             label_k, tip_k, icon_k = mapping[mode]
@@ -1816,9 +1883,9 @@ class RezeptorWindow(QMainWindow):
             btn.setVisible(True)
         else:
             btn.setEnabled(False)
-            if not untrusted:
-                btn.setText(t("btn.launch"))
-                btn.setToolTip("")
+            btn.setText(t("btn.launch"))
+            btn.setToolTip("")
+            btn.setIcon(QIcon())
 
         # Mehr-Menü wird bei jedem Öffnen neu gebaut (_popup_more_menu) —
         # kein setVisible(False) auf RoundMenu-Actions (erzeugt Leerzellen).
@@ -1939,8 +2006,13 @@ class RezeptorWindow(QMainWindow):
         return
 
     def _update_health_chip(self, info: RecipeInfo) -> None:
+        """Hinweise nur für das aktuell gewählte Rezept (Header-Chip)."""
         chip = getattr(self, "health_chip", None)
         if chip is None:
+            return
+        if self._selected is None or self._selected.rid != info.rid:
+            chip.setVisible(False)
+            chip.setText("")
             return
         fails = list(info.validate_fails or [])
         if info.state == RecipeState.PARTIAL and not fails and info.status_detail:
@@ -2186,7 +2258,7 @@ class RezeptorWindow(QMainWindow):
         if REZEPTOR_ICON.is_file():
             ic = QIcon(str(REZEPTOR_ICON))
             self.setWindowIcon(ic)
-            self.icon_label.setPixmap(ic.pixmap(64, 64))
+            self.icon_label.setPixmap(rounded_pixmap(ic.pixmap(64, 64), 12))
         self.name_label.setText(t("app.home_title"))
         self.version_info_btn.setVisible(False)
         self.status_pill.setVisible(False)
@@ -2216,7 +2288,6 @@ class RezeptorWindow(QMainWindow):
             self.primary_btn.setIconSize(QSize(14, 14))
         self.primary_btn.setEnabled(True)
         self.primary_btn.setVisible(True)
-        self.trust_btn.setVisible(False)
         self.more_btn.setEnabled(True)
         self._sync_medizin_button()
 
@@ -2664,17 +2735,47 @@ class RezeptorWindow(QMainWindow):
             )
 
     def _on_trust_action(self) -> None:
-        if (ROOT / ".git").is_dir():
-            try:
-                n = generate_manifest(RECIPES_DIR, MANIFEST_PATH)
-                self._activity("ok", t("trust.regen_ok") + f" ({n})")
-                self._apply_discover_outcome(discover_recipes())
-                self.refresh_statuses()
-            except OSError as exc:
-                self._activity("error", t("trust.regen_fail") + f": {exc}")
-                QMessageBox.critical(self, t("dialog.error"), str(exc))
-        else:
+        if not (ROOT / ".git").is_dir():
             self.check_updates()
+            return
+        if self._selected is None:
+            self._flash_status(t("trust.regen_fail") + ": kein Rezept gewählt")
+            return
+        info = self._selected
+        rid = info.rid
+        recipe_dir = Path(info.meta.get("_dir") or "")
+        if not recipe_dir.is_dir():
+            self._activity("error", t("trust.regen_fail") + f": {rid}")
+            return
+        try:
+            approve_recipe_manifest(recipe_dir, _recipe_manifest_path(recipe_dir))
+            self._activity("ok", t("trust.regen_ok") + f" ({rid})")
+            # Nach Freigabe: Primary → „Jetzt reparieren“ (nur dieses Rezept)
+            if (recipe_dir / "repair.sh").is_file():
+                self._pending_repair_rid = rid
+                self._activity("info", t("trust.force_repair_followup"))
+            self._apply_discover_outcome(discover_recipes())
+            self.refresh_statuses()
+            idx = next(
+                (i for i, r in enumerate(self.recipes) if r.rid == rid),
+                -1,
+            )
+            if idx >= 0:
+                self._on_select(idx)
+        except OSError as exc:
+            self._activity("error", t("trust.regen_fail") + f": {exc}")
+            QMessageBox.critical(self, t("dialog.error"), str(exc))
+
+    def _clear_pending_repair(self, rid: str) -> None:
+        if self._pending_repair_rid == rid:
+            self._pending_repair_rid = None
+        if self._selected is not None and self._selected.rid == rid:
+            idx = next(
+                (i for i, r in enumerate(self.recipes) if r.rid == rid),
+                -1,
+            )
+            if idx >= 0:
+                self._on_select(idx)
 
     def show_about(self) -> None:
         AboutDialog(self).exec()
@@ -2854,6 +2955,10 @@ class RezeptorWindow(QMainWindow):
                     recipe_id=info.rid,
                     subtitle=subtitle,
                 )
+                card.set_install_state(
+                    info.state.value,
+                    attention=_sidebar_attention(info),
+                )
                 card.setToolTip(" · ".join(tip_bits))
                 card.apply_theme(getattr(self, "_theme", "dark"))
                 card.clicked.connect(lambda idx=i: self._select_recipe_index(idx))
@@ -2867,6 +2972,7 @@ class RezeptorWindow(QMainWindow):
                 )
                 self._recipe_cards.append((card, info))
         self.recipe_cards_layout.addStretch(1)
+        QTimer.singleShot(0, self._sync_sidebar_scroll_gap)
 
     def _select_recipe_index(self, row: int) -> None:
         if row < 0 or row >= len(self.recipes):
@@ -2955,14 +3061,31 @@ class RezeptorWindow(QMainWindow):
             _debug_log(f"status fallback failed: {exc}")
             self._activity("warn", t("status.query_error", error=str(exc)))
 
+    def _route_trust_notices(
+        self, *, manifest_sync: str = "", trust_log: str = ""
+    ) -> None:
+        """Trust-Hinweise nur am gewählten Rezept (Statusleiste), nie global im Vorgang."""
+        selected_rid = self._selected.rid if self._selected else None
+        if not selected_rid:
+            return
+        if trust_log:
+            for line in trust_log.splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                rid = line.split(":", 1)[0].strip()
+                if rid == selected_rid:
+                    self._flash_status(t("trust.hidden_warn", line=line))
+                    break
+        if manifest_sync and self._selected and _recipe_is_untrusted(self._selected):
+            self._flash_status(t("trust.resync_needed", detail=manifest_sync))
+
     def _apply_discover_outcome(self, outcome: DiscoverOutcome) -> None:
         self.recipes = outcome.recipes
-        if outcome.manifest_sync:
-            self._activity("warn", t("trust.resync_needed", detail=outcome.manifest_sync))
-        if outcome.trust_log:
-            for line in outcome.trust_log.splitlines():
-                if line.strip():
-                    self._activity("warn", t("trust.hidden_warn", line=line))
+        self._route_trust_notices(
+            manifest_sync=outcome.manifest_sync or "",
+            trust_log=outcome.trust_log or "",
+        )
 
     def _on_status_refresh_finished(self, refreshed: object) -> None:
         if not isinstance(refreshed, DiscoverOutcome):
@@ -2977,12 +3100,10 @@ class RezeptorWindow(QMainWindow):
             self._select_recipe_index(prev if 0 <= prev < len(self.recipes) else 0)
         else:
             self._show_home()
-        if refreshed.manifest_sync:
-            self._activity("warn", t("trust.resync_needed", detail=refreshed.manifest_sync))
-        if refreshed.trust_log:
-            for line in refreshed.trust_log.splitlines():
-                if line.strip():
-                    self._activity("warn", t("trust.hidden_warn", line=line))
+        self._route_trust_notices(
+            manifest_sync=refreshed.manifest_sync or "",
+            trust_log=refreshed.trust_log or "",
+        )
         if self._status_refresh_announce:
             self._activity("info", t("menu.refresh_done", n=len(self.recipes)))
 
@@ -3002,9 +3123,9 @@ class RezeptorWindow(QMainWindow):
 
         icon = recipe_icon(meta)
         self.setWindowIcon(icon)
-        pix = icon.pixmap(72, 72)
+        pix = icon.pixmap(64, 64)
         if not pix.isNull():
-            self.icon_label.setPixmap(pix)
+            self.icon_label.setPixmap(rounded_pixmap(pix, 12))
         self.name_label.setText(meta.get("name", info.rid))
         self._update_status_pills(info)
         self._update_version_header(info)
@@ -3027,18 +3148,14 @@ class RezeptorWindow(QMainWindow):
             if not checking:
                 if (ROOT / ".git").is_dir():
                     detail = f"{detail}\n{t('trust.hint_dev')}"
-                    self.trust_btn.setText(t("btn.regen_manifest"))
-                    self.trust_btn.setToolTip(t("tooltip.regen_manifest"))
                 else:
                     detail = f"{detail}\n{t('trust.hint_user')}"
-                    self.trust_btn.setText(t("btn.update_rezeptor"))
-                    self.trust_btn.setToolTip(t("tooltip.regen_manifest"))
             self.status_detail_label.setText(detail)
             self.status_detail_label.setVisible(True)
             self._status_detail_base = detail
             self._info_raw = recipe_info_text(info.rid, Path(meta["_dir"]))
             self._render_info_markdown()
-            self.trust_btn.setVisible(not checking)
+            # Pflicht-Freigabe = Kupfer-Primary (wie „Jetzt reparieren“), kein Nebenbutton.
             self._apply_primary_cta(
                 info, can_launch=False, running=False, busy=self._busy
             )
@@ -3046,7 +3163,6 @@ class RezeptorWindow(QMainWindow):
             self._refresh_running_indicators()
             return
 
-        self.trust_btn.setVisible(False)
         if self._busy and self._busy_belongs_to_selected():
             detail = t("status.busy")
         elif self._busy:
@@ -3133,7 +3249,10 @@ class RezeptorWindow(QMainWindow):
                 self._running_prev[info.rid] = True
             try:
                 card.set_running(running)
-                card.set_install_state(info.state.value)
+                card.set_install_state(
+                    info.state.value,
+                    attention=_sidebar_attention(info),
+                )
             except RuntimeError:
                 # SIP: sidebar card already deleted mid-refresh
                 continue
@@ -3841,6 +3960,7 @@ class RezeptorWindow(QMainWindow):
                 return
             cancelled = self._cancel_requested
             op_kind = self._current_op
+            busy_rid = self._busy_rid
             install_dir = self._install_recipe_dir
             log_line("PROC-DONE", f"{script.name} code={code} cancelled={cancelled}")
             self._install_pgid = 0
@@ -3864,6 +3984,8 @@ class RezeptorWindow(QMainWindow):
                     "ok",
                     t("status.exit_code", label=done_label, code=code),
                 )
+                if op_kind == "repair" and busy_rid:
+                    self._clear_pending_repair(busy_rid)
             else:
                 ev = LogEvent(
                     level="error",
@@ -4484,11 +4606,30 @@ class RezeptorWindow(QMainWindow):
 
     def showEvent(self, event) -> None:  # type: ignore[no-untyped-def]
         super().showEvent(event)
+        QTimer.singleShot(0, self._sync_sidebar_scroll_gap)
         if not self._ui_restored:
             self._ui_restored = True
             # Nach erstem Show — sonst speichert der WM falsche Größen
             QTimer.singleShot(0, self._restore_ui_layout)
             QTimer.singleShot(200, self._startup_prompts)
+
+    def _sync_sidebar_scroll_gap(self) -> None:
+        """Rechter Karten-Abstand: Scrollbar-Breite einrechnen, wenn sie nötig ist."""
+        scroll = getattr(self, "recipe_cards_scroll", None)
+        host = getattr(self, "recipe_cards_host", None)
+        lay = getattr(self, "recipe_cards_layout", None)
+        if scroll is None or host is None or lay is None:
+            return
+        sb = scroll.verticalScrollBar()
+        need = sb.maximum() > sb.minimum()
+        # Basis 4px; mit Scrollbar: Breite + Luft, damit Karten nicht am Balken kleben.
+        right = (sb.sizeHint().width() + 6) if need else 4
+        lay.setContentsMargins(0, 0, right, 0)
+        vw = scroll.viewport().width()
+        if vw > 0:
+            host.setMaximumWidth(vw)
+        else:
+            host.setMaximumWidth(16777215)
 
     def _startup_prompts(self) -> None:
         self._maybe_host_deps_first_run()

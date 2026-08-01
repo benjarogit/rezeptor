@@ -43,6 +43,40 @@ def options_env_path(data_root: Path) -> Path:
     return data_root / "options.env"
 
 
+_PS_UI_ENVS = (
+    "PHOTOSHOP_UI_HOME_SCREEN",
+    "PHOTOSHOP_UI_RICH_TOOLTIPS",
+    "PHOTOSHOP_UI_MODERN_NEW",
+)
+
+
+def migrate_photoshop_windows_like_ui(data_root: Path) -> bool:
+    """Expand legacy PHOTOSHOP_WINDOWS_LIKE_UI=1 into the three UI toggles once."""
+    path = options_env_path(data_root)
+    if not path.is_file():
+        return False
+    stored = _parse_env_file(path)
+    legacy = _as_bool(stored.get("PHOTOSHOP_WINDOWS_LIKE_UI"), False)
+    if not legacy:
+        return False
+    if any(k in stored for k in _PS_UI_ENVS):
+        return False
+    for env in _PS_UI_ENVS:
+        write_option_value(
+            data_root,
+            RecipeOption(
+                id=env.lower(),
+                env=env,
+                type="bool",
+                default=False,
+                label={},
+                tip={},
+            ),
+            True,
+        )
+    return True
+
+
 def host_has_nvidia() -> bool:
     if shutil.which("nvidia-smi"):
         try:

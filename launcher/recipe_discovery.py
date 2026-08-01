@@ -19,6 +19,18 @@ from recipe_trust import (
     sync_manifest_if_stale,
     verify_recipe_trust,
 )
+
+
+def _dev_recipes_visible() -> bool:
+    """REZEPTOR_DEV=1 oder Einstellungen → Entwicklermodus."""
+    if rezeptor_dev_mode():
+        return True
+    try:
+        from settings import load_settings, recipe_edit_allowed
+
+        return recipe_edit_allowed(load_settings())
+    except Exception:  # noqa: BLE001 — Discovery darf Settings-Fehler nicht werfen
+        return False
 from version_detect import load_recipe_mapping
 
 # Nested / complex YAML keys — not flattened into GUI meta strings.
@@ -245,19 +257,29 @@ def _collect_yml_paths(recipes_dir: Path) -> list[Path]:
     return yml_paths
 
 
+def is_maintainer_only(meta: dict[str, str]) -> bool:
+    """``maintainer_only: true`` — recipe is still being worked on, not for users."""
+    return (meta.get("maintainer_only") or "").strip().lower() in ("1", "true", "yes")
+
+
 def merge_recipe_yml_paths(
     bundled_recipes: Path,
     overlay_recipes: Path | None = None,
 ) -> list[Path]:
     """Official/community ymls; overlay path wins on the same recipe id."""
+    show_wip = _dev_recipes_visible()
     by_id: dict[str, Path] = {}
     for yml in _collect_yml_paths(bundled_recipes):
         meta = parse_recipe_yml(yml)
+        if not show_wip and is_maintainer_only(meta):
+            continue
         rid = meta.get("id", yml.parent.name)
         by_id[rid] = yml
     if overlay_recipes is not None and overlay_recipes.is_dir():
         for yml in _collect_yml_paths(overlay_recipes):
             meta = parse_recipe_yml(yml)
+            if not show_wip and is_maintainer_only(meta):
+                continue
             rid = meta.get("id", yml.parent.name)
             by_id[rid] = yml
     return [by_id[k] for k in sorted(by_id)]
@@ -292,8 +314,9 @@ def discover_recipes(
 
     synced = False
     sync_msg = ""
+    stale_ids: frozenset[str] = frozenset()
     if verify_trust and recipes_dir.is_dir():
-        synced, sync_msg = sync_manifest_if_stale(
+        synced, sync_msg, stale_ids = sync_manifest_if_stale(
             recipes_dir, manifest_path, project_root
         )
         if synced and sync_msg:
@@ -332,8 +355,8 @@ def discover_recipes(
             bundled_manifest=manifest_path,
             overlay_manifest=ov_manifest,
         )
-        # Bundled auto-sync forces re-confirm only for bundled recipes
-        if synced and not recipe_is_overlay:
+        # Auto-Sync: Freigabe nur für geänderte Rezepte — nicht für alle.
+        if synced and not recipe_is_overlay and rid in stale_ids:
             ok, reason = False, sync_msg or t("trust.reason_changed")
         else:
             ok, reason = verify_recipe_trust(yml.parent, use_manifest)

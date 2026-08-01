@@ -105,6 +105,43 @@ def generate_manifest(recipes_dir: Path, manifest_path: Path) -> int:
     return len(recipes)
 
 
+def approve_recipe_manifest(recipe_dir: Path, manifest_path: Path) -> str:
+    """Freigabe nur für *ein* Rezept — restliche Manifest-Einträge bleiben unverändert.
+
+    Returns the recipe id whose hashes were updated.
+    """
+    clear_digest_cache()
+    rid = _recipe_id(recipe_dir)
+    if not (recipe_dir / "recipe.yml").is_file():
+        raise FileNotFoundError(f"recipe.yml fehlt: {recipe_dir}")
+
+    if manifest_path.is_file():
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            manifest = {"version": 1, "recipes": {}}
+    else:
+        manifest = {"version": 1, "recipes": {}}
+    if not isinstance(manifest.get("recipes"), dict):
+        manifest["recipes"] = {}
+
+    files: dict[str, str] = {}
+    for path in sorted(recipe_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        rel = path.relative_to(recipe_dir).as_posix()
+        files[rel] = _file_digest(path)
+    manifest["recipes"][rid] = {"files": files}
+    if "version" not in manifest:
+        manifest["version"] = 1
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return rid
+
+
 def _iter_recipe_ymls(recipes_dir: Path) -> list[Path]:
     """recipe.yml paths under official and community trees (mirrors discover_recipes)."""
     yml_paths: list[Path] = []
@@ -157,37 +194,50 @@ def _recipe_dir_stale_vs_manifest(
     return False
 
 
-def manifest_needs_sync(recipes_dir: Path, manifest_path: Path) -> bool:
+def stale_recipe_ids(recipes_dir: Path, manifest_path: Path) -> set[str]:
+    """Rezept-IDs, deren Dateien vom Manifest abweichen (oder Manifest fehlt)."""
+    ymls = _iter_recipe_ymls(recipes_dir)
     if not manifest_path.is_file():
-        return True
+        return {_recipe_id(yml.parent) for yml in ymls}
     try:
         manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         manifest_mtime_ns = int(manifest_path.stat().st_mtime_ns)
     except (OSError, json.JSONDecodeError):
-        return True
-    for yml in _iter_recipe_ymls(recipes_dir):
+        return {_recipe_id(yml.parent) for yml in ymls}
+    stale: set[str] = set()
+    for yml in ymls:
         if _recipe_dir_stale_vs_manifest(
             yml.parent, manifest_path, manifest, manifest_mtime_ns
         ):
-            return True
-    return False
+            stale.add(_recipe_id(yml.parent))
+    return stale
+
+
+def manifest_needs_sync(recipes_dir: Path, manifest_path: Path) -> bool:
+    return bool(stale_recipe_ids(recipes_dir, manifest_path))
 
 
 def sync_manifest_if_stale(
     recipes_dir: Path, manifest_path: Path, project_root: Path
-) -> tuple[bool, str]:
+) -> tuple[bool, str, frozenset[str]]:
     """Regenerate manifest when recipe files changed (REZEPTOR_DEV only).
 
-    Callers must treat a successful sync as *not* user approval: force
-    ``trust_ok=False`` until the user explicitly re-confirms (Approve files).
+    Returns ``(synced, message, stale_ids)``. Callers must treat a successful
+    sync as *not* user approval — but only for *stale_ids*, not every recipe.
     """
     if not manifest_auto_sync_enabled(project_root):
-        return False, ""
-    if not manifest_needs_sync(recipes_dir, manifest_path):
-        return False, ""
+        return False, "", frozenset()
+    stale = frozenset(stale_recipe_ids(recipes_dir, manifest_path))
+    if not stale:
+        return False, "", frozenset()
     count = generate_manifest(recipes_dir, manifest_path)
-    return True, f"Rezept-Manifest aktualisiert ({count} Rezepte) — Freigabe nötig"
-
+    ids = ", ".join(sorted(stale)[:5])
+    more = f" (+{len(stale) - 5})" if len(stale) > 5 else ""
+    return (
+        True,
+        f"Rezept-Manifest aktualisiert ({count} Rezepte) — Freigabe nötig: {ids}{more}",
+        stale,
+    )
 
 def verify_recipe_trust(
     recipe_dir: Path, manifest_path: Path, *, strict: bool = False

@@ -92,7 +92,6 @@
     "update_tip": "Patches/Updates in Reihenfolge nachziehen (Ordner mit 1 - … / 2 - … oder separates Update-Paket)",
     "relocate": "Ziel verschieben…",
     "relocate_tip": "Installation auf einen anderen Ordner/eine andere Platte umziehen (Prefix und Verknüpfungen werden angepasst)",
-
     "uninstall": "Deinstallieren",
     "view_recipe": "Rezept anzeigen…",
     "view_recipe_tip": "Rezept nur ansehen (schreibgeschützt)",
@@ -132,7 +131,8 @@
     "update_rezeptor": "Rezeptor aktualisieren",
     "regen_manifest": "Dateien freigeben",
     "report_bug": "Fehler melden…",
-    "report_github": "Auf GitHub melden"
+    "report_github": "Auf GitHub melden",
+    "repair_required": "Jetzt reparieren"
   },
   "tooltip": {
     "launch": "Anwendung starten (wechselt zu „Vorgang“)",
@@ -167,7 +167,7 @@
     "installed_tip": "Installiert — bereit zum Starten",
     "partial_tip": "Teilweise — Reparieren empfohlen",
     "not_installed_tip": "Noch nicht installiert",
-    "untrusted_tip": "Rezept-Dateien geändert — unter Mehr „Dateien freigeben“ (nur mit Entwicklermodus / REZEPTOR_DEV)",
+    "untrusted_tip": "Rezept-Dateien geändert — Primary „Dateien freigeben“ (Entwicklermodus / REZEPTOR_DEV)",
     "checking_tip": "Integrität der Rezept-Dateien wird noch geprüft",
     "prefix_present": "Prefix vorhanden",
     "installed_with_warnings": "Installiert (Prüfung mit Warnungen)",
@@ -236,12 +236,13 @@
     "reason_changed": "Einige Rezeptor-Dateien wurden geändert und müssen erneut freigegeben werden.",
     "reason_checking": "Integrität wird geprüft…",
     "reason_missing": "Erwartete Rezeptor-Dateien fehlen oder sind unlesbar.",
-    "hint_dev": "Ein Klick auf „Dateien freigeben“ übernimmt die lokalen Änderungen — danach kannst du wieder starten.",
+    "hint_dev": "Der hervorgehobene Button „Dateien freigeben“ übernimmt nur dieses Rezept — danach „Jetzt reparieren“, sonst greifen die Fixes nicht.",
     "hint_user": "Bitte Rezeptor aktualisieren (Hilfe → Update prüfen), dann erneut öffnen.",
     "hidden_warn": "Rezept mit Warnung: {line}",
     "resync_needed": "Rezept-Dateien geändert — bitte erneut freigeben vor Install/Start. {detail}",
-    "regen_ok": "Dateien freigegeben — Status wird aktualisiert",
-    "regen_fail": "Freigabe fehlgeschlagen"
+    "regen_ok": "Dateien freigegeben (dieses Rezept) — Status wird aktualisiert",
+    "regen_fail": "Freigabe fehlgeschlagen",
+    "force_repair_followup": "Freigabe nur für dieses Rezept. Bitte jetzt „Jetzt reparieren“ drücken."
   },
   "update": {
     "available_title": "Update verfügbar",
@@ -279,7 +280,7 @@
     "error_title": "Option speichern",
     "error_body": "Konnte Option nicht speichern:\n{error}",
     "apply_title": "Option gespeichert",
-    "apply_repair_hint": "Änderung gespeichert. Einmal Reparieren, damit Prefix und Optionen dazu passen."
+    "apply_repair_hint": "Gespeichert. Bitte jetzt „Jetzt reparieren“ — sonst bleiben die alten Einstellungen aktiv."
   },
   "recipe_sync": {
     "available_title": "Rezept-Updates",

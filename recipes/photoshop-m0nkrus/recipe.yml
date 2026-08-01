@@ -37,6 +37,36 @@ launch_process_patterns: [Photoshop.exe]
 # win10 via recipe_win10::ensure; VC++ via recipe_vcrun::ensure (nicht winetricks)
 winetricks: [atmlib, corefonts, "fontsmooth=rgb", gdiplus, msxml3, msxml6, ie8]
 options:
+  - id: ui_home_screen
+    env: PHOTOSHOP_UI_HOME_SCREEN
+    type: bool
+    default: false
+    label:
+      de: "Startbildschirm (Home)"
+      en: "Home screen"
+    tip:
+      de: "Standard aus. An = Photoshop zeigt den Startbildschirm wie unter Windows. Bei weißem/leerem Workspace Option aus + Reparieren."
+      en: "Default off. On = Photoshop home screen like on Windows. If you get a white/empty workspace, turn off and Repair."
+  - id: ui_rich_tooltips
+    env: PHOTOSHOP_UI_RICH_TOOLTIPS
+    type: bool
+    default: false
+    label:
+      de: "Animierte / ausführliche Tooltips"
+      en: "Rich / animated tooltips"
+    tip:
+      de: "Standard aus (Text-Werkzeug/Plugins unter Wine oft stabiler). An = ausführliche Tooltips mit Bild. Bei Problemen Option aus + Reparieren."
+      en: "Default off (Type tool/plugins often more stable under Wine). On = rich tooltips with preview. If something breaks, turn off and Repair."
+  - id: ui_modern_new
+    env: PHOTOSHOP_UI_MODERN_NEW
+    type: bool
+    default: false
+    label:
+      de: "Moderner Neu-Dialog"
+      en: "Modern New document dialog"
+    tip:
+      de: "Standard aus — Legacy-Dialog ist unter Wine robuster. An = großer Neu-Dialog mit Vorlagen. Kann schwarze Felder oder weiße Fläche auslösen → Option aus + Reparieren."
+      en: "Default off — legacy New dialog is more reliable under Wine. On = large New dialog with presets. Can cause black fields or a white canvas → turn off and Repair."
   - id: genp_on_repair
     env: PHOTOSHOP_GENP_ON_REPAIR
     type: bool

@@ -45,13 +45,13 @@
         "info.de.txt": "sha256:e7158162efe0568466b758f595603223bea3f9242a8247d6f203f923a38eab34",
         "info.en.txt": "sha256:07062b28cb4633fda455d4d8773b265a05b8a222567a50e56d4d8c2997cb6799",
         "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
-        "kill.sh": "sha256:8bb102767ac30c240e662585e13e8735caa5d93b20e7ba722be91c4423c7da52",
+        "kill.sh": "sha256:3e0269b5c5bcc405f46031cc4f8ca781d0be5f049b6a2f18b7721f5a1ecda753",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
         "optional/cameraRawInstaller.sh": "sha256:9097568694ea8deac6e925fd5f098d6ec60298b0325a3140fce68bb7ff011b93",
-        "recipe.yml": "sha256:e6da74d031985079018de49435b3acbae30ffd21c5172b03c2af97991be99ad0",
+        "recipe.yml": "sha256:616f8cda5c0b243e300cbdc40abb58c7b74dbc185ad2d464e086aa59c3f51ff1",
         "repair.sh": "sha256:f1362b1ea8545118e9a54c74ffec72eb867775161f749897e9a09571535a14e8",
         "uninstall.sh": "sha256:4dd23e1814e426203305b5fa160939d62e68b00c85178ec6cca724e022df9925",
-        "validate.sh": "sha256:148296253f190121b7b478a18fe37b8bd3829ca73d2ac9fd14f51149ad1924a5"
+        "validate.sh": "sha256:6f9e28e3e0792c2a1cc95f65d5c0a99fc586b1e1fa7a490a2177eaa7599f8049"
       }
     },
     "photoshop-m0nkrus": {
@@ -60,12 +60,12 @@
         "info.de.txt": "sha256:100ddcf7d620dad44307303c25fd8fa77026b9697ea0eba480155ef43d92141c",
         "info.en.txt": "sha256:8d279200e994fef23610c970ace5403aa551de0f38445a58d59d3bd42fe1ccf6",
         "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
-        "kill.sh": "sha256:8bb102767ac30c240e662585e13e8735caa5d93b20e7ba722be91c4423c7da52",
+        "kill.sh": "sha256:3e0269b5c5bcc405f46031cc4f8ca781d0be5f049b6a2f18b7721f5a1ecda753",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
-        "recipe.yml": "sha256:9317e05c110f82466f8ab1558bcae8fb26aeaea753976e862510002ee9c90ef7",
+        "recipe.yml": "sha256:e0f9814006b49b636befa287b3f89e2ce8077bf83657a7302f949eda74f92dc1",
         "repair.sh": "sha256:2606839fb643291c3d923a3c01cf9336ec999c9f3da42bf24d5dbabd0dc87dd6",
         "uninstall.sh": "sha256:5f8ce2cbb0a7883c11e89db3f42be217e035dfdb3dce600bb78351da51536ab4",
-        "validate.sh": "sha256:148296253f190121b7b478a18fe37b8bd3829ca73d2ac9fd14f51149ad1924a5"
+        "validate.sh": "sha256:6f9e28e3e0792c2a1cc95f65d5c0a99fc586b1e1fa7a490a2177eaa7599f8049"
       }
     },
     "photoshop-m0nkrus-220": {
@@ -73,12 +73,12 @@
         "info.de.txt": "sha256:8b58a755b77900226cd40e6a453ecd3257c08b01ff0d2c3969db98aa8449293e",
         "info.en.txt": "sha256:2763688e383b459d065e45f3b3a0eab069c051ca1f33377e281da833e8a6c8e6",
         "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
-        "kill.sh": "sha256:8bb102767ac30c240e662585e13e8735caa5d93b20e7ba722be91c4423c7da52",
+        "kill.sh": "sha256:3e0269b5c5bcc405f46031cc4f8ca781d0be5f049b6a2f18b7721f5a1ecda753",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
-        "recipe.yml": "sha256:8e639d2658c4e7cf68dd0d7230abe165a950e335d1e3ed9f5036e759f33bc3ea",
+        "recipe.yml": "sha256:d08066773fe32c87b8bed77f8a327e9b86c1aac675ffcf7762d18b7148394e8e",
         "repair.sh": "sha256:f1362b1ea8545118e9a54c74ffec72eb867775161f749897e9a09571535a14e8",
         "uninstall.sh": "sha256:8c1c445512d2d07977e7a7f72e4f4944262a5d548f47fcb7edcea486bbedc481",
-        "validate.sh": "sha256:148296253f190121b7b478a18fe37b8bd3829ca73d2ac9fd14f51149ad1924a5"
+        "validate.sh": "sha256:6f9e28e3e0792c2a1cc95f65d5c0a99fc586b1e1fa7a490a2177eaa7599f8049"
       }
     },
     "premiere": {

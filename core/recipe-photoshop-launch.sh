@@ -34,6 +34,90 @@ recipe_photoshop::_notify() {
     fi
 }
 
+# Orphan AdobeIPCBroker (cmdline embeds Photoshop.exe path) — not a real session.
+recipe_photoshop::_clear_orphan_ipc_broker() {
+    if recipe_guard::process_matches 'Photoshop.exe'; then
+        return 0
+    fi
+    if ! pgrep -f '[Aa]dobe[Ii][Pp][Cc][Bb]roker' >/dev/null 2>&1; then
+        return 0
+    fi
+    echo "⚠ Verwaisten Adobe IPC Broker beenden…"
+    recipe_photoshop::_runtime_log "Orphan AdobeIPCBroker — kill"
+    pkill -f '[Aa]dobe[Ii][Pp][Cc][Bb]roker' 2>/dev/null || true
+    sleep 0.5
+    pkill -9 -f '[Aa]dobe[Ii][Pp][Cc][Bb]roker' 2>/dev/null || true
+}
+
+# Weißer Vollbild-Desktop ohne Photoshop: explorer.exe /desktop (Wine-VD).
+# Muss auch greifen, wenn Photoshop.exe bereits abgestürzt ist.
+recipe_photoshop::_clear_orphan_virtual_desktop() {
+    local prefix="${WINEPREFIX:-${WINE_PREFIX:-}}"
+    local pid environ found=0
+    while IFS= read -r pid; do
+        [ -n "$pid" ] || continue
+        [[ "$pid" =~ ^[0-9]+$ ]] || continue
+        if [ -n "$prefix" ] && [ -r "/proc/$pid/environ" ]; then
+            environ="$(tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null || true)"
+            case "$environ" in
+                *"WINEPREFIX=${prefix}"*) ;;
+                *) continue ;;
+            esac
+        fi
+        found=1
+        break
+    done < <(pgrep -f 'explorer\.exe.*/desktop' 2>/dev/null || true)
+
+    if [ "$found" -ne 1 ]; then
+        return 0
+    fi
+
+    # Echte PS-Session mit VD: _clear_stuck_session räumt mit Photoshop auf.
+    if recipe_guard::process_matches 'Photoshop.exe'; then
+        return 0
+    fi
+
+    echo "⚠ Orphan Wine-Virtual-Desktop (weißes Fenster) — beende…"
+    recipe_photoshop::_runtime_log "Orphan explorer /desktop — kill"
+    recipe_photoshop::_drop_virtual_desktop_shell
+    if [ -n "$prefix" ] && type wine_runtime::wineserver >/dev/null 2>&1; then
+        wine_runtime::wineserver -k 2>/dev/null || true
+    fi
+    sleep 0.5
+    return 0
+}
+
+# Nur explorer /desktop dieses Prefixes — Photoshop.exe bleibt.
+recipe_photoshop::_drop_virtual_desktop_shell() {
+    local prefix="${WINEPREFIX:-${WINE_PREFIX:-}}"
+    local pid environ
+    while IFS= read -r pid; do
+        [ -n "$pid" ] || continue
+        [[ "$pid" =~ ^[0-9]+$ ]] || continue
+        if [ -n "$prefix" ] && [ -r "/proc/$pid/environ" ]; then
+            environ="$(tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null || true)"
+            case "$environ" in
+                *"WINEPREFIX=${prefix}"*) ;;
+                *) continue ;;
+            esac
+        fi
+        kill "$pid" 2>/dev/null || true
+    done < <(pgrep -f 'explorer\.exe.*/desktop' 2>/dev/null || true)
+    sleep 0.3
+    while IFS= read -r pid; do
+        [ -n "$pid" ] || continue
+        [[ "$pid" =~ ^[0-9]+$ ]] || continue
+        if [ -n "$prefix" ] && [ -r "/proc/$pid/environ" ]; then
+            environ="$(tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null || true)"
+            case "$environ" in
+                *"WINEPREFIX=${prefix}"*) ;;
+                *) continue ;;
+            esac
+        fi
+        kill -9 "$pid" 2>/dev/null || true
+    done < <(pgrep -f 'explorer\.exe.*/desktop' 2>/dev/null || true)
+}
+
 # Hängende unsichtbare Session (explorer /desktop) beenden — sonst „läuft bereits“ ohne Fenster.
 recipe_photoshop::_clear_stuck_session() {
     if ! recipe_guard::process_matches 'Photoshop.exe'; then
@@ -73,7 +157,9 @@ recipe_photoshop::_export_launch_env() {
     export MESA_GL_VERSION_OVERRIDE=3.3
     export __GL_SHADER_DISK_CACHE=0
     # DXVK für Start/UI (albakhtari). GPU in Prefs bleibt aus — sonst Neu/Text-Tool kaputt.
-    export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d;desktop=n;d3d11=native,builtin;d2d1=builtin;gdiplus=native;mshtml=native,builtin;jscript=native,builtin;vbscript=native,builtin;urlmon=native,builtin;wininet=native,builtin;shdocvw=native,builtin;ieframe=native,builtin;actxprxy=native,builtin;browseui=native,builtin;dxtrans=native,builtin;msimtf=native,builtin;shlwapi=native,builtin;shell32=native,builtin;iertutil=native,builtin;jsproxy=native,builtin}"
+    # Kein „desktop=n“ in WINEDLLOVERRIDES — unter Proton-GE kann das explorer /desktop
+    # (weißes Vollbild) triggern; VD wird nur über Registry abgeschaltet.
+    export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d;d3d11=native,builtin;d2d1=builtin;gdiplus=native;mshtml=native,builtin;jscript=native,builtin;vbscript=native,builtin;urlmon=native,builtin;wininet=native,builtin;shdocvw=native,builtin;ieframe=native,builtin;actxprxy=native,builtin;browseui=native,builtin;dxtrans=native,builtin;msimtf=native,builtin;shlwapi=native,builtin;shell32=native,builtin;iertutil=native,builtin;jsproxy=native,builtin}"
     export WINE_CPU_TOPOLOGY="4:2"
     export __GL_THREADED_OPTIMIZATIONS=1
     export __GL_YIELD="USLEEP"
@@ -100,6 +186,8 @@ recipe_photoshop::_prepare_prefix() {
     recipe_hooks::_source recipe-photoshop-install.sh
     recipe_guard::kill_stale_winetricks 2>/dev/null || true
     recipe_guard::require_mem 4096 || return 1
+    recipe_photoshop::_clear_orphan_ipc_broker
+    recipe_photoshop::_clear_orphan_virtual_desktop
     recipe_photoshop::_clear_stuck_session
     if ! recipe_guard::abort_if_running "Photoshop.exe"; then
         recipe_photoshop::_notify "Adobe Photoshop CC 2021" \
@@ -107,8 +195,13 @@ recipe_photoshop::_prepare_prefix() {
             "$(recipe_guard::notify_icon 2>/dev/null || true)"
         return 1
     fi
-    # VD-Registry vor jedem Start (sonst explorer /desktop unsichtbar).
+    # VD-Registry vor jedem Start (sonst explorer /desktop = weißes Vollbild).
     photoshop_setup::disable_virtual_desktop
+    # Registry-Änderung greift erst mit frischem wineserver — sonst bleibt weißer Desktop.
+    if type wine_runtime::wineserver >/dev/null 2>&1; then
+        wine_runtime::wineserver -k 2>/dev/null || true
+        sleep 0.3
+    fi
     recipe_win10::ensure 2>/dev/null \
         || recipe_photoshop::_runtime_log "Warnung: win10 Registry fehlgeschlagen"
 

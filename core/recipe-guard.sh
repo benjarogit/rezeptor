@@ -18,23 +18,50 @@ recipe_guard::require_mem() {
 }
 
 recipe_guard::process_matches() {
-    # True if a real process cmdline matches needle, excluding shells/tools that
-    # merely mention the pattern in their own argv (agent/CI false positives).
+    # True if a real process matches needle.
+    # For *.exe: match /proc/comm (Wine sets Windows EXE name) — not argv that merely
+    # *mention* the EXE (AdobeIPCBroker … Photoshop.exe → false "already running").
     local needle="$1"
-    local pid cmdline
+    local pid cmdline comm want
+    want="$(printf '%s' "$needle" | tr '[:upper:]' '[:lower:]')"
+    want="${want%.exe}"
+
     for pid in /proc/[0-9]*; do
-        cmdline="$(tr '\0' ' ' <"${pid}/cmdline" 2>/dev/null || true)"
+        # PID can vanish mid-scan — silence bash redirection errors into the launch log.
+        cmdline=""
+        if [ -r "${pid}/cmdline" ]; then
+            cmdline="$(tr '\0' ' ' <"${pid}/cmdline" 2>/dev/null || true)"
+        fi
         [ -n "$cmdline" ] || continue
-        case "$cmdline" in
-            *"${needle}"*) ;;
-            *) continue ;;
-        esac
         case "$cmdline" in
             */bin/bash*|*/bin/zsh*|*/usr/bin/bash*|*/usr/bin/zsh*|*python*|*cursor*|*pgrep*|*rg\ *|*grep\ *|*systemd-run*)
                 continue
                 ;;
+            *[Aa]dobe[Ii][Pp][Cc][Bb]roker*)
+                # Broker cmdline embeds the app path — never treat as the app itself.
+                continue
+                ;;
         esac
-        return 0
+
+        case "$needle" in
+            *.exe|*.EXE|*.Exe)
+                # Race: PID can vanish between readdir and open — never spam the launch log.
+                comm="$(tr -d '\n' <"${pid}/comm" 2>/dev/null | tr '[:upper:]' '[:lower:]' || true)"
+                comm="${comm%.exe}"
+                # Wine truncates comm to 15 chars — accept exact or prefix of long names.
+                if [ -n "$comm" ] && {
+                    [ "$comm" = "$want" ] \
+                        || { [ "${#comm}" -ge 8 ] && [ "${want#"$comm"}" != "$want" ]; }
+                }; then
+                    return 0
+                fi
+                continue
+                ;;
+        esac
+
+        case "$cmdline" in
+            *"${needle}"*) return 0 ;;
+        esac
     done
     return 1
 }

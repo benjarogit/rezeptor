@@ -73,9 +73,13 @@ Katalog-Felder:
 
 ## Rezept-Optionen (Medizin)
 
-Dauerhafte Einstellungen pro Rezept (nicht „einmal installieren“). Button **Medizin** (Icon `kit-medical`) neben **Mehr** öffnet einen Dialog mit Checkbox + Erklärungstext. Werte in `{data_root}/options.env` steuern Install/Reparieren/Start.
+Dauerhafte Einstellungen pro Rezept (nicht „einmal installieren“). Button **Medizin** (Icon `kit-medical`) **neben** **Mehr** (eigener Button) öffnet einen Dialog mit Checkbox + Erklärungstext. Werte in `{data_root}/options.env` steuern Install/Reparieren/Start.
+
+Nach dem Umschalten kann der Primary-CTA zu **„Jetzt reparieren“** werden — einmal ausführen, damit Prefs/Prefix nachziehen.
 
 Sinnvoll nur, wenn die Option Verhalten ändert (z. B. Feature opt-out). Nicht für Aktionen, die Install/Reparatur ohnehin erledigen.
+
+Photoshop: drei UI-Schalter (`PHOTOSHOP_UI_HOME_SCREEN`, `PHOTOSHOP_UI_RICH_TOOLTIPS`, `PHOTOSHOP_UI_MODERN_NEW`), Default `false` — siehe [Benutzerhandbuch](USER-GUIDE.md#medizin-rezept-optionen).
 
 ```yaml
 options:

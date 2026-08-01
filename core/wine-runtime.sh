@@ -381,12 +381,14 @@ wine_runtime::deploy_proton_graphics_dlls() {
 
     [ -n "$prefix" ] && [ -d "$sys32" ] || wine_runtime::_fail "Wine prefix system32 missing: ${prefix:-<unset>}"
 
-    for dll in libvkd3d-1.dll libvkd3d-shader-1.dll; do
+    # libvkd3d-utils + wined3d: Proton-11-DXCore hängt davon ab — ohne sie
+    # scheitert DXCoreCreateAdapterFactory still (DirectML/UE5-Absturz).
+    for dll in libvkd3d-1.dll libvkd3d-shader-1.dll libvkd3d-utils-1.dll wined3d.dll; do
         if [ -f "$def_sys32/$dll" ]; then
-            cp -f "$def_sys32/$dll" "$sys32/$dll" 2>/dev/null || err=1
+            cp -fL "$def_sys32/$dll" "$sys32/$dll" 2>/dev/null || err=1
         fi
         if [ -f "$def_wow64/$dll" ]; then
-            cp -f "$def_wow64/$dll" "$wow64/$dll" 2>/dev/null || err=1
+            cp -fL "$def_wow64/$dll" "$wow64/$dll" 2>/dev/null || err=1
         fi
     done
     # d3d10core mitliefern — sonst Wine-d3d10core + DXVK-dxgi → DXGID3D10CreateDevice abort

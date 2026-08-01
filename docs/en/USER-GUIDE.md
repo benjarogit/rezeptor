@@ -6,10 +6,11 @@ How to use the Rezeptor GUI. Recipe authors: see [Developer overview](ENTWICKLER
 
 | Element | Role |
 |---------|------|
-| **Sidebar** | Recipe list (~240 px), status pill, search/order |
+| **Sidebar** | Recipe list, status dot (warn icon only for partial / untrusted), search/order |
 | **Main area** | Overview, source/target, info texts |
-| **Primary CTA** | Context action (Install / Launch / …) |
-| **More ▾** | Secondary actions (Repair, Validate, Uninstall, …) |
+| **Primary CTA** | Context action (Install / Launch / Approve / **Repair now** / …) |
+| **More ▾** | Secondary actions (Validate, Uninstall, …) |
+| **Medizin** | Own button next to More — lasting recipe options (see below) |
 | **Activity** | Humanized log lines from hook scripts |
 
 Theme: Fluent Dark + copper (`#B87333`) — see [Brand](BRAND.md).
@@ -25,11 +26,30 @@ Theme: Fluent Dark + copper (`#B87333`) — see [Brand](BRAND.md).
 7. On problems: **Repair** (fixes gaps; does not reinstall from scratch)
 8. **Uninstall** removes Rezeptor state fully — portable/Steam folders outside stay
 
+## Medizin (recipe options)
+
+The **Medizin** button (first-aid kit icon) sits next to **More** — not inside the More menu.
+
+Lasting per-recipe toggles (`options.env`). After changing options, the primary button often becomes **Repair now** — click once, or the old settings stay active.
+
+### Photoshop (CC 2021)
+
+Under Wine some Windows-like UI features are fragile. Rezeptor therefore applies safe prefs by default (no home screen, tooltips off, legacy New dialog). If the Windows-like UI is stable on your system, you can enable them individually:
+
+| Option | Effect |
+|--------|--------|
+| Home screen | Like on Windows — if you get a white/empty workspace, turn off + Repair |
+| Rich / animated tooltips | Can break Type tool / plugins |
+| Modern New dialog | Large New dialog — can cause black fields / white canvas |
+
+Defaults are **off**. Tips in the Medizin dialog have the same guidance.
+
 ## Status & validation
 
 - Optional **validate on startup** (Settings)
 - **F5** / Validate: structured `OK:` / `FAIL:` / `WARN:` output
 - Green = tested / ready; amber = warning; error = action needed
+- Sidebar warn icon = repair or trust approval needed — not for “not installed”
 
 ## Settings
 

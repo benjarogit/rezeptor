@@ -5,13 +5,14 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from PyQt6.QtCore import QPointF, Qt
+from PyQt6.QtCore import QPointF, QRectF, Qt
 from PyQt6.QtGui import (
     QColor,
     QFont,
     QFontDatabase,
     QIcon,
     QPainter,
+    QPainterPath,
     QPixmap,
     QPolygonF,
 )
@@ -158,6 +159,28 @@ def fa_icon(kind: str, pixel: int = 16, *, color: str | None = None) -> QIcon | 
     painter.drawText(pix.rect(), int(Qt.AlignmentFlag.AlignCenter), glyph)
     painter.end()
     return QIcon(pix)
+
+
+def rounded_pixmap(pix: QPixmap, radius: int) -> QPixmap:
+    """Clip pixmap to rounded rect — Sidebar- und Header-Icons einheitlich."""
+    if pix.isNull() or radius <= 0:
+        return pix
+    out = QPixmap(pix.size())
+    out.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(out)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    path = QPainterPath()
+    path.addRoundedRect(QRectF(out.rect()), float(radius), float(radius))
+    painter.setClipPath(path)
+    painter.drawPixmap(0, 0, pix)
+    painter.end()
+    return out
+
+
+def rounded_icon(icon: QIcon, size: int, radius: int) -> QIcon:
+    if icon is None or icon.isNull():
+        return QIcon()
+    return QIcon(rounded_pixmap(icon.pixmap(size, size), radius))
 
 
 def _ui_asset_dir() -> Path:

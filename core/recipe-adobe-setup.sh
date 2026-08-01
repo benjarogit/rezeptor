@@ -235,12 +235,14 @@ adobe_setup::reregister_ie8_dlls() {
 
 adobe_setup::disable_virtual_desktop() {
     local wine_bin="${WINE:-wine}"
-    # Kein Wine-„blauer Desktop“ — App als normales Fenster.
+    # Kein Wine-„blauer/weißer Desktop“ — App als normales Fenster.
     "$wine_bin" reg delete "HKCU\\Software\\Wine\\X11 Driver" /v Desktop /f \
         >>"${LOG_FILE:-/dev/null}" 2>&1 || true
     "$wine_bin" reg delete "HKCU\\Software\\Wine\\Explorer" /v Desktop /f \
         >>"${LOG_FILE:-/dev/null}" 2>&1 || true
     "$wine_bin" reg delete "HKCU\\Software\\Wine\\Explorer\\Desktops" /v Default /f \
+        >>"${LOG_FILE:-/dev/null}" 2>&1 || true
+    "$wine_bin" reg delete "HKCU\\Software\\Wine\\Explorer\\Desktops" /f \
         >>"${LOG_FILE:-/dev/null}" 2>&1 || true
     "$wine_bin" reg delete "HKCU\\Software\\Wine\\Explorer\\Desktop" /v Enable /f \
         >>"${LOG_FILE:-/dev/null}" 2>&1 || true

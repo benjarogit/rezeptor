@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PyQt6.QtCore import QPoint, QSize, Qt, pyqtSignal
-from PyQt6.QtGui import QFont, QFontMetrics, QIcon, QKeyEvent, QResizeEvent
+from PyQt6.QtGui import QFont, QFontMetrics, QIcon, QKeyEvent, QPixmap, QResizeEvent
 from PyQt6.QtWidgets import (
     QApplication,
     QButtonGroup,
@@ -29,7 +29,7 @@ from ui_fluent import (
     MUTED,
     IconWidget,
 )
-from ui_icons import ensure_chevron_png
+from ui_icons import ensure_chevron_png, fa_icon, rounded_icon
 from i18n import t
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -416,7 +416,7 @@ class RecipeSidebarCard(QFrame):
             return w
 
         if FLUENT_AVAILABLE and icon is not None and not icon.isNull():
-            iw = _pass_mouse(IconWidget(icon, self))
+            iw = _pass_mouse(IconWidget(rounded_icon(icon, 20, 4), self))
             iw.setFixedSize(20, 20)
             layout.addWidget(iw, 0, Qt.AlignmentFlag.AlignVCenter)
         else:
@@ -461,13 +461,15 @@ class RecipeSidebarCard(QFrame):
         layout.addWidget(self._run_dot, 0, Qt.AlignmentFlag.AlignVCenter)
 
         self._state_dot = _pass_mouse(QLabel("●", self))
-        self._state_dot.setFixedWidth(12)
+        self._state_dot.setFixedWidth(14)
         self._state_dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._state_dot.setStyleSheet(
             f"color: {STATE_DOT.get(state, STATE_DOT['unknown'])}; font-size: 10px;"
         )
         self._state_dot.setToolTip(_state_tip(state))
         layout.addWidget(self._state_dot, 0, Qt.AlignmentFlag.AlignVCenter)
+        self._install_state = state
+        self._apply_state_indicator(state)
 
         outer.addWidget(row, stretch=1)
 
@@ -672,11 +674,37 @@ class RecipeSidebarCard(QFrame):
         self._run_dot.setVisible(running)
         self._state_dot.setVisible(not running)
 
-    def set_install_state(self, state: str) -> None:
-        self._state_dot.setStyleSheet(
-            f"color: {STATE_DOT.get(state, STATE_DOT['unknown'])}; font-size: 10px;"
-        )
-        self._state_dot.setToolTip(_state_tip(state))
+    def _apply_state_indicator(self, state: str, *, attention: bool = False) -> None:
+        """Statuspunkt — bei Hinweis/Partial/Untrusted: Warn-Icon."""
+        warn = attention or state in ("partial", "untrusted")
+        if warn:
+            tip = (
+                _state_tip(state)
+                if state in ("partial", "untrusted")
+                else t("state.partial_tip")
+            )
+            color = STATE_DOT.get(
+                state if state in ("partial", "untrusted") else "partial",
+                STATE_DOT["partial"],
+            )
+        else:
+            tip = _state_tip(state)
+            color = STATE_DOT.get(state, STATE_DOT["unknown"])
+        self._state_dot.setToolTip(tip)
+        if warn:
+            icon = fa_icon("warn", 14, color=color)
+            if icon is not None:
+                self._state_dot.setText("")
+                self._state_dot.setPixmap(icon.pixmap(14, 14))
+                self._state_dot.setStyleSheet("background: transparent;")
+                return
+        self._state_dot.setPixmap(QPixmap())
+        self._state_dot.setText("●")
+        self._state_dot.setStyleSheet(f"color: {color}; font-size: 10px;")
+
+    def set_install_state(self, state: str, *, attention: bool = False) -> None:
+        self._install_state = state
+        self._apply_state_indicator(state, attention=attention)
         self._state_dot.setVisible(not self._running)
         self._set_a11y(self._card_name, state)
 

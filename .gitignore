@@ -138,3 +138,8 @@ __pycache__/
 squashfs-root/
 launcher/assets/ui/
 docs/Archiv.zip
+
+# Maintainer-only notes (local; not for GitHub / MkDocs)
+docs/maintainer/
+docs/de/maintainer/
+docs/en/maintainer/

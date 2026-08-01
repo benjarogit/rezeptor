@@ -17,6 +17,7 @@ from PyQt6.QtWidgets import (
 from i18n import get_locale, t
 from recipe_options import (
     RecipeOption,
+    migrate_photoshop_windows_like_ui,
     read_option_values,
     write_option_value,
 )
@@ -52,6 +53,7 @@ class MedizinDialog(QDialog):
         self._style_muted(intro, muted)
         lay.addWidget(intro)
 
+        migrate_photoshop_windows_like_ui(data_root)
         values = read_option_values(data_root, options)
         locale = get_locale()
         self._boxes: list[tuple[RecipeOption, QCheckBox]] = []
@@ -101,7 +103,14 @@ class MedizinDialog(QDialog):
 
     def _on_toggle(self, opt: RecipeOption, checked: bool) -> None:
         write_option_value(self._data_root, opt, checked)
-        if opt.env in ("PREMIERE_NVIDIA_LIBS", "PHOTOSHOP_GENP_ON_REPAIR"):
+        if opt.env in (
+            "PREMIERE_NVIDIA_LIBS",
+            "PHOTOSHOP_GENP_ON_REPAIR",
+            "PHOTOSHOP_WINDOWS_LIKE_UI",
+            "PHOTOSHOP_UI_HOME_SCREEN",
+            "PHOTOSHOP_UI_RICH_TOOLTIPS",
+            "PHOTOSHOP_UI_MODERN_NEW",
+        ):
             self._needs_repair_hint = True
             self._hint.setText(t("medizin.apply_repair_hint"))
             self._hint.setVisible(True)

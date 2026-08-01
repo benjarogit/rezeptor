@@ -73,9 +73,13 @@ Catalog fields for sync:
 
 ## Recipe options (Medizin)
 
-Lasting per-recipe settings (not “install once”). The **Medizin** button (icon `kit-medical`) next to **More** opens a dialog with checkbox + explanation. Values in `{data_root}/options.env` steer install/repair/launch.
+Lasting per-recipe settings (not “install once”). The **Medizin** button (icon `kit-medical`) **next to** **More** (its own button) opens a dialog with checkbox + explanation. Values in `{data_root}/options.env` steer install/repair/launch.
+
+After toggling, the primary CTA may become **Repair now** — run it once so prefs/prefix catch up.
 
 Only use when the option changes behaviour (e.g. opt-out). Not for actions Install/Repair already perform.
+
+Photoshop: three UI toggles (`PHOTOSHOP_UI_HOME_SCREEN`, `PHOTOSHOP_UI_RICH_TOOLTIPS`, `PHOTOSHOP_UI_MODERN_NEW`), default `false` — see [User guide](USER-GUIDE.md#medizin-recipe-options).
 
 ```yaml
 options:
