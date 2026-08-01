@@ -13,15 +13,15 @@
   <a href="https://github.com/benjarogit/rezeptor/releases"><img src="https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=Release&color=B87333" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/Lizenz-GPL--2.0-blue" alt="Lizenz"></a>
   <a href="https://benjarogit.github.io/rezeptor/"><img src="https://img.shields.io/badge/Doku-Rezeptor%20Docs-B87333" alt="Doku"></a>
-  <img src="https://img.shields.io/badge/AI-Vibe--Coding-B87333" alt="AI Vibe-Coding">
+  <img src="https://img.shields.io/badge/AI-unterst%C3%BCtzt-5C5C58" alt="AI-unterstützt">
   <a href="https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/"><img src="https://img.shields.io/badge/Reddit-User--Bericht-FF4500?logo=reddit&logoColor=white" alt="Reddit User-Bericht"></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/benjarogit/rezeptor/stargazers"><img src="https://img.shields.io/github/stars/benjarogit/rezeptor?style=flat&color=B87333" alt="Stars"></a>
-  <a href="https://github.com/benjarogit/rezeptor/issues"><img src="https://img.shields.io/github/issues/benjarogit/rezeptor?color=B87333" alt="Issues"></a>
-  <a href="https://github.com/benjarogit/rezeptor/commits/main"><img src="https://img.shields.io/github/last-commit/benjarogit/rezeptor?label=letzter%20Commit&color=B87333" alt="Letzter Commit"></a>
-  <a href="https://github.com/benjarogit/rezeptor/releases"><img src="https://img.shields.io/github/downloads/benjarogit/rezeptor/total?label=Downloads&color=B87333" alt="Downloads"></a>
+  <a href="https://github.com/benjarogit/rezeptor/stargazers"><img src="https://img.shields.io/github/stars/benjarogit/rezeptor?style=flat&color=C9A227" alt="Stars"></a>
+  <a href="https://github.com/benjarogit/rezeptor/issues"><img src="https://img.shields.io/github/issues/benjarogit/rezeptor?color=5C6B7A" alt="Issues"></a>
+  <a href="https://github.com/benjarogit/rezeptor/commits/main"><img src="https://img.shields.io/github/last-commit/benjarogit/rezeptor?label=letzter%20Commit&color=6B7280" alt="Letzter Commit"></a>
+  <a href="https://github.com/benjarogit/rezeptor/releases"><img src="https://img.shields.io/github/downloads/benjarogit/rezeptor/total?label=Downloads&color=4A7C59" alt="Downloads"></a>
 </p>
 
 Photoshop, Steuerprogramme (WISO), Steam-Spiele mit Online-Fix, Trainer und mehr: Jedes Rezept weiß, wie Installation, Reparatur, Prüfung, Start und saubere Deinstallation funktionieren.
