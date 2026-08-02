@@ -18,6 +18,7 @@ from pathlib import Path
 try:
     from PyQt6.QtCore import (
         Qt,
+        QEvent,
         QObject,
         QProcess,
         QProcessEnvironment,
@@ -89,6 +90,7 @@ from app_support import (
     GITHUB_REPO,
     collect_report_bundle,
     community_reddit_url,
+    describe_runtime_for_report,
     detect_source_version,
     detect_update_channel,
     fetch_latest_release,
@@ -96,8 +98,10 @@ from app_support import (
     github_repo_url,
     humanize_log_line,
     parse_validate_version_fields,
+    proton_ge_badge_label,
     prune_old_logs,
     public_docs_url,
+    read_proton_ge_tag,
     read_version,
     report_clipboard_text,
     sanitize_log_text,
@@ -165,6 +169,7 @@ from ui_source import (
     source_configure_label,
 )
 from recipe_categories import (
+    category_label,
     default_category,
     effective_category,
     sort_categories,
@@ -1013,7 +1018,13 @@ class AboutDialog(QDialog):
         layout.addWidget(QLabel(t("dialog.about_heading", version=ver)))
         body = QTextBrowser()
         body.setOpenExternalLinks(True)
-        body.setHtml(t("dialog.about_body", repo=GITHUB_REPO))
+        body.setHtml(
+            t(
+                "dialog.about_body",
+                repo=GITHUB_REPO,
+                runtime=describe_runtime_for_report(),
+            )
+        )
         layout.addWidget(body)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(self.reject)
@@ -1142,7 +1153,7 @@ class RezeptorWindow(QMainWindow):
         self._status_refresh_announce = False
         self._status_refresh_pending: tuple[bool, bool] | None = None
         self._post_config_dir: str | None = None
-        # Nach Freigabe/Medizin: Primary = „Jetzt reparieren“, bis Repair durch ist
+        # Nach Freigabe/Medizin: Primary = „Jetzt aktualisieren“, bis Repair durch ist
         self._pending_repair_rid: str | None = None
 
         self._build_menus()
@@ -1179,40 +1190,54 @@ class RezeptorWindow(QMainWindow):
 
     def _build_menus(self) -> None:
         self.menuBar().clear()
+        # Rezeptor — app shell
         rezeptor_menu = self.menuBar().addMenu(t("menu.rezeptor"))
         rezeptor_menu.addAction(t("menu.home"), self._show_home)
         rezeptor_menu.addAction(t("menu.settings"), self.show_settings)
-        rezeptor_menu.addSeparator()
+
+        # Rezepte — catalog / status / sync
+        recipes_menu = self.menuBar().addMenu(t("menu.recipes"))
         self.action_refresh = QAction(t("menu.refresh"), self)
         self.action_refresh.setToolTip(t("menu.refresh_tip"))
         self.action_refresh.setStatusTip(t("menu.refresh_tip"))
         self.action_refresh.triggered.connect(self.refresh_statuses)
-        rezeptor_menu.addAction(self.action_refresh)
-        act_sys = QAction(t("menu.system_check"), self)
-        act_sys.setToolTip(t("menu.system_check_tip"))
-        act_sys.setStatusTip(t("menu.system_check_tip"))
-        act_sys.triggered.connect(self.show_host_deps_check)
-        rezeptor_menu.addAction(act_sys)
+        recipes_menu.addAction(self.action_refresh)
+        act_sync = QAction(t("menu.check_recipes"), self)
+        act_sync.setToolTip(t("menu.check_recipes_tip"))
+        act_sync.setStatusTip(t("menu.check_recipes_tip"))
+        act_sync.triggered.connect(self.check_recipe_sync)
+        recipes_menu.addAction(act_sync)
+        recipes_menu.addSeparator()
         act_new = QAction(t("menu.new_recipe"), self)
         act_new.setToolTip(t("menu.new_recipe_tip"))
         act_new.setStatusTip(t("menu.new_recipe_tip"))
         act_new.triggered.connect(self.show_recipe_wizard)
-        rezeptor_menu.addAction(act_new)
+        recipes_menu.addAction(act_new)
         act_cat = QAction(t("menu.add_recipe_catalog"), self)
         act_cat.setToolTip(t("menu.add_recipe_catalog_tip"))
         act_cat.setStatusTip(t("menu.add_recipe_catalog_tip"))
         act_cat.triggered.connect(self.show_catalog_dialog)
-        rezeptor_menu.addAction(act_cat)
+        recipes_menu.addAction(act_cat)
         self.action_view_recipe = QAction(self._view_recipe_label(), self)
         self.action_view_recipe.setToolTip(self._view_recipe_tip())
         self.action_view_recipe.setStatusTip(self._view_recipe_tip())
         self.action_view_recipe.triggered.connect(self.show_recipe_view)
-        rezeptor_menu.addAction(self.action_view_recipe)
-        rezeptor_menu.addAction(t("menu.show_hidden_recipes"), self.show_hidden_recipes_dialog)
-        rezeptor_menu.addSeparator()
-        rezeptor_menu.addAction(t("menu.cleanup_logs"), self.cleanup_logs_now)
-        rezeptor_menu.addAction(t("menu.rollback"), self.show_rollback_dialog)
+        recipes_menu.addAction(self.action_view_recipe)
+        recipes_menu.addAction(
+            t("menu.show_hidden_recipes"), self.show_hidden_recipes_dialog
+        )
 
+        # Werkzeuge — maintenance (not day-to-day recipe ops)
+        extras_menu = self.menuBar().addMenu(t("menu.extras"))
+        act_sys = QAction(t("menu.system_check"), self)
+        act_sys.setToolTip(t("menu.system_check_tip"))
+        act_sys.setStatusTip(t("menu.system_check_tip"))
+        act_sys.triggered.connect(self.show_host_deps_check)
+        extras_menu.addAction(act_sys)
+        extras_menu.addAction(t("menu.cleanup_logs"), self.cleanup_logs_now)
+        extras_menu.addAction(t("menu.rollback"), self.show_rollback_dialog)
+
+        # Hilfe — docs, app update, support
         help_menu = self.menuBar().addMenu(t("menu.help"))
         act_docs = QAction(t("menu.docs"), self)
         act_docs.setToolTip(t("menu.docs_tip"))
@@ -1221,15 +1246,48 @@ class RezeptorWindow(QMainWindow):
         help_menu.addAction(act_docs)
         help_menu.addSeparator()
         help_menu.addAction(t("menu.check_update"), self.check_updates)
-        act_recipes = QAction(t("menu.check_recipes"), self)
-        act_recipes.setToolTip(t("menu.check_recipes_tip"))
-        act_recipes.setStatusTip(t("menu.check_recipes_tip"))
-        act_recipes.triggered.connect(self.check_recipe_sync)
-        help_menu.addAction(act_recipes)
         help_menu.addSeparator()
         help_menu.addAction(t("menu.report_bug"), self.report_bug)
         help_menu.addAction(t("menu.about"), self.show_about)
+        self._ensure_lang_toggle()
         self._menu_bar_built = True
+
+    def _ensure_lang_toggle(self) -> None:
+        """Flag icon top-right (no button chrome): click toggles DE ↔ EN."""
+        if not hasattr(self, "_lang_btn") or self._lang_btn is None:
+            self._lang_btn = QToolButton(self)
+            self._lang_btn.setObjectName("langToggle")
+            self._lang_btn.setAutoRaise(True)
+            self._lang_btn.setToolButtonStyle(
+                Qt.ToolButtonStyle.ToolButtonTextOnly
+            )
+            self._lang_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self._lang_btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            font = self._lang_btn.font()
+            font.setPointSize(20)
+            self._lang_btn.setFont(font)
+            self._lang_btn.clicked.connect(self._toggle_ui_locale)
+        self._sync_lang_toggle()
+        self.menuBar().setCornerWidget(
+            self._lang_btn, Qt.Corner.TopRightCorner
+        )
+
+    def _sync_lang_toggle(self) -> None:
+        if not hasattr(self, "_lang_btn") or self._lang_btn is None:
+            return
+        de = (get_locale() or "en").startswith("de")
+        self._lang_btn.setText("🇩🇪" if de else "🇬🇧")
+        self._lang_btn.setToolTip(t("menu.language_toggle_tip"))
+        self._lang_btn.setAccessibleName(t("menu.language_toggle"))
+        self._lang_btn.setStatusTip(t("menu.language_toggle_tip"))
+
+    def _toggle_ui_locale(self) -> None:
+        new = "en" if (get_locale() or "en").startswith("de") else "de"
+        self._settings.locale = new
+        save_settings(self._settings)
+        set_locale(new)
+        self.retranslate_ui()
+        self._activity("info", t("menu.language_switched", lang=new.upper()))
 
     def _view_recipe_label(self) -> str:
         if recipe_edit_allowed(self._settings):
@@ -1364,6 +1422,10 @@ class RezeptorWindow(QMainWindow):
         header = CardWidget() if FLUENT_AVAILABLE else QFrame()
         header.setObjectName("headerCard")
         header.setAccessibleName("HEADER")
+        header.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
+        self._header = header
         hl = QHBoxLayout(header)
         hl.setContentsMargins(16, 14, 16, 14)
         hl.setSpacing(14)
@@ -1445,6 +1507,12 @@ class RezeptorWindow(QMainWindow):
         self.path_label = QLabel()
         self.path_label.setObjectName("appPath")
         self.path_label.setWordWrap(True)
+        self.path_label.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        self.path_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         self.path_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
@@ -1476,6 +1544,15 @@ class RezeptorWindow(QMainWindow):
         self.status_detail_label = QLabel()
         self.status_detail_label.setObjectName("statusDetail")
         self.status_detail_label.setWordWrap(True)
+        self.status_detail_label.setAlignment(
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop
+        )
+        self.status_detail_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
+        self.status_detail_label.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
         self._style_secondary_label(self.status_detail_label, MUTED, size_px=12)
         hc.addLayout(title_row)
         hc.addLayout(pills_row)
@@ -1483,6 +1560,7 @@ class RezeptorWindow(QMainWindow):
         hc.addWidget(self.status_detail_label)
         hl.addLayout(hc, stretch=1)
         ml.addWidget(header)
+        header.installEventFilter(self)
 
         # Detail: Startseite | Rezept (CTA + Tabs)
         self._home_page = self._create_home_page()
@@ -1549,7 +1627,8 @@ class RezeptorWindow(QMainWindow):
         # Ein Primärbutton — Text/Icon/Aktion wechseln mit Zustand
         self.primary_btn = PrimaryPushButton(t("btn.launch"))
         self.primary_btn.setObjectName("primaryBtn")
-        self.primary_btn.setMinimumWidth(140)
+        # Wide enough for DE CTAs („Rezept freigeben“ / „Jetzt aktualisieren“) — less width hop
+        self.primary_btn.setMinimumWidth(200)
         self.primary_btn.setCursor(hand)
         self.primary_btn.clicked.connect(self._on_primary_cta)
         # Aliase für bestehenden Code (_set_busy, retranslate, …)
@@ -1637,18 +1716,26 @@ class RezeptorWindow(QMainWindow):
         dr = resolve_data_root(self._selected.meta, self._selected.rid)
         dlg = MedizinDialog(opts, dr, self)
         # Eigenes Taskleisten-Fenster — sonst blockiert modaler Child „Alles schließen“.
-        apply_tool_window(dlg, icon=self.windowIcon(), modal=True)
+        apply_tool_window(dlg, icon=self.windowIcon(), modal=True, compact=True)
         dlg.exec()
         if dlg.needs_repair_hint and self._selected is not None:
             rid = self._selected.rid
             self._pending_repair_rid = rid
             self._activity("info", t("medizin.apply_repair_hint"))
-            idx = next(
-                (i for i, r in enumerate(self.recipes) if r.rid == rid),
-                -1,
+            # Stable one-liner + CTA only — full _on_select reflows header (flash/hop).
+            hint = t("medizin.apply_repair_hint")
+            self._status_detail_base = hint
+            self.status_detail_label.setText(hint)
+            self.status_detail_label.setVisible(True)
+            info = self._selected
+            dr = resolve_data_root(info.meta, info.rid)
+            self._apply_primary_cta(
+                info,
+                can_launch=self._can_launch_recipe(info, dr),
+                running=recipe_process_running(info.rid, info.meta),
+                busy=self._busy,
             )
-            if idx >= 0:
-                self._on_select(idx)
+            self._sync_medizin_button()
 
     def _popup_more_menu(self) -> None:
         self._rebuild_more_menu()
@@ -1820,21 +1907,26 @@ class RezeptorWindow(QMainWindow):
         kill_ok = (Path(info.meta["_dir"]) / "kill.sh").is_file()
         checking = _recipe_is_checking(info)
         untrusted = _recipe_is_untrusted(info)
+        # After Freigabe, pending_repair must win even if rediscover briefly
+        # still reports untrusted — otherwise CTA flashes back to „Rezept freigeben“.
         pending_repair = (
-            self._pending_repair_rid == info.rid and repair_ok and not untrusted and not checking
+            self._pending_repair_rid == info.rid and repair_ok and not checking
         )
         git_dev = (ROOT / ".git").is_dir()
 
-        if busy:
+        if checking and not pending_repair:
             mode = "none"
-        elif checking:
-            mode = "none"
+        elif pending_repair:
+            # Beat untrusted + busy: Freigabe sets pending_repair immediately so the
+            # Kupfer-CTA never sticks on „Rezept freigeben“ mid-approve.
+            mode = "repair"
+        elif busy:
+            # Keep current meaningful label — mode "none" used to flash „Starten“.
+            mode = "busy_hold"
         elif untrusted and git_dev:
             mode = "trust_approve"
         elif untrusted:
             mode = "trust_update"
-        elif pending_repair:
-            mode = "repair"
         elif running and kill_ok:
             mode = "kill"
         elif info.state == RecipeState.NOT_INSTALLED:
@@ -1850,11 +1942,17 @@ class RezeptorWindow(QMainWindow):
 
         self._cta_mode = mode
         btn = self.primary_btn
+        if pending_repair and busy:
+            repair_label = "btn.repair_busy"
+        elif pending_repair:
+            repair_label = "btn.repair_required"
+        else:
+            repair_label = "btn.repair"
         mapping = {
             "install": ("btn.install", "tooltip.install", "install"),
             "launch": ("btn.launch", "tooltip.launch", "launch"),
             "repair": (
-                "btn.repair_required" if pending_repair else "btn.repair",
+                repair_label,
                 "tooltip.repair",
                 "warn" if pending_repair else "repair",
             ),
@@ -1870,7 +1968,11 @@ class RezeptorWindow(QMainWindow):
                 "warn",
             ),
         }
-        if mode in mapping:
+        if mode == "busy_hold":
+            # Disabled, but do not rewrite label (avoids Freigeben→Starten flash).
+            btn.setEnabled(False)
+            btn.setVisible(True)
+        elif mode in mapping:
             label_k, tip_k, icon_k = mapping[mode]
             btn.setText(t(label_k))
             btn.setToolTip(t(tip_k))
@@ -1879,7 +1981,8 @@ class RezeptorWindow(QMainWindow):
             if icon is not None:
                 btn.setIcon(icon)
                 btn.setIconSize(QSize(14, 14))
-            btn.setEnabled(True)
+            # Always disable while busy — including pending_repair handoff.
+            btn.setEnabled(not busy)
             btn.setVisible(True)
         else:
             btn.setEnabled(False)
@@ -2741,20 +2844,60 @@ class RezeptorWindow(QMainWindow):
         if self._selected is None:
             self._flash_status(t("trust.regen_fail") + ": kein Rezept gewählt")
             return
+        if self._reject_if_subprocess_busy():
+            return
         info = self._selected
         rid = info.rid
         recipe_dir = Path(info.meta.get("_dir") or "")
         if not recipe_dir.is_dir():
             self._activity("error", t("trust.regen_fail") + f": {rid}")
             return
+
+        repair = recipe_dir / "repair.sh"
+        installed_ish = info.state in (
+            RecipeState.INSTALLED,
+            RecipeState.PARTIAL,
+        )
+        # Busy first, then CTA label — never leave Primary clickable mid-approve
+        # (flash „Rezept freigeben“ / „Jetzt aktualisieren“ invited double-clicks).
+        for r in self.recipes:
+            if r.rid == rid:
+                r.trust_ok = True
+                r.trust_reason = ""
+                break
+        if repair.is_file() and installed_ish:
+            self._pending_repair_rid = rid
+        self.raw_log.clear()
+        self.activity_list.clear()
+        self._switch_to_progress_tab()
+        self._set_busy(True, rid=rid)
+        self._apply_primary_cta(
+            info, can_launch=False, running=False, busy=True
+        )
+        self._set_step_text(t("trust.regen_busy"))
+        self._activity("step", t("trust.regen_busy"))
+        QApplication.processEvents()
+
+        handoff_repair = False
         try:
             approve_recipe_manifest(recipe_dir, _recipe_manifest_path(recipe_dir))
             self._activity("ok", t("trust.regen_ok") + f" ({rid})")
-            # Nach Freigabe: Primary → „Jetzt reparieren“ (nur dieses Rezept)
-            if (recipe_dir / "repair.sh").is_file():
+            # Re-assert after rediscover — hash verify can briefly look untrusted.
+            for r in self.recipes:
+                if r.rid == rid:
+                    r.trust_ok = True
+                    r.trust_reason = ""
+                    break
+            if repair.is_file() and installed_ish:
                 self._pending_repair_rid = rid
-                self._activity("info", t("trust.force_repair_followup"))
             self._apply_discover_outcome(discover_recipes())
+            for r in self.recipes:
+                if r.rid == rid:
+                    r.trust_ok = True
+                    r.trust_reason = ""
+                    break
+            if repair.is_file() and installed_ish:
+                self._pending_repair_rid = rid
             self.refresh_statuses()
             idx = next(
                 (i for i, r in enumerate(self.recipes) if r.rid == rid),
@@ -2762,9 +2905,38 @@ class RezeptorWindow(QMainWindow):
             )
             if idx >= 0:
                 self._on_select(idx)
+            # Keep busy through select/rediscover — Primary stays disabled.
+            self._set_busy(True, rid=rid)
+            if self._selected is not None and self._selected.rid == rid:
+                self._apply_primary_cta(
+                    self._selected,
+                    can_launch=False,
+                    running=False,
+                    busy=True,
+                )
+
+            # Approve alone is not enough — login/runtime fixes need repair.
+            # Stay busy into _run_async (reject checks QProcess, not _busy).
+            if repair.is_file() and installed_ish:
+                self._pending_repair_rid = rid
+                self._activity("step", t("trust.regen_then_repair"))
+                self._maybe_wine_dialog_hint("repair")
+                handoff_repair = True
+                self._run_async(repair, done_label=t("action.repair"), op="repair")
+                return
+
+            if repair.is_file():
+                self._pending_repair_rid = rid
+                self._activity("info", t("trust.force_repair_followup"))
         except OSError as exc:
             self._activity("error", t("trust.regen_fail") + f": {exc}")
             QMessageBox.critical(self, t("dialog.error"), str(exc))
+        finally:
+            # Handoff: QProcess may still be Starting — never clear busy then.
+            if handoff_repair and self._process is not None:
+                pass
+            elif self._busy and self._process is None:
+                self._set_busy(False)
 
     def _clear_pending_repair(self, rid: str) -> None:
         if self._pending_repair_rid == rid:
@@ -2866,6 +3038,8 @@ class RezeptorWindow(QMainWindow):
         env["PROJECT_ROOT"] = str(ROOT)
         env["LAUNCHER_GUI"] = "1"
         env["LAUNCHER_SESSION_ID"] = self.session_id
+        loc = (get_locale() or "en").split("-", 1)[0].lower()
+        env["RECIPE_UI_LANG"] = "de" if loc.startswith("de") else "en"
         if self._selected:
             env["RECIPE_ID"] = self._selected.rid
             rt = self._selected.meta.get("runtime", "proton-ge")
@@ -2932,7 +3106,7 @@ class RezeptorWindow(QMainWindow):
         order = list(self._settings.recipe_order or [])
         custom_cat_order = list(self._settings.custom_category_order or [])
         for cat in sort_categories(list(grouped.keys()), custom_cat_order):
-            header = SidebarCategoryHeader(cat)
+            header = SidebarCategoryHeader(cat, label=category_label(cat))
             self.recipe_cards_layout.addWidget(header)
             cat_rows = sort_recipes_in_category(grouped[cat], order)
             side_texts = sidebar_card_texts(
@@ -3137,6 +3311,24 @@ class RezeptorWindow(QMainWindow):
 
         checking = _recipe_is_checking(info)
         untrusted = _recipe_is_untrusted(info)
+        pending_repair = self._pending_repair_rid == info.rid
+        # After Freigabe/Medizin: keep a short stable line — long trust hints
+        # + header refit made the primary CTA appear to “hop”.
+        if pending_repair and not checking:
+            hint = t("medizin.apply_repair_hint")
+            self._status_detail_base = hint
+            self.status_detail_label.setText(hint)
+            self.status_detail_label.setVisible(True)
+            self._info_raw = recipe_info_text(info.rid, Path(meta["_dir"]))
+            self._render_info_markdown()
+            can_launch = self._can_launch_recipe(info, dr)
+            running = recipe_process_running(info.rid, info.meta)
+            self._apply_primary_cta(
+                info, can_launch=can_launch, running=running, busy=self._busy
+            )
+            self._sync_medizin_button()
+            self._refresh_running_indicators()
+            return
         if checking or untrusted:
             raw = info.trust_reason or info.status_detail or "?"
             reason_suffix = "checking" if checking else friendly_trust_reason(raw)
@@ -3155,12 +3347,13 @@ class RezeptorWindow(QMainWindow):
             self._status_detail_base = detail
             self._info_raw = recipe_info_text(info.rid, Path(meta["_dir"]))
             self._render_info_markdown()
-            # Pflicht-Freigabe = Kupfer-Primary (wie „Jetzt reparieren“), kein Nebenbutton.
+            # Pflicht-Freigabe = Kupfer-Primary (wie „Jetzt aktualisieren“), kein Nebenbutton.
             self._apply_primary_cta(
                 info, can_launch=False, running=False, busy=self._busy
             )
             self._sync_medizin_button()
             self._refresh_running_indicators()
+            self._schedule_header_refit()
             return
 
         if self._busy and self._busy_belongs_to_selected():
@@ -3182,6 +3375,7 @@ class RezeptorWindow(QMainWindow):
         self._status_detail_base = detail if detail else " "
         self.status_detail_label.setText(self._status_detail_base)
         self.status_detail_label.setVisible(bool(self._status_detail_base.strip()))
+        self._schedule_header_refit()
         self._info_raw = recipe_info_text(info.rid, Path(meta["_dir"]))
         self._render_info_markdown()
 
@@ -3355,6 +3549,8 @@ class RezeptorWindow(QMainWindow):
 
         tag = (meta.get("runtime") or "proton-ge").strip().lower()
         steam_id = (meta.get("steam_appid") or "").strip()
+        proton_label = proton_ge_badge_label()
+        ge_tag = read_proton_ge_tag() or proton_label
         if tag == "system" and steam_id:
             self.proton_pill.set_content(t("badge.runtime_steam"), COLOR_EXPERIMENTAL)
             self.proton_pill.setToolTip(t("tooltip.runtime_steam"))
@@ -3362,11 +3558,13 @@ class RezeptorWindow(QMainWindow):
             self.proton_pill.set_content(t("badge.runtime_system"), COLOR_EXPERIMENTAL)
             self.proton_pill.setToolTip(t("tooltip.runtime_system"))
         elif steam_id:
-            self.proton_pill.set_content(t("badge.runtime_proton"), COLOR_EXPERIMENTAL)
-            self.proton_pill.setToolTip(t("tooltip.runtime_proton_steam"))
+            self.proton_pill.set_content(proton_label, COLOR_EXPERIMENTAL)
+            self.proton_pill.setToolTip(
+                t("tooltip.runtime_proton_steam", tag=ge_tag)
+            )
         else:
-            self.proton_pill.set_content(t("badge.runtime_proton"), COLOR_EXPERIMENTAL)
-            self.proton_pill.setToolTip(t("tooltip.runtime_proton"))
+            self.proton_pill.set_content(proton_label, COLOR_EXPERIMENTAL)
+            self.proton_pill.setToolTip(t("tooltip.runtime_proton", tag=ge_tag))
         # Arrow + tooltip: WhatsThisCursor showed a stray "?" on some desktops.
         self.proton_pill.setCursor(Qt.CursorShape.ArrowCursor)
 
@@ -3397,6 +3595,43 @@ class RezeptorWindow(QMainWindow):
             if usable
             else t("tooltip.open_data_root_missing")
         )
+        self._schedule_header_refit()
+
+    def _schedule_header_refit(self) -> None:
+        """Word-wrap QLabels need a deferred height pass after layout width is known."""
+        QTimer.singleShot(0, self._refit_header_labels)
+
+    def _refit_header_labels(self) -> None:
+        header = getattr(self, "_header", None)
+        if header is None:
+            return
+        for lab in (self.path_label, self.status_detail_label):
+            if lab is None:
+                continue
+            if not lab.isVisible() or not lab.wordWrap() or not (lab.text() or "").strip():
+                lab.setMinimumHeight(0)
+                continue
+            w = lab.width()
+            if w < 40:
+                # First layout pass: estimate from header minus icon/margins
+                w = max(header.width() - 110, 200)
+            h = lab.heightForWidth(w)
+            if h > 0:
+                # Floor ~2 lines so CTA/header don't jump when detail shrinks
+                floor = lab.fontMetrics().height() * 2 + 6
+                lab.setMinimumHeight(max(h, floor))
+        header.updateGeometry()
+        parent = header.parentWidget()
+        if parent is not None:
+            parent.updateGeometry()
+
+    def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # noqa: N802
+        if (
+            obj is getattr(self, "_header", None)
+            and event.type() == QEvent.Type.Resize
+        ):
+            self._refit_header_labels()
+        return super().eventFilter(obj, event)
 
     def _action_hint_for(self, info: RecipeInfo) -> str:
         """Kurzer Hinweis — ergänzt Badge + CTA, ohne zu wiederholen."""
@@ -4474,7 +4709,9 @@ class RezeptorWindow(QMainWindow):
         remaining = [r for r in order if r not in siblings]
         save_settings(self._settings)
         self._persist_recipe_order(siblings + remaining)
-        self._flash_status(t("menu.category_moved", id=source_id, cat=category))
+        self._flash_status(
+            t("menu.category_moved", id=source_id, cat=category_label(category))
+        )
 
     def _on_recipe_reorder(
         self, source_id: str, target_id: str, place: str = "before"
@@ -4869,6 +5106,7 @@ class RezeptorWindow(QMainWindow):
 
     def retranslate_ui(self) -> None:
         self._build_menus()
+        self._sync_lang_toggle()
         self.setWindowTitle(
             self._window_title(
                 read_version(), self._update_available or ""
@@ -4944,7 +5182,20 @@ class RezeptorWindow(QMainWindow):
                     ("logs", t("tab.logs")),
                 ]
             )
-        if self._selected:
+        # Rebuild sidebar so category headers / card tips follow the locale.
+        prev = self._selected.rid if self._selected else ""
+        if hasattr(self, "recipe_cards_layout"):
+            self._populate_list()
+            if prev:
+                for i, info in enumerate(self.recipes):
+                    if info.rid == prev:
+                        self._select_recipe_index(i)
+                        break
+                else:
+                    self._show_home()
+            else:
+                self._show_home()
+        elif self._selected:
             self._on_select(self._selected_index)
         else:
             self._show_home()
@@ -5407,7 +5658,7 @@ class RezeptorWindow(QMainWindow):
         self.step_label.setText(t("status.starting", name=name))
         self.step_label.setStyleSheet("")
         self._activity("step", t("status.start_triggered", name=name))
-        self._activity("info", t("status.window_soon"))
+        self._activity("info", t("status.window_soon", name=name))
         if launch_process_patterns(rid, meta):
             QTimer.singleShot(
                 2500, lambda: self._check_launch_alive(rid, log_path, 0)

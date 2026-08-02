@@ -8,19 +8,19 @@ assignees: ''
 
 ## 💡 Feature
 
-Kurze Beschreibung des gewünschten Features.
+Short description of the feature you want.
 
 ## 🎯 Problem
 
-Welches Problem löst dieses Feature?
+What problem does this feature solve?
 
-## 💭 Lösung
+## 💭 Solution
 
-Wie sollte das Feature funktionieren?
+How should the feature work?
 
-## 📊 Priorität
+## 📊 Priority
 
-- [ ] Kritisch
-- [ ] Hoch
-- [ ] Mittel
-- [ ] Niedrig
+- [ ] Critical
+- [ ] High
+- [ ] Medium
+- [ ] Low

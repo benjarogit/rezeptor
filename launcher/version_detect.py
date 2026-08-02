@@ -67,7 +67,7 @@ def _parse_string_list_block(
 
 
 def _load_recipe_mapping_minimal(text: str) -> dict[str, Any]:
-    # Minimal: top-level Skalare + version_detect / source_hints Listen
+    # Minimal: top-level Skalare + version_detect / options / source_hints Listen
     data: dict[str, Any] = {}
     lines = text.splitlines()
     i = 0
@@ -86,6 +86,12 @@ def _load_recipe_mapping_minimal(text: str) -> dict[str, Any]:
         key, rest = m.group(1), m.group(2).strip()
         if key == "version_detect":
             items, i = _parse_version_detect_block(lines, i + 1)
+            data[key] = items
+            continue
+        if key == "options":
+            # AppImage hat oft kein PyYAML — options als Mapping-Liste parsen,
+            # sonst bleibt Medizin-Button unsichtbar (leere Optionen).
+            items, i = _parse_mapping_list_block(lines, i + 1)
             data[key] = items
             continue
         if rest.startswith("[") and rest.endswith("]"):
@@ -165,6 +171,81 @@ def source_ref_host_allowed(url: str) -> bool:
     except Exception:
         return False
     return host in SOURCE_REF_ALLOWED_HOSTS
+
+
+def _line_indent(line: str) -> int:
+    return len(line) - len(line.lstrip(" \t"))
+
+
+def _parse_mapping_list_block(
+    lines: list[str], start: int
+) -> tuple[list[dict[str, Any]], int]:
+    """Parse ``options:``-style list of mappings without PyYAML (indent-aware)."""
+    items: list[dict[str, Any]] = []
+    i = start
+    current: dict[str, Any] | None = None
+    item_indent: int | None = None
+
+    while i < len(lines):
+        raw = lines[i]
+        if not raw.strip() or raw.lstrip().startswith("#"):
+            i += 1
+            continue
+        ind = _line_indent(raw)
+        if ind == 0:
+            break
+        stripped = raw.strip()
+
+        if stripped.startswith("- "):
+            if current is not None:
+                items.append(current)
+            current = {}
+            item_indent = ind
+            rest = stripped[2:].strip()
+            if ":" in rest:
+                k, _, v = rest.partition(":")
+                current[k.strip()] = _parse_scalar(v.strip())
+            i += 1
+            continue
+
+        if current is None:
+            break
+        if item_indent is not None and ind <= item_indent:
+            break
+
+        if ":" not in stripped:
+            i += 1
+            continue
+
+        k, _, v = stripped.partition(":")
+        key = k.strip()
+        val = v.strip()
+        key_indent = ind
+        if val == "":
+            nested: dict[str, Any] = {}
+            i += 1
+            while i < len(lines):
+                sub = lines[i]
+                if not sub.strip() or sub.lstrip().startswith("#"):
+                    i += 1
+                    continue
+                sind = _line_indent(sub)
+                if sind <= key_indent:
+                    break
+                sm = sub.strip()
+                if ":" in sm:
+                    sk, _, sv = sm.partition(":")
+                    nested[sk.strip()] = _parse_scalar(sv.strip())
+                i += 1
+            current[key] = nested
+            continue
+
+        current[key] = _parse_scalar(val)
+        i += 1
+
+    if current is not None:
+        items.append(current)
+    return items, i
 
 
 def _parse_version_detect_block(

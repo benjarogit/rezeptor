@@ -8,34 +8,34 @@ assignees: ''
 
 ## 🚀 Problem
 
-Beschreibung des Performance-Problems.
+Describe the performance problem.
 
-## 📊 Symptome
+## 📊 Symptoms
 
-- [ ] Langsamer Start
-- [ ] Bildschirm-Lag
-- [ ] Abstürze
-- [ ] Hohe CPU/RAM-Nutzung
-- [ ] Anderes: _______
+- [ ] Slow startup
+- [ ] UI / screen lag
+- [ ] Crashes
+- [ ] High CPU/RAM usage
+- [ ] Other: _______
 
 ## 📋 System
 
-- **CPU:** [z.B. AMD Ryzen 7 5800X]
-- **RAM:** [z.B. 16GB]
-- **GPU:** [z.B. Nvidia RTX 3060]
-- **Distro:** [z.B. CachyOS]
-- **Runtime:** Proton-GE — `source core/wine-runtime.sh && wine_runtime::describe`
+- **CPU:** [e.g. AMD Ryzen 7 5800X]
+- **RAM:** [e.g. 16GB]
+- **GPU:** [e.g. Nvidia RTX 3060]
+- **Distro:** [e.g. CachyOS]
+- **Runtime:** Proton-GE — prefer Help → Report issue, or check About
 
-## 🔧 Bereits versucht
+## 🔧 Already tried
 
-- [ ] GPU in Photoshop deaktiviert
-- [ ] Wine-Registry-Tweaks angewendet
-- [ ] Andere Apps geschlossen
+- [ ] Disabled GPU in Photoshop (if applicable)
+- [ ] Applied Wine registry tweaks
+- [ ] Closed other apps
 
-## 📈 Metriken
+## 📈 Metrics
 
 ```bash
-# CPU/RAM während Problem
+# CPU/RAM while reproducing
 top -b -n 1 | head -20
 free -h
 ```

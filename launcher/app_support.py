@@ -310,7 +310,60 @@ def humanize_log_line(line: str) -> str | None:
     return line
 
 
+def _ui_locale() -> str:
+    try:
+        from i18n import get_locale
+
+        code = (get_locale() or "en").split("-", 1)[0].lower()
+        return "de" if code.startswith("de") else "en"
+    except Exception:
+        return "en"
+
+
+def read_proton_ge_tag() -> str:
+    """Pinned Proton-GE tag from core/runtime.lock (no shell)."""
+    lock = ROOT / "core" / "runtime.lock"
+    if not lock.is_file():
+        return ""
+    try:
+        for line in lock.read_text(encoding="utf-8", errors="replace").splitlines():
+            raw = line.strip()
+            if not raw or raw.startswith("#") or "=" not in raw:
+                continue
+            key, _, val = raw.partition("=")
+            if key.strip() == "PROTON_GE_TAG":
+                return val.strip().strip('"').strip("'")
+    except OSError:
+        return ""
+    return ""
+
+
+def describe_runtime_for_report() -> str:
+    tag = read_proton_ge_tag()
+    return f"Proton-GE {tag}" if tag else "Proton-GE (unknown — core/runtime.lock)"
+
+
+def proton_ge_short_tag() -> str:
+    """GE-Proton10-28 → 10-28 for compact UI badges."""
+    tag = read_proton_ge_tag()
+    if tag.startswith("GE-Proton"):
+        return tag[len("GE-Proton") :] or tag
+    return tag
+
+
+def proton_ge_badge_label() -> str:
+    short = proton_ge_short_tag()
+    return f"Proton-GE {short}" if short else "Proton-GE"
+
+
+def bug_report_template_name() -> str:
+    """GitHub ISSUE_TEMPLATE filename matching UI locale."""
+    return "bug_report_de.md" if _ui_locale() == "de" else "bug_report.md"
+
+
 def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
+    from i18n import t
+
     LOG_ROOT.mkdir(parents=True, exist_ok=True)
     try:
         os.chmod(LOG_ROOT, 0o700)
@@ -318,22 +371,31 @@ def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
         pass
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
     out = LOG_ROOT / f"github-report_{recipe_id}_{ts}.txt"
+    runtime = describe_runtime_for_report()
+    locale = _ui_locale()
     lines: list[str] = [
-        "Rezeptor — Fehlerbericht (sanitisiert)",
-        f"Zeit (UTC): {datetime.now(timezone.utc).isoformat()}",
-        f"Rezept: {recipe_id}",
-        f"Version: {read_version()}",
-        f"Distro: {detect_distro()}",
+        t("dialog.report_file_title"),
+        t("dialog.report_file_time", time=datetime.now(timezone.utc).isoformat()),
+        t("dialog.report_file_recipe", recipe=recipe_id),
+        t("dialog.report_file_version", version=read_version()),
+        t("dialog.report_file_distro", distro=detect_distro()),
+        t("dialog.report_file_runtime", runtime=runtime),
+        t("dialog.report_file_locale", locale=locale),
         "",
     ]
     if session_id:
-        lines.append(f"Interne Session-ID (Support): {session_id}")
+        lines.append(t("dialog.report_file_session", session=session_id))
         lines.append("")
 
     try:
         uname = subprocess.run(["uname", "-a"], capture_output=True, text=True, timeout=5)
         if uname.stdout:
-            lines.append(f"Kernel: {sanitize_log_text(uname.stdout.strip())}")
+            lines.append(
+                t(
+                    "dialog.report_file_kernel",
+                    kernel=sanitize_log_text(uname.stdout.strip()),
+                )
+            )
     except OSError:
         pass
     lines.append("")
@@ -358,9 +420,9 @@ def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
                     if h is None or LOG_NOISE_RE.search(h):
                         continue
                     cleaned.append(sanitize_log_text(h))
-                lines.extend(cleaned or ["(keine lesbaren Zeilen)"])
+                lines.extend(cleaned or [t("dialog.report_file_empty")])
             except OSError as exc:
-                lines.append(f"(Lesefehler: {exc})")
+                lines.append(t("dialog.report_file_read_error", error=exc))
             lines.append("")
 
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -372,59 +434,72 @@ def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
 
 
 def build_issue_body(recipe_id: str, report_path: Path, session_id: str = "") -> str:
-    """Markdown gemäß .github/ISSUE_TEMPLATE/bug_report.md"""
+    """Markdown matching locale-specific GitHub bug_report template."""
+    from i18n import t
+
     log_excerpt = sanitize_log_text(
         report_path.read_text(encoding="utf-8", errors="replace")[-8000:]
     )
-    recipe_label = recipe_id if recipe_id != "launcher" else "Rezeptor (allgemein)"
-    ps_line = f"- **Photoshop:** CC 2021\n" if recipe_id in (
-        "photoshop",
-        "photoshop-m0nkrus",
-        "photoshop-m0nkrus-220",
-    ) else ""
-    session_note = f"\n- **Support-Session:** `{session_id}` (nur intern)" if session_id else ""
-
-    return f"""## 🐛 Problem
-
-(Kurz beschreiben — was ist schiefgelaufen?)
-
-## 📋 System
-
-- **Distro:** {detect_distro()}
-- **Runtime:** Proton-GE (`core/runtime.lock`) — run: `source core/wine-runtime.sh && wine_runtime::describe`
-- **Rezept:** {recipe_label}
-- **Launcher-Version:** v{read_version()}{session_note}
-{ps_line}
-## 🔍 Schritte zum Reproduzieren
-
-1. Rezeptor starten
-2. Rezept „{recipe_label}" wählen
-3. (Aktion: Installieren / Reparieren / …)
-
-## ✅ Erwartetes Verhalten
-
-Was sollte passieren?
-
-## ❌ Tatsächliches Verhalten
-
-Was passiert stattdessen?
-
-## 📸 Logs
-
-```bash
-# Relevante Logs (sanitisiert)
-{log_excerpt}
-```
-
-Vollständiger Report: `~/.local/share/wine-software/logs/{report_path.name}`
-
-## 🔧 Bereits versucht
-
-- [ ] `./pre-check.sh` ausgeführt
-- [ ] `./core/troubleshoot.sh` ausgeführt
-- [ ] GPU in Photoshop deaktiviert
-- [ ] Logs geprüft
-"""
+    recipe_label = (
+        recipe_id if recipe_id != "launcher" else t("dialog.issue_recipe_general")
+    )
+    runtime = describe_runtime_for_report()
+    locale = _ui_locale()
+    parts = [
+        t("dialog.issue_problem_h"),
+        "",
+        t("dialog.issue_problem_hint"),
+        "",
+        t("dialog.issue_system_h"),
+        "",
+        t("dialog.issue_distro", distro=detect_distro()),
+        t("dialog.issue_runtime", runtime=runtime),
+        t("dialog.issue_recipe", recipe=recipe_label),
+        t("dialog.issue_launcher", version=read_version()),
+        t("dialog.issue_ui_locale", locale=locale),
+    ]
+    if session_id:
+        parts.append(t("dialog.issue_session", session=session_id))
+    if recipe_id in ("photoshop", "photoshop-m0nkrus", "photoshop-m0nkrus-220"):
+        parts.append(t("dialog.issue_photoshop"))
+    parts.extend(
+        [
+            "",
+            t("dialog.issue_steps_h"),
+            "",
+            t("dialog.issue_steps_body", recipe=recipe_label),
+            "",
+            t("dialog.issue_expected_h"),
+            "",
+            t("dialog.issue_expected_hint"),
+            "",
+            t("dialog.issue_actual_h"),
+            "",
+            t("dialog.issue_actual_hint"),
+            "",
+            t("dialog.issue_logs_h"),
+            "",
+            "```bash",
+            t("dialog.issue_logs_intro"),
+            log_excerpt,
+            "```",
+            "",
+            t("dialog.issue_logs_note", name=report_path.name),
+        ]
+    )
+    script_note = t("dialog.issue_logs_script_note").strip()
+    if script_note:
+        parts.extend(["", script_note])
+    parts.extend(
+        [
+            "",
+            t("dialog.issue_tried_h"),
+            "",
+            t("dialog.issue_tried_body"),
+            "",
+        ]
+    )
+    return "\n".join(parts)
 
 
 def report_clipboard_text(recipe_id: str, report_path: Path, session_id: str = "") -> str:
@@ -434,23 +509,28 @@ def report_clipboard_text(recipe_id: str, report_path: Path, session_id: str = "
 def github_issue_url(recipe_id: str, report_path: Path | None = None) -> str:
     from urllib.parse import quote
 
+    from i18n import t
+
     recipe_label = recipe_id if recipe_id != "launcher" else "launcher"
     title = f"[BUG] {recipe_label} — Rezeptor"
-    # Kurzer Body in URL — volles Template kommt aus Zwischenablage (Strg+V)
+    # Short URL body — full clipboard paste fills the form
     body = (
-        "## 🐛 Problem\n\n"
-        "(Details und Logs aus der Zwischenablage unten einfügen — Strg+V)\n\n"
-        f"## 📋 System\n\n"
-        f"- **Distro:** {detect_distro()}\n"
-        f"- **Rezept:** {recipe_label}\n"
-        f"- **Launcher-Version:** v{read_version()}\n"
+        f"{t('dialog.issue_problem_h')}\n\n"
+        f"{t('dialog.issue_url_paste_hint')}\n\n"
+        f"{t('dialog.issue_system_h')}\n\n"
+        f"{t('dialog.issue_distro', distro=detect_distro())}\n"
+        f"{t('dialog.issue_runtime', runtime=describe_runtime_for_report())}\n"
+        f"{t('dialog.issue_recipe', recipe=recipe_label)}\n"
+        f"{t('dialog.issue_launcher', version=read_version())}\n"
+        f"{t('dialog.issue_ui_locale', locale=_ui_locale())}\n"
     )
     if report_path is not None:
-        body += f"\nReport-Datei: `{report_path.name}`\n"
+        body += f"\n{t('dialog.issue_report_file', name=report_path.name)}\n"
 
+    template = bug_report_template_name()
     return (
         f"https://github.com/{GITHUB_REPO}/issues/new"
-        f"?template=bug_report.md"
+        f"?template={quote(template)}"
         f"&labels=bug"
         f"&title={quote(title)}"
         f"&body={quote(body)}"

@@ -57,6 +57,7 @@ recipe_hooks::load() {
     recipe_hooks::_source paths.sh
     recipe_hooks::_source recipe.sh
     recipe_export_env "$RECIPE_YML"
+    recipe_hooks::_source i18n.sh
     recipe_hooks::_source output.sh
     # Rezept-Optionen (Medizin-Menü) → DATA_ROOT/options.env
     if [ -n "${DATA_ROOT:-}" ] && [ -f "${DATA_ROOT}/options.env" ]; then
@@ -405,12 +406,12 @@ recipe_hooks::run_exe_installer() {
     local exe="${1:-${RECIPE_INSTALLER_PATH:-}}"
     local log="${LOG_FILE:-/dev/null}"
     [ -f "$exe" ] || {
-        recipe_hooks::log_err "Installer fehlt: ${exe:-?}"
+        recipe_hooks::log_err "$(msg::t err.installer_missing "${exe:-?}")"
         return 1
     }
-    output::step "Installer: $(basename "$exe")"
+    output::step "$(msg::t step.installer "$(basename "$exe")")"
     recipe_hooks::run_exe_silent "$exe" "$log" wine || return 1
-    output::success "Installer ausgeführt"
+    output::success "$(msg::t ok.installer_done)"
     return 0
 }
 
@@ -433,13 +434,13 @@ recipe_hooks::install_prepare_source() {
 }
 
 recipe_hooks::install_prefix() {
-    output::step "Wine initialisieren"
+    output::step "$(msg::t step.wine_init)"
     recipe_hooks::runtime_init || return 1
-    output::success "$(wine_runtime::describe 2>/dev/null || echo "Wine bereit")"
-    output::step "Wine-Prefix"
+    output::success "$(wine_runtime::describe 2>/dev/null || msg::t ok.wine_ready)"
+    output::step "$(msg::t step.wine_prefix)"
     mkdir -p "$(dirname "$WINEPREFIX")"
     recipe_prefix::ensure "$WINEPREFIX" || return 1
-    output::success "Prefix bereit"
+    output::success "$(msg::t ok.prefix_ready)"
     return 0
 }
 
@@ -465,24 +466,28 @@ recipe_hooks::winetricks_packages() {
 
 recipe_hooks::install_winetricks_from_recipe() {
     local pkg pct=20 wt_ok=0
+    # repair.sh must call log_setup; keep a safe fallback for set -u callers
+    if [ -z "${LOG_DIR:-}" ] || [ -z "${TIMESTAMP_ISO:-}" ]; then
+        recipe_hooks::log_setup "${RECIPE_ID:-recipe}_winetricks"
+    fi
     recipe_winetricks::stabilize_prefix
     while IFS= read -r pkg; do
         [ -n "$pkg" ] || continue
         pct=$((pct + 10))
         [ "$pct" -gt 90 ] && pct=90
-        output::progress "$pct" "winetricks: $pkg"
+        output::progress "$pct" "$(msg::t step.winetricks "$pkg")"
         if recipe_winetricks::run "${LOG_DIR}/winetricks_${pkg}_${TIMESTAMP_ISO}.log" "$pkg"; then
             output::success "$pkg"
         else
-            recipe_hooks::log_err "winetricks $pkg fehlgeschlagen"
+            recipe_hooks::log_err "$(msg::t err.winetricks_failed "$pkg")"
             wt_ok=1
         fi
     done < <(recipe_hooks::winetricks_packages)
-    output::step "Windows 10 (Registry)"
+    output::step "$(msg::t step.win10_registry)"
     if recipe_win10::ensure; then
-        output::success "win10"
+        output::success "$(msg::t ok.win10)"
     else
-        recipe_hooks::log_err "win10 Registry fehlgeschlagen"
+        recipe_hooks::log_err "$(msg::t err.win10_failed)"
         wt_ok=1
     fi
     [ "$wt_ok" -eq 0 ]

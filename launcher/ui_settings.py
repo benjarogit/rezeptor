@@ -27,6 +27,7 @@ from ui_window import mark_force_close, mark_user_dismiss
 from i18n import available_locales, t
 from settings import RezeptorSettings, save_settings
 from ui_window import confirm_unsaved_changes
+from ui_styles import style_status_label
 
 # Feste Zeilenhöhe — verhindert Combo/Spin-Überlappung unter Fusion+Host-QSS.
 _FIELD_H = 36
@@ -266,15 +267,15 @@ class SettingsDialog(QDialog):
             self.pw_status.setText(
                 t("settings.archive_passwords_errors", detail="\n".join(result.errors))
             )
-            self.pw_status.setStyleSheet(f"color: #fbbf24;")
+            style_status_label(self.pw_status, "warn")
             self.pw_fix_btn.setEnabled(bool(result.corrected_text is not None))
         elif result.auto_fixed:
             self.pw_status.setText(t("settings.archive_passwords_dirty"))
-            self.pw_status.setStyleSheet("color: #fbbf24;")
+            style_status_label(self.pw_status, "warn")
             self.pw_fix_btn.setEnabled(True)
         else:
             self.pw_status.setText(t("settings.archive_passwords_ok"))
-            self.pw_status.setStyleSheet("color: #86efac;")
+            style_status_label(self.pw_status, "ok")
             self.pw_fix_btn.setEnabled(False)
 
     def _fix_passwords(self) -> None:

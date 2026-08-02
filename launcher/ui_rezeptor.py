@@ -252,8 +252,13 @@ class StatusPill(QLabel):
     def set_content(self, text: str, color: str | None = None) -> None:
         if color is not None:
             self._color = color
-        self.setText(text)
-        self.setVisible(bool((text or "").strip()))
+        full = text or ""
+        display = full.strip()
+        if len(display) > 22:
+            display = display[:19].rstrip() + "…"
+            self.setToolTip(full)
+        self.setText(display)
+        self.setVisible(bool(full.strip()))
         self.apply_theme("dark")
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: ANN001
@@ -328,8 +333,16 @@ class ElidedLabel(QLabel):
 class SidebarCategoryHeader(ElidedLabel):
     """Category label in the sidebar — drop target for cross-category moves."""
 
-    def __init__(self, category: str, parent: QWidget | None = None) -> None:
-        super().__init__(category.upper(), parent)
+    def __init__(
+        self,
+        category: str,
+        parent: QWidget | None = None,
+        *,
+        label: str | None = None,
+    ) -> None:
+        # *category* = storage key; *label* = locale display (defaults to key).
+        display = (label if label is not None else category).upper()
+        super().__init__(display, parent)
         self.category = category
         self.setObjectName("sidebarCategory")
         self.setProperty("dropInsert", "")

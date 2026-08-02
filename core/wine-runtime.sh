@@ -135,31 +135,52 @@ wine_runtime::_user_runtime_base() {
     fi
 }
 
-wine_runtime::_find_proton_dir() {
+# Usable Proton-GE tree (files/bin/wine or wine64).
+wine_runtime::_proton_dir_ok() {
+    local candidate="${1:-}"
+    [ -n "$candidate" ] && [ -d "$candidate/files/bin" ] || return 1
+    [ -x "$candidate/files/bin/wine" ] || [ -x "$candidate/files/bin/wine64" ]
+}
+
+# Steam compatibilitytools.d — exact PROTON_GE_TAG only (read-only reuse).
+wine_runtime::_find_steam_ge_tag_dir() {
+    local tag="${PROTON_GE_TAG:-}"
+    [ -n "$tag" ] || return 1
+    local steam_root="${STEAM_ROOT:-$HOME/.local/share/Steam}"
     local candidate=""
-    local -a glob_candidates=()
-    local base appdir="${APPDIR:-}"
-    base="$(wine_runtime::_user_runtime_base)"
-    shopt -s nullglob 2>/dev/null || true
-    if [ -n "$appdir" ] && [ -d "$appdir/runtime/proton-ge" ]; then
-        glob_candidates+=(
-            "$appdir/runtime/proton-ge/${PROTON_GE_TAG:-GE-Proton10-28}"
-            "$appdir/runtime/proton-ge"/*
-        )
+    [ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
+    [ -d "$steam_root" ] || return 1
+    candidate="$steam_root/compatibilitytools.d/$tag"
+    if wine_runtime::_proton_dir_ok "$candidate"; then
+        echo "$candidate"
+        return 0
     fi
-    glob_candidates+=(
-        "$base/${PROTON_GE_TAG:-GE-Proton10-28}"
-        "$base"/*
-    )
-    shopt -u nullglob 2>/dev/null || true
-    for candidate in "${glob_candidates[@]}"; do
-        if [ -d "$candidate/files/bin" ] && {
-            [ -x "$candidate/files/bin/wine" ] || [ -x "$candidate/files/bin/wine64" ]
-        }; then
+    return 1
+}
+
+# Prefer exact lock tag: APPDIR bundle → user cache → Steam same tag.
+# Never pick a random other GE-* under the tree (healing pin must match).
+wine_runtime::_find_proton_dir() {
+    local tag="${PROTON_GE_TAG:-GE-Proton10-28}"
+    local base appdir="${APPDIR:-}"
+    local candidate=""
+    base="$(wine_runtime::_user_runtime_base)"
+    if [ -n "$appdir" ]; then
+        candidate="$appdir/runtime/proton-ge/$tag"
+        if wine_runtime::_proton_dir_ok "$candidate"; then
             echo "$candidate"
             return 0
         fi
-    done
+    fi
+    candidate="$base/$tag"
+    if wine_runtime::_proton_dir_ok "$candidate"; then
+        echo "$candidate"
+        return 0
+    fi
+    if candidate="$(wine_runtime::_find_steam_ge_tag_dir 2>/dev/null)"; then
+        echo "$candidate"
+        return 0
+    fi
     return 1
 }
 
@@ -324,15 +345,20 @@ wine_runtime::proton_script() {
     echo "$root/proton"
 }
 
-# Steam-/Spiel-Rezepte: Rezeptor Proton-GE zuerst, dann Steam-GE, zuletzt Valve-Proton.
+# Steam-/Spiel-Rezepte: Pin-Tag (Bundle/Cache/Steam-gleicher-Tag), dann neuester Steam-GE, dann Valve.
 wine_runtime::resolve_proton_script() {
     local steam_root="${1:-${STEAM_ROOT:-$HOME/.local/share/Steam}}"
-    local p=""
+    local p="" tag="${PROTON_GE_TAG:-}"
     if p="$(wine_runtime::proton_script 2>/dev/null)" && [ -n "$p" ] && [ -f "$p" ]; then
         echo "$p"
         return 0
     fi
     [ -d "$steam_root" ] || steam_root="$HOME/.steam/steam"
+    # Exact pin tag in Steam (same as _find_proton_dir Steam path)
+    if [ -n "$tag" ] && [ -f "$steam_root/compatibilitytools.d/$tag/proton" ]; then
+        echo "$steam_root/compatibilitytools.d/$tag/proton"
+        return 0
+    fi
     if [ -d "$steam_root" ] && compgen -G "$steam_root/compatibilitytools.d/GE-Proton*/proton" >/dev/null 2>&1; then
         ls -1d "$steam_root/compatibilitytools.d"/GE-Proton*/proton 2>/dev/null | sort -V | tail -1
         return 0

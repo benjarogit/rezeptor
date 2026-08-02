@@ -25,7 +25,7 @@ from PyQt6.QtWidgets import (
 )
 
 from i18n import t
-from recipe_categories import STANDARD_CATEGORIES
+from recipe_categories import STANDARD_CATEGORIES, category_label
 from ui_rezeptor import LimitedComboBox
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -71,8 +71,8 @@ class RecipeWizardDialog(QDialog):
         self.category_combo = LimitedComboBox(max_visible=12)
         self.category_combo.setEditable(True)
         for cat in STANDARD_CATEGORIES:
-            self.category_combo.addItem(cat, cat)
-        self.category_combo.setCurrentText(STANDARD_CATEGORIES[0])
+            self.category_combo.addItem(category_label(cat), cat)
+        self.category_combo.setCurrentIndex(0)
         self.category_combo.setToolTip(t("wizard.category_tip"))
         form.addRow(t("wizard.category"), self.category_combo)
         layout.addLayout(form)
@@ -136,7 +136,13 @@ class RecipeWizardDialog(QDialog):
             )
             return
 
-        cat = self.category_combo.currentText().strip()
+        # Prefer storage key from item data; free-text custom categories use edit text.
+        cat_data = self.category_combo.currentData()
+        cat = (
+            str(cat_data).strip()
+            if cat_data is not None
+            else self.category_combo.currentText().strip()
+        )
         if cat:
             yml = dest / "recipe.yml"
             try:

@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
 )
 
 from i18n import t
+from recipe_categories import category_label
 from ui_window import confirm_unsaved_changes
 from version_detect import load_recipe_mapping, source_hints_list, source_refs_list
 
@@ -261,6 +262,8 @@ class RecipeViewDialog(QDialog):
         ):
             val = _meta_scalar(self._data, key, "")
             if val and val != "—":
+                if key == "category":
+                    val = category_label(val)
                 meta_row.addWidget(_chip(f"{label}: {val}"))
         steam = _meta_scalar(self._data, "steam_appid", "")
         if steam and steam != "—":

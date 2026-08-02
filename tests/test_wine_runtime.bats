@@ -56,3 +56,33 @@ setup() {
     [[ "$output" == *ERROR:* ]]
     [[ "$output" == *"synthetic failure"* ]]
 }
+
+@test "wine_runtime _find_proton_dir prefers exact lock tag only" {
+    export HOME="$BATS_TEST_TMPDIR/wine-home-exact"
+    mkdir -p "$HOME"
+    wine_runtime::reset
+    wine_runtime::_load_lock
+    base="$(wine_runtime::_user_runtime_base)"
+    wrong="$base/GE-Proton9-0"
+    right="$base/${PROTON_GE_TAG}"
+    mkdir -p "$wrong/files/bin" "$right/files/bin"
+    touch "$wrong/files/bin/wine" "$right/files/bin/wine"
+    chmod +x "$wrong/files/bin/wine" "$right/files/bin/wine"
+    run wine_runtime::_find_proton_dir
+    [ "$status" -eq 0 ]
+    [[ "$output" == "$right" ]]
+}
+
+@test "wine_runtime _find_proton_dir does not pick wrong tag via glob" {
+    export HOME="$BATS_TEST_TMPDIR/wine-home-wrong"
+    mkdir -p "$HOME"
+    wine_runtime::reset
+    wine_runtime::_load_lock
+    base="$(wine_runtime::_user_runtime_base)"
+    wrong="$base/GE-Proton9-0"
+    mkdir -p "$wrong/files/bin"
+    touch "$wrong/files/bin/wine"
+    chmod +x "$wrong/files/bin/wine"
+    run wine_runtime::_find_proton_dir
+    [ "$status" -ne 0 ]
+}

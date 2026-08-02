@@ -1,39 +1,31 @@
 #!/usr/bin/env bats
-################################################################################
-# Photoshop CC Linux - i18n Module Tests
-#
-# Description:
-#   Unit tests for core/i18n.sh (Bash install-pipeline strings).
-#
-# Author:       benjarogit
-# Repository:   https://github.com/benjarogit/photoshopCClinux
-# License:      GPL-3.0
-# Copyright:    (c) 2024 benjarogit
-################################################################################
+# Shell i18n (RECIPE_UI_LANG)
 
 load test_helper
 
 setup() {
-    source "$BATS_TEST_DIRNAME/../core/i18n.sh"
+    ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+    # shellcheck source=/dev/null
+    source "$ROOT/core/i18n.sh"
 }
 
-@test "i18n::get returns German text when LANG_CODE is de" {
-    export LANG_CODE="de"
-    run i18n::get "install_photoshop"
+@test "msg::t returns German for RECIPE_UI_LANG=de" {
+    RECIPE_UI_LANG=de
+    run msg::t step.wine_init
     [ "$status" -eq 0 ]
-    [[ "$output" =~ "Installiere" ]] || [[ "$output" =~ "Photoshop" ]]
+    [[ "$output" == "Wine initialisieren" ]]
 }
 
-@test "i18n::get returns English text when LANG_CODE is en" {
-    export LANG_CODE="en"
-    run i18n::get "install_photoshop"
+@test "msg::t returns English for RECIPE_UI_LANG=en" {
+    RECIPE_UI_LANG=en
+    run msg::t step.wine_init
     [ "$status" -eq 0 ]
-    [[ "$output" =~ "Install" ]] || [[ "$output" =~ "Photoshop" ]]
+    [[ "$output" == "Initializing Wine" ]]
 }
 
-@test "i18n::get returns key when translation not found" {
-    export LANG_CODE="de"
-    run i18n::get "nonexistent_key"
+@test "msg::t formats printf args" {
+    RECIPE_UI_LANG=en
+    run msg::t step.installer "Setup.exe"
     [ "$status" -eq 0 ]
-    [ "$output" = "nonexistent_key" ]
+    [[ "$output" == "Installer: Setup.exe" ]]
 }

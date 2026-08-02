@@ -6,19 +6,19 @@ labels: question
 assignees: ''
 ---
 
-## ❓ Frage
+## ❓ Question
 
-Deine Frage hier.
+Your question here.
 
-## 🔍 Bereits versucht
+## 🔍 Already tried
 
-- [ ] README.md / README.de.md gelesen
-- [ ] Bestehende Issues durchsucht
-- [ ] `./pre-check.sh` ausgeführt
-- [ ] `./troubleshoot.sh` ausgeführt
+- [ ] Read README.md / docs
+- [ ] Searched existing issues
+- [ ] Ran `./pre-check.sh`
+- [ ] Ran `./core/troubleshoot.sh`
 
 ## 📋 System
 
-- **Distro:** [z.B. CachyOS]
-- **Runtime:** Proton-GE — `source core/wine-runtime.sh && wine_runtime::describe`
-- **Photoshop:** [z.B. CC 2021]
+- **Distro:** [e.g. CachyOS]
+- **Runtime:** Proton-GE — prefer Help → Report issue, or check About
+- **Recipe / app:** [if applicable]

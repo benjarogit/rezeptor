@@ -1,6 +1,6 @@
 ---
 name: 🐛 Bug Report
-about: Report a bug or issue
+about: Report a bug or issue (English)
 title: '[BUG] '
 labels: bug
 assignees: ''
@@ -8,38 +8,40 @@ assignees: ''
 
 ## 🐛 Problem
 
-Kurze Beschreibung des Problems.
+Briefly describe the problem.
 
 ## 📋 System
 
-- **Distro:** [z.B. CachyOS, Arch, Ubuntu]
-- **Runtime:** Proton-GE (`core/runtime.lock`) — run: `source core/wine-runtime.sh && wine_runtime::describe`
-- **Photoshop:** [z.B. CC 2021]
+- **Distro:** [e.g. CachyOS, Arch, Ubuntu]
+- **Runtime:** Proton-GE (see `core/runtime.lock` / launcher report)
+- **Recipe:** [recipe id]
+- **Launcher version:** [from About / report]
+- **UI language:** English
 
-## 🔍 Schritte zum Reproduzieren
+## 🔍 Steps to reproduce
 
-1. ...
-2. ...
-3. ...
+1. …
+2. …
+3. …
 
-## ✅ Erwartetes Verhalten
+## ✅ Expected behavior
 
-Was sollte passieren?
+What should happen?
 
-## ❌ Tatsächliches Verhalten
+## ❌ Actual behavior
 
-Was passiert stattdessen?
+What happens instead?
 
 ## 📸 Logs
 
 ```bash
-# Relevante Logs
-tail -n 50 ~/.local/share/wine-software/logs/*.log
+# Prefer: Help → Report issue (copies sanitized logs + runtime)
+# Or paste the clipboard report from the launcher here
 ```
 
-## 🔧 Bereits versucht
+## 🔧 Already tried
 
-- [ ] `./pre-check.sh` ausgeführt
-- [ ] `./troubleshoot.sh` ausgeführt
-- [ ] GPU in Photoshop deaktiviert
-- [ ] Logs geprüft
+- [ ] Ran `./pre-check.sh`
+- [ ] Ran `./core/troubleshoot.sh`
+- [ ] Disabled GPU in Photoshop (if applicable)
+- [ ] Checked logs

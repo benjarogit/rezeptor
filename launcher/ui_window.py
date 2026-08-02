@@ -278,7 +278,9 @@ class ApplicationCloseGuard(QObject):
 
         if w is self._main:
             self._main_close_at = now
+            # Gestapelt: zuerst Kinder/Modals, dann App-Quit (Taskleisten-„Alle schließen“).
             unwind_modal_dialogs(self._main, force=True)
+            dismiss_all_top_level_windows(self._main, force=True)
             self._schedule_quit()
             event.ignore()
             return True
@@ -290,13 +292,12 @@ class ApplicationCloseGuard(QObject):
         if self._secondary_has_unsaved(w) and not wm_close:
             return False
 
-        # Taskleisten-/WM-Close: alle Fenster beenden.
-        # force_close setzen, sonst ruft Dialog.closeEvent mark_user_dismiss auf
-        # und cancel_pending_quit verwirft den geplanten Quit (→ „Schließen tut nichts“).
+        # Taskleisten-/WM-X auf Nebenfenster: nur dieses Fenster schließen.
+        # App-Quit nur über Hauptfenster (Close / „Alle schließen“ inkl. Main) oder Quit-Event.
+        # Früher: jeder WM-Close auf einem Dialog → _schedule_quit → Rezeptor tot (Medizin-X).
         if wm_close:
             if isinstance(w, QDialog):
                 mark_force_close(w)
-            self._schedule_quit()
             return False
 
         return False
@@ -345,6 +346,7 @@ def apply_tool_window(
     icon: QIcon | None = None,
     modal: bool = False,
     delete_on_close: bool | None = None,
+    compact: bool = False,
 ) -> None:
     """Eigenständiges Fenster: Taskleisten-Eintrag, Schließen per RMB funktioniert.
 
@@ -354,6 +356,8 @@ def apply_tool_window(
     WA_DeleteOnClose: nur bei nicht-modalen show()-Fenstern (default).
     Bei modal=True + exec() muss das Objekt nach return noch lesbar sein
     (Geometrie, result_settings) — sonst RuntimeError/SIGABRT.
+
+    compact=True: kleine Dialoge (Medizin, Kurz-Infos) — kein 480×360-Zwang.
     """
     flags = (
         Qt.WindowType.Window
@@ -376,7 +380,10 @@ def apply_tool_window(
         )
         widget.setSizeGripEnabled(True)
     # Nie kleiner als schon gesetztes Minimum (Settings/Rezept-View sonst gequetscht).
-    floor_w, floor_h = 480, 360
+    if compact:
+        floor_w, floor_h = 360, 120
+    else:
+        floor_w, floor_h = 480, 360
     cur = widget.minimumSize()
     widget.setMinimumSize(max(floor_w, cur.width()), max(floor_h, cur.height()))
     # __init__-resize als Standard halten (WM/adjustSize darf nicht dauerhaft schrumpfen).

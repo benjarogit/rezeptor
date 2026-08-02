@@ -83,9 +83,43 @@ def test_cancel_pending_quit_ignores_wm_armed() -> None:
     del app
 
 
+def test_secondary_wm_close_does_not_quit_app() -> None:
+    """Medizin-/Nebenfenster-X darf keinen App-Quit planen (nur Hauptfenster)."""
+    from unittest.mock import MagicMock
+
+    from PyQt6.QtCore import QEvent, Qt
+    from PyQt6.QtWidgets import QApplication, QDialog, QWidget
+
+    from ui_window import ApplicationCloseGuard
+
+    app = QApplication.instance() or QApplication([])
+    main = QWidget()
+    main.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, True)
+    guard = ApplicationCloseGuard(main)
+    scheduled: list[str] = []
+    guard._schedule_quit = lambda: scheduled.append("quit")  # type: ignore[method-assign]
+
+    dlg = QDialog(main)
+    dlg.setWindowFlags(Qt.WindowType.Window)
+    dlg.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, False)
+
+    ev = MagicMock()
+    ev.type.return_value = QEvent.Type.Close
+    ev.spontaneous.return_value = True
+    assert guard.eventFilter(dlg, ev) is False
+    assert scheduled == []
+
+    # Hauptfenster-Close plant Quit
+    guard.eventFilter(main, ev)
+    assert scheduled == ["quit"]
+    main.close()
+    del app
+
+
 if __name__ == "__main__":
     test_own_process_group_rejects_shared_group()
     test_own_process_group_accepts_group_leader()
     test_signal_tree_does_not_kill_own_group()
     test_cancel_pending_quit_ignores_wm_armed()
+    test_secondary_wm_close_does_not_quit_app()
     print("ok")

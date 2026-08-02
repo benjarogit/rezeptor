@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+# Storage keys (recipe.yml / settings) — German canonical, stable across locales.
 STANDARD_CATEGORIES = [
     "Finanzen & Steuer",
     "Grafik & Design",
@@ -9,10 +10,30 @@ STANDARD_CATEGORIES = [
     "Sonstige",
 ]
 
+_CATEGORY_I18N = {
+    "Finanzen & Steuer": "category.finance",
+    "Grafik & Design": "category.design",
+    "Spiele": "category.games",
+    "Sonstige": "category.other",
+}
+
 
 def is_standard(category: str) -> bool:
     """True when *category* is one of the built-in sidebar groups."""
     return category in STANDARD_CATEGORIES
+
+
+def category_label(category: str) -> str:
+    """Locale display name for a stored category key (custom names pass through)."""
+    key = _CATEGORY_I18N.get((category or "").strip())
+    if key is None:
+        return (category or "").strip() or category_label("Sonstige")
+    try:
+        from i18n import t
+
+        return t(key)
+    except Exception:
+        return category
 
 
 def default_category(meta: dict | None) -> str:
@@ -31,7 +52,7 @@ def effective_category(rid: str, meta: dict | None, overrides: dict[str, str] | 
 
 
 def sort_categories(categories: list[str], custom_order: list[str]) -> list[str]:
-    """Standard categories first (alphabetical), then custom (DnD order), then rest."""
+    """Standard categories first (alphabetical by storage key), then custom (DnD order), then rest."""
     seen: set[str] = set()
     ordered: list[str] = []
 

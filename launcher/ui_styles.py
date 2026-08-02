@@ -14,6 +14,8 @@ COLOR_TESTED = "#639922"
 COLOR_EXPERIMENTAL = "#d9a441"
 COLOR_PARCHMENT = "#EDE6D6"  # high-emphasis text (Material ~87%)
 COLOR_ANTHRACITE = "#1C1C1A"  # surface 0
+# Semantic error (not in brand table — soft red for dark surfaces)
+COLOR_ERROR = "#E07070"
 
 # Material-ähnliche Elevation auf Dark (heller = höher)
 SURFACE_1 = "#252526"  # sidebar / menubar
@@ -21,6 +23,14 @@ SURFACE_2 = "#2B2B2B"  # cards (Fluent-Dialog-nah)
 SURFACE_3 = "#323232"  # hover / elevierter
 BORDER = "#3A3A3A"
 MUTED = "#D4CDC3"  # secondary text — hell genug auf Surface 2 (AA)
+
+# Status text on dark UI (ok / warn / error / info)
+STATUS_FG = {
+    "ok": COLOR_TESTED,
+    "warn": COLOR_EXPERIMENTAL,
+    "error": COLOR_ERROR,
+    "info": MUTED,
+}
 
 STATE_COLORS = {
     "not_installed": (MUTED, SURFACE_1),
@@ -41,6 +51,16 @@ DARK = {
 def palette(theme: str | None = None) -> dict[str, str]:
     _ = theme
     return DARK
+
+
+def style_status_label(label, kind: str = "info", *, size_px: int = 12) -> None:
+    """Brand status colors for feedback lines (Gespeichert / Warnung / Fehler)."""
+    color = STATUS_FG.get(kind, MUTED)
+    weight = "600" if kind in ("ok", "warn", "error") else "500"
+    label.setStyleSheet(
+        f"color: {color}; font-size: {size_px}px; font-weight: {weight}; "
+        "background: transparent;"
+    )
 
 
 def host_stylesheet() -> str:
@@ -415,6 +435,23 @@ QToolButton#healthChip {{
     min-height: 26px;
     max-height: 28px;
     background-color: rgba(255, 255, 255, 0.08);
+}}
+/* Sprach-Flagge: nur Icon, kein Button-Chrome */
+QToolButton#langToggle {{
+    background: transparent;
+    border: none;
+    padding: 0 10px;
+    margin: 0;
+    min-width: 40px;
+    min-height: 30px;
+    font-size: 22px;
+    color: {COLOR_PARCHMENT};
+}}
+QToolButton#langToggle:hover,
+QToolButton#langToggle:pressed,
+QToolButton#langToggle:focus {{
+    background: transparent;
+    border: none;
 }}
 QToolButton::menu-indicator {{ image: none; width: 0; }}
 /* Scrollbars dezent — kein Kupfer-Signalstreifen (Akzent bleibt bei CTA/Auswahl) */
