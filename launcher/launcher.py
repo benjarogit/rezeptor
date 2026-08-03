@@ -1248,6 +1248,7 @@ class RezeptorWindow(QMainWindow):
         help_menu.addAction(t("menu.check_update"), self.check_updates)
         help_menu.addSeparator()
         help_menu.addAction(t("menu.report_bug"), self.report_bug)
+        help_menu.addAction(t("menu.open_log_folder"), self.open_log_folder)
         help_menu.addAction(t("menu.about"), self.show_about)
         self._ensure_lang_toggle()
         self._menu_bar_built = True
@@ -2491,6 +2492,21 @@ class RezeptorWindow(QMainWindow):
         rb.clicked.connect(self.populate_log_files)
         lr.addWidget(rb)
         lay.addLayout(lr)
+        actions = QHBoxLayout()
+        self._logs_open_folder_btn = QPushButton(t("logs.open_folder"))
+        self._logs_open_folder_btn.setObjectName("ghostBtn")
+        self._logs_open_folder_btn.clicked.connect(self.open_log_folder)
+        actions.addWidget(self._logs_open_folder_btn)
+        self._logs_copy_path_btn = QPushButton(t("logs.copy_path"))
+        self._logs_copy_path_btn.setObjectName("ghostBtn")
+        self._logs_copy_path_btn.clicked.connect(self.copy_selected_log_path)
+        actions.addWidget(self._logs_copy_path_btn)
+        self._logs_copy_content_btn = QPushButton(t("logs.copy_content"))
+        self._logs_copy_content_btn.setObjectName("ghostBtn")
+        self._logs_copy_content_btn.clicked.connect(self.copy_selected_log_content)
+        actions.addWidget(self._logs_copy_content_btn)
+        actions.addStretch(1)
+        lay.addLayout(actions)
         self.file_log = QTextEdit()
         self.file_log.setReadOnly(True)
         self.file_log.setFont(QFont("monospace", 9))
@@ -3002,11 +3018,32 @@ class RezeptorWindow(QMainWindow):
         clip = QApplication.clipboard()
         clip.setText(report_clipboard_text(rid, report, self.session_id))
         QDesktopServices.openUrl(QUrl(github_issue_url(rid, report)))
-        QMessageBox.information(
-            self,
-            t("dialog.report_opened_title"),
-            t("dialog.report_opened_body", name=report.name),
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(t("dialog.report_opened_title"))
+        box.setText(
+            t(
+                "dialog.report_opened_body",
+                name=report.name,
+                folder=str(LOG_ROOT),
+            )
         )
+        open_folder = box.addButton(
+            t("btn.open_log_folder"), QMessageBox.ButtonRole.ActionRole
+        )
+        copy_path = box.addButton(
+            t("btn.copy_log_path"), QMessageBox.ButtonRole.ActionRole
+        )
+        box.addButton(QMessageBox.StandardButton.Ok)
+        box.exec()
+        clicked = box.clickedButton()
+        if clicked == open_folder:
+            self.open_log_folder()
+        elif clicked == copy_path:
+            clip.setText(str(report.resolve()))
+            self._activity(
+                "info", t("dialog.report_path_copied", path=str(report.resolve()))
+            )
         self._activity("info", t("dialog.report_clipboard", name=report.name))
 
     def _show_failure(self, done_label: str, code: int) -> None:
@@ -3025,12 +3062,25 @@ class RezeptorWindow(QMainWindow):
         if extras:
             info = info + "\n\n" + "\n".join(extras)
         box.setInformativeText(info)
+        open_folder = box.addButton(
+            t("btn.open_log_folder"), QMessageBox.ButtonRole.ActionRole
+        )
+        copy_path = box.addButton(
+            t("btn.copy_log_path"), QMessageBox.ButtonRole.ActionRole
+        )
         report = box.addButton(
             t("btn.report_github"), QMessageBox.ButtonRole.ActionRole
         )
         box.addButton(QMessageBox.StandardButton.Ok)
         box.exec()
-        if box.clickedButton() == report:
+        clicked = box.clickedButton()
+        if clicked == open_folder:
+            self.open_log_folder()
+        elif clicked == copy_path:
+            path = err_path or log_path or str(LOG_ROOT)
+            QApplication.clipboard().setText(path)
+            self._activity("info", t("dialog.log_path_copied", path=path))
+        elif clicked == report:
             self.report_bug()
 
     def _base_env(self) -> dict[str, str]:
@@ -4452,7 +4502,12 @@ class RezeptorWindow(QMainWindow):
         self.log_combo.blockSignals(True)
         self.log_combo.clear()
         if LOG_ROOT.is_dir():
-            for f in sorted(LOG_ROOT.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True)[:50]:
+            files = [
+                f
+                for f in LOG_ROOT.iterdir()
+                if f.is_file() and f.suffix.lower() in {".log", ".txt"}
+            ]
+            for f in sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)[:50]:
                 self.log_combo.addItem(f.name, str(f))
         self.log_combo.blockSignals(False)
         if self.log_combo.count():
@@ -4466,6 +4521,46 @@ class RezeptorWindow(QMainWindow):
             self.file_log.setPlainText(Path(str(p)).read_text(encoding="utf-8", errors="replace")[-400_000:])
         except OSError as e:
             self.file_log.setPlainText(str(e))
+
+    def _selected_log_path(self) -> Path | None:
+        p = self.log_combo.currentData()
+        if not p:
+            return None
+        path = Path(str(p))
+        return path if path.is_file() else None
+
+    def open_log_folder(self) -> None:
+        try:
+            LOG_ROOT.mkdir(parents=True, exist_ok=True)
+            os.chmod(LOG_ROOT, 0o700)
+        except OSError:
+            pass
+        if not LOG_ROOT.is_dir():
+            self._activity("warn", t("logs.folder_missing", path=str(LOG_ROOT)))
+            return
+        QDesktopServices.openUrl(QUrl.fromLocalFile(str(LOG_ROOT.resolve())))
+        self._activity("info", t("logs.folder_opened", path=str(LOG_ROOT)))
+
+    def copy_selected_log_path(self) -> None:
+        path = self._selected_log_path()
+        if path is None:
+            self._activity("warn", t("logs.no_selection"))
+            return
+        QApplication.clipboard().setText(str(path.resolve()))
+        self._activity("info", t("logs.path_copied", path=str(path.resolve())))
+
+    def copy_selected_log_content(self) -> None:
+        path = self._selected_log_path()
+        if path is None:
+            self._activity("warn", t("logs.no_selection"))
+            return
+        try:
+            raw = path.read_text(encoding="utf-8", errors="replace")[-200_000:]
+        except OSError as exc:
+            self._activity("warn", str(exc))
+            return
+        QApplication.clipboard().setText(sanitize_log_text(raw))
+        self._activity("info", t("logs.content_copied", name=path.name))
 
     def _switch_to_logs_tab(self) -> None:
         self._set_content_tab("logs")
@@ -5163,6 +5258,12 @@ class RezeptorWindow(QMainWindow):
             self._logs_file_label.setText(t("logs.label"))
         if hasattr(self, "_logs_refresh_btn"):
             self._logs_refresh_btn.setText(t("logs.refresh"))
+        if hasattr(self, "_logs_open_folder_btn"):
+            self._logs_open_folder_btn.setText(t("logs.open_folder"))
+        if hasattr(self, "_logs_copy_path_btn"):
+            self._logs_copy_path_btn.setText(t("logs.copy_path"))
+        if hasattr(self, "_logs_copy_content_btn"):
+            self._logs_copy_content_btn.setText(t("logs.copy_content"))
         self.more_btn.setText(t("btn.more"))
         self.more_btn.setToolTip(t("tooltip.more"))
         if hasattr(self, "medizin_btn"):
