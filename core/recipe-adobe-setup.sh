@@ -277,6 +277,14 @@ adobe_setup::ensure_native_msxml() {
     local wt_log="${LOG_DIR}/winetricks_msxml_${TIMESTAMP_ISO}.log"
     if ! recipe_winetricks::run "$wt_log" -f msxml3 msxml6; then
         recipe_hooks::log_err "MSXML winetricks fehlgeschlagen — $wt_log"
+        # Tail in Haupt-/Fehlerlog, damit Bug-Reports den Grund mitnehmen (nicht nur den Pfad).
+        if [ -f "$wt_log" ]; then
+            {
+                echo "--- winetricks msxml (tail) ---"
+                tail -n 60 "$wt_log" 2>/dev/null || true
+                echo "--- ende winetricks msxml ---"
+            } | tee -a "${LOG_FILE:-/dev/null}" >>"${ERROR_LOG:-/dev/null}" 2>/dev/null || true
+        fi
         return 1
     fi
     adobe_setup::ensure_msxml3r_system32
@@ -345,9 +353,26 @@ adobe_setup::install_ie8() {
         recipe_winetricks::purge_win7sp1_cache || true
         recipe_winetricks::sanitize_win7sp1_cache || true
     done
-    [ "$rc" -eq 0 ] || return 1
+    if [ "$rc" -ne 0 ]; then
+        recipe_hooks::log_err "IE8 winetricks fehlgeschlagen — $wt_log"
+        if [ -f "$wt_log" ]; then
+            {
+                echo "--- winetricks ie8 (tail) ---"
+                tail -n 60 "$wt_log" 2>/dev/null || true
+                echo "--- ende winetricks ie8 ---"
+            } | tee -a "${LOG_FILE:-/dev/null}" >>"${ERROR_LOG:-/dev/null}" 2>/dev/null || true
+        fi
+        return 1
+    fi
     if ! adobe_setup::ie8_present; then
         recipe_hooks::log_err "IE8 fehlgeschlagen — $wt_log"
+        if [ -f "$wt_log" ]; then
+            {
+                echo "--- winetricks ie8 (tail) ---"
+                tail -n 60 "$wt_log" 2>/dev/null || true
+                echo "--- ende winetricks ie8 ---"
+            } | tee -a "${LOG_FILE:-/dev/null}" >>"${ERROR_LOG:-/dev/null}" 2>/dev/null || true
+        fi
         return 1
     fi
     output::success "IE8 installiert"

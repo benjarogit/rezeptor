@@ -401,15 +401,36 @@ def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
     lines.append("")
 
     if LOG_ROOT.is_dir():
-        pattern = f"*{recipe_id}*" if recipe_id != "launcher" else "*.log"
-        logs = sorted(LOG_ROOT.glob(pattern), key=lambda p: p.stat().st_mtime, reverse=True)[:6]
-        if not logs:
-            logs = sorted(LOG_ROOT.glob("*.log"), key=lambda p: p.stat().st_mtime, reverse=True)[:6]
-        # Prefer *_errors.log first for diagnosis
-        logs = sorted(
-            logs,
-            key=lambda p: (0 if "_errors" in p.name else 1, -p.stat().st_mtime),
+        # Recipe logs alone miss winetricks_msxml_*.log (no recipe id in the name).
+        by_mtime: dict[Path, float] = {}
+        patterns = (
+            ["*.log"]
+            if recipe_id == "launcher"
+            else [f"*{recipe_id}*", "winetricks_*.log", "*_errors.log"]
         )
+        for pat in patterns:
+            for p in LOG_ROOT.glob(pat):
+                if not p.is_file():
+                    continue
+                try:
+                    by_mtime[p] = p.stat().st_mtime
+                except OSError:
+                    continue
+        if not by_mtime:
+            for p in LOG_ROOT.glob("*.log"):
+                if p.is_file():
+                    try:
+                        by_mtime[p] = p.stat().st_mtime
+                    except OSError:
+                        continue
+        # Prefer *_errors.log, then winetricks detail logs, then newest.
+        logs = sorted(
+            by_mtime.keys(),
+            key=lambda p: (
+                0 if "_errors" in p.name else 1 if p.name.startswith("winetricks_") else 2,
+                -by_mtime[p],
+            ),
+        )[:8]
         for lf in logs:
             lines.append(f"--- {lf.name} ---")
             try:
