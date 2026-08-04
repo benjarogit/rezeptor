@@ -275,7 +275,21 @@ adobe_setup::ensure_native_msxml() {
 
     output::step "Native MSXML3/MSXML6 (Adobe-Installer)"
     local wt_log="${LOG_DIR}/winetricks_msxml_${TIMESTAMP_ISO}.log"
-    if ! recipe_winetricks::run "$wt_log" -f msxml3 msxml6; then
+    local attempt rc=1
+    # Ohne -f: Checksumme greift. Kaputter win7sp1-Cache → Purge + einmal Retry (wie IE8).
+    recipe_winetricks::sanitize_win7sp1_cache || true
+    for attempt in 1 2; do
+        set +e
+        recipe_winetricks::run "$wt_log" msxml3 msxml6
+        rc=$?
+        set -e
+        [ "$rc" -eq 0 ] && break
+        [ "$attempt" -eq 1 ] || break
+        output::warning "MSXML fehlgeschlagen — win7sp1-Cache löschen und erneut versuchen"
+        recipe_winetricks::purge_win7sp1_cache || true
+        recipe_winetricks::sanitize_win7sp1_cache || true
+    done
+    if [ "$rc" -ne 0 ]; then
         recipe_hooks::log_err "MSXML winetricks fehlgeschlagen — $wt_log"
         # Tail in Haupt-/Fehlerlog, damit Bug-Reports den Grund mitnehmen (nicht nur den Pfad).
         if [ -f "$wt_log" ]; then

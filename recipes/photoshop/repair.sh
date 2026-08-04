@@ -113,11 +113,10 @@ msxml3="$WINEPREFIX/drive_c/windows/syswow64/msxml3.dll"
 msxml6="$WINEPREFIX/drive_c/windows/syswow64/msxml6.dll"
 if ! recipe_validate::msxml_is_native "$msxml3" || ! recipe_validate::msxml_is_native "$msxml6"; then
     output::step "MSXML3/MSXML6 (Adobe-Installer)"
-    wt_log="$LOG_DIR/winetricks_msxml_${TIMESTAMP_ISO}.log"
-    if recipe_winetricks::run "$wt_log" -f msxml3 msxml6; then
+    if adobe_setup::ensure_native_msxml; then
         output::success "MSXML installiert"
     else
-        output::error "MSXML fehlgeschlagen — $wt_log"
+        output::error "MSXML fehlgeschlagen — siehe $LOG_DIR"
         exit 1
     fi
 fi

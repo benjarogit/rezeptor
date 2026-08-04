@@ -31,31 +31,45 @@ recipe_winetricks::purge_win7sp1_cache() {
     done
 }
 
-# ie8/win7sp1 lädt gern halbfertige Dateien in den Cache; die blockieren alle Folgeläufe.
+# Größe ok ≠ gültig: MSXML holt DLLs per cabextract aus win7sp1; kaputte ~947MB-Dateien
+# scheitern mit „no valid cabinets“ (Issue #7). Ohne cabextract: nur Größen-Check.
+# WINETRICKS_WIN7SP1_CAB_CHECK=0 → nur Größe (Unit-Tests mit Dummy-Dateien).
+recipe_winetricks::win7sp1_file_usable() {
+    local f="$1" min="${WINETRICKS_WIN7SP1_MIN_BYTES}" sz out
+    [ -f "$f" ] || return 1
+    sz="$(recipe_winetricks::_filesize "$f" || echo 0)"
+    [ "${sz:-0}" -ge "$min" ] || return 1
+    [ "${WINETRICKS_WIN7SP1_CAB_CHECK:-1}" != "0" ] || return 0
+    if ! command -v cabextract >/dev/null 2>&1; then
+        return 0
+    fi
+    out="$(cabextract -l "$f" 2>&1)" || true
+    case "$out" in
+        *"no valid cabinets"*) return 1 ;;
+    esac
+    return 0
+}
+
+# ie8/msxml/win7sp1: halbfertige ODER ungültige Cache-Dateien blockieren Folgeläufe.
 recipe_winetricks::sanitize_win7sp1_cache() {
-    local d canonical alt min sz
+    local d canonical alt
     d="$(recipe_winetricks::_win7sp1_cache_dir)"
     canonical="$d/windows6.1-KB976932-X64.exe"
     alt="$d/windows6.1-kb976932-x64_74865ef2562006e51d7f9333b4a8d45b7a749dab.exe"
-    min="${WINETRICKS_WIN7SP1_MIN_BYTES}"
     /bin/mkdir -p "$d" 2>/dev/null || mkdir -p "$d" 2>/dev/null || true
 
-    if [ -f "$canonical" ]; then
-        sz="$(recipe_winetricks::_filesize "$canonical" || echo 0)"
-        if [ "${sz:-0}" -lt "$min" ]; then
-            /bin/rm -f "$canonical" 2>/dev/null || rm -f "$canonical" 2>/dev/null || true
-            if type output::warning >/dev/null 2>&1; then
-                output::warning "win7sp1-Cache korrigiert (zu klein, neu laden)"
-            fi
+    if [ -f "$canonical" ] && ! recipe_winetricks::win7sp1_file_usable "$canonical"; then
+        /bin/rm -f "$canonical" 2>/dev/null || rm -f "$canonical" 2>/dev/null || true
+        if type output::warning >/dev/null 2>&1; then
+            output::warning "win7sp1-Cache korrigiert (ungültig/zu klein, neu laden)"
         fi
     fi
 
     if [ -f "$alt" ]; then
-        sz="$(recipe_winetricks::_filesize "$alt" || echo 0)"
-        if [ "${sz:-0}" -lt "$min" ]; then
+        if ! recipe_winetricks::win7sp1_file_usable "$alt"; then
             /bin/rm -f "$alt" 2>/dev/null || rm -f "$alt" 2>/dev/null || true
             if type output::warning >/dev/null 2>&1; then
-                output::warning "win7sp1-Hashcache verworfen (zu klein, neu laden)"
+                output::warning "win7sp1-Hashcache verworfen (ungültig/zu klein, neu laden)"
             fi
         elif [ ! -f "$canonical" ]; then
             /bin/cp -f "$alt" "$canonical" 2>/dev/null || cp -f "$alt" "$canonical" 2>/dev/null || true
