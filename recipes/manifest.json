@@ -2,16 +2,36 @@
   "recipes": {
     "halo-campaign-evolved": {
       "files": {
+        "assets/XalStorage.json": "sha256:15fec5d71674c81e821266c53d1b1d46ae9962a19df9df2d2ef027029d869b80",
+        "assets/build-libhttp-stub.sh": "sha256:2a4e577c1eb47b9ff8974353c4ef5a5508ad47ac646ca66d2a5e3f0d6fa5de80",
+        "assets/build-version-proxy.sh": "sha256:cb4b6b5f46c7d318be9bad8c1ea240eb79f65a03d983eac8d7eb57362acf5600",
+        "assets/emu/steam_settings/configs.app.ini": "sha256:11f7d01677f177941e99b71fc554ce6250ca08ea882ab6b7f9c1aa8763370987",
+        "assets/emu/steam_settings/configs.main.ini": "sha256:680d45f96774e4d9b4c9c0fc18676496361c9a4cb8c513af42e93ff9f2a45945",
+        "assets/emu/steam_settings/configs.user.ini": "sha256:9c7672a584bda472122d12c7fa66348b5aaf70a0f3b5a94bfd7e0b09c061f4a2",
+        "assets/emu/steam_settings/steam_appid.txt": "sha256:dcd9b438547d8694eb5e9e6f0ef26bfe76718ee706560cc015b2ab4ca8d0deb2",
+        "assets/emu/steamclient64.dll": "sha256:d95e0f4ef8fa1eae57c86dea79a3006e5b9dd38cdc184fce8a93b755d3636069",
+        "assets/emu/winmm.dll": "sha256:f22aad32a90be88b64346d6b2658e3b3f71447d7cf5cce72952c1f2b77f0d5c7",
+        "assets/ghidra-login-trace.md": "sha256:47eba4936271b5ab9a1d372ce35d64f42dc66f6e13100a23382f1f246b0ef284",
+        "assets/halo-analyse-leitfaden.md": "sha256:76a62b30d8d7d56d05014cd6f784ec3995fead6e7eb5992e8fcbb62bd8c172ea",
+        "assets/libHttpClient.Win32.dll": "sha256:f124e9c4e0c3a84f9070799df728f9ef5b5d3e181bcbae64d332890092de4a68",
+        "assets/libHttpClient.def": "sha256:7c16d038c09b228a85e2a2350a0d807baf269ac961aa6279b520dadfe3e7b19e",
+        "assets/libHttpClient_stub.c": "sha256:9093b28e3423939e6d55011e194f1f745432c1d24001bb5fa4e4474e192e9cf9",
+        "assets/login-patch-inventory.md": "sha256:ceeb130b55499b3fcc56f5a52e5550b7033af3542994c74c0b139d24493b73ac",
+        "assets/version.dll": "sha256:70d8f839b129f2037f1a79734a1cb1daf10574bfc2a56b47927e11d7c291e84f",
+        "assets/version_proxy.c": "sha256:8a6af2bf5597650478ca7a3540b8d283b3b3e6da4badf9eb937ff06f308689f0",
+        "assets/version_proxy.def": "sha256:7de4c111b544b869bae648b2594d7c42aa9bb34392eb99c028684916b8dba5a8",
         "info.de.md": "sha256:9a4f8e1cc1f64eb040dd244208ff0cc2482ce1f3e2fa4a64ef3d37e6913de617",
         "info.en.md": "sha256:b402ebfa9628944b34b1e5162a674c9c2e65ebbc59cd09e47e4a089ebe5b8d7c",
         "install.sh": "sha256:aebc0bcdf72b4f5fb20a1d12145ad6b829183546e2b55e9566710b1be0323ca6",
         "kill.sh": "sha256:e125bcef11ba5b9f71c164bf2fa78b62ef5ce0a7ddfb742a053d4c05f50c3fff",
-        "launch.sh": "sha256:472254a5e908e5452905a342c8fd9d27006b43573713b6948b1e41e6ae915d92",
-        "recipe.yml": "sha256:29450341204c894bb8581dcc63ad1c76b46cad32354033c8004428d0682c16dd",
-        "repair.sh": "sha256:d73ea62f1fc91e3c6eb7d0d97a433165ebd020d8c6c0477f9d96893631750281",
+        "launch.sh": "sha256:5b704973b6e965d7761b45a57860bb88b3b90dea6fc4a76af2781962f05ef6ce",
+        "prepare-ghidra.sh": "sha256:0690b8e49e09b56ce9368edc47cc32bd446373860d384408b5aae21727b926f5",
+        "recipe.yml": "sha256:a88e41f36f33fcb407ff0d958a43c1c08cb8214df09f065cef3a2a0f5b09ffcf",
+        "repair.sh": "sha256:15fa07ee4269cd23b47dcf8697728149dd84e8633df15e37526ab9f75e403c6e",
+        "trace-login.sh": "sha256:eb3f66bfa645126e7af624b318692bc0e0cd60e040761a345e152d2ee1a7eccb",
         "uninstall.sh": "sha256:2d0370a331e4d235326da9e0daf10bd6f038b91c1fce79fe9e543b47ee42a869",
         "update.sh": "sha256:08a20fc7d33a1fe9d69f21bcc35b6987a10a322bfaa770327da0368493a63aa1",
-        "validate.sh": "sha256:143d4f48398d048e6837ff45f98e6e871e7e10d84b51375fc539f0dd463d6c6f"
+        "validate.sh": "sha256:0407c83951235b73be820f593f7ebc69e66cf830ac736f4011e453bca9955dba"
       }
     },
     "house-of-ashes": {
@@ -49,7 +69,7 @@
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
         "optional/cameraRawInstaller.sh": "sha256:9097568694ea8deac6e925fd5f098d6ec60298b0325a3140fce68bb7ff011b93",
         "recipe.yml": "sha256:616f8cda5c0b243e300cbdc40abb58c7b74dbc185ad2d464e086aa59c3f51ff1",
-        "repair.sh": "sha256:f1362b1ea8545118e9a54c74ffec72eb867775161f749897e9a09571535a14e8",
+        "repair.sh": "sha256:7e769ac9972b1efb17f72d2a3550251e6dcbd60eecd239e8cbc5b25a8b2de5f4",
         "uninstall.sh": "sha256:4dd23e1814e426203305b5fa160939d62e68b00c85178ec6cca724e022df9925",
         "validate.sh": "sha256:6f9e28e3e0792c2a1cc95f65d5c0a99fc586b1e1fa7a490a2177eaa7599f8049"
       }
@@ -63,7 +83,7 @@
         "kill.sh": "sha256:3e0269b5c5bcc405f46031cc4f8ca781d0be5f049b6a2f18b7721f5a1ecda753",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
         "recipe.yml": "sha256:e0f9814006b49b636befa287b3f89e2ce8077bf83657a7302f949eda74f92dc1",
-        "repair.sh": "sha256:2606839fb643291c3d923a3c01cf9336ec999c9f3da42bf24d5dbabd0dc87dd6",
+        "repair.sh": "sha256:591b9dacc99e0b5c24a34b2e4c39c873bde23e799248602a3eec2d0ccd4d8397",
         "uninstall.sh": "sha256:5f8ce2cbb0a7883c11e89db3f42be217e035dfdb3dce600bb78351da51536ab4",
         "validate.sh": "sha256:6f9e28e3e0792c2a1cc95f65d5c0a99fc586b1e1fa7a490a2177eaa7599f8049"
       }
@@ -76,7 +96,7 @@
         "kill.sh": "sha256:3e0269b5c5bcc405f46031cc4f8ca781d0be5f049b6a2f18b7721f5a1ecda753",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
         "recipe.yml": "sha256:d08066773fe32c87b8bed77f8a327e9b86c1aac675ffcf7762d18b7148394e8e",
-        "repair.sh": "sha256:f1362b1ea8545118e9a54c74ffec72eb867775161f749897e9a09571535a14e8",
+        "repair.sh": "sha256:7e769ac9972b1efb17f72d2a3550251e6dcbd60eecd239e8cbc5b25a8b2de5f4",
         "uninstall.sh": "sha256:8c1c445512d2d07977e7a7f72e4f4944262a5d548f47fcb7edcea486bbedc481",
         "validate.sh": "sha256:6f9e28e3e0792c2a1cc95f65d5c0a99fc586b1e1fa7a490a2177eaa7599f8049"
       }
