@@ -1,7 +1,7 @@
 # Steam-Wrapper-Rezepte
 
 Muster für Steam-Spiele mit **BYOS** (Bring Your Own Source): Rezeptor verteilt weder Spiel noch Online-Fix.
-Referenz-Rezept: `house-of-ashes` — siehe auch `recipes/_template-steam-game/`.
+Vorlage: `recipes/_template-steam-game/` — siehe auch [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md).
 
 ## Prinzip
 
@@ -38,7 +38,7 @@ Der Wrapper setzt u. a.:
 - `WINEDLLOVERRIDES` für OnlineFix-DLLs
 - Proton-Skript: Rezeptor-GE → Steam GE-Proton
 
-Details: `recipes/house-of-ashes/launch.sh`, `recipes/_template-steam-game/install.sh`.
+Details: `recipes/_template-steam-game/launch.sh`, `recipes/_template-steam-game/install.sh`.
 
 ## Deinstallieren
 
@@ -53,7 +53,7 @@ Details: `recipes/house-of-ashes/launch.sh`, `recipes/_template-steam-game/insta
 - Der Online-Fix im Spielordner
 - Spacewar in der Bibliothek
 
-Siehe `recipes/house-of-ashes/uninstall.sh`.
+Siehe `recipes/_template-steam-game/uninstall.sh`.
 
 ## Neues Steam-Spiel-Rezept
 

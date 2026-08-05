@@ -640,7 +640,7 @@ def default_folder_source(
     meta: dict[str, str] | None = None,
 ) -> str:
     meta = meta or {}
-    # Steam-Spielordner (z. B. house-of-ashes mit deploy_mode: link)
+    # Steam game folder (deploy_mode: link)
     appid = (meta.get("steam_appid") or "").strip()
     if appid and meta.get("deploy_mode", "copy") == "link":
         game = steam_app_install_dir(appid)

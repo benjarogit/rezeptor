@@ -1,5 +1,8 @@
 id: halo-campaign-evolved
 schema_version: 1
+# Setup, Update und Kampagne unter GE-Proton 11-3 (DXCore) + MSVC CRT 14.40+.
+# Offline/ElAmigos — BYOS. Login via SteamDeck=1 (in-process XAL).
+maintainer_only: false
 icon: "{repo}/images/halo-campaign-evolved-icon.png"
 name: "Halo Campaign Evolved"
 author: "benjarogit"
@@ -22,6 +25,7 @@ source_hints:
   - "Halo Campaign Evolved Premium Edition MULTi13 ElAmigos"
   - "g4u"
   - "ElAmigos"
+  - "Halo.Campaign.Evolved.v1.0-v20260729.Plus.16.Trainer-FLiNG"
 source_refs:
   - label: "xrel (Suche)"
     url: "https://www.xrel.to/search.html?xrel_search_query=Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos"
@@ -33,7 +37,7 @@ install_type: installer_offline
 source_kind: folder
 source_label: "Pack-Ordner oder ISO (Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos)"
 source_formats: iso,zip,7z,rar
-target_label: "Installationsordner (frei wählbar — Spiel + Prefix landen hier)"
+target_label: "Datenordner (frei wählbar — Prefix + sichtbarer Spiel-Link HaloCampaignEvolved/)"
 fix_kind: optional
 update: update.sh
 exe_glob: "**/HaloCampaignEvolved.exe"
@@ -41,6 +45,155 @@ launch_process_patterns: [HaloCampaignEvolved.exe]
 winetricks: [vcrun2019]
 env:
   WINEDEBUG: "-all"
+  RECIPE_WINE_SILENT: "1"
+options:
+  - id: gfx_clear_image
+    env: HALO_GFX_CLEAR_IMAGE
+    group: graphics
+    type: bool
+    default: true
+    label:
+      de: "Grafik: Klares Bild (Blur / Rütteln aus)"
+      en: "Graphics: clear image (blur / shake off)"
+    tip:
+      de: "Nur unnötige Effekte aus (Blur, Rütteln, Aberration, HUD-Parallax, Film Grain) — Qualität bleibt. Steht die Qualität noch auf Niedrig/Sehr niedrig, wird einmal auf Medium angehoben (guter Kompromiss). Höher darfst du im Menü selbst wählen."
+      en: "Only turns off junk effects (blur, shake, aberration, HUD parallax, film grain) — does not dump quality to Very Low. If quality is still Low/Very Low, bumps to Medium (solid compromise). Set higher in the menu if you want."
+  - id: gfx_exclusive_fs
+    env: HALO_GFX_EXCLUSIVE_FS
+    group: graphics
+    type: bool
+    default: false
+    label:
+      de: "Grafik: Exklusives Vollbild (experimentell)"
+      en: "Graphics: exclusive fullscreen (experimental)"
+    tip:
+      de: "Standard aus. Unter Proton wird daraus oft ein kleines Fenster statt echtem Vollbild — dann aus lassen (randlos bleibt). Nur testen, wenn du es bewusst willst."
+      en: "Default off. Under Proton this often becomes a small window instead of real fullscreen — leave off (borderless stays). Only enable if you want to experiment."
+  - id: gfx_low_latency
+    env: HALO_GFX_LOW_LATENCY
+    group: graphics
+    type: bool
+    default: true
+    label:
+      de: "Grafik: Weniger Maus-Verzögerung"
+      en: "Graphics: lower mouse latency"
+    tip:
+      de: "Empfohlen: winewayland (nicht XWayland), vkd3d nur 1 Frame Queue (statt 3), UE GTSync, Reflex/NVAPI, FPS nahe Hz, Engine.ini-Lock. Bei Mikrorucklern selten VKD3D_SWAPCHAIN_LATENCY_FRAMES=2 in options.env. Start kaputt → aus."
+      en: "Recommended: winewayland (not XWayland), vkd3d 1-frame queue (not 3), UE GTSync, Reflex/NVAPI, FPS near Hz, Engine.ini lock. If micro-stutter: try VKD3D_SWAPCHAIN_LATENCY_FRAMES=2 in options.env. Won't start → turn off."
+  - id: gfx_vram_6gb
+    env: HALO_GFX_VRAM_6GB
+    group: graphics
+    type: bool
+    default: false
+    label:
+      de: "Grafik: 6-GB-VRAM-Preset"
+      en: "Graphics: 6 GB VRAM preset"
+    tip:
+      de: "Weiche Lumen/Nanite-Caps für 6 GB VRAM (z. B. RTX 2060). Bei Schwarzem Bild nach dem Intro wieder aus. Bei 8 GB+ meist aus lassen."
+      en: "Soft Lumen/Nanite caps for 6 GB VRAM (e.g. RTX 2060). Turn off if you get a black screen after the intro. Leave off on 8 GB+."
+  - id: gfx_vrr
+    env: HALO_GFX_VRR
+    group: graphics
+    type: bool
+    default: false
+    label:
+      de: "Grafik: VRR / Adaptive Sync"
+      en: "Graphics: VRR / adaptive sync"
+    tip:
+      de: "VSync aus + AllowTearing. Nur mit aktivem Adaptive Sync. Bei Schwarzem Bild/Absturz nach dem Intro aus lassen."
+      en: "VSync off + AllowTearing. Only with adaptive sync enabled. Turn off if you get a black screen/crash after the intro."
+  - id: launch_trainer
+    env: HALO_LAUNCH_TRAINER
+    group: runtime
+    type: bool
+    default: false
+    label:
+      de: "Trainer mitstarten"
+      en: "Launch trainer with the game"
+    tip:
+      de: "BYOS — Ordner-Icon: EXE oder Trainer-Ordner wählen (wird nach <Datenordner>/trainer/ kopiert). Getestet: „Halo.Campaign.Evolved.v1.0-v20260729.Plus.16.Trainer-FLiNG“. Andere Trainer möglich, ohne Garantie. Manuell ablegen geht weiterhin. Startet ~12 s nach dem Spiel im gleichen Wine-Prefix. Rezeptor liefert keinen Trainer."
+      en: "BYOS — folder icon: pick an EXE or trainer folder (copied into <data root>/trainer/). Tested: “Halo.Campaign.Evolved.v1.0-v20260729.Plus.16.Trainer-FLiNG”. Other trainers allowed, no guarantee. Manual drop still works. Starts ~12 s after the game in the same Wine prefix. Rezeptor does not ship trainers."
+    pick:
+      kind: file_or_folder
+      dest_rel: trainer
+      source_env: HALO_TRAINER_SOURCE
+  - id: skip_intro
+    env: HALO_SKIP_INTRO
+    group: mods
+    type: bool
+    default: false
+    label:
+      de: "Intro-Video und Splash überspringen"
+      en: "Skip intro video and splash"
+    tip:
+      de: "Ersetzt LogoParade/Splash durch Stubs. Originale bleiben als .rezeptor_bak."
+      en: "Replaces LogoParade/Splash with stubs. Originals kept as .rezeptor_bak."
+  - id: mod_viewmodels
+    env: HALO_MOD_VIEWMODELS
+    group: mods
+    type: bool
+    default: false
+    label:
+      de: "Mod: Waffenansicht wie Halo CE"
+      en: "Mod: Halo CE weapon viewmodels"
+    tip:
+      de: "BYOS: entpackte Dateien nach <Datenordner>/mods/viewmodels/. Dann Reparieren."
+      en: "BYOS: unpack into <data root>/mods/viewmodels/, then Repair."
+  - id: mod_hidden_skins
+    env: HALO_MOD_HIDDEN_SKINS
+    group: mods
+    type: bool
+    default: false
+    label:
+      de: "Mod: Versteckte Skins freischalten"
+      en: "Mod: unlock hidden skins"
+    tip:
+      de: "BYOS: <Datenordner>/mods/hidden_skins/"
+      en: "BYOS: <data root>/mods/hidden_skins/"
+  - id: mod_clean_hud
+    env: HALO_MOD_CLEAN_HUD
+    group: mods
+    type: bool
+    default: false
+    label:
+      de: "Mod: Aufgeräumtes HUD (CE-Stil)"
+      en: "Mod: Clean HUD (CE style)"
+    tip:
+      de: "Braucht UE4SS unter mods/ue4ss/ plus mods/clean_hud/. Standard aus."
+      en: "Needs UE4SS in mods/ue4ss/ plus mods/clean_hud/. Default off."
+  - id: mod_skulls_unlocked
+    env: HALO_MOD_SKULLS_UNLOCKED
+    group: mods
+    type: bool
+    default: false
+    label:
+      de: "Mod: Alle Skulls freischalten"
+      en: "Mod: unlock all skulls"
+    tip:
+      de: "Schreibt in den Spielstand. Vor dem ersten Aktivieren wird automatisch eine Sicherung unter backups/ angelegt. UE4SS nötig. Standard aus."
+      en: "Writes into the save. A backup under backups/ is created before first enable. Needs UE4SS. Default off."
+  - id: mod_weapon_slots_4
+    env: HALO_MOD_WEAPON_SLOTS_4
+    group: mods
+    type: bool
+    default: false
+    label:
+      de: "Mod: Vier Waffenplätze statt zwei"
+      en: "Mod: four weapon slots instead of two"
+    tip:
+      de: "UE4SS nötig: mods/ue4ss/ + mods/weapon_slots/. Signatur muss zur installierten HaloSimulation passen."
+      en: "Needs UE4SS: mods/ue4ss/ + mods/weapon_slots/. Signature must match installed HaloSimulation."
+  - id: mod_third_person
+    env: HALO_MOD_THIRD_PERSON
+    group: mods
+    type: bool
+    default: false
+    label:
+      de: "Mod: Dritte Person auf Tastendruck"
+      en: "Mod: third person toggle"
+    tip:
+      de: "Steam-Variante: mods/third_person/version.dll. Taste B / V (Schulter)."
+      en: "Steam build: mods/third_person/version.dll. Key B / V (shoulder)."
 validate: validate.sh
 launch: launch.sh
 install: install.sh

@@ -407,7 +407,6 @@ LAUNCH_PROCESS_PATTERNS: dict[str, list[str]] = {
     "photoshop": ["Photoshop.exe"],
     "photoshop-m0nkrus": ["Photoshop.exe"],
     "photoshop-m0nkrus-220": ["Photoshop.exe"],
-    "house-of-ashes": ["HouseOfAshes.exe"],
 }
 
 
@@ -1517,6 +1516,14 @@ class RezeptorWindow(QMainWindow):
         self.path_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
+        # Native QLabel menu is unstyled (black) and often fails on Wayland —
+        # Fluent/QMenu + explicit clipboard actions instead.
+        self.path_label.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.path_label.customContextMenuRequested.connect(
+            self._show_path_context_menu
+        )
         self._style_secondary_label(self.path_label, MUTED, size_px=11)
         self.open_path_btn = QToolButton()
         self.open_path_btn.setObjectName("openPathBtn")
@@ -1857,7 +1864,12 @@ class RezeptorWindow(QMainWindow):
         w = QApplication.focusWidget()
         if isinstance(w, (QLineEdit, QTextEdit, QTextBrowser)):
             return
+        # Hard gate: disabled styling can race with re-select/status refresh.
+        if getattr(self, "_busy", False):
+            return
         mode = getattr(self, "_cta_mode", "none")
+        if mode in ("none", "busy_hold"):
+            return
         if mode == "docs":
             self.show_developer_docs()
             return
@@ -1901,17 +1913,20 @@ class RezeptorWindow(QMainWindow):
         Pflicht-Aktionen (Freigabe, Jetzt-reparieren) immer auf dem Kupfer-Primary —
         kein grauer Nebenbutton, kein Rezept-Sonderweg.
         """
-        repair_ok = (Path(info.meta["_dir"]) / "repair.sh").is_file() and info.state in (
+        repair_sh = (Path(info.meta["_dir"]) / "repair.sh").is_file()
+        repair_ok = repair_sh and info.state in (
             RecipeState.INSTALLED,
             RecipeState.PARTIAL,
         )
         kill_ok = (Path(info.meta["_dir"]) / "kill.sh").is_file()
         checking = _recipe_is_checking(info)
         untrusted = _recipe_is_untrusted(info)
-        # After Freigabe, pending_repair must win even if rediscover briefly
-        # still reports untrusted — otherwise CTA flashes back to „Rezept freigeben“.
+        # After Freigabe, pending must win even when rediscover still reports
+        # UNTRUSTED/UNKNOWN (install state is masked until status refresh).
+        # Only require repair.sh — not INSTALLED|PARTIAL — or CTA flashes back
+        # to „Rezept freigeben“ and stays clickable.
         pending_repair = (
-            self._pending_repair_rid == info.rid and repair_ok and not checking
+            self._pending_repair_rid == info.rid and repair_sh and not checking
         )
         git_dev = (ROOT / ".git").is_dir()
 
@@ -2860,6 +2875,10 @@ class RezeptorWindow(QMainWindow):
         if self._selected is None:
             self._flash_status(t("trust.regen_fail") + ": kein Rezept gewählt")
             return
+        # Block re-entry while approve/repair is already running (QProcess-only
+        # reject is not enough — freigeben is sync until handoff).
+        if getattr(self, "_busy", False):
+            return
         if self._reject_if_subprocess_busy():
             return
         info = self._selected
@@ -2870,19 +2889,17 @@ class RezeptorWindow(QMainWindow):
             return
 
         repair = recipe_dir / "repair.sh"
+        # UNTRUSTED masks INSTALLED|PARTIAL — use install markers so Freigabe
+        # still hands off to repair / pending „Jetzt aktualisieren“.
         installed_ish = info.state in (
             RecipeState.INSTALLED,
             RecipeState.PARTIAL,
-        )
-        # Busy first, then CTA label — never leave Primary clickable mid-approve
-        # (flash „Rezept freigeben“ / „Jetzt aktualisieren“ invited double-clicks).
-        for r in self.recipes:
-            if r.rid == rid:
-                r.trust_ok = True
-                r.trust_reason = ""
-                break
-        if repair.is_file() and installed_ish:
+        ) or _recipe_has_install_marker(info.meta, rid)
+        # Always pin pending when repair exists so CTA cannot fall back to
+        # clickable „Rezept freigeben“ mid-approve or after rediscover.
+        if repair.is_file():
             self._pending_repair_rid = rid
+        self._assert_recipe_trusted(rid)
         self.raw_log.clear()
         self.activity_list.clear()
         self._switch_to_progress_tab()
@@ -2899,20 +2916,12 @@ class RezeptorWindow(QMainWindow):
             approve_recipe_manifest(recipe_dir, _recipe_manifest_path(recipe_dir))
             self._activity("ok", t("trust.regen_ok") + f" ({rid})")
             # Re-assert after rediscover — hash verify can briefly look untrusted.
-            for r in self.recipes:
-                if r.rid == rid:
-                    r.trust_ok = True
-                    r.trust_reason = ""
-                    break
-            if repair.is_file() and installed_ish:
+            if repair.is_file():
                 self._pending_repair_rid = rid
+            self._assert_recipe_trusted(rid)
             self._apply_discover_outcome(discover_recipes())
-            for r in self.recipes:
-                if r.rid == rid:
-                    r.trust_ok = True
-                    r.trust_reason = ""
-                    break
-            if repair.is_file() and installed_ish:
+            self._assert_recipe_trusted(rid)
+            if repair.is_file():
                 self._pending_repair_rid = rid
             self.refresh_statuses()
             idx = next(
@@ -2947,12 +2956,48 @@ class RezeptorWindow(QMainWindow):
         except OSError as exc:
             self._activity("error", t("trust.regen_fail") + f": {exc}")
             QMessageBox.critical(self, t("dialog.error"), str(exc))
+            # Failed freigabe: drop pending so CTA can return to Freigeben.
+            if self._pending_repair_rid == rid and not handoff_repair:
+                self._pending_repair_rid = None
         finally:
             # Handoff: QProcess may still be Starting — never clear busy then.
             if handoff_repair and self._process is not None:
                 pass
             elif self._busy and self._process is None:
                 self._set_busy(False)
+                # After freigeben without auto-repair: show „Jetzt aktualisieren“
+                # immediately (enabled). Re-apply after busy clear so label sticks.
+                if (
+                    self._pending_repair_rid == rid
+                    and self._selected is not None
+                    and self._selected.rid == rid
+                ):
+                    self._apply_primary_cta(
+                        self._selected,
+                        can_launch=False,
+                        running=False,
+                        busy=False,
+                    )
+
+    def _assert_recipe_trusted(self, rid: str) -> None:
+        """Force trust after Freigabe; clear UNTRUSTED mask with marker state."""
+        for r in self.recipes:
+            if r.rid != rid:
+                continue
+            r.trust_ok = True
+            r.trust_reason = ""
+            if r.state in (RecipeState.UNTRUSTED, RecipeState.CHECKING):
+                st, detail, detected, version_warn, _actions = query_recipe_state_quick(
+                    r.rid, r.meta
+                )
+                r.state = st
+                if detail:
+                    r.status_detail = detail
+                if detected:
+                    r.version_detected = detected
+                if version_warn:
+                    r.version_warning = version_warn
+            break
 
     def _clear_pending_repair(self, rid: str) -> None:
         if self._pending_repair_rid == rid:
@@ -3315,6 +3360,11 @@ class RezeptorWindow(QMainWindow):
         if not isinstance(refreshed, DiscoverOutcome):
             return
         self.recipes = refreshed.recipes
+        # Stale status workers started before Freigabe can re-inject UNTRUSTED.
+        # Pending repair must keep trust + CTA on „Jetzt aktualisieren“.
+        pending = self._pending_repair_rid
+        if pending:
+            self._assert_recipe_trusted(pending)
         prev = self._selected_index
         was_home = self._selected is None
         self._populate_list()
@@ -3646,6 +3696,65 @@ class RezeptorWindow(QMainWindow):
             else t("tooltip.open_data_root_missing")
         )
         self._schedule_header_refit()
+
+    def _path_clipboard_targets(self) -> list[tuple[str, str]]:
+        """(label, path) for path context menu — data root first."""
+        out: list[tuple[str, str]] = []
+        dr = getattr(self, "_current_data_root", None)
+        if dr is not None:
+            out.append((t("tooltip.path_data"), str(dr)))
+        text = (self.path_label.text() or "").strip()
+        for line in text.splitlines():
+            if ": " not in line:
+                continue
+            label, _, path = line.partition(": ")
+            path = path.strip()
+            if not path:
+                continue
+            if any(path == p for _l, p in out):
+                continue
+            out.append((label.strip(), path))
+        return out
+
+    def _copy_path_to_clipboard(self, path: str) -> None:
+        path = (path or "").strip()
+        if not path:
+            return
+        QApplication.clipboard().setText(path)
+        self._activity("info", t("logs.path_copied", path=path))
+
+    def _show_path_context_menu(self, pos) -> None:  # noqa: ANN001
+        targets = self._path_clipboard_targets()
+        if not targets:
+            return
+        menu = RoundMenu(parent=self) if FLUENT_AVAILABLE else QMenu(self)
+        selected = ""
+        if hasattr(self.path_label, "selectedText"):
+            selected = (self.path_label.selectedText() or "").strip()
+        # Prefer explicit selection when user highlighted a path fragment
+        if selected and ("/" in selected or selected.startswith("~")):
+            self._add_menu_action(
+                menu,
+                t("logs.copy_path"),
+                lambda _c=False, p=selected: self._copy_path_to_clipboard(p),
+            )
+            if hasattr(menu, "addSeparator"):
+                menu.addSeparator()
+        for label, path in targets:
+            title = t("status.copy_labeled_path", label=label)
+            self._add_menu_action(
+                menu,
+                title,
+                lambda _c=False, p=path: self._copy_path_to_clipboard(p),
+            )
+        if len(targets) > 1:
+            all_text = "\n".join(p for _l, p in targets)
+            self._add_menu_action(
+                menu,
+                t("status.copy_all_paths"),
+                lambda _c=False, p=all_text: self._copy_path_to_clipboard(p),
+            )
+        menu.exec(self.path_label.mapToGlobal(pos))
 
     def _schedule_header_refit(self) -> None:
         """Word-wrap QLabels need a deferred height pass after layout width is known."""

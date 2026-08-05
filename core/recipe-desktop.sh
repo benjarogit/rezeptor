@@ -73,8 +73,7 @@ recipe_desktop::_icon_src() {
     for src in \
         "${PROJECT_ROOT}/images/${RECIPE_ID}-icon.png" \
         "${PROJECT_ROOT}/images/AdobePhotoshop-icon.png" \
-        "${PROJECT_ROOT}/images/wiso-steuer-icon.png" \
-        "${PROJECT_ROOT}/images/house-of-ashes-icon.png"; do
+        "${PROJECT_ROOT}/images/wiso-steuer-icon.png"; do
         [ -f "$src" ] && { echo "$src"; return 0; }
     done
     # WISO: ICO aus Portable
@@ -130,7 +129,7 @@ recipe_desktop::_categories() {
     case "${RECIPE_ID}" in
         photoshop) echo "Graphics;2DGraphics;RasterGraphics;" ;;
         wiso-steuer) echo "Office;Finance;" ;;
-        house-of-ashes|za4-trainer) echo "Game;" ;;
+        halo-campaign-evolved) echo "Game;" ;;
         *) echo "Utility;" ;;
     esac
 }
@@ -149,11 +148,8 @@ StartupWMClass=start.exe
 Keywords=tax;steuer;wiso;buhl;
 EOF
             ;;
-        house-of-ashes)
-            echo "StartupWMClass=HouseOfAshes.exe"
-            ;;
-        za4-trainer)
-            echo "StartupWMClass=ZA4-Trainer.exe"
+        halo-campaign-evolved)
+            echo "StartupWMClass=HaloCampaignEvolved.exe"
             ;;
     esac
 }

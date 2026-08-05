@@ -1,29 +1,89 @@
 #!/usr/bin/env bash
-# Halo Campaign Evolved — Launch
-set -eu
-(set -o pipefail 2>/dev/null) || true
-
+# Halo: Campaign Evolved — Launch
+set -euo pipefail
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
 source "$RECIPE_DIR/../../core/recipe-hooks.sh"
 recipe_hooks::load launch
+
+# Halo braucht Proton-GE 11 (DXCore / libvkd3d-utils) — global bleibt 10 für Photoshop.
+export PROTON_GE_TAG="${PROTON_GE_TAG:-GE-Proton11-3}"
+export PROTON_GE_URL="${PROTON_GE_URL:-https://github.com/GloriousEggroll/proton-ge-custom/releases/download/${PROTON_GE_TAG}/${PROTON_GE_TAG}.tar.gz}"
+export PROTON_GE_SHA256="${PROTON_GE_SHA256:-861c2edc8d40d051fb1e7a692deb953be52bd339c46d90f2b7dde50ddad91266}"
 
 recipe_hooks::runtime_init || exit 1
 
 EXE="$(recipe_hooks::state_get GAME_EXE 2>/dev/null || true)"
 WORK_ROOT="$(recipe_hooks::state_get WORK_ROOT 2>/dev/null || true)"
 
+# shellcheck source=/dev/null
+source "$CORE_DIR/recipe-halo-campaign-evolved.sh"
+
 if [ -z "$EXE" ] || [ ! -f "$EXE" ]; then
-    # shellcheck source=/dev/null
-    source "$CORE_DIR/recipe-halo-campaign-evolved.sh"
     EXE="$(recipe_halo_campaign_evolved::find_game_exe || true)"
 fi
 if [ -z "$EXE" ] || [ ! -f "$EXE" ]; then
-    if [ -n "$WORK_ROOT" ] && [ -d "$WORK_ROOT" ]; then
-        EXE="$(recipe_hooks::find_exe "$WORK_ROOT" || true)"
-    fi
+    recipe_hooks::die "Nicht installiert — Halo-EXE fehlt (Setup / Update prüfen)"
 fi
 [ -n "$EXE" ] && [ -f "$EXE" ] || recipe_hooks::die "Nicht installiert — Halo-EXE fehlt (Setup / Update prüfen)"
 
+recipe_halo_campaign_evolved::require_steam_stopped
+
+# D3D12/DXVK + libvkd3d-utils (Proton-11-DXCore braucht wined3d/utils)
+wine_runtime::deploy_proton_graphics_dlls || true
+# RUNE-Pfad, MSVC-Runtime, libHttpClient, DirectML-Off — auch nach Updates erneut
+recipe_halo_campaign_evolved::prepare_runtime "$EXE" || true
+
+# Ohne Override: Wine-Builtins statt DXVK/vkd3d-proton → „GPU not supported“.
+# steam_api64/RUNE64 native erzwingen (House-of-Ashes-Muster).
+# gameinput=: Stub liefert Nullzeiger; lieber ganz weglassen.
+# House-of-Ashes-Muster: Crack-DLLs native + winhttp native/builtin (Xbox-HTTP-Pfad).
+# CRT native: libHttpClient needs the release's msvcp140 14.40+ (constexpr std::mutex);
+# Wine's builtin would win over the installed native one and crash in _Mtx_lock.
+HALO_CRT_OVERRIDE="msvcp140,msvcp140_1,msvcp140_2,msvcp140_atomic_wait,msvcp140_codecvt_ids,vcruntime140,vcruntime140_1,concrt140=n,b"
+# dwmapi/version: UE4SS / Third-Person proxy when those mods are deployed
+HALO_PROXY_OVERRIDE=""
+[ -f "$(dirname "$EXE")/dwmapi.dll" ] && HALO_PROXY_OVERRIDE="${HALO_PROXY_OVERRIDE:+$HALO_PROXY_OVERRIDE,}dwmapi"
+[ -f "$(dirname "$EXE")/version.dll" ] && HALO_PROXY_OVERRIDE="${HALO_PROXY_OVERRIDE:+$HALO_PROXY_OVERRIDE,}version"
+HALO_PROXY_PART=""
+[ -n "$HALO_PROXY_OVERRIDE" ] && HALO_PROXY_PART=";${HALO_PROXY_OVERRIDE}=n,b"
+export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-d3d12,d3d12core,dxgi,d3d11,d3d10core,steam_api64,RUNE64,libHttpClient.Win32=n;${HALO_CRT_OVERRIDE}${HALO_PROXY_PART};winhttp=n,b;gameinput=}"
+# RUNE/ElAmigos AppId (wie House-of-Ashes SteamAppId)
+export SteamAppId="${SteamAppId:-2806050}"
+export SteamGameId="${SteamGameId:-2806050}"
+# XAL (Microsoft GDK) would spawn XALApp.exe for sign-in — missing / broken under
+# Proton (endless spinner or failed sign-in). Always SteamDeck=1 so XAL signs in
+# inside the game process (Proton issue 8814 / Gears of War: Reloaded). Not a
+# Medizin toggle — required for this recipe under Proton-GE.
+export SteamDeck=1
+
+# Overlays off + NVIDIA shader cache + PowerMizer (host). Always — not Medizin.
+recipe_halo_campaign_evolved::apply_host_perf || true
+
+# Game must show a real window. RECIPE_WINE_SILENT=1 would otherwise wrap wine
+# in xvfb/offscreen via recipe_wine_silent::run — kills winewayland + adds lag.
+export RECIPE_WINE_SHOW_GUI=1
+
 cd "$(dirname "$EXE")" || exit 1
-exec wine "./$(basename "$EXE")" "$@"
+# Win64-EXE (Community: Meteorite/Binaries/Win64 — nicht Desktop-Shortcut).
+# Keine OSSNull-CVars: unter Wine → FMallocBinned2.
+
+# Optional BYOS trainer in the same prefix (Medizin → Trainer mitstarten).
+# Without a co-process we can exec; with trainer we must wait on the game PID.
+if recipe_halo_campaign_evolved::trainer_launch_enabled; then
+    # Keep winewayland: never leave DISPLAY set (XWayland path / extra lag).
+    env -u DISPLAY wine "./$(basename "$EXE")" "$@" &
+    _halo_game_pid=$!
+    recipe_halo_campaign_evolved::spawn_trainer_after_delay || true
+    wait "$_halo_game_pid"
+    _rc=$?
+    # Best-effort: stop trainer when the game exits (same wineserver is fine either way).
+    _tr="$(recipe_halo_campaign_evolved::find_trainer_exe 2>/dev/null || true)"
+    if [ -n "$_tr" ]; then
+        pkill -f "$(basename "$_tr")" 2>/dev/null || true
+    fi
+    exit "$_rc"
+fi
+
+# env -u DISPLAY: force winewayland even if a parent re-exported DISPLAY=:0.
+exec env -u DISPLAY wine "./$(basename "$EXE")" "$@"

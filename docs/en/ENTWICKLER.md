@@ -85,9 +85,9 @@ In the GUI always **Source** and optionally **Target** — same labels for every
 |------|---------|--------|--------|-----------|
 | **Offline installer** | `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere` | Pack folder / setup / `.iso` | Data folder (prefix) | [INSTALLER.md](INSTALLER.md) |
 | **Portable** (folder/archive) | `wiso-steuer` | Folder or zip/7z/… | Install folder | [WISO.md](WISO.md) |
-| **Steam + online fix** | `house-of-ashes` | Fix BYOS; game in Steam | Game folder (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
+| **Steam + online fix** | `_template-steam-game` | Fix BYOS; game in Steam | Game folder (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
 | **Offline game + updates** | `halo-campaign-evolved` | ISO / pack folder | Prefix | [UPDATES.md](UPDATES.md) |
-| **Single EXE / trainer** | `za4-trainer` | one `.exe` | often Steam subfolder | [TRAINER.md](TRAINER.md) |
+| **Single EXE / trainer** | (pattern) | one `.exe` | often Steam subfolder | [TRAINER.md](TRAINER.md) |
 
 Templates: `recipes/_template/` (portable), `recipes/_template-installer/`, `recipes/_template-steam-game/`.  
 Community: `recipes/community/<id>/` (hooks load core via `../../../core/`; not in the official manifest).

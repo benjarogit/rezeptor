@@ -1,6 +1,6 @@
 # Referenz-Muster: Einzel-EXE / Trainer (Direktstart)
 
-**Zielgruppe: Rezept-Autoren.** Beispiel-Rezept: `za4-trainer`
+**Zielgruppe: Rezept-Autoren.** Kein mitgeliefertes Produktrezept — Muster für eigene Community-Rezepte.
 
 ## Wann dieses Muster?
 

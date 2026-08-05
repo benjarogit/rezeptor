@@ -8,7 +8,7 @@ nicht jede Quelle ist gleichwertig.
 Im Repository unter `recipes/<id>/` gebündelt, indexiert in `recipes/catalog.json` (`trust: official`).
 CI sichert sie ab (`recipe-lint`, Manifest-Check).
 
-Aktuell **7** offizielle Produktrezepte in **4** Kategorien.
+Aktuell **6** offizielle Produktrezepte in **4** Kategorien.
 
 ### Grafik & Design
 
@@ -34,9 +34,7 @@ Aktuell **7** offizielle Produktrezepte in **4** Kategorien.
 
 | ID | Name | Beschreibung |
 |----|------|--------------|
-| `house-of-ashes` | House of Ashes | The Dark Pictures Anthology über Proton — Steam BYOS + Online-Fix |
 | `halo-campaign-evolved` | Halo Campaign Evolved | Pack `Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos` — ISO + optionale Updates |
-| `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | FLiNG/Plus-14-Trainer; Spiel zuerst starten, dann Trainer aus Rezeptor |
 
 Vorlagen unter `recipes/_template*` und Einträge unter `recipes/community/` sind **keine** mitgelieferten Produktrezepte.
 

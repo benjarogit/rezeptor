@@ -89,9 +89,7 @@ Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`t
 | `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Graphics & Design | Full pack + Neural / missing_libs / GenP (optional) |
 | `premiere` | Adobe Premiere Pro 2024 | Video | NVIDIA: CUDA via nvidia-libs |
 | `wiso-steuer` | WISO Steuer (Portable) | Finance | Portable under Proton-GE |
-| `house-of-ashes` | House of Ashes | Games | Steam BYOS + online fix |
 | `halo-campaign-evolved` | Halo Campaign Evolved | Games | MULTi13-ElAmigos pack + numbered updates |
-| `za4-trainer` | Zombie Army 4 — Plus 14 Trainer | Games | Trainer; start the game first |
 
 </details>
 

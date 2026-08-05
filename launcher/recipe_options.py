@@ -16,6 +16,15 @@ _ENV_KEY_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
 @dataclass
+class RecipeOptionPick:
+    """Optional path picker attached to a bool option (e.g. trainer BYOS)."""
+
+    kind: str  # file_or_folder
+    dest_rel: str  # relative to data_root
+    source_env: str = ""  # optional path stored in options.env
+
+
+@dataclass
 class RecipeOption:
     id: str
     env: str
@@ -24,6 +33,8 @@ class RecipeOption:
     label: dict[str, str]
     tip: dict[str, str]
     when: str = ""  # "", "nvidia"
+    group: str = ""  # "", "runtime", "graphics", "mods" — Medizin tabs
+    pick: RecipeOptionPick | None = None
 
     def label_for(self, locale: str) -> str:
         code = (locale or "de").split("-", 1)[0].lower()
@@ -143,6 +154,10 @@ def parse_recipe_options(recipe_yml: Path | dict[str, Any]) -> list[RecipeOption
         otype = str(item.get("type") or "bool").strip().lower()
         if otype != "bool":
             continue
+        grp = str(item.get("group") or "").strip().lower()
+        if grp not in ("", "runtime", "graphics", "mods"):
+            grp = ""
+        pick = _parse_pick(item.get("pick"))
         out.append(
             RecipeOption(
                 id=oid,
@@ -152,9 +167,24 @@ def parse_recipe_options(recipe_yml: Path | dict[str, Any]) -> list[RecipeOption
                 label=_lang_map(item.get("label")),
                 tip=_lang_map(item.get("tip") or item.get("tooltip")),
                 when=str(item.get("when") or "").strip().lower(),
+                group=grp,
+                pick=pick,
             )
         )
     return out
+
+
+def _parse_pick(raw: Any) -> RecipeOptionPick | None:
+    if not isinstance(raw, dict):
+        return None
+    kind = str(raw.get("kind") or "").strip().lower()
+    dest = str(raw.get("dest_rel") or "").strip().lstrip("/")
+    if kind != "file_or_folder" or not dest or ".." in dest.split("/"):
+        return None
+    source_env = str(raw.get("source_env") or "").strip()
+    if source_env and not _ENV_KEY_RE.match(source_env):
+        source_env = ""
+    return RecipeOptionPick(kind=kind, dest_rel=dest, source_env=source_env)
 
 
 def option_visible(opt: RecipeOption) -> bool:
@@ -181,8 +211,16 @@ def _parse_env_file(path: Path) -> dict[str, str]:
         if not _ENV_KEY_RE.match(key):
             continue
         val = raw.strip()
+        # printf %q: quoted or backslash-escaped (same as launcher recipe.env)
         if len(val) >= 2 and val[0] == val[-1] and val[0] in "'\"":
             val = val[1:-1]
+        else:
+            val = (
+                val.replace("\\ ", " ")
+                .replace("\\'", "'")
+                .replace('\\"', '"')
+                .replace("\\\\", "\\")
+            )
         data[key] = val
     return data
 
@@ -199,21 +237,29 @@ def read_option_values(data_root: Path, options: list[RecipeOption]) -> dict[str
     return result
 
 
-def write_option_value(data_root: Path, opt: RecipeOption, enabled: bool) -> None:
-    """Persist one bool option as 1/0 via env_file_set (bash) or plain write."""
+def _env_file_write(data_root: Path, key: str, value: str) -> None:
+    """Persist one key=value in options.env via env_file_set or plain rewrite."""
+    if not _ENV_KEY_RE.match(key):
+        raise ValueError(f"invalid env key: {key}")
     data_root.mkdir(parents=True, exist_ok=True)
     path = options_env_path(data_root)
-    value = "1" if enabled else "0"
-    # Prefer project env_file_set for %q safety when bash+core available
     root = Path(__file__).resolve().parent.parent
     env_sh = root / "core" / "env-file.sh"
     if env_sh.is_file() and shutil.which("bash"):
-        script = (
-            f'source "{env_sh}" && env_file_set "{path}" "{opt.env}" "{value}"'
-        )
+        # Pass path/key/value as argv — safe for spaces in trainer paths.
+        script = 'source "$1" && env_file_set "$2" "$3" "$4"'
         try:
             subprocess.run(
-                ["bash", "-c", script],
+                [
+                    "bash",
+                    "-c",
+                    script,
+                    "_",
+                    str(env_sh),
+                    str(path),
+                    key,
+                    value,
+                ],
                 check=True,
                 capture_output=True,
                 timeout=10,
@@ -221,13 +267,29 @@ def write_option_value(data_root: Path, opt: RecipeOption, enabled: bool) -> Non
             return
         except (OSError, subprocess.TimeoutExpired, subprocess.CalledProcessError):
             pass
-    # Fallback: rewrite file
     cur = _parse_env_file(path)
-    cur[opt.env] = value
+    cur[key] = value
     tmp = path.with_suffix(".env.tmp")
     lines = [f"{k}={v}\n" for k, v in sorted(cur.items())]
     tmp.write_text("".join(lines), encoding="utf-8")
     tmp.replace(path)
+
+
+def write_option_value(data_root: Path, opt: RecipeOption, enabled: bool) -> None:
+    """Persist one bool option as 1/0 via env_file_set (bash) or plain write."""
+    _env_file_write(data_root, opt.env, "1" if enabled else "0")
+
+
+def write_option_env(data_root: Path, key: str, value: str) -> None:
+    """Persist an arbitrary options.env string (e.g. trainer source path)."""
+    _env_file_write(data_root, key, value)
+
+
+def read_stored_env(data_root: Path, key: str) -> str:
+    """Raw value from options.env, or empty string."""
+    if not _ENV_KEY_RE.match(key):
+        return ""
+    return _parse_env_file(options_env_path(data_root)).get(key, "")
 
 
 def env_overrides_for_options(

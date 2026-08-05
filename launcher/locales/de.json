@@ -242,7 +242,9 @@
     "install_rollback_running": "Abbruch — angelegte Rezept-Daten werden zurückgenommen …",
     "install_rolled_back": "Installation abgebrochen — bereits angelegte Rezept-Daten wurden zurückgenommen.",
     "install_rollback_fail": "Installation abgebrochen, Rollback unvollständig.\nBitte unter Mehr → Deinstallieren bereinigen.",
-    "query_error": "Statusprüfung fehlgeschlagen: {error}"
+    "query_error": "Statusprüfung fehlgeschlagen: {error}",
+    "copy_labeled_path": "{label} kopieren",
+    "copy_all_paths": "Alle Pfade kopieren"
   },
   "trust": {
     "title": "Rezeptor-Dateien prüfen",
@@ -298,7 +300,17 @@
     "error_body": "Konnte Option nicht speichern:\n{error}",
     "apply_title": "Option gespeichert",
     "saved_ok": "Gespeichert.",
-    "apply_repair_hint": "Gespeichert. Bitte jetzt „Jetzt aktualisieren“ — sonst bleiben die alten Einstellungen aktiv."
+    "apply_repair_hint": "Gespeichert. Bitte jetzt „Jetzt aktualisieren“ — sonst bleiben die alten Einstellungen aktiv.",
+    "tab_runtime": "Laufzeit",
+    "tab_graphics": "Grafik",
+    "tab_mods": "Mods",
+    "trainer_pick_tip": "Trainer-EXE oder -Ordner wählen und nach trainer/ kopieren",
+    "trainer_pick_exe": "Trainer-EXE…",
+    "trainer_pick_folder": "Trainer-Ordner…",
+    "trainer_ready": "Trainer bereit: {name}",
+    "trainer_none": "Noch kein Trainer unter trainer/.",
+    "trainer_pick_cancel": "Auswahl abgebrochen.",
+    "trainer_pick_error": "Trainer konnte nicht übernommen werden: {error}"
   },
   "recipe_sync": {
     "available_title": "Rezept-Updates",

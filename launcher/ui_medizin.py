@@ -2,16 +2,22 @@
 
 from __future__ import annotations
 
+from collections import OrderedDict
 from pathlib import Path
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QCloseEvent
+from PyQt6.QtCore import QSize, Qt, QTimer
+from PyQt6.QtGui import QAction, QCloseEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
     QDialogButtonBox,
+    QHBoxLayout,
     QLabel,
+    QMenu,
+    QScrollArea,
     QSizePolicy,
+    QStackedWidget,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
@@ -21,10 +27,19 @@ from recipe_options import (
     RecipeOption,
     migrate_photoshop_windows_like_ui,
     read_option_values,
+    write_option_env,
     write_option_value,
 )
-from ui_fluent import FLUENT_AVAILABLE
-from ui_styles import MUTED, style_status_label
+from trainer_deploy import (
+    TrainerDeployError,
+    deploy_trainer_source,
+    installed_trainer_exe,
+)
+from ui_fluent import FLUENT_AVAILABLE, RoundMenu
+from ui_icons import fa_icon
+from ui_rezeptor import SegmentTabBar
+from ui_source import pick_directory, pick_open_file
+from ui_styles import COLOR_PARCHMENT, MUTED, style_status_label
 from ui_window import mark_force_close, mark_user_dismiss
 
 
@@ -37,13 +52,55 @@ _REPAIR_AFTER = frozenset(
         "PHOTOSHOP_UI_HOME_SCREEN",
         "PHOTOSHOP_UI_RICH_TOOLTIPS",
         "PHOTOSHOP_UI_MODERN_NEW",
-        "HALO_GOLDBERG_EMU",
+        "HALO_GFX_CLEAR_IMAGE",
+        "HALO_GFX_EXCLUSIVE_FS",
+        "HALO_GFX_VRAM_6GB",
+        "HALO_GFX_VRR",
+        "HALO_SKIP_INTRO",
+        "HALO_MOD_VIEWMODELS",
+        "HALO_MOD_HIDDEN_SKINS",
+        "HALO_MOD_CLEAN_HUD",
+        "HALO_MOD_SKULLS_UNLOCKED",
+        "HALO_MOD_WEAPON_SLOTS_4",
+        "HALO_MOD_THIRD_PERSON",
     }
 )
 
+_GROUP_ORDER = ("runtime", "graphics", "mods")
+
+
+def option_group(opt: RecipeOption) -> str:
+    """Tab bucket: recipe.yml ``group`` or infer from id/env."""
+    g = (getattr(opt, "group", "") or "").strip().lower()
+    if g in _GROUP_ORDER:
+        return g
+    key = f"{opt.env}_{opt.id}".upper()
+    oid = (opt.id or "").lower()
+    if (
+        "GFX_" in key
+        or oid.startswith("gfx_")
+        or "GRAPHICS" in key
+    ):
+        return "graphics"
+    if (
+        "MOD_" in key
+        or oid.startswith("mod_")
+        or "SKIP_INTRO" in key
+        or oid.startswith("skip_")
+    ):
+        return "mods"
+    return "runtime"
+
+
+def _group_label(key: str) -> str:
+    return t(f"medizin.tab_{key}")
+
 
 class MedizinDialog(QDialog):
-    """Show recipe options with always-visible explanations (no menu tooltips)."""
+    """Show recipe options with always-visible explanations (no menu tooltips).
+
+    Many options → SegmentTabBar (runtime / graphics / mods). Few options → flat list.
+    """
 
     def __init__(
         self,
@@ -53,12 +110,13 @@ class MedizinDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(t("medizin.dialog_title"))
-        # Modalität/Taskleiste setzt apply_tool_window(compact=True) im Launcher.
-        self.setMinimumWidth(400)
-        self.setMaximumWidth(560)
+        self.setMinimumWidth(420)
+        self.setMaximumWidth(580)
         self._data_root = data_root
         self._options = options
         self._needs_repair_hint = False
+        self._boxes: list[tuple[RecipeOption, QCheckBox]] = []
+        self._trainer_status: QLabel | None = None
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(16, 12, 16, 12)
@@ -76,35 +134,36 @@ class MedizinDialog(QDialog):
         migrate_photoshop_windows_like_ui(data_root)
         values = read_option_values(data_root, options)
         locale = get_locale()
-        self._boxes: list[tuple[RecipeOption, QCheckBox]] = []
 
+        grouped: OrderedDict[str, list[RecipeOption]] = OrderedDict()
+        for key in _GROUP_ORDER:
+            grouped[key] = []
         for opt in options:
-            block = QVBoxLayout()
-            block.setSpacing(2)
-            block.setContentsMargins(0, 0, 0, 0)
-            cb = QCheckBox(opt.label_for(locale))
-            cb.setChecked(bool(values.get(opt.id, opt.default)))
-            cb.toggled.connect(
-                lambda checked, o=opt: self._on_toggle(o, checked)
+            grouped.setdefault(option_group(opt), []).append(opt)
+        # Drop empty groups; keep order
+        groups = [(k, opts) for k, opts in grouped.items() if opts]
+        use_tabs = len(groups) > 1
+
+        if use_tabs:
+            tabs = [(k, _group_label(k)) for k, _ in groups]
+            self._seg = SegmentTabBar(tabs)
+            self._stack = QStackedWidget()
+            self._seg.tabSelected.connect(self._on_tab)
+            lay.addWidget(self._seg)
+            for _key, opts in groups:
+                page = self._build_options_page(opts, values, locale)
+                self._stack.addWidget(page)
+            lay.addWidget(self._stack, stretch=1)
+            self._seg.set_current(groups[0][0])
+            self._tab_keys = [k for k, _ in groups]
+        else:
+            self._seg = None
+            self._stack = None
+            self._tab_keys = []
+            page = self._build_options_page(
+                groups[0][1] if groups else [], values, locale
             )
-            tip = QLabel(opt.tip_for(locale) or "")
-            tip.setWordWrap(True)
-            tip.setObjectName("muted")
-            tip.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
-            )
-            self._style_muted(tip)
-            tip.setContentsMargins(22, 0, 0, 4)
-            block.addWidget(cb)
-            if tip.text().strip():
-                block.addWidget(tip)
-            wrap = QWidget()
-            wrap.setSizePolicy(
-                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
-            )
-            wrap.setLayout(block)
-            lay.addWidget(wrap)
-            self._boxes.append((opt, cb))
+            lay.addWidget(page, stretch=1)
 
         self._hint = QLabel("")
         self._hint.setWordWrap(True)
@@ -126,19 +185,195 @@ class MedizinDialog(QDialog):
         if FLUENT_AVAILABLE:
             self.setObjectName("medizinDialog")
 
-        # An Inhalt anpassen — apply_tool_window(compact) hält das Minimum klein
         self.adjustSize()
         hint = self.sizeHint()
         if hint.isValid():
-            self.resize(
-                max(400, min(hint.width() + 8, 560)),
-                max(hint.height(), 120),
+            h = min(max(hint.height(), 280), 560)
+            self.resize(max(420, min(hint.width() + 8, 580)), h)
+
+    def _on_tab(self, key: str) -> None:
+        if self._stack is None:
+            return
+        try:
+            idx = self._tab_keys.index(key)
+        except ValueError:
+            return
+        self._stack.setCurrentIndex(idx)
+        if self._seg is not None:
+            self._seg.set_current(key)
+
+    def _build_options_page(
+        self,
+        opts: list[RecipeOption],
+        values: dict[str, bool],
+        locale: str,
+    ) -> QWidget:
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        host = QWidget()
+        col = QVBoxLayout(host)
+        col.setContentsMargins(0, 4, 4, 4)
+        col.setSpacing(8)
+        for opt in opts:
+            block = QVBoxLayout()
+            block.setSpacing(2)
+            block.setContentsMargins(0, 0, 0, 0)
+
+            row = QHBoxLayout()
+            row.setSpacing(4)
+            row.setContentsMargins(0, 0, 0, 0)
+            cb = QCheckBox(opt.label_for(locale))
+            cb.setChecked(bool(values.get(opt.id, opt.default)))
+            cb.toggled.connect(
+                lambda checked, o=opt: self._on_toggle(o, checked)
             )
-            self.setMinimumHeight(min(hint.height(), 200))
+            row.addWidget(cb, stretch=1)
+            if opt.pick is not None:
+                row.addWidget(
+                    self._make_pick_button(opt),
+                    alignment=Qt.AlignmentFlag.AlignTop,
+                )
+            block.addLayout(row)
+
+            if opt.pick is not None:
+                status = QLabel(self._trainer_status_text())
+                status.setWordWrap(True)
+                status.setObjectName("muted")
+                status.setContentsMargins(22, 0, 0, 0)
+                self._style_muted(status)
+                self._trainer_status = status
+                block.addWidget(status)
+
+            tip = QLabel(opt.tip_for(locale) or "")
+            tip.setWordWrap(True)
+            tip.setObjectName("muted")
+            tip.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+            )
+            self._style_muted(tip)
+            tip.setContentsMargins(22, 0, 0, 4)
+            if tip.text().strip():
+                block.addWidget(tip)
+            wrap = QWidget()
+            wrap.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+            )
+            wrap.setLayout(block)
+            col.addWidget(wrap)
+            self._boxes.append((opt, cb))
+        col.addStretch(1)
+        scroll.setWidget(host)
+        return scroll
+
+    def _make_pick_button(self, opt: RecipeOption) -> QToolButton:
+        btn = QToolButton(self)
+        btn.setObjectName("openPathBtn")
+        btn.setAutoRaise(True)
+        btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn.setFixedSize(26, 26)
+        btn.setToolTip(t("medizin.trainer_pick_tip"))
+        btn.setAccessibleName(t("medizin.trainer_pick_tip"))
+        folder_ic = fa_icon("folder", 14, color=COLOR_PARCHMENT)
+        if folder_ic is not None:
+            btn.setIcon(folder_ic)
+            btn.setIconSize(QSize(14, 14))
+        else:
+            btn.setText("…")
+        btn.clicked.connect(lambda _c=False, o=opt, b=btn: self._popup_pick_menu(o, b))
+        return btn
+
+    def _popup_pick_menu(self, opt: RecipeOption, btn: QToolButton) -> None:
+        menu = RoundMenu(parent=self) if FLUENT_AVAILABLE else QMenu(self)
+        self._add_menu_action(
+            menu,
+            t("medizin.trainer_pick_exe"),
+            lambda _c=False, o=opt: self._pick_trainer_exe(o),
+        )
+        self._add_menu_action(
+            menu,
+            t("medizin.trainer_pick_folder"),
+            lambda _c=False, o=opt: self._pick_trainer_folder(o),
+        )
+        pos = btn.mapToGlobal(btn.rect().bottomLeft())
+        QTimer.singleShot(0, lambda p=pos, m=menu: m.exec(p))
+
+    @staticmethod
+    def _add_menu_action(menu: QMenu, text: str, slot) -> QAction:  # noqa: ANN001
+        action = QAction(text, menu)
+        action.triggered.connect(slot)
+        menu.addAction(action)
+        return action
+
+    def _pick_trainer_exe(self, opt: RecipeOption) -> None:
+        start = str(Path.home() / "Downloads")
+        path = pick_open_file(
+            self,
+            t("medizin.trainer_pick_exe"),
+            start,
+            "Windows EXE (*.exe);;All (*)",
+        )
+        if not path:
+            self._set_status(t("medizin.trainer_pick_cancel"), "info")
+            return
+        self._deploy_picked(opt, Path(path))
+
+    def _pick_trainer_folder(self, opt: RecipeOption) -> None:
+        start = str(Path.home() / "Downloads")
+        path = pick_directory(self, t("medizin.trainer_pick_folder"), start)
+        if not path:
+            self._set_status(t("medizin.trainer_pick_cancel"), "info")
+            return
+        self._deploy_picked(opt, Path(path))
+
+    def _deploy_picked(self, opt: RecipeOption, source: Path) -> None:
+        try:
+            deployed = deploy_trainer_source(self._data_root, source)
+        except (TrainerDeployError, OSError) as exc:
+            self._set_status(
+                t("medizin.trainer_pick_error", error=str(exc)),
+                "error",
+            )
+            return
+        try:
+            write_option_value(self._data_root, opt, True)
+            if opt.pick and opt.pick.source_env:
+                write_option_env(
+                    self._data_root, opt.pick.source_env, str(source)
+                )
+        except (OSError, ValueError) as exc:
+            self._set_status(
+                t("medizin.error_body", error=str(exc)),
+                "error",
+            )
+            return
+        for o, cb in self._boxes:
+            if o.id == opt.id:
+                cb.blockSignals(True)
+                cb.setChecked(True)
+                cb.blockSignals(False)
+                break
+        if self._trainer_status is not None:
+            self._trainer_status.setText(self._trainer_status_text())
+        self._set_status(
+            t("medizin.trainer_ready", name=deployed.name),
+            "ok",
+        )
+
+    def _trainer_status_text(self) -> str:
+        exe = installed_trainer_exe(self._data_root)
+        if exe is None:
+            return t("medizin.trainer_none")
+        return t("medizin.trainer_ready", name=exe.name)
 
     @staticmethod
     def _style_muted(label: QLabel) -> None:
-        label.setStyleSheet(f"color: {MUTED}; font-size: 12px; background: transparent;")
+        label.setStyleSheet(
+            f"color: {MUTED}; font-size: 12px; background: transparent;"
+        )
 
     def _set_status(self, text: str, kind: str) -> None:
         self._hint.setText(text)

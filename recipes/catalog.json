@@ -58,37 +58,15 @@
       }
     },
     {
-      "id": "house-of-ashes",
-      "name": "House of Ashes",
-      "category": "Spiele",
-      "trust": "official",
-      "path": "house-of-ashes",
-      "summary": {
-        "de": "The Dark Pictures Anthology: House of Ashes über Proton starten — mit Online-Fix für Steam.",
-        "en": "Launch The Dark Pictures Anthology: House of Ashes via Proton — with online fix for Steam."
-      }
-    },
-    {
       "id": "halo-campaign-evolved",
       "name": "Halo Campaign Evolved",
       "category": "Spiele",
       "trust": "official",
       "path": "halo-campaign-evolved",
-      "min_app_version": "1.1.7",
+      "min_app_version": "1.1.31",
       "summary": {
-        "de": "Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos unter Proton-GE — ISO mounten, Setup, optionale Updates.",
-        "en": "Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos on Proton-GE — mount ISO, setup, optional updates."
-      }
-    },
-    {
-      "id": "za4-trainer",
-      "name": "Zombie Army 4 — Plus 14 Trainer",
-      "category": "Spiele",
-      "trust": "official",
-      "path": "za4-trainer",
-      "summary": {
-        "de": "Plus-14/FLiNG-Trainer für Zombie Army 4: Dead War (Steam) — Spiel zuerst starten, dann Trainer aus Rezeptor.",
-        "en": "Plus 14 / FLiNG trainer for Zombie Army 4: Dead War (Steam) — start the game first, then launch the trainer from Rezeptor."
+        "de": "Halo Campaign Evolved (ElAmigos) unter Proton-GE — Offline, Login, Trainer/Mods optional, Low-Latency.",
+        "en": "Halo Campaign Evolved (ElAmigos) on Proton-GE — offline, login, optional trainer/mods, low-latency."
       }
     }
   ]

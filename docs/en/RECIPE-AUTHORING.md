@@ -246,8 +246,8 @@ Optional (rare): `source_kind: fixed_path` + `installer_dir: "{repo}/installer"`
 
 **Steam title with external fix (BYOS, launch from Rezeptor):**
 
-For games that stay in the Steam folder and only need a user-supplied fix
-(e.g. `house-of-ashes`). Do not ship the fix in the repo — validate checks files
+For games that stay in the Steam folder and only need a user-supplied fix.
+Do not ship the fix in the repo — validate checks files
 read-only; launch sets Proton + `WINEDLLOVERRIDES` / `SteamAppId`. Template: `_template-steam-game/`.
 
 Note: no new Steam entry (start via Rezeptor only); FakeAppId is often **480/Spacewar**
@@ -266,7 +266,7 @@ steam_fix_required:
 steam_api_rel: ""          # optional, relative to game folder
 runtime: proton-ge
 fix_kind: none
-exe_glob: "HouseOfAshes.exe"
+exe_glob: "Game.exe"
 install_steps:
   - emit_log_paths         # logic in install.sh / validate.sh / launch.sh
 ```
@@ -281,8 +281,8 @@ install_steps:
 
 Details: [STEAM-WRAPPER.md](STEAM-WRAPPER.md).
 
-| | Trainer (`za4-trainer`) | Steam+fix (`house-of-ashes`) |
-|--|-------------------------|------------------------------|
+| | Trainer (pattern) | Steam+fix (`_template-steam-game`) |
+|--|-------------------|--------------------------------------|
 | Source | single `.exe` | game folder |
 | Deploy | copy into target subfolder | `link` (remember path) |
 | Prefix | game Steam compatdata | same |

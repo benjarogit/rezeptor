@@ -1,6 +1,6 @@
 # Reference pattern: Single EXE / trainer (direct launch)
 
-**Audience: recipe authors.** Example recipe: `za4-trainer`
+**Audience: recipe authors.** No bundled product recipe — pattern for custom community recipes.
 
 ## When to use this pattern
 

@@ -1,7 +1,7 @@
 # Steam wrapper recipes
 
 Pattern for Steam games with **BYOS** (Bring Your Own Source): Rezeptor does not distribute the game or online fix.
-Reference recipe: `house-of-ashes` — see also `recipes/_template-steam-game/`.
+Template: `recipes/_template-steam-game/` — see also [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md).
 
 ## Principle
 
@@ -38,7 +38,7 @@ The wrapper sets among other things:
 - `WINEDLLOVERRIDES` for OnlineFix DLLs
 - Proton script: Rezeptor GE → Steam GE-Proton
 
-Details: `recipes/house-of-ashes/launch.sh`, `recipes/_template-steam-game/install.sh`.
+Details: `recipes/_template-steam-game/launch.sh`, `recipes/_template-steam-game/install.sh`.
 
 ## Uninstall
 
@@ -53,7 +53,7 @@ Details: `recipes/house-of-ashes/launch.sh`, `recipes/_template-steam-game/insta
 - The online fix in the game folder
 - Spacewar in your library
 
-See `recipes/house-of-ashes/uninstall.sh`.
+See `recipes/_template-steam-game/uninstall.sh`.
 
 ## New Steam game recipe
 

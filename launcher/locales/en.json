@@ -242,7 +242,9 @@
     "install_rollback_running": "Cancelling — rolling back recipe data that was created …",
     "install_rolled_back": "Installation cancelled — recipe data that was created has been rolled back.",
     "install_rollback_fail": "Installation cancelled, but rollback was incomplete.\nPlease use More → Uninstall to clean up.",
-    "query_error": "Status check failed: {error}"
+    "query_error": "Status check failed: {error}",
+    "copy_labeled_path": "Copy {label}",
+    "copy_all_paths": "Copy all paths"
   },
   "trust": {
     "title": "Check Rezeptor files",
@@ -298,7 +300,17 @@
     "error_body": "Could not save option:\n{error}",
     "apply_title": "Option saved",
     "saved_ok": "Saved.",
-    "apply_repair_hint": "Saved. Please click “Update now” — otherwise the old settings stay active."
+    "apply_repair_hint": "Saved. Please click “Update now” — otherwise the old settings stay active.",
+    "tab_runtime": "Runtime",
+    "tab_graphics": "Graphics",
+    "tab_mods": "Mods",
+    "trainer_pick_tip": "Pick trainer EXE or folder and copy into trainer/",
+    "trainer_pick_exe": "Trainer EXE…",
+    "trainer_pick_folder": "Trainer folder…",
+    "trainer_ready": "Trainer ready: {name}",
+    "trainer_none": "No trainer under trainer/ yet.",
+    "trainer_pick_cancel": "Selection cancelled.",
+    "trainer_pick_error": "Could not import trainer: {error}"
   },
   "recipe_sync": {
     "available_title": "Recipe updates",

@@ -85,9 +85,9 @@ In der GUI immer **Quelle** und ggf. **Ziel** — unabhängig vom App-Typ.
 |-----|--------------|--------|------|----------|
 | **Offline-Installer** | `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere` | Pack-Ordner / Setup / `.iso` | Datenordner (Prefix) | [INSTALLER.md](INSTALLER.md) |
 | **Portable** (Ordner/Archiv) | `wiso-steuer` | Ordner oder zip/7z/… | Installationsordner | [WISO.md](WISO.md) |
-| **Steam + Online-Fix** | `house-of-ashes` | Fix BYOS; Spiel in Steam | Spielordner (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
+| **Steam + Online-Fix** | `_template-steam-game` | Fix BYOS; Spiel in Steam | Spielordner (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
 | **Offline-Spiel + Updates** | `halo-campaign-evolved` | ISO / Pack-Ordner | Prefix | [UPDATES.md](UPDATES.md) |
-| **Einzel-EXE / Trainer** | `za4-trainer` | eine `.exe` | oft Steam-Unterordner | [TRAINER.md](TRAINER.md) |
+| **Einzel-EXE / Trainer** | (Muster) | eine `.exe` | oft Steam-Unterordner | [TRAINER.md](TRAINER.md) |
 
 Vorlagen: `recipes/_template/` (Portable), `recipes/_template-installer/`, `recipes/_template-steam-game/`.  
 Community: `recipes/community/<id>/` (Hooks laden Core über `../../../core/`; nicht im offiziellen Manifest).

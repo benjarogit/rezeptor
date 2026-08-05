@@ -6,7 +6,7 @@ Full list **by category** (Graphics, Video, Finance, Games):
 
 → **[Recipe catalog](CATALOG.md#official-recipes-bundled)**
 
-Short: 7 official IDs — `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere`, `wiso-steuer`, `house-of-ashes`, `za4-trainer`.
+Short: 6 official IDs — `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere`, `wiso-steuer`, `halo-campaign-evolved`.
 
 ## For authors
 
