@@ -80,7 +80,7 @@ Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`t
 ## Recipes
 
 <details>
-<summary><strong>Bundled official recipes</strong> (8 — click to expand)</summary>
+<summary><strong>Bundled official recipes</strong> (6 — click to expand)</summary>
 
 | ID | Name | Category | Notes |
 |----|------|----------|--------|
@@ -89,7 +89,7 @@ Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`t
 | `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Graphics & Design | Full pack + Neural / missing_libs / GenP (optional) |
 | `premiere` | Adobe Premiere Pro 2024 | Video | NVIDIA: CUDA via nvidia-libs |
 | `wiso-steuer` | WISO Steuer (Portable) | Finance | Portable under Proton-GE |
-| `halo-campaign-evolved` | Halo Campaign Evolved | Games | MULTi13-ElAmigos pack + numbered updates |
+| `halo-campaign-evolved` | Halo Campaign Evolved | Games | ElAmigos/RUNE · Proton-GE 11 · offline login · optional BYOS trainer |
 
 </details>
 

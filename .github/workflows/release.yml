@@ -226,14 +226,41 @@ jobs:
             prev="$(git describe --tags --abbrev=0 "${SHA}^" 2>/dev/null || true)"
           fi
 
-          notes="$(gh api "repos/${REPO}/releases/generate-notes" \
-            -f tag_name="$TAG" \
-            -f target_commitish="$SHA" \
-            ${prev:+-f previous_tag_name="$prev"} \
-            --jq .body 2>/dev/null || true)"
-          # Keep changelog headers bilingual (GitHub generate-notes is EN-only).
-          notes="${notes//## What's Changed/## What's Changed \/ Änderungen}"
-          notes="${notes//\*\*Full Changelog\*\*/\*\*Full Changelog \/ Vollständiger Changelog\*\*}"
+          # Prefer CHANGELOG.md section for this VERSION (English bullets).
+          # Auto-generated commit lists hide removals / multi-topic releases.
+          notes=""
+          if [ -f CHANGELOG.md ]; then
+            notes="$(python3 - "$VER" <<'PY'
+import re, sys
+from pathlib import Path
+ver = sys.argv[1]
+text = Path("CHANGELOG.md").read_text(encoding="utf-8")
+# ## [1.1.32] - date  ... until next ## [
+pat = rf"(?ms)^## \[{re.escape(ver)}\][^\n]*\n(.*?)(?=^## \[|\Z)"
+m = re.search(pat, text)
+if not m:
+    sys.exit(0)
+body = m.group(1).strip()
+if len(body) < 40:
+    sys.exit(0)
+print("## What's Changed / Änderungen\n")
+print(body)
+print()
+print(f"**Full Changelog / Vollständiger Changelog**: see `CHANGELOG.md` ({ver})")
+PY
+)" || true
+          fi
+
+          if [ -z "${notes}" ] || [ "${#notes}" -lt 80 ]; then
+            notes="$(gh api "repos/${REPO}/releases/generate-notes" \
+              -f tag_name="$TAG" \
+              -f target_commitish="$SHA" \
+              ${prev:+-f previous_tag_name="$prev"} \
+              --jq .body 2>/dev/null || true)"
+            # Keep changelog headers bilingual (GitHub generate-notes is EN-only).
+            notes="${notes//## What's Changed/## What's Changed \/ Änderungen}"
+            notes="${notes//\*\*Full Changelog\*\*/\*\*Full Changelog \/ Vollständiger Changelog\*\*}"
+          fi
 
           if [ -z "${notes}" ] || [ "${#notes}" -lt 120 ]; then
             if [ -n "${prev}" ]; then

@@ -34,7 +34,7 @@ Currently **6** official product recipes in **4** categories.
 
 | ID | Name | Description |
 |----|------|-------------|
-| `halo-campaign-evolved` | Halo Campaign Evolved | Pack `Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos` — ISO + optional updates |
+| `halo-campaign-evolved` | Halo Campaign Evolved | ElAmigos/RUNE (MULTi13), Proton-GE 11, offline login, Medizin (graphics/low-latency), optional BYOS trainer |
 
 Templates under `recipes/_template*` and entries under `recipes/community/` are **not** bundled product recipes.
 
