@@ -102,6 +102,7 @@ modules:
         sha256: 9f5474351378aeca746ee8a2ff3b187edec71d791ef92827eca14ab5b0e15441
         dest: python-src
       - type: file
-        url: https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks
-        sha256: 954d17f56ae5f4d32eb083193a4a838c73ae5ff6b91765d93b0eab59cf2e7d29
+        # Pin commit — master tip moves and breaks Flatpak SHA checks.
+        url: https://raw.githubusercontent.com/Winetricks/winetricks/8e6f0d529b0077bc8602c5de62a08583c7cd0f4e/src/winetricks
+        sha256: fc01a60ab9fe2a7d1827014bd61f5d78ea1196cdf07b4965ff9fa06fcc8f5e0d
         dest: winetricks-src
