@@ -100,7 +100,7 @@ CODE_REVIEW_REPORT.md
 RELEASE_NOTES_*.md
 FINAL_CODE_REVIEW.md
 GIT_PUSH_READY.md
-CHANGELOG.md
+# CHANGELOG.md is tracked — Release notes prefer its VERSION sections.
 
 # ============================================================
 # AppImage / Flatpak / Release build artifacts
