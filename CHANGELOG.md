@@ -23,6 +23,7 @@ GitHub Release notes should match these bullets.
 ### Fixed
 - Winetricks install steps ensure `LOG_DIR` before package loops
 - Flatpak / runtime pin adjustments for reproducible builds
+- CI: restore valid `release.yml` (column-0 heredoc broke YAML / `workflow_dispatch`); changelog notes via `scripts/changelog-release-notes.py`
 
 ### Documentation
 - USER-GUIDE / CATALOG: Halo Medizin presets + Steam medicine; choice YAML example for authors

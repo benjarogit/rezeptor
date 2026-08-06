@@ -230,25 +230,7 @@ jobs:
           # Auto-generated commit lists hide removals / multi-topic releases.
           notes=""
           if [ -f CHANGELOG.md ]; then
-            notes="$(python3 - "$VER" <<'PY'
-import re, sys
-from pathlib import Path
-ver = sys.argv[1]
-text = Path("CHANGELOG.md").read_text(encoding="utf-8")
-# ## [1.1.32] - date  ... until next ## [
-pat = rf"(?ms)^## \[{re.escape(ver)}\][^\n]*\n(.*?)(?=^## \[|\Z)"
-m = re.search(pat, text)
-if not m:
-    sys.exit(0)
-body = m.group(1).strip()
-if len(body) < 40:
-    sys.exit(0)
-print("## What's Changed / Änderungen\n")
-print(body)
-print()
-print(f"**Full Changelog / Vollständiger Changelog**: see `CHANGELOG.md` ({ver})")
-PY
-)" || true
+            notes="$(python3 scripts/changelog-release-notes.py "$VER" 2>/dev/null || true)"
           fi
 
           if [ -z "${notes}" ] || [ "${#notes}" -lt 80 ]; then
