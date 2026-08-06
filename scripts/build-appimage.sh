@@ -208,14 +208,19 @@ for f in \
     "$SHARE/launcher/locales/de.json" \
     "$SHARE/images/AdobePhotoshop-icon.png" \
     "$SHARE/images/rezeptor-icon.svg" \
-    "$APPDIR/runtime/winetricks/winetricks" \
-    "$APPDIR/runtime/proton-ge/$PROTON_GE_TAG/files/bin/wine64"
+    "$APPDIR/runtime/winetricks/winetricks"
 do
     if [ ! -e "$f" ]; then
         echo "MISSING: $f" >&2
         fail=1
     fi
 done
+# GE-Proton11+: often only files/bin/wine (no separate wine64 symlink).
+_proton_bin="$APPDIR/runtime/proton-ge/$PROTON_GE_TAG/files/bin"
+if [ ! -x "$_proton_bin/wine" ] && [ ! -x "$_proton_bin/wine64" ]; then
+    echo "MISSING: $_proton_bin/wine (or wine64)" >&2
+    fail=1
+fi
 # Trust must be green for photoshop (stale manifest = install blocked in GUI)
 if ! "$APPDIR/python/bin/python3" - <<PY
 import sys
