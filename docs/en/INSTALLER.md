@@ -1,6 +1,6 @@
 # Reference pattern: Offline installer
 
-**Audience: recipe authors.** Example recipes: `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere` · Template: `recipes/_template-installer/`
+**Audience: recipe authors.** Example recipes: `photoshop`, `photoshop-m0nkrus`, `premiere`, `master-pdf-editor` · Template: `recipes/_template-installer/`
 
 ## When to use this pattern
 
@@ -21,12 +21,11 @@ Windows ships an **offline installer** (folder with `Set-up.exe` / `Setup.exe` +
 
 ### Pack folder (m0nkrus-style)
 
-Three Photoshop recipes (one pack = one recipe):
+Two Photoshop recipes (one pack = one recipe):
 
 | ID | Pack | Guaranteed |
 |----|------|------------|
 | `photoshop` | Standard offline (Set-up + packages) | 22.0.0.35 |
-| `photoshop-m0nkrus-220` | Folder `Photoshop.2021` / `Adobe.Photoshop.2021.Multilingual.iso` (ISO-only) | 22.0.0.35 |
 | `photoshop-m0nkrus` | Pack 22.1.1.138 + Neural / missing_libs / GenP | 22.1.1.138 |
 
 For `photoshop-m0nkrus`: source = **full pack folder** (ISO + sibling extras). Rezeptor:
@@ -35,14 +34,15 @@ For `photoshop-m0nkrus`: source = **full pack folder** (ISO + sibling extras). R
 2. sets `RECIPE_PACK_ROOT` and after Adobe setup applies extras (`core/recipe-photoshop-pack.sh`): `ps2021_missing_libs.7z`, Neural Filters SFX → Wine `PluginData`
 3. does **not** auto-run GenP (ISO pre-patched per pack; manual cure only if activation drops)
 
-For `photoshop-m0nkrus-220`: source = ISO-only pack (no Neural/GenP); same core install API.
-
 Variants share the Photoshop core API via thin wrappers:
 
 - `core/recipe-photoshop-m0nkrus-install.sh` / `-launch.sh`
-- `core/recipe-photoshop-m0nkrus-220-install.sh` / `-launch.sh`
 
 (`module: recipe_photoshop::install` in `recipe.yml`; without the wrappers `load_app_module` will not find the functions.)
+
+### MSI (Master PDF Editor)
+
+`master-pdf-editor`: pack folder with `MasterPDFEditor-setup-*.msi` (+ optional `crack/MasterPDFEditor.exe`). Core: `recipe_master_pdf_editor::run_msi` (timeout; success when EXE exists) + `::finalize` (WORK_ROOT / crack). No crack binary in the repo.
 
 ## Pitfalls
 

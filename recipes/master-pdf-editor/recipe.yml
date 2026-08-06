@@ -1,0 +1,51 @@
+id: master-pdf-editor
+schema_version: 1
+icon: "{repo}/images/master-pdf-editor-icon.png"
+name: "Master PDF Editor"
+author: "benjarogit"
+category: "Dokumente & PDF"
+min_app_version: "1.1.33"
+version_guaranteed: "5.9.9.8"
+version_label: "Master PDF Editor 5.9.9.8"
+version_detect:
+  - kind: pe_field
+    glob: "**/MasterPDFEditor.exe"
+    field: ProductVersion
+  - kind: pe_field
+    glob: "**/MasterPDFEditor.exe"
+    field: FileVersion
+  - kind: filename_regex
+    regex: '(?i)MasterPDFEditor.*?(\d+\.\d+(?:\.\d+)?)'
+sidebar_label: "Master PDF Editor"
+source_hints:
+  - "Master PDF Editor 5"
+  - "MasterPDFEditor-setup"
+notify_title: "Master PDF Editor"
+data_root: "~/.local/share/wine-software/master-pdf-editor"
+prefix: "{data_root}/prefix"
+runtime: proton-ge
+install_type: installer_offline
+source_kind: folder
+source_formats: "msi,rar,zip,7z"
+source_label: "Pack-Ordner (MasterPDFEditor-setup-qt6-x64.msi + optional crack/)"
+target_default: "~/.local/share/wine-software/master-pdf-editor"
+target_label: "Datenordner (Wine-Prefix wird hier angelegt)"
+fix_kind: none
+exe_glob: "**/MasterPDFEditor.exe"
+launch_process_patterns: ["MasterPDFEditor.exe"]
+winetricks: [vcrun2019, corefonts, "fontsmooth=rgb"]
+env:
+  WINEDEBUG: "-all"
+validate: validate.sh
+launch: launch.sh
+install: install.sh
+repair: repair.sh
+kill: kill.sh
+uninstall: uninstall.sh
+install_steps:
+  - prepare_source
+  - prefix
+  - winetricks: [vcrun2019, corefonts, "fontsmooth=rgb"]
+  - deploy_graphics
+  - module: recipe_master_pdf_editor::run_msi
+  - module: recipe_master_pdf_editor::finalize

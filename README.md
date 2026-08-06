@@ -85,11 +85,11 @@ Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`t
 | ID | Name | Category | Notes |
 |----|------|----------|--------|
 | `photoshop` | Adobe Photoshop CC 2021 | Graphics & Design | Standard offline installer (22.0.0.35) |
-| `photoshop-m0nkrus-220` | Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35) | Graphics & Design | ISO-only m0nkrus pack (not standard / not 22.1.1.138) |
 | `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Graphics & Design | Full pack + Neural / missing_libs / GenP (optional) |
 | `premiere` | Adobe Premiere Pro 2024 | Video | NVIDIA: CUDA via nvidia-libs |
 | `wiso-steuer` | WISO Steuer (Portable) | Finance | Portable under Proton-GE |
-| `halo-campaign-evolved` | Halo Campaign Evolved | Games | ElAmigos/RUNE · Proton-GE 11 · offline login · optional BYOS trainer |
+| `master-pdf-editor` | Master PDF Editor | Documents & PDF | MSI 5.9 under Proton-GE (optional crack/ in pack) |
+| `halo-campaign-evolved` | Halo Campaign Evolved | Games | ElAmigos/RUNE · graphics presets · optional Steam Non-Steam · BYOS trainer |
 
 </details>
 

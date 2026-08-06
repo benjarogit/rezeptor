@@ -169,6 +169,7 @@
     "path_data": "Data",
     "path_source": "Source",
     "path_target": "Target",
+    "path_app": "App",
     "regen_manifest": "Approve the changed recipe as trusted"
   },
   "state": {
@@ -243,8 +244,10 @@
     "install_rolled_back": "Installation cancelled — recipe data that was created has been rolled back.",
     "install_rollback_fail": "Installation cancelled, but rollback was incomplete.\nPlease use More → Uninstall to clean up.",
     "query_error": "Status check failed: {error}",
-    "copy_labeled_path": "Copy {label}",
-    "copy_all_paths": "Copy all paths"
+    "copy_labeled_path": "Copy {label} path",
+    "copy_all_paths": "Copy all paths",
+    "copy_data": "Copy data",
+    "data_copied": "Recipe data on clipboard (title, version, paths)"
   },
   "trust": {
     "title": "Check Rezeptor files",
@@ -311,6 +314,13 @@
     "trainer_none": "No trainer under trainer/ yet.",
     "trainer_pick_cancel": "Selection cancelled.",
     "trainer_pick_error": "Could not import trainer: {error}"
+  },
+  "steam_medicine": {
+    "dialog_title": "Steam detected",
+    "dialog_body": "Steam is installed on this system.\n\nFor “{name}” it is recommended to enable “Launch: via Steam” under Medizin → Runtime. There you choose the Proton version: Steam default (global Steam Play), System Proton (distro, if present), or Rezeptor Proton.\n\nWithout Steam launch, the normal Rezeptor Proton path remains available.",
+    "dont_show_again": "Don’t show this hint again for this recipe",
+    "open_medizin": "Open Medizin",
+    "ok": "OK"
   },
   "recipe_sync": {
     "available_title": "Recipe updates",
@@ -480,7 +490,11 @@
     "report_file_title": "Rezeptor — bug report (sanitized)",
     "report_file_time": "Time (UTC): {time}",
     "report_file_recipe": "Recipe: {recipe}",
-    "report_file_version": "Version: {version}",
+    "report_file_recipe_name": "Display name: {name}",
+    "report_file_version": "Launcher version: {version}",
+    "report_file_recipe_version": "Recipe version (guaranteed): {version}",
+    "report_file_recipe_detected": "Recipe version (detected): {version}",
+    "report_file_data_root": "Data folder: {path}",
     "report_file_distro": "Distro: {distro}",
     "report_file_runtime": "Runtime: {runtime}",
     "report_file_locale": "UI language: {locale}",
@@ -488,6 +502,8 @@
     "report_file_kernel": "Kernel: {kernel}",
     "report_file_empty": "(no readable lines)",
     "report_file_read_error": "(read error: {error})",
+    "report_file_section_data_logs": "--- Install/recipe logs (data folder) ---",
+    "report_file_section_global_logs": "--- Launcher logs (~/.local/share/wine-software/logs) ---",
     "install_title": "Installation",
     "install_question": "Start installation now?",
     "install_reconfirm": "“{name}” is already set up.\n\nChoose source/target again and run installation?\n(Wine prefix stays; portable can be copied to a new target folder.)",
@@ -697,12 +713,23 @@
     "refresh": "Refresh",
     "open_folder": "Open folder",
     "copy_path": "Copy path",
+    "copy_title": "Copy title",
+    "copy_selection": "Copy selection",
     "copy_content": "Copy content",
     "no_selection": "No log file selected.",
     "content_copied": "Log content on clipboard — {name}",
     "path_copied": "Path on clipboard — {path}",
     "folder_opened": "Log folder opened — {path}",
-    "folder_missing": "Log folder not found — {path}"
+    "folder_missing": "Log folder not found — {path}",
+    "ctx_title": "Title",
+    "ctx_id": "Recipe ID",
+    "ctx_version_guaranteed": "Version (guaranteed)",
+    "ctx_version_detected": "Version (detected)",
+    "ctx_status": "Status",
+    "ctx_runtime": "Runtime",
+    "ctx_launcher": "Launcher",
+    "ctx_author": "Author",
+    "ctx_distro": "Distro"
   },
   "error": {
     "E_TRUST_MANIFEST": "Recipe manifest invalid",

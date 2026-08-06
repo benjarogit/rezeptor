@@ -31,6 +31,7 @@ StrongBodyLabel = None  # type: ignore[misc, assignment]
 FluentIcon = None  # type: ignore[misc, assignment]
 Theme = None  # type: ignore[misc, assignment]
 RoundMenu = None  # type: ignore[misc, assignment]
+MenuAnimationType = None  # type: ignore[misc, assignment]
 _qconfig = None  # type: ignore[misc, assignment]
 _setTheme = None  # type: ignore[misc, assignment]
 _setThemeColor = None  # type: ignore[misc, assignment]
@@ -54,6 +55,9 @@ try:
         setTheme,
         setThemeColor,
     )
+    from qfluentwidgets.components.widgets.menu import (  # type: ignore[import-untyped]
+        MenuAnimationType,
+    )
 
     FLUENT_AVAILABLE = True
     _qconfig = qconfig
@@ -74,6 +78,7 @@ except ImportError:
     PrimaryPushButton = QPushButton  # type: ignore[misc, assignment]
     PushButton = QPushButton  # type: ignore[misc, assignment]
     RoundMenu = QMenu  # type: ignore[misc, assignment]
+    MenuAnimationType = None  # type: ignore[misc, assignment]
     CardWidget = QWidget  # type: ignore[misc, assignment]
     TitleLabel = QLabel  # type: ignore[misc, assignment]
     SubtitleLabel = QLabel  # type: ignore[misc, assignment]

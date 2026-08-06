@@ -77,12 +77,15 @@ EOF
     export HALO_GFX_VRAM_6GB=0
     export HALO_GFX_VRR=0
     export HALO_GFX_LOW_LATENCY=0
+    # Ultra = no auto VRAM caps (unless HALO_GFX_VRAM_6GB=1).
+    export HALO_GFX_PRESET=ultra
     cfg="$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows"
     mkdir -p "$cfg"
     recipe_halo_campaign_evolved::ensure_offline_ini
     ini="$cfg/Engine.ini"
     [ -f "$ini" ]
     ! grep -qE '^r\.Lumen\.' "$ini"
+    ! grep -qE '^r\.Streaming\.PoolSize=' "$ini"
     ! grep -qE '^r\.FilmGrain=' "$ini"
     ! grep -qE '^r\.OneFrameThreadLag=' "$ini"
     ! grep -qE '^r\.Tonemapper\.GrainQuantization=' "$ini"
@@ -94,6 +97,7 @@ EOF
     export DATA_ROOT="$BATS_TEST_TMPDIR/data_rq"
     export WINEPREFIX="$DATA_ROOT/prefix"
     export HALO_GFX_CLEAR_IMAGE=0 HALO_GFX_VRAM_6GB=0 HALO_GFX_VRR=0 HALO_GFX_LOW_LATENCY=0
+    export HALO_GFX_PRESET=ultra
     cfg="$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows"
     mkdir -p "$cfg"
     printf '%s\r\n' '[ScalabilityGroups]' 'sg.ResolutionQuality=0' 'sg.ShadowQuality=3' \
@@ -142,11 +146,38 @@ EOF
     export WINEPREFIX="$DATA_ROOT/prefix"
     export HALO_GFX_CLEAR_IMAGE=0
     export HALO_GFX_VRAM_6GB=1
+    export HALO_GFX_PRESET=ultra
     mkdir -p "$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows"
     recipe_halo_campaign_evolved::ensure_offline_ini
     ini="$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows/Engine.ini"
     grep -qE '^r\.Streaming\.PoolSize=2048$' "$ini"
     ! grep -qE '^r\.FilmGrain=' "$ini"
+}
+
+@test "ensure_offline_ini balanced preset applies soft VRAM caps" {
+    export DATA_ROOT="$BATS_TEST_TMPDIR/data_bal"
+    export WINEPREFIX="$DATA_ROOT/prefix"
+    export HALO_GFX_CLEAR_IMAGE=0
+    export HALO_GFX_VRAM_6GB=0
+    export HALO_GFX_VRR=0
+    export HALO_GFX_LOW_LATENCY=0
+    export HALO_GFX_PRESET=balanced
+    mkdir -p "$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows"
+    recipe_halo_campaign_evolved::ensure_offline_ini
+    ini="$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows/Engine.ini"
+    grep -qE '^r\.Streaming\.PoolSize=2048$' "$ini"
+    grep -qE '^r\.ScreenPercentage=100$' "$ini"
+}
+
+@test "ensure_offline_ini ultra_low uses ScreenPercentage 85" {
+    export DATA_ROOT="$BATS_TEST_TMPDIR/data_ul"
+    export WINEPREFIX="$DATA_ROOT/prefix"
+    export HALO_GFX_CLEAR_IMAGE=0 HALO_GFX_VRAM_6GB=0 HALO_GFX_VRR=0 HALO_GFX_LOW_LATENCY=0
+    export HALO_GFX_PRESET=ultra_low
+    mkdir -p "$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows"
+    recipe_halo_campaign_evolved::ensure_offline_ini
+    grep -qE '^r\.ScreenPercentage=85$' \
+        "$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows/Engine.ini"
 }
 
 @test "prepare-ghidra.sh copies vanilla exe path" {
@@ -236,11 +267,13 @@ INI
     export WINEPREFIX="$DATA_ROOT/prefix"
     export HALO_GFX_CLEAR_IMAGE=0 HALO_GFX_VRAM_6GB=0 HALO_GFX_VRR=0
     export HALO_GFX_LOW_LATENCY=1
+    export HALO_GFX_PRESET=ultra
     cfg="$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows"
     mkdir -p "$cfg"
     recipe_halo_campaign_evolved::ensure_offline_ini
     grep -qE '^r\.OneFrameThreadLag=0$' "$cfg/Engine.ini"
     grep -qE '^r\.GTSyncType=1$' "$cfg/Engine.ini"
+    grep -qE '^r\.FinishCurrentFrame=1$' "$cfg/Engine.ini"
     grep -qE '^bEnableMouseSmoothing=False$' "$cfg/Engine.ini"
     # Game deletes a writable Engine.ini — we lock it.
     [ ! -w "$cfg/Engine.ini" ]
@@ -248,6 +281,7 @@ INI
 
 @test "apply_host_perf sets vkd3d swapchain latency to 1" {
     export HALO_GFX_LOW_LATENCY=1
+    export HALO_GFX_GAMESCOPE=0
     export WAYLAND_DISPLAY=wayland-0
     export DISPLAY=:0
     export WINEDLLOVERRIDES="d3d12=n"
@@ -255,6 +289,45 @@ INI
     unset VKD3D_SWAPCHAIN_LATENCY_FRAMES
     recipe_halo_campaign_evolved::apply_host_perf
     [ "${VKD3D_SWAPCHAIN_LATENCY_FRAMES}" = "1" ]
+}
+
+@test "gamescope path skips winewayland and forces winex11 overrides" {
+    export HALO_GFX_LOW_LATENCY=1
+    export HALO_GFX_GAMESCOPE=1
+    export HALO_LAUNCH_VIA_STEAM=0
+    export WAYLAND_DISPLAY=wayland-0
+    export DISPLAY=:0
+    export WINEDLLOVERRIDES="d3d12=n"
+    export PROTON_PATH="/home/benny/.local/share/wine-software/runtime/proton-ge/GE-Proton11-3"
+    recipe_halo_campaign_evolved::apply_host_perf
+    # winewayland must not be enabled when gamescope will nest X11
+    [[ "${WINEDLLOVERRIDES}" != *"winewayland.drv=b"* ]]
+    recipe_halo_campaign_evolved::prefer_winex11_for_gamescope
+    [[ "${WINEDLLOVERRIDES}" == *"winewayland.drv=d"* ]]
+    [[ "${WINEDLLOVERRIDES}" == *"winex11.drv=b"* ]]
+}
+
+@test "steam proton path links compat pfx to existing prefix" {
+    export DATA_ROOT="$BATS_TEST_TMPDIR/halo_data"
+    export WINEPREFIX="$DATA_ROOT/prefix"
+    mkdir -p "$WINEPREFIX/drive_c"
+    run recipe_halo_campaign_evolved::ensure_steam_compat_data
+    [ "$status" -eq 0 ]
+    [ -L "$DATA_ROOT/steam-compat/pfx" ]
+    [ "$(readlink -f "$DATA_ROOT/steam-compat/pfx")" = "$(readlink -f "$WINEPREFIX")" ]
+}
+
+@test "steam proton wanted skips manual winewayland" {
+    export HALO_GFX_LOW_LATENCY=1
+    export HALO_GFX_GAMESCOPE=0
+    export HALO_LAUNCH_VIA_STEAM=1
+    export WAYLAND_DISPLAY=wayland-0
+    export DISPLAY=:0
+    export WINEDLLOVERRIDES="d3d12=n"
+    export PROTON_PATH="/home/benny/.local/share/wine-software/runtime/proton-ge/GE-Proton11-3"
+    recipe_halo_campaign_evolved::apply_host_perf
+    [[ "${WINEDLLOVERRIDES}" != *"winewayland.drv=b"* ]]
+    [ -n "${DISPLAY:-}" ]
 }
 
 @test "apply_winewayland disables x11drv and unsets DISPLAY" {
@@ -282,13 +355,14 @@ INI
     [ -f "$WINEPREFIX/drive_c/windows/system32/nvapi64.dll" ]
 }
 
-@test "ensure_halo_video_settings bumps VeryLow to Medium; Reflex + FPS cap" {
+@test "ensure_halo_video_settings applies balanced preset; Reflex + FPS cap" {
     export DATA_ROOT="$BATS_TEST_TMPDIR/data_med"
     export WINEPREFIX="$DATA_ROOT/prefix"
     export HALO_GFX_CLEAR_IMAGE=1
     export HALO_GFX_EXCLUSIVE_FS=0
     export HALO_GFX_LOW_LATENCY=1
     export HALO_GFX_MAX_FPS=141
+    export HALO_GFX_PRESET=balanced
     cfg="$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/invalid_id"
     mkdir -p "$cfg" "$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows"
     cat >"$cfg/HaloGlobalGameUserSettings.ini" <<'INI'
@@ -309,9 +383,37 @@ INI
     printf '%s\n' '[/Script/Engine.GameUserSettings]' 'FullscreenMode=1' \
         >"$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows/GameUserSettings.ini"
     recipe_halo_campaign_evolved::ensure_halo_video_settings
-    grep -qE '^QualityPreset=Medium$' "$cfg/HaloLocalGameUserSettings.ini"
+    grep -qE '^QualityPreset=High$' "$cfg/HaloLocalGameUserSettings.ini"
+    grep -qE '^TextureQuality=High$' "$cfg/HaloLocalGameUserSettings.ini"
+    grep -qE '^ReflectionsQuality=Medium$' "$cfg/HaloLocalGameUserSettings.ini"
     grep -qE '^UpscalingQuality=High$' "$cfg/HaloLocalGameUserSettings.ini"
     grep -qE '^LowLatencyMode=VendorSpecific$' "$cfg/HaloLocalGameUserSettings.ini"
     grep -qE '^MaximumFrameRate=141$' "$cfg/HaloLocalGameUserSettings.ini"
     grep -qE '^bFrameGeneration=False$' "$cfg/HaloLocalGameUserSettings.ini"
+}
+
+@test "ensure_skip_intro heals corrupt Splash.bmp and uses valid LogoParade stub" {
+    export PROJECT_ROOT
+    export RECIPE_DIR="$PROJECT_ROOT/recipes/halo-campaign-evolved"
+    export HALO_SKIP_INTRO=1
+    root="$BATS_TEST_TMPDIR/HaloCampaignEvolved"
+    movies="$root/Meteorite/Content/Movies"
+    splash="$root/Meteorite/Content/Splash"
+    mkdir -p "$movies" "$splash"
+    # Simulate previous buggy deploy: tiny stubs + real backups
+    head -c 200000 /dev/urandom >"$movies/LogoParade.mp4.rezeptor_bak"
+    printf '\x00\x00\x00\x18ftypmp42' >"$movies/LogoParade.mp4"
+    head -c 50000 /dev/urandom >"$splash/Splash.bmp.rezeptor_bak"
+    printf 'BM\x00\x00\x00\x00' >"$splash/Splash.bmp"
+    output::info() { :; }
+    output::success() { :; }
+    output::warning() { :; }
+    recipe_halo_campaign_evolved::ensure_skip_intro "$root"
+    # Splash must be restored (never left as fake BM header)
+    [ "$(stat -c%s "$splash/Splash.bmp")" -eq 50000 ]
+    # LogoParade must be the shipped valid stub, not the 12-byte fake
+    [ "$(stat -c%s "$movies/LogoParade.mp4")" -gt 1000 ]
+    [ "$(stat -c%s "$movies/LogoParade.mp4")" -lt 50000 ]
+    # Real original remains backed up
+    [ "$(stat -c%s "$movies/LogoParade.mp4.rezeptor_bak")" -eq 200000 ]
 }

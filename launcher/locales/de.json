@@ -169,6 +169,7 @@
     "path_data": "Daten",
     "path_source": "Quelle",
     "path_target": "Ziel",
+    "path_app": "Programm",
     "regen_manifest": "Geändertes Rezept als vertrauenswürdig freigeben"
   },
   "state": {
@@ -243,8 +244,10 @@
     "install_rolled_back": "Installation abgebrochen — bereits angelegte Rezept-Daten wurden zurückgenommen.",
     "install_rollback_fail": "Installation abgebrochen, Rollback unvollständig.\nBitte unter Mehr → Deinstallieren bereinigen.",
     "query_error": "Statusprüfung fehlgeschlagen: {error}",
-    "copy_labeled_path": "{label} kopieren",
-    "copy_all_paths": "Alle Pfade kopieren"
+    "copy_labeled_path": "{label}-Pfad kopieren",
+    "copy_all_paths": "Alle Pfade kopieren",
+    "copy_data": "Daten kopieren",
+    "data_copied": "Rezept-Daten in Zwischenablage (Titel, Version, Pfade)"
   },
   "trust": {
     "title": "Rezeptor-Dateien prüfen",
@@ -311,6 +314,13 @@
     "trainer_none": "Noch kein Trainer unter trainer/.",
     "trainer_pick_cancel": "Auswahl abgebrochen.",
     "trainer_pick_error": "Trainer konnte nicht übernommen werden: {error}"
+  },
+  "steam_medicine": {
+    "dialog_title": "Steam erkannt",
+    "dialog_body": "Auf diesem System ist Steam installiert.\n\nFür „{name}“ wird empfohlen, unter Medizin → Laufzeit „Start: über Steam“ zu aktivieren. Dort wählst du die Proton-Version: Steam-Standard (global Steam Play), System-Proton (Distro, falls vorhanden) oder Rezeptor Proton.\n\nOhne Steam-Start bleibt der normale Rezeptor-Proton-Pfad verfügbar.",
+    "dont_show_again": "Diesen Hinweis für dieses Rezept nicht mehr anzeigen",
+    "open_medizin": "Medizin öffnen",
+    "ok": "OK"
   },
   "recipe_sync": {
     "available_title": "Rezept-Updates",
@@ -480,7 +490,11 @@
     "report_file_title": "Rezeptor — Fehlerbericht (sanitisiert)",
     "report_file_time": "Zeit (UTC): {time}",
     "report_file_recipe": "Rezept: {recipe}",
-    "report_file_version": "Version: {version}",
+    "report_file_recipe_name": "Anzeigename: {name}",
+    "report_file_version": "Launcher-Version: {version}",
+    "report_file_recipe_version": "Rezept-Version (Garantie): {version}",
+    "report_file_recipe_detected": "Rezept-Version (erkannt): {version}",
+    "report_file_data_root": "Datenordner: {path}",
     "report_file_distro": "Distro: {distro}",
     "report_file_runtime": "Runtime: {runtime}",
     "report_file_locale": "UI-Sprache: {locale}",
@@ -488,6 +502,8 @@
     "report_file_kernel": "Kernel: {kernel}",
     "report_file_empty": "(keine lesbaren Zeilen)",
     "report_file_read_error": "(Lesefehler: {error})",
+    "report_file_section_data_logs": "--- Install-/Rezept-Logs (Datenordner) ---",
+    "report_file_section_global_logs": "--- Launcher-Logs (~/.local/share/wine-software/logs) ---",
     "install_title": "Installation",
     "install_question": "Installation jetzt starten?",
     "install_reconfirm": "„{name}“ ist bereits eingerichtet.\n\nQuelle/Ziel erneut wählen und Installation ausführen?\n(Wine-Prefix bleibt; Portable kann an neuen Zielordner kopiert werden.)",
@@ -697,12 +713,23 @@
     "refresh": "Aktualisieren",
     "open_folder": "Ordner öffnen",
     "copy_path": "Pfad kopieren",
+    "copy_title": "Titel kopieren",
+    "copy_selection": "Auswahl kopieren",
     "copy_content": "Inhalt kopieren",
     "no_selection": "Keine Log-Datei ausgewählt.",
     "content_copied": "Log-Inhalt in Zwischenablage — {name}",
     "path_copied": "Pfad in Zwischenablage — {path}",
     "folder_opened": "Log-Ordner geöffnet — {path}",
-    "folder_missing": "Log-Ordner nicht gefunden — {path}"
+    "folder_missing": "Log-Ordner nicht gefunden — {path}",
+    "ctx_title": "Titel",
+    "ctx_id": "Rezept-ID",
+    "ctx_version_guaranteed": "Version (Garantie)",
+    "ctx_version_detected": "Version (erkannt)",
+    "ctx_status": "Status",
+    "ctx_runtime": "Runtime",
+    "ctx_launcher": "Launcher",
+    "ctx_author": "Autor",
+    "ctx_distro": "Distro"
   },
   "error": {
     "E_TRUST_MANIFEST": "Rezept-Manifest ungültig",

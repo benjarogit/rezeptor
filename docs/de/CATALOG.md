@@ -8,14 +8,13 @@ nicht jede Quelle ist gleichwertig.
 Im Repository unter `recipes/<id>/` gebündelt, indexiert in `recipes/catalog.json` (`trust: official`).
 CI sichert sie ab (`recipe-lint`, Manifest-Check).
 
-Aktuell **6** offizielle Produktrezepte in **4** Kategorien.
+Aktuell **6** offizielle Produktrezepte in **5** Kategorien.
 
 ### Grafik & Design
 
 | ID | Name | Beschreibung |
 |----|------|--------------|
 | `photoshop` | Adobe Photoshop CC 2021 | Standard-Offline-Installer (22.0.0.35) unter Proton-GE |
-| `photoshop-m0nkrus-220` | Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35) | ISO-only-Pack Photoshop.2021 — eigenes Rezept, nicht Standard und nicht 22.1.1.138 |
 | `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Vollpack inkl. Neural Filters / missing_libs / GenP (optional) |
 
 ### Video & Schnitt
@@ -30,11 +29,17 @@ Aktuell **6** offizielle Produktrezepte in **4** Kategorien.
 |----|------|--------------|
 | `wiso-steuer` | WISO Steuer (Portable) | Portable unter Proton-GE — Quelle wählen, in Zielordner kopieren, starten |
 
+### Dokumente & PDF
+
+| ID | Name | Beschreibung |
+|----|------|--------------|
+| `master-pdf-editor` | Master PDF Editor | MSI 5.9 unter Proton-GE — Pack mit Setup + optional `crack/` |
+
 ### Spiele
 
 | ID | Name | Beschreibung |
 |----|------|--------------|
-| `halo-campaign-evolved` | Halo Campaign Evolved | ElAmigos/RUNE (MULTi13), Proton-GE 11, Offline-Login, Medizin (Grafik/Low-Latency), optional BYOS-Trainer |
+| `halo-campaign-evolved` | Halo Campaign Evolved | ElAmigos/RUNE, Grafik-Presets (Default Empfohlen RTX 2060), optional Steam Non-Steam, BYOS-Trainer |
 
 Vorlagen unter `recipes/_template*` und Einträge unter `recipes/community/` sind **keine** mitgelieferten Produktrezepte.
 
@@ -71,7 +76,7 @@ Katalog-Felder:
 
 ## Rezept-Optionen (Medizin)
 
-Dauerhafte Einstellungen pro Rezept (nicht „einmal installieren“). Button **Medizin** (Icon `kit-medical`) **neben** **Mehr** (eigener Button) öffnet einen Dialog mit Checkbox + Erklärungstext. Werte in `{data_root}/options.env` steuern Install/Reparieren/Start.
+Dauerhafte Einstellungen pro Rezept (nicht „einmal installieren“). Button **Medizin** (Icon `kit-medical`) **neben** **Mehr** (eigener Button) öffnet einen Dialog mit Schaltern, **Choice-Combos** und Erklärungstext. Werte in `{data_root}/options.env` steuern Install/Reparieren/Start.
 
 Nach dem Umschalten kann der Primary-CTA zu **„Jetzt reparieren“** werden — einmal ausführen, damit Prefs/Prefix nachziehen.
 
@@ -79,8 +84,19 @@ Sinnvoll nur, wenn die Option Verhalten ändert (z. B. Feature opt-out). Nicht
 
 Photoshop: drei UI-Schalter (`PHOTOSHOP_UI_HOME_SCREEN`, `PHOTOSHOP_UI_RICH_TOOLTIPS`, `PHOTOSHOP_UI_MODERN_NEW`), Default `false` — siehe [Benutzerhandbuch](USER-GUIDE.md#medizin-rezept-optionen).
 
+Halo: Qualitäts-Preset (`HALO_GFX_PRESET`, Default `balanced` / Empfohlen RTX 2060), Grafik-Toggles, optional **Start über Steam** + Proton-Choice — siehe [Benutzerhandbuch](USER-GUIDE.md#medizin-rezept-optionen).
+
 ```yaml
 options:
+  - id: gfx_preset
+    env: HALO_GFX_PRESET
+    type: choice
+    default: balanced
+    choices:
+      - id: balanced
+        label: { de: "Empfohlen …", en: "Recommended …" }
+    label: { de: "…", en: "…" }
+    tip: { de: "…", en: "…" }
   - id: nvidia_libs
     env: PREMIERE_NVIDIA_LIBS
     type: bool

@@ -286,8 +286,7 @@ recipe_desktop::remove() {
             "$d/photoshop.desktop" \
             "$d/wiso-steuer.desktop" \
             2>/dev/null || true
-        if [ "$RECIPE_ID" = "photoshop" ] || [ "$RECIPE_ID" = "photoshop-m0nkrus" ] \
-            || [ "$RECIPE_ID" = "photoshop-m0nkrus-220" ]; then
+        if [ "$RECIPE_ID" = "photoshop" ] || [ "$RECIPE_ID" = "photoshop-m0nkrus" ]; then
             find "$d" -maxdepth 1 -type f \( -iname '*photoshop*' -o -iname '*adobe*photoshop*' \) \
                 -delete 2>/dev/null || true
         fi
@@ -303,8 +302,7 @@ recipe_desktop::remove() {
 
     for s in 16 22 24 32 48 64 128 256 512; do
         rm -f "${icon_dir}/${s}x${s}/apps/${theme}.png" 2>/dev/null || true
-        if [ "$RECIPE_ID" = "photoshop" ] || [ "$RECIPE_ID" = "photoshop-m0nkrus" ] \
-            || [ "$RECIPE_ID" = "photoshop-m0nkrus-220" ]; then
+        if [ "$RECIPE_ID" = "photoshop" ] || [ "$RECIPE_ID" = "photoshop-m0nkrus" ]; then
             rm -f "${icon_dir}/${s}x${s}/apps/photoshop.png" 2>/dev/null || true
         fi
         [ "$RECIPE_ID" = "wiso-steuer" ] && rm -f "${icon_dir}/${s}x${s}/apps/wiso-steuer-wine.png" 2>/dev/null || true

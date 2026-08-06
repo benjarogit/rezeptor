@@ -39,7 +39,7 @@ wine_runtime::_load_lock() {
         # shellcheck source=/dev/null
         source "$rt_dir/runtime.lock"
     fi
-    export PROTON_GE_TAG="${PROTON_GE_TAG:-GE-Proton10-28}"
+    export PROTON_GE_TAG="${PROTON_GE_TAG:-GE-Proton11-3}"
     export PROTON_GE_URL="${PROTON_GE_URL:-https://github.com/GloriousEggroll/proton-ge-custom/releases/download/${PROTON_GE_TAG}/${PROTON_GE_TAG}.tar.gz}"
     export PROTON_GE_SHA256="${PROTON_GE_SHA256:-}"
 }
@@ -86,7 +86,7 @@ wine_runtime::_proton_bin_works() {
 # dir with a writable wrap where wine → wine64.
 wine_runtime::_proton_wine64_wrap_dir() {
     local _bin32="$1" bin64="$2" tag wrap f name
-    tag="${PROTON_GE_TAG:-GE-Proton10-28}"
+    tag="${PROTON_GE_TAG:-GE-Proton11-3}"
     wrap="${XDG_CACHE_HOME:-$HOME/.cache}/rezeptor/wine-wrap-${tag}"
     mkdir -p "$wrap"
     for f in "$_WINE_RUNTIME_ROOT/files/bin"/*; do
@@ -161,7 +161,7 @@ wine_runtime::_find_steam_ge_tag_dir() {
 # Prefer exact lock tag: APPDIR bundle → user cache → Steam same tag.
 # Never pick a random other GE-* under the tree (healing pin must match).
 wine_runtime::_find_proton_dir() {
-    local tag="${PROTON_GE_TAG:-GE-Proton10-28}"
+    local tag="${PROTON_GE_TAG:-GE-Proton11-3}"
     local base appdir="${APPDIR:-}"
     local candidate=""
     base="$(wine_runtime::_user_runtime_base)"

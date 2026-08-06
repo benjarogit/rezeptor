@@ -1,6 +1,6 @@
 # Referenz-Muster: Offline-Installer
 
-**Zielgruppe: Rezept-Autoren.** Beispiel-Rezepte: `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere` · Vorlage: `recipes/_template-installer/`
+**Zielgruppe: Rezept-Autoren.** Beispiel-Rezepte: `photoshop`, `photoshop-m0nkrus`, `premiere`, `master-pdf-editor` · Vorlage: `recipes/_template-installer/`
 
 ## Wann dieses Muster?
 
@@ -21,12 +21,11 @@ Windows liefert einen **Offline-Installer** (Ordner mit `Set-up.exe` / `Setup.ex
 
 ### Pack-Ordner (m0nkrus-Stil)
 
-Drei Photoshop-Rezepte (ein Pack = ein Rezept):
+Zwei Photoshop-Rezepte (ein Pack = ein Rezept):
 
 | ID | Pack | Garantie |
 |----|------|----------|
 | `photoshop` | Standard Offline (Set-up + packages) | 22.0.0.35 |
-| `photoshop-m0nkrus-220` | Ordner `Photoshop.2021` / `Adobe.Photoshop.2021.Multilingual.iso` (ISO-only) | 22.0.0.35 |
 | `photoshop-m0nkrus` | Pack 22.1.1.138 + Neural / missing_libs / GenP | 22.1.1.138 |
 
 Bei `photoshop-m0nkrus`: Quelle = **kompletter Pack-Ordner** (ISO + Sibling-Extras). Rezeptor:
@@ -35,23 +34,24 @@ Bei `photoshop-m0nkrus`: Quelle = **kompletter Pack-Ordner** (ISO + Sibling-Extr
 2. setzt `RECIPE_PACK_ROOT` und wendet nach dem Adobe-Setup Extras an (`core/recipe-photoshop-pack.sh`): `ps2021_missing_libs.7z`, Neural-Filters-SFX → Wine-`PluginData`
 3. startet **kein** GenP (ISO laut Pack vorgepatcht; Cure nur manuell bei Aktivierungsverlust)
 
-Bei `photoshop-m0nkrus-220`: Quelle = ISO-only-Pack (kein Neural/GenP); gleiche Core-Install-API.
-
 Varianten teilen die Core-API mit `photoshop` über dünne Wrapper:
 
 - `core/recipe-photoshop-m0nkrus-install.sh` / `-launch.sh`
-- `core/recipe-photoshop-m0nkrus-220-install.sh` / `-launch.sh`
 
 (`module: recipe_photoshop::install` in `recipe.yml`; ohne Wrapper findet `load_app_module` die Funktionen nicht.)
+
+### MSI (Master PDF Editor)
+
+`master-pdf-editor`: Pack-Ordner mit `MasterPDFEditor-setup-*.msi` (+ optional `crack/MasterPDFEditor.exe`). Core: `recipe_master_pdf_editor::run_msi` (Timeout, Erfolg wenn EXE da) + `::finalize` (WORK_ROOT / Crack). Kein Crack-Binary im Repo.
 
 ## Bekannte Fallen
 
 | Falle | Hinweis |
 |-------|---------|
-| GPU/OpenGL in Adobe-Apps | Rezept setzt Prefs über Proton-Graphics-DLLs |
-| Quelle ≠ Repo-Pfad | Nutzer bringt Offline-Medium mit; Heuristik: Pack-Ordner / `Downloads/` |
+| GPU/OpenGL in Adobe-Apps | Rezept setzt Prefs über Proton-Grafik-DLLs |
+| Quelle ≠ Repo-Pfad | Nutzer bringt Offline-Medium; Heuristik: Pack-Ordner / `Downloads/` |
 | Nur-ISO statt Pack | Install ok, Neural Filters / missing_libs fehlen |
-| Ziel leer | Pflichtwahl — kein stiller Default aus `target_default` / Home |
-| Ziel umziehen | Mehr → **Ziel verschieben…** (`scripts/recipe-relocate.sh`) |
+| Leeres Ziel | Pflichtwahl — kein stiller Default aus `target_default` / Home |
+| Ziel verschieben | Mehr → **Ziel verschieben…** (`scripts/recipe-relocate.sh`) |
 
-Schnellstart & Typenübersicht: [ENTWICKLER.md](ENTWICKLER.md) · Spezifikation: [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)
+Schnellstart & Typ-Übersicht: [ENTWICKLER.md](ENTWICKLER.md) · Spec: [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md)

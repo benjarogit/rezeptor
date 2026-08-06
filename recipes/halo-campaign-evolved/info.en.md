@@ -13,9 +13,10 @@ On Linux there was a second hurdle: the game ships a **newer Microsoft runtime**
 ## Steam
 
 - **Steam does not have to be installed.** The pack brings its own Steam replacement layer and runs offline.
-- **If Steam is installed, quit it first** — completely, including the background process `steamwebhelper`. Otherwise the launch stops with a message. This is the most common pitfall.
+- **Optional Medizin “Launch via Steam”:** Rezeptor registers a Non-Steam shortcut and starts via the client (prefix stays Rezeptor’s). Steam is only stopped when the shortcut is missing or must be rewritten — not on every launch.
+- Without Steam medicine: **quit Steam first** (including `steamwebhelper`), or the offline RUNE start can collide with Steam.
 
-You can check in a terminal with `pgrep -x steam` and `pgrep -x steamwebhelper` — neither may print anything.
+Check: `pgrep -x steam` / `pgrep -x steamwebhelper`.
 
 ## Source and target
 
@@ -38,7 +39,15 @@ Community “GDK / OnlineFix” packs target the Microsoft Store build (AppX / D
 
 ## Mods & graphics (Medizin)
 
-Under **Medizin** you can choose optional graphics presets and mods before launch. Always on: MSVC runtime, RUNE, real `libHttpClient`. Default is **original mode** (no forced Lumen/HWRT CVars) — those caused a black screen/crash after the intro under Proton. Only enable graphics options if you need them.
+Under **Medizin**:
+
+- **Quality preset** (`HALO_GFX_PRESET`): Very low → Ultra. Default **Recommended (RTX 2060 / 1080p144)** — sharp and fluid; soft VRAM caps on. Ultra skips soft caps.
+- Individual toggles (**clear image**, **low-latency**, **VRR**, **gamescope**, **force 6 GB caps**) stay fine-tuning above the preset.
+- **Launch via Steam** (optional): Non-Steam “… (Rezeptor)” shortcut with Proton choice and Steam grid art; soft low-latency under Steam. Needs `python-vdf`.
+
+Always on: MSVC runtime, RUNE, real `libHttpClient`. Default remains **original mode** without forced Lumen HWRT CVars (black-screen trap under Proton).
+
+**Shorten intro:** replaces only `LogoParade.mp4` with a valid short black video — `Splash.bmp` is left alone (fake stubs crash at launch).
 
 Community mods are **not shipped** (BYOS). Drop folder:
 
@@ -53,7 +62,7 @@ A `README.txt` there lists the layout (`ue4ss/`, `viewmodels/`, …). Enable the
 ## Notes
 
 - **Shader loading** (“STARTING MJOLNIR SYSTEMS” / progress bar on the main menu): normal, especially on first launch or after a graphics/driver change. Can take **several minutes** — don’t quit the game or it starts over. Then wait 1–2 minutes on the menu before starting a mission (fewer hitches while moving).
-- **Graphics / mouse:** Medizin **Clear image** = junk effects off only; quality stays around **Medium** (not Very Low). **Lower mouse latency** (default on): enables the real **winewayland** driver (no XWayland — that was the main lag on KDE), plus Engine.ini lock, Reflex/NVAPI, FPS cap near monitor Hz. Launch log should say `winewayland.drv aktiv`. If the window never appears: turn the option off, or try a Plasma X11 session.
+- **Graphics / input:** Preset sets the quality ladder; **clear image** turns junk effects off only. **Lower input latency** (default on): winewayland / soft LL under Steam, vkd3d frame queue, FPS near Hz. Log: `Preset=…`, `winewayland.drv aktiv`, `gamescope`, or Steam shortcut AppID. No window → turn options off, or try Plasma X11.
 - Xbox/XAL sign-in always runs **inside the game process** (`SteamDeck=1`) — required under Proton, not a Medizin toggle.
 - The ISO is **mounted** (no full extract of ~66 GiB); the same volume is reused (no triple mounts).
 - Setup runs silently (Inno `/VERYSILENT` + `/LANG` + `/DIR=`). Cancel does not spawn extra installer windows.

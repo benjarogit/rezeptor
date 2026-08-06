@@ -9,6 +9,7 @@ from PyQt6.QtCore import QSize, Qt, QTimer
 from PyQt6.QtGui import QAction, QCloseEvent
 from PyQt6.QtWidgets import (
     QCheckBox,
+    QComboBox,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
@@ -30,6 +31,10 @@ from recipe_options import (
     write_option_env,
     write_option_value,
 )
+from steam_proton_catalog import (
+    curated_steam_proton_choices,
+    is_steam_proton_option,
+)
 from trainer_deploy import (
     TrainerDeployError,
     deploy_trainer_source,
@@ -37,7 +42,7 @@ from trainer_deploy import (
 )
 from ui_fluent import FLUENT_AVAILABLE, RoundMenu
 from ui_icons import fa_icon
-from ui_rezeptor import SegmentTabBar
+from ui_rezeptor import LimitedComboBox, SegmentTabBar
 from ui_source import pick_directory, pick_open_file
 from ui_styles import COLOR_PARCHMENT, MUTED, style_status_label
 from ui_window import mark_force_close, mark_user_dismiss
@@ -56,6 +61,7 @@ _REPAIR_AFTER = frozenset(
         "HALO_GFX_EXCLUSIVE_FS",
         "HALO_GFX_VRAM_6GB",
         "HALO_GFX_VRR",
+        "HALO_GFX_PRESET",
         "HALO_SKIP_INTRO",
         "HALO_MOD_VIEWMODELS",
         "HALO_MOD_HIDDEN_SKINS",
@@ -116,6 +122,7 @@ class MedizinDialog(QDialog):
         self._options = options
         self._needs_repair_hint = False
         self._boxes: list[tuple[RecipeOption, QCheckBox]] = []
+        self._combos: list[tuple[RecipeOption, QComboBox]] = []
         self._trainer_status: QLabel | None = None
 
         lay = QVBoxLayout(self)
@@ -205,7 +212,7 @@ class MedizinDialog(QDialog):
     def _build_options_page(
         self,
         opts: list[RecipeOption],
-        values: dict[str, bool],
+        values: dict[str, bool | str],
         locale: str,
     ) -> QWidget:
         scroll = QScrollArea()
@@ -223,30 +230,51 @@ class MedizinDialog(QDialog):
             block.setSpacing(2)
             block.setContentsMargins(0, 0, 0, 0)
 
-            row = QHBoxLayout()
-            row.setSpacing(4)
-            row.setContentsMargins(0, 0, 0, 0)
-            cb = QCheckBox(opt.label_for(locale))
-            cb.setChecked(bool(values.get(opt.id, opt.default)))
-            cb.toggled.connect(
-                lambda checked, o=opt: self._on_toggle(o, checked)
-            )
-            row.addWidget(cb, stretch=1)
-            if opt.pick is not None:
-                row.addWidget(
-                    self._make_pick_button(opt),
-                    alignment=Qt.AlignmentFlag.AlignTop,
+            if opt.type == "choice":
+                title = QLabel(opt.label_for(locale))
+                title.setWordWrap(True)
+                block.addWidget(title)
+                combo = LimitedComboBox(self, max_visible=8)
+                for cid, lab in self._choice_items(opt, locale):
+                    combo.addItem(lab, cid)
+                current = str(values.get(opt.id, opt.default))
+                idx = combo.findData(current)
+                if idx < 0 and combo.count():
+                    idx = 0
+                    current = str(combo.itemData(0))
+                if idx >= 0:
+                    combo.setCurrentIndex(idx)
+                combo.currentIndexChanged.connect(
+                    lambda _i, o=opt, c=combo: self._on_choice(o, c)
                 )
-            block.addLayout(row)
+                block.addWidget(combo)
+                self._combos.append((opt, combo))
+            else:
+                row = QHBoxLayout()
+                row.setSpacing(4)
+                row.setContentsMargins(0, 0, 0, 0)
+                cb = QCheckBox(opt.label_for(locale))
+                cb.setChecked(bool(values.get(opt.id, opt.default)))
+                cb.toggled.connect(
+                    lambda checked, o=opt: self._on_toggle(o, checked)
+                )
+                row.addWidget(cb, stretch=1)
+                if opt.pick is not None:
+                    row.addWidget(
+                        self._make_pick_button(opt),
+                        alignment=Qt.AlignmentFlag.AlignTop,
+                    )
+                block.addLayout(row)
+                self._boxes.append((opt, cb))
 
-            if opt.pick is not None:
-                status = QLabel(self._trainer_status_text())
-                status.setWordWrap(True)
-                status.setObjectName("muted")
-                status.setContentsMargins(22, 0, 0, 0)
-                self._style_muted(status)
-                self._trainer_status = status
-                block.addWidget(status)
+                if opt.pick is not None:
+                    status = QLabel(self._trainer_status_text())
+                    status.setWordWrap(True)
+                    status.setObjectName("muted")
+                    status.setContentsMargins(22, 0, 0, 0)
+                    self._style_muted(status)
+                    self._trainer_status = status
+                    block.addWidget(status)
 
             tip = QLabel(opt.tip_for(locale) or "")
             tip.setWordWrap(True)
@@ -264,10 +292,44 @@ class MedizinDialog(QDialog):
             )
             wrap.setLayout(block)
             col.addWidget(wrap)
-            self._boxes.append((opt, cb))
         col.addStretch(1)
         scroll.setWidget(host)
         return scroll
+
+    def _choice_items(
+        self, opt: RecipeOption, locale: str
+    ) -> list[tuple[str, str]]:
+        """(value, label) for combo — Steam Proton uses live host catalog."""
+        if is_steam_proton_option(opt):
+            code = (locale or "de").split("-", 1)[0].lower()
+            items: list[tuple[str, str]] = []
+            for c in curated_steam_proton_choices():
+                lab = c.label_de if code == "de" else c.label_en
+                items.append((c.tool, lab))
+            if items:
+                return items
+        out: list[tuple[str, str]] = []
+        for ch in opt.choices:
+            out.append((ch.id, ch.label_for(locale)))
+        return out
+
+    def _on_choice(self, opt: RecipeOption, combo: QComboBox) -> None:
+        val = combo.currentData()
+        if val is None:
+            return
+        try:
+            write_option_value(self._data_root, opt, str(val))
+        except OSError as exc:
+            self._set_status(
+                t("medizin.error_body", error=str(exc)),
+                "error",
+            )
+            return
+        if opt.env in _REPAIR_AFTER:
+            self._needs_repair_hint = True
+            self._set_status(t("medizin.apply_repair_hint"), "warn")
+        else:
+            self._set_status(t("medizin.saved_ok"), "ok")
 
     def _make_pick_button(self, opt: RecipeOption) -> QToolButton:
         btn = QToolButton(self)

@@ -2,11 +2,11 @@
 
 ## Bundled product recipes
 
-Full list **by category** (Graphics, Video, Finance, Games):
+Full list **by category** (Graphics, Video, Finance, Documents, Games):
 
 → **[Recipe catalog](CATALOG.md#official-recipes-bundled)**
 
-Short: 6 official IDs — `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere`, `wiso-steuer`, `halo-campaign-evolved`.
+Short: 6 official IDs — `photoshop`, `photoshop-m0nkrus`, `premiere`, `wiso-steuer`, `master-pdf-editor`, `halo-campaign-evolved`.
 
 ## For authors
 

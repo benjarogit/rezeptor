@@ -47,6 +47,38 @@ env:
   WINEDEBUG: "-all"
   RECIPE_WINE_SILENT: "1"
 options:
+  - id: gfx_preset
+    env: HALO_GFX_PRESET
+    group: graphics
+    type: choice
+    default: balanced
+    choices:
+      - id: ultra_low
+        label:
+          de: "Sehr niedrig (Notlauf / max. FPS)"
+          en: "Very low (emergency / max FPS)"
+      - id: low
+        label:
+          de: "Niedrig"
+          en: "Low"
+      - id: balanced
+        label:
+          de: "Empfohlen (RTX 2060 / 1080p144)"
+          en: "Recommended (RTX 2060 / 1080p144)"
+      - id: high
+        label:
+          de: "Hoch"
+          en: "High"
+      - id: ultra
+        label:
+          de: "Ultra (6-GB-VRAM-Risiko)"
+          en: "Ultra (6 GB VRAM risk)"
+    label:
+      de: "Grafik: Qualitäts-Preset"
+      en: "Graphics: quality preset"
+    tip:
+      de: "Leiter für Texturen/Lumen/Effekte. Default „Empfohlen“ ist auf RTX 2060 6 GB + 1080p144 abgestimmt (scharf, flüssig). Die Schalter darunter (Klares Bild, Latenz, 6‑GB-Caps, …) bleiben Feintuning. Ultra ohne Soft-Caps — bei Schwarzbild/Hitches zurück auf Empfohlen."
+      en: "Ladder for textures/Lumen/effects. Default “Recommended” is tuned for RTX 2060 6 GB + 1080p144 (sharp and fluid). Toggles below (clear image, latency, 6 GB caps, …) stay fine-tuning. Ultra skips soft caps — if black screen/hitches, switch back to Recommended."
   - id: gfx_clear_image
     env: HALO_GFX_CLEAR_IMAGE
     group: graphics
@@ -56,8 +88,8 @@ options:
       de: "Grafik: Klares Bild (Blur / Rütteln aus)"
       en: "Graphics: clear image (blur / shake off)"
     tip:
-      de: "Nur unnötige Effekte aus (Blur, Rütteln, Aberration, HUD-Parallax, Film Grain) — Qualität bleibt. Steht die Qualität noch auf Niedrig/Sehr niedrig, wird einmal auf Medium angehoben (guter Kompromiss). Höher darfst du im Menü selbst wählen."
-      en: "Only turns off junk effects (blur, shake, aberration, HUD parallax, film grain) — does not dump quality to Very Low. If quality is still Low/Very Low, bumps to Medium (solid compromise). Set higher in the menu if you want."
+      de: "Nur unnötige Effekte aus (Blur, Rütteln, Aberration, HUD-Parallax, Film Grain). Die Qualitätsleiter kommt vom Grafik-Preset darüber."
+      en: "Only turns off junk effects (blur, shake, aberration, HUD parallax, film grain). Quality ladder comes from the graphics preset above."
   - id: gfx_exclusive_fs
     env: HALO_GFX_EXCLUSIVE_FS
     group: graphics
@@ -75,22 +107,69 @@ options:
     type: bool
     default: true
     label:
-      de: "Grafik: Weniger Maus-Verzögerung"
-      en: "Graphics: lower mouse latency"
+      de: "Grafik: Weniger Eingabe-Verzögerung"
+      en: "Graphics: lower input latency"
     tip:
-      de: "Empfohlen: winewayland (nicht XWayland), vkd3d nur 1 Frame Queue (statt 3), UE GTSync, Reflex/NVAPI, FPS nahe Hz, Engine.ini-Lock. Bei Mikrorucklern selten VKD3D_SWAPCHAIN_LATENCY_FRAMES=2 in options.env. Start kaputt → aus."
-      en: "Recommended: winewayland (not XWayland), vkd3d 1-frame queue (not 3), UE GTSync, Reflex/NVAPI, FPS near Hz, Engine.ini lock. If micro-stutter: try VKD3D_SWAPCHAIN_LATENCY_FRAMES=2 in options.env. Won't start → turn off."
+      de: "Betrifft Maus und Bewegung (gleiche Frame-Queue). winewayland, vkd3d 1 Frame, UE GTSync + FinishCurrentFrame, Reflex/NVAPI, FPS nahe Hz. Bei Mikrorucklern: VKD3D_SWAPCHAIN_LATENCY_FRAMES=2 in options.env. Start kaputt → aus."
+      en: "Affects look and movement (same frame queue). winewayland, vkd3d 1-frame, UE GTSync + FinishCurrentFrame, Reflex/NVAPI, FPS near Hz. Micro-stutter: try VKD3D_SWAPCHAIN_LATENCY_FRAMES=2 in options.env. Won't start → turn off."
+  - id: gfx_gamescope
+    env: HALO_GFX_GAMESCOPE
+    group: graphics
+    type: bool
+    default: false
+    label:
+      de: "Grafik: gamescope (weniger Lag)"
+      en: "Graphics: gamescope (lower lag)"
+    tip:
+      de: "Startet Halo in Valve-gamescope statt direkt unter KWin — oft spürbar weniger Present-/Input-Lag (Maus + Laufen). Braucht paket gamescope. Bei Startproblemen aus. Zusammen mit „Weniger Eingabe-Verzögerung“ empfohlen."
+      en: "Runs Halo inside Valve gamescope instead of directly under KWin — often noticeably lower present/input lag (look + move). Needs the gamescope package. Turn off if launch fails. Best with “lower input latency”."
+  - id: launch_via_steam
+    env: HALO_LAUNCH_VIA_STEAM
+    group: runtime
+    type: bool
+    default: false
+    label:
+      de: "Start: über Steam (empfohlen)"
+      en: "Launch: via Steam (recommended)"
+    tip:
+      de: "An: Rezeptor setzt Non-Steam „… (Rezeptor)“ mit gewähltem Proton + Startoptionen, startet Steam falls nötig, dann das Spiel. Low-Latency unter Steam ohne Tear/FinishCurrentFrame (sonst oft Schwarzbild). Bei Rest-Schwarzbild „Weniger Eingabe-Verzögerung“ testweise aus. Aus: normaler Rezeptor-Proton-Start. Store-Eintrag „Halo: Campaign Evolved“ nicht nutzen. Braucht python-vdf."
+      en: "On: Rezeptor registers Non-Steam “… (Rezeptor)” with the chosen Proton + launch options, starts Steam if needed, then the game. Low-latency under Steam omits Tear/FinishCurrentFrame (otherwise often a black window). If still black, try turning off “lower input latency”. Off: normal Rezeptor Proton launch. Do not use the store entry “Halo: Campaign Evolved”. Needs python-vdf."
+  - id: steam_proton
+    env: HALO_STEAM_PROTON
+    group: runtime
+    type: choice
+    when: steam
+    default: GE-Proton11-3
+    choices:
+      - id: steam_default
+        label:
+          de: "Steam-Standard (global Steam Play)"
+          en: "Steam default (global Steam Play)"
+      - id: system
+        label:
+          de: "System-Proton (Distro, falls erkannt)"
+          en: "System Proton (distro, if detected)"
+      - id: GE-Proton11-3
+        label:
+          de: "Rezeptor Proton (GE-Proton11-3)"
+          en: "Rezeptor Proton (GE-Proton11-3)"
+    label:
+      de: "Steam: Proton-Version"
+      en: "Steam: Proton version"
+    tip:
+      de: "Nur bei „Start: über Steam“. (1) Steam-Standard = Force aus → was unter Steam → Steam Play für alle Titel global gewählt ist. (2) System-Proton = Distro-Tool (CachyOS, Nobara, …), wenn in compatibilitytools.d gefunden. (3) Rezeptor = GE-Proton11-3 wie ohne Steam-Medizin (getestet). Die GUI ersetzt die Liste dynamisch durch erkannte Tools."
+      en: "Only with “Launch: via Steam”. (1) Steam default = Force off → whatever is set under Steam → Steam Play for all titles. (2) System Proton = distro tool (CachyOS, Nobara, …) if found in compatibilitytools.d. (3) Rezeptor = GE-Proton11-3 as without Steam medicine (tested). The GUI replaces the list dynamically with discovered tools."
   - id: gfx_vram_6gb
     env: HALO_GFX_VRAM_6GB
     group: graphics
     type: bool
     default: false
     label:
-      de: "Grafik: 6-GB-VRAM-Preset"
-      en: "Graphics: 6 GB VRAM preset"
+      de: "Grafik: 6-GB-VRAM-Caps erzwingen"
+      en: "Graphics: force 6 GB VRAM caps"
     tip:
-      de: "Weiche Lumen/Nanite-Caps für 6 GB VRAM (z. B. RTX 2060). Bei Schwarzem Bild nach dem Intro wieder aus. Bei 8 GB+ meist aus lassen."
-      en: "Soft Lumen/Nanite caps for 6 GB VRAM (e.g. RTX 2060). Turn off if you get a black screen after the intro. Leave off on 8 GB+."
+      de: "Weiche Lumen/Nanite-Caps. Presets bis inkl. Hoch setzen Caps bereits selbst — dieser Schalter erzwingt sie auch bei Ultra. Bei Schwarzem Bild nach dem Intro aus."
+      en: "Soft Lumen/Nanite caps. Presets through High already apply caps — this toggle forces them on Ultra too. Turn off if you get a black screen after the intro."
   - id: gfx_vrr
     env: HALO_GFX_VRR
     group: graphics
@@ -123,11 +202,11 @@ options:
     type: bool
     default: false
     label:
-      de: "Intro-Video und Splash überspringen"
-      en: "Skip intro video and splash"
+      de: "Intro-Video kürzen"
+      en: "Shorten intro video"
     tip:
-      de: "Ersetzt LogoParade/Splash durch Stubs. Originale bleiben als .rezeptor_bak."
-      en: "Replaces LogoParade/Splash with stubs. Originals kept as .rezeptor_bak."
+      de: "Ersetzt nur LogoParade.mp4 durch ein gültiges kurzes Schwarz-Video. Splash.bmp bleibt unverändert (kaputte Stubs → Sofort-Absturz). Original als .rezeptor_bak."
+      en: "Replaces only LogoParade.mp4 with a valid short black video. Splash.bmp stays untouched (fake stubs crash at launch). Original kept as .rezeptor_bak."
   - id: mod_viewmodels
     env: HALO_MOD_VIEWMODELS
     group: mods

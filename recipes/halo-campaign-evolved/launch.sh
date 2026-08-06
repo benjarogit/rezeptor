@@ -27,6 +27,10 @@ if [ -z "$EXE" ] || [ ! -f "$EXE" ]; then
 fi
 [ -n "$EXE" ] && [ -f "$EXE" ] || recipe_hooks::die "Nicht installiert — Halo-EXE fehlt (Setup / Update prüfen)"
 
+# Steam Non-Steam / library launch needs the Steam client (RUNE tip still applies).
+if recipe_halo_campaign_evolved::steam_proton_wanted; then
+    export HALO_ALLOW_STEAM=1
+fi
 recipe_halo_campaign_evolved::require_steam_stopped
 
 # D3D12/DXVK + libvkd3d-utils (Proton-11-DXCore braucht wined3d/utils)
@@ -57,6 +61,9 @@ export SteamGameId="${SteamGameId:-2806050}"
 # Medizin toggle — required for this recipe under Proton-GE.
 export SteamDeck=1
 
+# Remember host DISPLAY before low-latency winewayland unsets it (gamescope needs it).
+export HALO_HOST_DISPLAY="${DISPLAY:-}"
+
 # Overlays off + NVIDIA shader cache + PowerMizer (host). Always — not Medizin.
 recipe_halo_campaign_evolved::apply_host_perf || true
 
@@ -64,15 +71,11 @@ recipe_halo_campaign_evolved::apply_host_perf || true
 # in xvfb/offscreen via recipe_wine_silent::run — kills winewayland + adds lag.
 export RECIPE_WINE_SHOW_GUI=1
 
-cd "$(dirname "$EXE")" || exit 1
 # Win64-EXE (Community: Meteorite/Binaries/Win64 — nicht Desktop-Shortcut).
-# Keine OSSNull-CVars: unter Wine → FMallocBinned2.
-
 # Optional BYOS trainer in the same prefix (Medizin → Trainer mitstarten).
 # Without a co-process we can exec; with trainer we must wait on the game PID.
 if recipe_halo_campaign_evolved::trainer_launch_enabled; then
-    # Keep winewayland: never leave DISPLAY set (XWayland path / extra lag).
-    env -u DISPLAY wine "./$(basename "$EXE")" "$@" &
+    recipe_halo_campaign_evolved::run_game "$EXE" "$@" &
     _halo_game_pid=$!
     recipe_halo_campaign_evolved::spawn_trainer_after_delay || true
     wait "$_halo_game_pid"
@@ -85,5 +88,4 @@ if recipe_halo_campaign_evolved::trainer_launch_enabled; then
     exit "$_rc"
 fi
 
-# env -u DISPLAY: force winewayland even if a parent re-exported DISPLAY=:0.
-exec env -u DISPLAY wine "./$(basename "$EXE")" "$@"
+recipe_halo_campaign_evolved::run_game "$EXE" "$@"

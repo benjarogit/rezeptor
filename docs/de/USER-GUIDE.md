@@ -44,6 +44,19 @@ Unter Wine sind manche Windows-UI-Features fragil. Rezeptor setzt deshalb standa
 
 Standard jeweils **aus**. Details auch in den Tipps im Medizin-Dialog.
 
+### Halo Campaign Evolved
+
+| Option | Wirkung |
+|--------|---------|
+| **Qualitäts-Preset** (`HALO_GFX_PRESET`) | Leiter Sehr niedrig → Ultra. Default **Empfohlen (RTX 2060 / 1080p144)** — Texturen/Geometrie hoch, Lumen/Reflections medium, Soft-VRAM-Caps. Ultra ohne Soft-Caps (6‑GB-Risiko). |
+| Klares Bild / Low-Latency / VRR / gamescope | Feintuning **über** dem Preset (Effekte, Latenz, Present). |
+| 6‑GB-VRAM-Caps erzwingen | Caps auch bei Ultra; Empfohlen/Niedrig/Hoch setzen Caps bereits selbst. |
+| Start über Steam | Non-Steam-Shortcut mit gewähltem Proton + Startoptionen; Soft-Low-Latency unter Steam (ohne Tear/FinishCurrentFrame). Braucht `python-vdf`. |
+| Steam Proton | Steam-Standard / System-Proton / Rezeptor GE-Proton11-3. |
+| Trainer / Mods / Intro kürzen | BYOS — siehe Rezept-Infotext. |
+
+Nach Preset-/Grafikwechsel: einmal **Reparieren** oder **Starten**, damit `Engine.ini` / Halo-*UserSettings greifen.
+
 ## Status & Validierung
 
 - Optional **Validieren beim Start** (Einstellungen)

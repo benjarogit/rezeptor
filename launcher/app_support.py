@@ -344,7 +344,7 @@ def describe_runtime_for_report() -> str:
 
 
 def proton_ge_short_tag() -> str:
-    """GE-Proton10-28 → 10-28 for compact UI badges."""
+    """GE-Proton11-3 → 11-3 for compact UI badges."""
     tag = read_proton_ge_tag()
     if tag.startswith("GE-Proton"):
         return tag[len("GE-Proton") :] or tag
@@ -361,7 +361,15 @@ def bug_report_template_name() -> str:
     return "bug_report_de.md" if _ui_locale() == "de" else "bug_report.md"
 
 
-def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
+def collect_report_bundle(
+    recipe_id: str,
+    session_id: str = "",
+    *,
+    data_root: Path | None = None,
+    recipe_name: str = "",
+    version_guaranteed: str = "",
+    version_detected: str = "",
+) -> Path:
     from i18n import t
 
     LOG_ROOT.mkdir(parents=True, exist_ok=True)
@@ -377,12 +385,31 @@ def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
         t("dialog.report_file_title"),
         t("dialog.report_file_time", time=datetime.now(timezone.utc).isoformat()),
         t("dialog.report_file_recipe", recipe=recipe_id),
-        t("dialog.report_file_version", version=read_version()),
-        t("dialog.report_file_distro", distro=detect_distro()),
-        t("dialog.report_file_runtime", runtime=runtime),
-        t("dialog.report_file_locale", locale=locale),
-        "",
     ]
+    if recipe_name.strip():
+        lines.append(t("dialog.report_file_recipe_name", name=recipe_name.strip()))
+    if version_guaranteed.strip():
+        lines.append(
+            t("dialog.report_file_recipe_version", version=version_guaranteed.strip())
+        )
+    if version_detected.strip():
+        lines.append(
+            t("dialog.report_file_recipe_detected", version=version_detected.strip())
+        )
+    lines.extend(
+        [
+            t("dialog.report_file_version", version=read_version()),
+            t("dialog.report_file_distro", distro=detect_distro()),
+            t("dialog.report_file_runtime", runtime=runtime),
+            t("dialog.report_file_locale", locale=locale),
+            "",
+        ]
+    )
+    if data_root is not None:
+        lines.append(
+            t("dialog.report_file_data_root", path=sanitize_log_text(str(data_root)))
+        )
+        lines.append("")
     if session_id:
         lines.append(t("dialog.report_file_session", session=session_id))
         lines.append("")
@@ -400,41 +427,19 @@ def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
         pass
     lines.append("")
 
-    if LOG_ROOT.is_dir():
-        # Recipe logs alone miss winetricks_msxml_*.log (no recipe id in the name).
-        by_mtime: dict[Path, float] = {}
-        patterns = (
-            ["*.log"]
-            if recipe_id == "launcher"
-            else [f"*{recipe_id}*", "winetricks_*.log", "*_errors.log"]
-        )
-        for pat in patterns:
-            for p in LOG_ROOT.glob(pat):
-                if not p.is_file():
-                    continue
-                try:
-                    by_mtime[p] = p.stat().st_mtime
-                except OSError:
-                    continue
-        if not by_mtime:
-            for p in LOG_ROOT.glob("*.log"):
-                if p.is_file():
-                    try:
-                        by_mtime[p] = p.stat().st_mtime
-                    except OSError:
-                        continue
-        # Prefer *_errors.log, then winetricks detail logs, then newest.
-        logs = sorted(
-            by_mtime.keys(),
-            key=lambda p: (
-                0 if "_errors" in p.name else 1 if p.name.startswith("winetricks_") else 2,
-                -by_mtime[p],
-            ),
-        )[:8]
-        for lf in logs:
+    def _append_log_files(
+        files: list[Path], *, section: str, per_file_lines: int
+    ) -> None:
+        if not files:
+            return
+        lines.append(section)
+        lines.append("")
+        for lf in files:
             lines.append(f"--- {lf.name} ---")
             try:
-                raw = lf.read_text(encoding="utf-8", errors="replace").splitlines()[-120:]
+                raw = lf.read_text(encoding="utf-8", errors="replace").splitlines()[
+                    -per_file_lines:
+                ]
                 cleaned: list[str] = []
                 for ln in raw:
                     h = humanize_log_line(ln) if ln.startswith("@") else ln
@@ -445,6 +450,68 @@ def collect_report_bundle(recipe_id: str, session_id: str = "") -> Path:
             except OSError as exc:
                 lines.append(t("dialog.report_file_read_error", error=exc))
             lines.append("")
+
+    def _rank_log(path: Path) -> tuple[int, float]:
+        name = path.name.lower()
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        if "_errors" in name or name.endswith("_errors.log"):
+            tier = 0
+        elif name.startswith("install") or "install" in name:
+            tier = 1
+        elif any(k in name for k in ("repair", "validate", "launch", "winetricks")):
+            tier = 2
+        else:
+            tier = 3
+        return (tier, -mtime)
+
+    # 1) Logs im Rezept-Datenordner (install.log, …)
+    if data_root is not None and data_root.is_dir():
+        seen: set[Path] = set()
+        data_logs: list[Path] = []
+        for pat in ("*.log", "install*.log", "*_errors.log"):
+            for p in data_root.glob(pat):
+                if p.is_file() and p not in seen:
+                    seen.add(p)
+                    data_logs.append(p)
+        data_logs = sorted(data_logs, key=_rank_log)[:10]
+        _append_log_files(
+            data_logs,
+            section=t("dialog.report_file_section_data_logs"),
+            per_file_lines=200,
+        )
+
+    # 2) Globale Launcher-Logs
+    if LOG_ROOT.is_dir():
+        by_mtime: dict[Path, float] = {}
+        patterns = (
+            ["*.log"]
+            if recipe_id == "launcher"
+            else [f"*{recipe_id}*", "winetricks_*.log", "*_errors.log"]
+        )
+        for pat in patterns:
+            for p in LOG_ROOT.glob(pat):
+                if not p.is_file() or p.name.startswith("github-report_"):
+                    continue
+                try:
+                    by_mtime[p] = p.stat().st_mtime
+                except OSError:
+                    continue
+        if not by_mtime:
+            for p in LOG_ROOT.glob("*.log"):
+                if p.is_file() and not p.name.startswith("github-report_"):
+                    try:
+                        by_mtime[p] = p.stat().st_mtime
+                    except OSError:
+                        continue
+        global_logs = sorted(by_mtime.keys(), key=_rank_log)[:12]
+        _append_log_files(
+            global_logs,
+            section=t("dialog.report_file_section_global_logs"),
+            per_file_lines=160,
+        )
 
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
     try:
@@ -459,7 +526,7 @@ def build_issue_body(recipe_id: str, report_path: Path, session_id: str = "") ->
     from i18n import t
 
     log_excerpt = sanitize_log_text(
-        report_path.read_text(encoding="utf-8", errors="replace")[-8000:]
+        report_path.read_text(encoding="utf-8", errors="replace")[-24000:]
     )
     recipe_label = (
         recipe_id if recipe_id != "launcher" else t("dialog.issue_recipe_general")
@@ -481,7 +548,7 @@ def build_issue_body(recipe_id: str, report_path: Path, session_id: str = "") ->
     ]
     if session_id:
         parts.append(t("dialog.issue_session", session=session_id))
-    if recipe_id in ("photoshop", "photoshop-m0nkrus", "photoshop-m0nkrus-220"):
+    if recipe_id in ("photoshop", "photoshop-m0nkrus"):
         parts.append(t("dialog.issue_photoshop"))
     parts.extend(
         [

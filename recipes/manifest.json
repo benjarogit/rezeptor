@@ -2,21 +2,41 @@
   "recipes": {
     "halo-campaign-evolved": {
       "files": {
+        "assets/ensure_steam_nonsteam.py": "sha256:fc6c9ec9d514b12267444699f94b57b9cfcb216d1899df133f28b4b4beb5bae7",
         "assets/ghidra-login-trace.md": "sha256:e36f0abb8b5266ab49f791601ee55a5b68e130bee2c3fbb4a5c991f98c1068ae",
         "assets/halo-analyse-leitfaden.md": "sha256:eeccc7ee458ea5980761f67f3d9abccd8650103cbe2fb9e8640cc7dce651e654",
         "assets/login-patch-inventory.md": "sha256:95c3ea2192e9fa39183f92f6e8bec7b119d53ac92ba58e67fb3cf372dd4b0223",
         "assets/prepare-ghidra.sh": "sha256:6aab08dc73b067fe1aa5ac7bb8be10ab296d75b7075528202a691969927f83a2",
+        "assets/skip-intro-LogoParade.mp4": "sha256:53122b321ad79f7c82f844b7c72883c8ba370527b51f896ce08c4ad4ebaf3f37",
+        "assets/steam-grid/cover.png": "sha256:78490df8d4b1fe8259610858104d283abf976c6270116587faa6ef1fec9a2a3c",
+        "assets/steam-grid/hero.png": "sha256:c45d5eace8fb389b43d0a5ecb9dad8e8207f73ac9cee36e0126090568a99a8ca",
+        "assets/steam-grid/logo.png": "sha256:96a15116fd024828718c201bad84c02f42e9676bf0cb0fbf6f98970678670473",
+        "assets/steam-grid/wide.png": "sha256:8232319f3c9e9ce39f75e7f5e90713df16c31054cd3211a83a360055fb826e66",
         "assets/trace-login.sh": "sha256:a876aa830557772891a9029f6328257c696268731d7444f406393e8e289a5890",
-        "info.de.md": "sha256:68f2d17593e597eac027e265258de5587c383a3dda89bcf347454de647b4fbd7",
-        "info.en.md": "sha256:ca0efade3cfb5ea3c206f27aa36f51377c61fdee03c6a4835d7716a985d09fc0",
+        "info.de.md": "sha256:87cc8922281eef4f5bda66b328e4219a020ffe21cb1597f73972b6cb7f9487ad",
+        "info.en.md": "sha256:12e850c847f345ff3fc472a9411e694e9cb82d3af3b7cf8201d2049fca10e13e",
         "install.sh": "sha256:aebc0bcdf72b4f5fb20a1d12145ad6b829183546e2b55e9566710b1be0323ca6",
         "kill.sh": "sha256:03dc29c0aa7a264833c5116d6e9ed3769450d820efaa5b80d7658fbfe763a0bf",
-        "launch.sh": "sha256:887b94276cbe155fc4b535d38795b9fdcf87e3d96270c9c49e2b58f7d8c37c93",
-        "recipe.yml": "sha256:5baf33b320613a6d2d6efdf5bde63b7d2b4569965f7f5c5054a41b944f75485e",
+        "launch.sh": "sha256:f78cc15ec0df0cb7ad30fa83363a7ba4f682a1181b5035a3dd3e0c15953bd120",
+        "recipe.yml": "sha256:fd50fee5474ebbc2436165e21b46c231301cc411f6ffc400e72edef171e73b64",
         "repair.sh": "sha256:eec88d1b95d1199639e1d148d44c2ce07724138c7efee5524fdd930b35ba63f2",
         "uninstall.sh": "sha256:2d0370a331e4d235326da9e0daf10bd6f038b91c1fce79fe9e543b47ee42a869",
         "update.sh": "sha256:08a20fc7d33a1fe9d69f21bcc35b6987a10a322bfaa770327da0368493a63aa1",
         "validate.sh": "sha256:a9450ffc48497e3934b3421384be68bc016b26f5cf6aec0cbde83aa9ad41e9fb"
+      }
+    },
+    "master-pdf-editor": {
+      "files": {
+        "info.de.txt": "sha256:833f2067d06cfd5a50e5441705ee0fadd1ff141cc1dde1cd3f7c4ec39739bf65",
+        "info.en.txt": "sha256:8219f3c156b91e275c0c933f7d0d9c2304a72f3ab83f6e12167ff730a66c3cf9",
+        "install.sh": "sha256:aebc0bcdf72b4f5fb20a1d12145ad6b829183546e2b55e9566710b1be0323ca6",
+        "kill.sh": "sha256:e125bcef11ba5b9f71c164bf2fa78b62ef5ce0a7ddfb742a053d4c05f50c3fff",
+        "launch.sh": "sha256:7f405cbf25c89012efbbce8288546f29af3f0c942a905972068f42e7234e340b",
+        "recipe.yml": "sha256:f8c3409cf8db32002227db1cb58947e9bc3f48ccf63db5045071fda772dc85a4",
+        "repair.sh": "sha256:b11963776e9102460624fabc0e68eaf857f11c4f375d64ed5fa34b942009a89c",
+        "uninstall.sh": "sha256:5d35f856c56da7cc219ee0be5a2b9bf26c9e367cf633a8e52e2dc3761e3d3c82",
+        "update.sh": "sha256:08a20fc7d33a1fe9d69f21bcc35b6987a10a322bfaa770327da0368493a63aa1",
+        "validate.sh": "sha256:53314a2bd7fa32b8ca649026cb53c6eed5c4061b158b86f89e976c02a91f69c8"
       }
     },
     "photoshop": {
@@ -57,19 +77,6 @@
         "recipe.yml": "sha256:e0f9814006b49b636befa287b3f89e2ce8077bf83657a7302f949eda74f92dc1",
         "repair.sh": "sha256:591b9dacc99e0b5c24a34b2e4c39c873bde23e799248602a3eec2d0ccd4d8397",
         "uninstall.sh": "sha256:5f8ce2cbb0a7883c11e89db3f42be217e035dfdb3dce600bb78351da51536ab4",
-        "validate.sh": "sha256:6f9e28e3e0792c2a1cc95f65d5c0a99fc586b1e1fa7a490a2177eaa7599f8049"
-      }
-    },
-    "photoshop-m0nkrus-220": {
-      "files": {
-        "info.de.txt": "sha256:8b58a755b77900226cd40e6a453ecd3257c08b01ff0d2c3969db98aa8449293e",
-        "info.en.txt": "sha256:2763688e383b459d065e45f3b3a0eab069c051ca1f33377e281da833e8a6c8e6",
-        "install.sh": "sha256:b5f592b04049356d5df018ab452f897b701433d3e441931d36390889e90dac5e",
-        "kill.sh": "sha256:3e0269b5c5bcc405f46031cc4f8ca781d0be5f049b6a2f18b7721f5a1ecda753",
-        "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
-        "recipe.yml": "sha256:d08066773fe32c87b8bed77f8a327e9b86c1aac675ffcf7762d18b7148394e8e",
-        "repair.sh": "sha256:7e769ac9972b1efb17f72d2a3550251e6dcbd60eecd239e8cbc5b25a8b2de5f4",
-        "uninstall.sh": "sha256:8c1c445512d2d07977e7a7f72e4f4944262a5d548f47fcb7edcea486bbedc481",
         "validate.sh": "sha256:6f9e28e3e0792c2a1cc95f65d5c0a99fc586b1e1fa7a490a2177eaa7599f8049"
       }
     },

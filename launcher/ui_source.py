@@ -652,7 +652,6 @@ def default_folder_source(
         drop = {"photoshop": "photoshop", "premiere": "premiere"}.get(rid)
         candidates: list[Path] = []
         pack_candidates: list[Path] = []
-        iso_only_candidates: list[Path] = []
         ver = (meta.get("version_guaranteed") or "").strip()
         if drop and repo_root is not None:
             candidates.append(repo_root / drop)
@@ -691,8 +690,6 @@ def default_folder_source(
                     continue
                 if _looks_like_adobe_pack_root(p):
                     pack_candidates.append(p)
-                elif _looks_like_adobe_iso_only_pack(p):
-                    iso_only_candidates.append(p)
                 found = _adobe_setup_dir(p)
                 if found is not None:
                     candidates.append(found)
@@ -706,24 +703,6 @@ def default_folder_source(
         for base in (Path.home() / "Downloads", Path.home() / "Dokumente"):
             if base.is_dir():
                 _shallow_isos_and_setups(base)
-
-        # m0nkrus 22.0 ISO-only Pack (Photoshop.2021) — nicht 22.1.1.138
-        if rid == "photoshop-m0nkrus-220":
-            for pack in iso_only_candidates:
-                if _matches_m0nkrus_220_pack(pack):
-                    iso = _adobe_iso_in_pack_dir(pack, "")
-                    if iso is not None:
-                        return str(iso.resolve())
-            for cand in candidates:
-                if _matches_m0nkrus_220_pack(cand):
-                    resolved = (
-                        _adobe_setup_dir(cand) if cand.is_dir() else cand
-                    )
-                    if resolved is None:
-                        continue
-                    if resolved.is_file() and resolved.suffix.lower() == ".iso":
-                        return str(resolved.resolve())
-            return ""
 
         # Empfohlen: kompletter Pack-Ordner (ISO + Neural Filters + missing_libs),
         # aber nur wenn Versions-Hinweis im Ordnernamen passt (sonst falsches Pack).
@@ -740,8 +719,8 @@ def default_folder_source(
                 return str(setup.resolve())
 
         for cand in candidates:
-            # Cross-Pack: Standard und 220 nicht den 138-Pack nehmen
-            if rid in ("photoshop", "photoshop-m0nkrus-220") and "22.1.1.138" in cand.name:
+            # Cross-Pack: Standard nicht den 138-Pack / ISO-only-220-Pack nehmen
+            if rid == "photoshop" and "22.1.1.138" in cand.name:
                 continue
             if rid == "photoshop-m0nkrus" and _matches_m0nkrus_220_pack(cand):
                 continue

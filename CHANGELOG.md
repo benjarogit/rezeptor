@@ -3,6 +3,32 @@
 All notable changes to **Rezeptor** are documented here (English).
 GitHub Release notes should match these bullets.
 
+## [1.1.33] - 2026-08-06
+
+### Added
+- **Halo Campaign Evolved:** system-tuned graphics quality presets (`HALO_GFX_PRESET`: ultra_low → ultra; default **Recommended / RTX 2060 / 1080p144**)
+- Halo: optional **Launch via Steam** (Non-Steam shortcut, Proton choice, Steam grid art, soft low-latency under Steam)
+- **Master PDF Editor** official recipe (MSI 5.9 + optional pack `crack/`; `recipe_master_pdf_editor::run_msi` / `finalize`)
+- Medizin `type: choice` combos (presets / Steam Proton) in the launcher
+
+### Changed
+- Halo VRAM soft caps follow the preset (ultra_low–high); `HALO_GFX_VRAM_6GB` only **forces** caps (e.g. on Ultra)
+- Steam Non-Steam path: do not kill/restart Steam on every launch when shortcut already exists
+- Recipe manifest generator skips `__pycache__` / `.pyc`
+- Docs / README / catalog: 6 official recipes, 5 categories; Halo + Master PDF author notes
+
+### Removed
+- **photoshop-m0nkrus-220** recipe (ISO-only duplicate of the standard 22.0.0.35 path)
+
+### Fixed
+- Winetricks install steps ensure `LOG_DIR` before package loops
+- Flatpak / runtime pin adjustments for reproducible builds
+
+### Documentation
+- USER-GUIDE / CATALOG: Halo Medizin presets + Steam medicine; choice YAML example for authors
+- INSTALLER / ENTWICKLER: Master PDF MSI pattern; drop m0nkrus-220 references
+- Halo `info.de.md` / `info.en.md` aligned with presets and Steam behaviour
+
 ## [1.1.32] - 2026-08-05
 
 ### Fixed

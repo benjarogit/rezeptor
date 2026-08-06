@@ -111,6 +111,9 @@ recipe_install_steps::copy_asset() {
 
 recipe_install_steps::run_winetricks_list() {
     local pkg pct=15 wt_ok=0
+    if [ -z "${LOG_DIR:-}" ] || [ -z "${TIMESTAMP_ISO:-}" ]; then
+        recipe_hooks::log_setup "${RECIPE_ID:-recipe}_winetricks"
+    fi
     recipe_winetricks::stabilize_prefix
     while IFS= read -r pkg; do
         [ -n "$pkg" ] || continue

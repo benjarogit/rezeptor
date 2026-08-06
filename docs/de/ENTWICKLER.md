@@ -83,7 +83,7 @@ In der GUI immer **Quelle** und ggf. **Ziel** — unabhängig vom App-Typ.
 
 | Typ | Mitgeliefert | Quelle | Ziel | Referenz |
 |-----|--------------|--------|------|----------|
-| **Offline-Installer** | `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere` | Pack-Ordner / Setup / `.iso` | Datenordner (Prefix) | [INSTALLER.md](INSTALLER.md) |
+| **Offline-Installer** | `photoshop`, `photoshop-m0nkrus`, `premiere`, `master-pdf-editor` | Pack-Ordner / Setup / `.iso` / `.msi` | Datenordner (Prefix) | [INSTALLER.md](INSTALLER.md) |
 | **Portable** (Ordner/Archiv) | `wiso-steuer` | Ordner oder zip/7z/… | Installationsordner | [WISO.md](WISO.md) |
 | **Steam + Online-Fix** | `_template-steam-game` | Fix BYOS; Spiel in Steam | Spielordner (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
 | **Offline-Spiel + Updates** | `halo-campaign-evolved` | ISO / Pack-Ordner | Prefix | [UPDATES.md](UPDATES.md) |

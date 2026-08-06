@@ -48,6 +48,8 @@ class RezeptorSettings:
     recipe_install_env: dict[str, dict[str, str]] = field(default_factory=dict)
     # First-start host tool prompt (System prüfen) already shown
     host_deps_prompt_done: bool = False
+    # Per recipe id: user dismissed Steam-medicine hint ("don't show again")
+    steam_medicine_prompt_dismissed: dict[str, bool] = field(default_factory=dict)
     # UI-Persistenz (Base64 von QWidget.saveGeometry / QSplitter.saveState)
     window_geometry: str = ""
     window_maximized: bool = False
@@ -78,6 +80,22 @@ def _parse_str_dict(raw: object) -> dict[str, str]:
         v = str(val).strip()
         if k and v:
             out[k] = v
+    return out
+
+
+def _parse_bool_dict(raw: object) -> dict[str, bool]:
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, bool] = {}
+    for key, val in raw.items():
+        k = str(key).strip()
+        if not k:
+            continue
+        if isinstance(val, bool):
+            out[k] = val
+        else:
+            s = str(val).strip().lower()
+            out[k] = s in ("1", "true", "yes", "on")
     return out
 
 
@@ -370,6 +388,9 @@ def load_settings() -> RezeptorSettings:
         archive_passwords=passwords,
         recipe_install_env=_parse_recipe_install_env(data.get("recipe_install_env")),
         host_deps_prompt_done=bool(data.get("host_deps_prompt_done", False)),
+        steam_medicine_prompt_dismissed=_parse_bool_dict(
+            data.get("steam_medicine_prompt_dismissed")
+        ),
         window_geometry=str(data.get("window_geometry", "") or ""),
         window_maximized=bool(data.get("window_maximized", False)),
         splitter_state=str(data.get("splitter_state", "") or ""),

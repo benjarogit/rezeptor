@@ -44,6 +44,19 @@ Under Wine some Windows-like UI features are fragile. Rezeptor therefore applies
 
 Defaults are **off**. Tips in the Medizin dialog have the same guidance.
 
+### Halo Campaign Evolved
+
+| Option | Effect |
+|--------|--------|
+| **Quality preset** (`HALO_GFX_PRESET`) | Ladder Very low → Ultra. Default **Recommended (RTX 2060 / 1080p144)** — high textures/geometry, medium Lumen/reflections, soft VRAM caps. Ultra skips soft caps (6 GB risk). |
+| Clear image / low-latency / VRR / gamescope | Fine-tuning **above** the preset (effects, latency, present). |
+| Force 6 GB VRAM caps | Caps even on Ultra; Recommended/Low/High already apply caps. |
+| Launch via Steam | Non-Steam shortcut with chosen Proton + launch options; soft low-latency under Steam (no Tear/FinishCurrentFrame). Needs `python-vdf`. |
+| Steam Proton | Steam default / system Proton / Rezeptor GE-Proton11-3. |
+| Trainer / mods / skip intro | BYOS — see recipe info text. |
+
+After changing preset/graphics: **Repair** or **Launch** once so `Engine.ini` / Halo-*UserSettings apply.
+
 ## Status & validation
 
 - Optional **validate on startup** (Settings)

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# install_type: installer_offline — deklarative install_steps
 set -eu
 (set -o pipefail 2>/dev/null) || true
 

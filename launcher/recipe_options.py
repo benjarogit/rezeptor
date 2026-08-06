@@ -6,7 +6,7 @@ import os
 import re
 import shutil
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -25,16 +25,34 @@ class RecipeOptionPick:
 
 
 @dataclass
+class RecipeOptionChoice:
+    """One value for ``type: choice`` (stored as string in options.env)."""
+
+    id: str
+    label: dict[str, str]
+
+    def label_for(self, locale: str) -> str:
+        code = (locale or "de").split("-", 1)[0].lower()
+        return (
+            self.label.get(code)
+            or self.label.get("en")
+            or self.label.get("de")
+            or self.id
+        )
+
+
+@dataclass
 class RecipeOption:
     id: str
     env: str
-    type: str  # bool
-    default: bool
+    type: str  # bool | choice
+    default: bool | str
     label: dict[str, str]
     tip: dict[str, str]
-    when: str = ""  # "", "nvidia"
+    when: str = ""  # "", "nvidia", "steam"
     group: str = ""  # "", "runtime", "graphics", "mods" — Medizin tabs
     pick: RecipeOptionPick | None = None
+    choices: list[RecipeOptionChoice] = field(default_factory=list)
 
     def label_for(self, locale: str) -> str:
         code = (locale or "de").split("-", 1)[0].lower()
@@ -152,24 +170,57 @@ def parse_recipe_options(recipe_yml: Path | dict[str, Any]) -> list[RecipeOption
         if not oid or not _ENV_KEY_RE.match(env):
             continue
         otype = str(item.get("type") or "bool").strip().lower()
-        if otype != "bool":
+        if otype not in ("bool", "choice"):
             continue
         grp = str(item.get("group") or "").strip().lower()
         if grp not in ("", "runtime", "graphics", "mods"):
             grp = ""
         pick = _parse_pick(item.get("pick"))
+        choices = _parse_choices(item.get("choices"))
+        if otype == "choice":
+            if not choices:
+                continue
+            default_raw = item.get("default")
+            default: bool | str = (
+                str(default_raw).strip()
+                if default_raw is not None and str(default_raw).strip()
+                else choices[0].id
+            )
+            # Ensure default is one of the declared ids (or keep for dynamic catalogs).
+            ids = {c.id for c in choices}
+            if default not in ids:
+                default = choices[0].id
+        else:
+            default = _as_bool(item.get("default"), True)
         out.append(
             RecipeOption(
                 id=oid,
                 env=env,
                 type=otype,
-                default=_as_bool(item.get("default"), True),
+                default=default,
                 label=_lang_map(item.get("label")),
                 tip=_lang_map(item.get("tip") or item.get("tooltip")),
                 when=str(item.get("when") or "").strip().lower(),
                 group=grp,
-                pick=pick,
+                pick=pick if otype == "bool" else None,
+                choices=choices if otype == "choice" else [],
             )
+        )
+    return out
+
+
+def _parse_choices(raw: Any) -> list[RecipeOptionChoice]:
+    if not isinstance(raw, list):
+        return []
+    out: list[RecipeOptionChoice] = []
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        cid = str(item.get("id") or "").strip()
+        if not cid:
+            continue
+        out.append(
+            RecipeOptionChoice(id=cid, label=_lang_map(item.get("label")))
         )
     return out
 
@@ -190,6 +241,13 @@ def _parse_pick(raw: Any) -> RecipeOptionPick | None:
 def option_visible(opt: RecipeOption) -> bool:
     if opt.when == "nvidia":
         return host_has_nvidia()
+    if opt.when == "steam":
+        try:
+            from steam_paths import steam_roots
+
+            return bool(steam_roots())
+        except Exception:
+            return False
     return True
 
 
@@ -225,15 +283,23 @@ def _parse_env_file(path: Path) -> dict[str, str]:
     return data
 
 
-def read_option_values(data_root: Path, options: list[RecipeOption]) -> dict[str, bool]:
-    """Effective bool values: options.env overrides default."""
+def read_option_values(
+    data_root: Path, options: list[RecipeOption]
+) -> dict[str, bool | str]:
+    """Effective values: options.env overrides default (bool or choice string)."""
     stored = _parse_env_file(options_env_path(data_root))
-    result: dict[str, bool] = {}
+    result: dict[str, bool | str] = {}
     for opt in options:
+        if opt.type == "choice":
+            if opt.env in stored and str(stored[opt.env]).strip():
+                result[opt.id] = str(stored[opt.env]).strip()
+            else:
+                result[opt.id] = str(opt.default)
+            continue
         if opt.env in stored:
-            result[opt.id] = _as_bool(stored[opt.env], opt.default)
+            result[opt.id] = _as_bool(stored[opt.env], bool(opt.default))
         else:
-            result[opt.id] = opt.default
+            result[opt.id] = bool(opt.default)
     return result
 
 
@@ -275,8 +341,13 @@ def _env_file_write(data_root: Path, key: str, value: str) -> None:
     tmp.replace(path)
 
 
-def write_option_value(data_root: Path, opt: RecipeOption, enabled: bool) -> None:
-    """Persist one bool option as 1/0 via env_file_set (bash) or plain write."""
+def write_option_value(
+    data_root: Path, opt: RecipeOption, enabled: bool | str
+) -> None:
+    """Persist one option (bool as 1/0, choice as string)."""
+    if opt.type == "choice":
+        _env_file_write(data_root, opt.env, str(enabled).strip())
+        return
     _env_file_write(data_root, opt.env, "1" if enabled else "0")
 
 
@@ -300,6 +371,9 @@ def env_overrides_for_options(
     out: dict[str, str] = {}
     for opt in options:
         if not option_visible(opt):
+            continue
+        if opt.type == "choice":
+            out[opt.env] = str(values.get(opt.id, opt.default))
             continue
         out[opt.env] = "1" if values.get(opt.id, opt.default) else "0"
     return out

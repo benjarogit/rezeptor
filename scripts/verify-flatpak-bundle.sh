@@ -8,7 +8,10 @@ if [ "$#" -ne 1 ] || [ ! -d "$1" ]; then
 fi
 
 BUILD_DIR="$(readlink -f "$1")"
-MANIFEST="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/flatpak/io.github.benjarogit.Rezeptor.yml"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+MANIFEST="$ROOT/flatpak/io.github.benjarogit.Rezeptor.yml"
+# shellcheck source=/dev/null
+source "$ROOT/core/runtime.lock"
 
 fail=0
 check() {
@@ -56,16 +59,16 @@ case "$pyqt_path" in
         ;;
 esac
 
-check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "/app/runtime/proton-ge/GE-Proton10-28/files/bin/wine64"
-check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "/app/runtime/proton-ge/GE-Proton10-28/files/bin/wine"
+check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "/app/runtime/proton-ge/${PROTON_GE_TAG}/files/bin/wine64"
+check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "/app/runtime/proton-ge/${PROTON_GE_TAG}/files/bin/wine"
 # Real 32-bit wine needs Compat.i386 + --allow=multiarch (not a wine64 shim).
 if flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
-    head -c 2 /app/runtime/proton-ge/GE-Proton10-28/files/bin/wine | grep -q '#!'; then
+    head -c 2 "/app/runtime/proton-ge/${PROTON_GE_TAG}/files/bin/wine" | grep -q '#!'; then
     echo "FAIL: wine is a shell shim — need real ELF + Compat.i386 for msxml3" >&2
     fail=1
 fi
 if ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
-    /app/runtime/proton-ge/GE-Proton10-28/files/bin/wine64 --version >/dev/null; then
+    "/app/runtime/proton-ge/${PROTON_GE_TAG}/files/bin/wine64" --version >/dev/null; then
     echo "FAIL: wine64 --version failed inside Flatpak runtime" >&2
     fail=1
 else

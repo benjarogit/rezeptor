@@ -8,14 +8,13 @@ not every source is equivalent.
 Shipped under `recipes/<id>/`, indexed in `recipes/catalog.json` (`trust: official`).
 Guarded by CI (`recipe-lint`, manifest checks).
 
-Currently **6** official product recipes in **4** categories.
+Currently **6** official product recipes in **5** categories.
 
 ### Graphics & Design
 
 | ID | Name | Description |
 |----|------|-------------|
 | `photoshop` | Adobe Photoshop CC 2021 | Standard offline installer (22.0.0.35) on Proton-GE |
-| `photoshop-m0nkrus-220` | Adobe Photoshop CC 2021 (m0nkrus 22.0.0.35) | ISO-only Photoshop.2021 pack — separate recipe, not standard and not 22.1.1.138 |
 | `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Full pack incl. Neural Filters / missing_libs / GenP (optional) |
 
 ### Video
@@ -30,11 +29,17 @@ Currently **6** official product recipes in **4** categories.
 |----|------|-------------|
 | `wiso-steuer` | WISO Steuer (Portable) | Portable on Proton-GE — pick source, copy to target folder, launch |
 
+### Documents & PDF
+
+| ID | Name | Description |
+|----|------|-------------|
+| `master-pdf-editor` | Master PDF Editor | MSI 5.9 on Proton-GE — pack with setup + optional `crack/` |
+
 ### Games
 
 | ID | Name | Description |
 |----|------|-------------|
-| `halo-campaign-evolved` | Halo Campaign Evolved | ElAmigos/RUNE (MULTi13), Proton-GE 11, offline login, Medizin (graphics/low-latency), optional BYOS trainer |
+| `halo-campaign-evolved` | Halo Campaign Evolved | ElAmigos/RUNE, graphics presets (default Recommended RTX 2060), optional Steam Non-Steam, BYOS trainer |
 
 Templates under `recipes/_template*` and entries under `recipes/community/` are **not** bundled product recipes.
 
@@ -71,7 +76,7 @@ Catalog fields for sync:
 
 ## Recipe options (Medizin)
 
-Lasting per-recipe settings (not “install once”). The **Medizin** button (icon `kit-medical`) **next to** **More** (its own button) opens a dialog with checkbox + explanation. Values in `{data_root}/options.env` steer install/repair/launch.
+Lasting per-recipe settings (not “install once”). The **Medizin** button (icon `kit-medical`) **next to** **More** (its own button) opens a dialog with toggles, **choice combos**, and explanations. Values in `{data_root}/options.env` steer install/repair/launch.
 
 After toggling, the primary CTA may become **Repair now** — run it once so prefs/prefix catch up.
 
@@ -79,8 +84,19 @@ Only use when the option changes behaviour (e.g. opt-out). Not for actions Insta
 
 Photoshop: three UI toggles (`PHOTOSHOP_UI_HOME_SCREEN`, `PHOTOSHOP_UI_RICH_TOOLTIPS`, `PHOTOSHOP_UI_MODERN_NEW`), default `false` — see [User guide](USER-GUIDE.md#medizin-recipe-options).
 
+Halo: quality preset (`HALO_GFX_PRESET`, default `balanced` / Recommended RTX 2060), graphics toggles, optional **Launch via Steam** + Proton choice — see [User guide](USER-GUIDE.md#medizin-recipe-options).
+
 ```yaml
 options:
+  - id: gfx_preset
+    env: HALO_GFX_PRESET
+    type: choice
+    default: balanced
+    choices:
+      - id: balanced
+        label: { de: "Empfohlen …", en: "Recommended …" }
+    label: { de: "…", en: "…" }
+    tip: { de: "…", en: "…" }
   - id: nvidia_libs
     env: PREMIERE_NVIDIA_LIBS
     type: bool

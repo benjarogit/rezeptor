@@ -83,7 +83,7 @@ In the GUI always **Source** and optionally **Target** — same labels for every
 
 | Type | Shipped | Source | Target | Reference |
 |------|---------|--------|--------|-----------|
-| **Offline installer** | `photoshop`, `photoshop-m0nkrus-220`, `photoshop-m0nkrus`, `premiere` | Pack folder / setup / `.iso` | Data folder (prefix) | [INSTALLER.md](INSTALLER.md) |
+| **Offline installer** | `photoshop`, `photoshop-m0nkrus`, `premiere`, `master-pdf-editor` | Pack folder / setup / `.iso` / `.msi` | Data folder (prefix) | [INSTALLER.md](INSTALLER.md) |
 | **Portable** (folder/archive) | `wiso-steuer` | Folder or zip/7z/… | Install folder | [WISO.md](WISO.md) |
 | **Steam + online fix** | `_template-steam-game` | Fix BYOS; game in Steam | Game folder (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
 | **Offline game + updates** | `halo-campaign-evolved` | ISO / pack folder | Prefix | [UPDATES.md](UPDATES.md) |

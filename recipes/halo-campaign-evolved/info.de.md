@@ -13,9 +13,10 @@ Unter Linux kam eine zweite Hürde dazu: das Spiel bringt eine **neuere Microsof
 ## Steam
 
 - **Steam muss nicht installiert sein.** Das Pack bringt seine eigene Steam-Ersatzschicht mit und läuft offline.
-- **Falls Steam installiert ist: vorher beenden** — vollständig, auch den Hintergrundprozess `steamwebhelper`. Sonst bricht der Start mit einem Hinweis ab. Das ist die häufigste Stolperfalle.
+- **Optional Medizin „Start über Steam“:** Rezeptor legt einen Non-Steam-Shortcut an und startet über den Client (Prefix bleibt Rezeptor). Steam wird nur beendet, wenn der Shortcut fehlt oder neu geschrieben werden muss — nicht bei jedem Start.
+- Ohne Steam-Medizin: **Steam vorher beenden** (auch `steamwebhelper`), sonst kann der Offline-Start mit RUNE kollidieren.
 
-Prüfen lässt sich das im Terminal mit `pgrep -x steam` und `pgrep -x steamwebhelper` — beide dürfen nichts ausgeben.
+Prüfen: `pgrep -x steam` / `pgrep -x steamwebhelper`.
 
 ## Quelle und Ziel
 
@@ -38,7 +39,15 @@ Ein „GDK / OnlineFix“ aus der Community zielt auf die Microsoft-Store-Varian
 
 ## Mods & Grafik (Medizin)
 
-Unter **Medizin** kannst du optionale Grafik-Presets und Mods vor dem Start wählen. Immer aktiv: MSVC-Runtime, RUNE, echte `libHttpClient`. Standard ist **Original-Modus** (keine erzwungenen Lumen/HWRT-CVars) — die hatten unter Proton nach dem Intro zu Schwarzem Bild/Absturz geführt. Grafik-Optionen nur einschalten, wenn du sie brauchst.
+Unter **Medizin**:
+
+- **Qualitäts-Preset** (`HALO_GFX_PRESET`): Sehr niedrig → Ultra. Default **Empfohlen (RTX 2060 / 1080p144)** — scharf und flüssig; Soft-VRAM-Caps an. Ultra ohne Soft-Caps.
+- Einzel-Toggles (**Klares Bild**, **Low-Latency**, **VRR**, **gamescope**, **6‑GB-Caps erzwingen**) bleiben Feintuning über dem Preset.
+- **Start über Steam** (optional): Non-Steam-Shortcut „… (Rezeptor)“ mit Proton-Choice und Steam-Grid-Art; Soft-Low-Latency unter Steam. Braucht `python-vdf`.
+
+Immer aktiv: MSVC-Runtime, RUNE, echte `libHttpClient`. Standard bleibt **Original-Modus** ohne erzwungene Lumen-HWRT-CVars (Schwarzbild-Falle unter Proton).
+
+**Intro kürzen:** ersetzt nur `LogoParade.mp4` durch ein gültiges kurzes Schwarz-Video — `Splash.bmp` wird nicht angefasst (kaputte Stubs → Sofort-Absturz).
 
 Community-Mods liefert Rezeptor **nicht mit** (BYOS). Ablage:
 
@@ -53,7 +62,7 @@ Dort liegt eine `README.txt` mit der Ordnerstruktur (`ue4ss/`, `viewmodels/`, �
 ## Hinweise
 
 - **Shader laden** („START DER MJOLNIR-SYSTEME“ / Fortschrittsbalken im Hauptmenü): normal, vor allem beim ersten Start oder nach Grafik-/Treiberwechsel. Kann **mehrere Minuten** dauern — Spiel nicht beenden, sonst beginnt es von vorn. Danach noch 1–2 Minuten im Menü warten, bevor du eine Mission startest (weniger Ruckler beim Bewegen).
-- **Grafik / Maus:** Medizin **Klares Bild** = nur Effekte aus (Blur, Rütteln, …), Qualität eher **Medium** (nicht Sehr niedrig). **Weniger Maus-Verzögerung** (Standard an): schaltet den echten **winewayland**-Treiber ein (ohne XWayland — das war der Haupt-Lag unter KDE), plus Engine.ini-Lock, Reflex/NVAPI, FPS-Cap nahe Monitor-Hz. Im Start-Log sollte stehen: `winewayland.drv aktiv`. Wenn das Fenster nicht kommt: Option aus oder kurz Plasma-X11 testen.
+- **Grafik / Eingabe:** Preset setzt die Qualitätsleiter; **Klares Bild** = nur Effekte aus. **Weniger Eingabe-Verzögerung** (Standard an): winewayland / Soft-LL unter Steam, vkd3d-Frame-Queue, FPS nahe Hz. Log: `Preset=…`, `winewayland.drv aktiv`, `gamescope`, oder Steam-Shortcut-AppID. Fenster fehlt → Optionen aus oder Plasma-X11.
 - Xbox/XAL-Anmeldung läuft immer **im Spielprozess** (`SteamDeck=1`) — nötig unter Proton, kein Medizin-Schalter.
 - ISO wird **gemountet** (kein Voll-Extract der ~66 GiB); derselbe Datenträger wird wiederverwendet (kein Mehrfach-Mount).
 - Setup läuft still (Inno `/VERYSILENT` + `/LANG` + `/DIR=`). Keine Klick-Kette bei Abbruch.

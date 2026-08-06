@@ -1,0 +1,15 @@
+# Master PDF Editor 5
+
+Offline-MSI unter **Proton-GE** (gepinnt in `core/runtime.lock`).
+
+## Quelle
+
+- Ordner mit `MasterPDFEditor-setup-qt6-x64.msi` (Qt6 x64)
+- Optional: Unterordner `crack/MasterPDFEditor.exe` — wird nach der MSI-Installation über die installierte EXE gelegt (nicht im Rezeptor-Repo)
+
+## Hinweise
+
+- Nach Install startet „Master PDF Editor“ aus dem Prefix (`Code Industry/Master PDF Editor 5`).
+- Ohne `crack/` bleibt der MSI-Build (Lizenz/Trial je nach Pack).
+- Winetricks: `vcrun2019`, `corefonts` (Qt6).
+- Deinstallation entfernt Prefix + Desktop-Verknüpfungen unter dem Rezept-`data_root`.

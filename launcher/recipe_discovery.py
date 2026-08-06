@@ -154,7 +154,6 @@ def is_adobe_offline_recipe(rid: str) -> bool:
     return rid in (
         "photoshop",
         "photoshop-m0nkrus",
-        "photoshop-m0nkrus-220",
         "premiere",
     )
 

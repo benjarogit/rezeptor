@@ -91,6 +91,7 @@ from app_support import (
     collect_report_bundle,
     community_reddit_url,
     describe_runtime_for_report,
+    detect_distro,
     detect_source_version,
     detect_update_channel,
     fetch_latest_release,
@@ -190,7 +191,11 @@ from recipe_options import (
     env_overrides_for_options,
     load_options_from_recipe_dir,
     option_visible,
+    read_option_values,
 )
+from steam_paths import steam_roots
+from steam_proton_catalog import is_steam_medicine_option
+from ui_steam_medicine import SteamMedicineHintDialog
 from recipe_paths import (
     manifest_for_recipe_dir,
     overlay_manifest_path,
@@ -406,7 +411,6 @@ def strip_ansi(text: str) -> str:
 LAUNCH_PROCESS_PATTERNS: dict[str, list[str]] = {
     "photoshop": ["Photoshop.exe"],
     "photoshop-m0nkrus": ["Photoshop.exe"],
-    "photoshop-m0nkrus-220": ["Photoshop.exe"],
 }
 
 
@@ -483,15 +487,16 @@ def _parse_env_file_values(path: Path) -> dict[str, str]:
 
 
 def installed_paths_text(meta: dict[str, str], rid: str, dr: Path) -> str:
-    """Mehrzeilig: Daten + Quelle/Ziel aus recipe.env / portable.env."""
+    """Mehrzeilig: Daten + Programm/Quelle/Ziel aus recipe.env / portable.env."""
     lines = [f"{t('tooltip.path_data')}: {dr}"]
     env: dict[str, str] = {}
     env.update(_parse_env_file_values(dr / "recipe.env"))
     env.update(_parse_env_file_values(dr / "portable.env"))
 
+    # WORK_ROOT = Installationsordner im Prefix — nicht die BYOS-Quelle
+    work = (env.get("WORK_ROOT") or "").strip()
     source = (
         (env.get("GAME_DIR") or "").strip()
-        or (env.get("WORK_ROOT") or "").strip()
         or (env.get("RECIPE_SOURCE_ROOT") or "").strip()
         or (env.get("RECIPE_INSTALLER_PATH") or "").strip()
         or (env.get("RECIPE_ARCHIVE_PATH") or "").strip()
@@ -509,9 +514,11 @@ def installed_paths_text(meta: dict[str, str], rid: str, dr: Path) -> str:
             source = source if source and source != trainer else ""
 
     dr_s = str(dr)
-    if source and source not in (dr_s, target):
+    if work and work not in (dr_s, source, target):
+        lines.append(f"{t('tooltip.path_app')}: {work}")
+    if source and source not in (dr_s, work, target):
         lines.append(f"{t('tooltip.path_source')}: {source}")
-    if target and target not in (dr_s, source):
+    if target and target not in (dr_s, work, source):
         lines.append(f"{t('tooltip.path_target')}: {target}")
     return "\n".join(lines)
 
@@ -1451,6 +1458,19 @@ class RezeptorWindow(QMainWindow):
         self.name_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
+        # Fluent TitleLabel verbindet bereits LabelContextMenu („Select all“) —
+        # das parallel zu unserem Menü → Doppel-Popup/Überlappung. Abklemmen.
+        if FLUENT_AVAILABLE:
+            try:
+                self.name_label.customContextMenuRequested.disconnect()
+            except TypeError:
+                pass
+        self.name_label.setContextMenuPolicy(
+            Qt.ContextMenuPolicy.CustomContextMenu
+        )
+        self.name_label.customContextMenuRequested.connect(
+            self._show_title_context_menu
+        )
         if FLUENT_AVAILABLE:
             self.name_label.setText(t("app.choose_recipe"))
 
@@ -1745,6 +1765,41 @@ class RezeptorWindow(QMainWindow):
             )
             self._sync_medizin_button()
 
+    def _maybe_steam_medicine_prompt(self) -> None:
+        """When user selects a recipe: recommend Steam medicine if Steam is present."""
+        if self._busy:
+            return
+        info = self._selected
+        if info is None:
+            return
+        if _recipe_is_checking(info) or _recipe_is_untrusted(info):
+            return
+        opts = self._visible_recipe_options()
+        steam_opt = next((o for o in opts if is_steam_medicine_option(o)), None)
+        if steam_opt is None:
+            return
+        if not steam_roots():
+            return
+        dismissed = self._settings.steam_medicine_prompt_dismissed or {}
+        if dismissed.get(info.rid):
+            return
+        dr = resolve_data_root(info.meta, info.rid)
+        values = read_option_values(dr, [steam_opt])
+        if bool(values.get(steam_opt.id, steam_opt.default)):
+            return
+        name = str(info.meta.get("name") or info.rid)
+        dlg = SteamMedicineHintDialog(name, self)
+        apply_tool_window(dlg, icon=self.windowIcon(), modal=True, compact=True)
+        result = dlg.exec()
+        if dlg.dont_show_again:
+            self._settings.steam_medicine_prompt_dismissed = {
+                **dict(dismissed),
+                info.rid: True,
+            }
+            save_settings(self._settings)
+        if result == QDialog.DialogCode.Accepted:
+            self._open_medizin_dialog()
+
     def _popup_more_menu(self) -> None:
         self._rebuild_more_menu()
         # Defer exec so the click is finished — otherwise RoundMenu closes on first move.
@@ -1836,15 +1891,14 @@ class RezeptorWindow(QMainWindow):
         )
         act.setEnabled(installed_ish and not busy and not untrusted)
 
-        if info.rid == "photoshop-m0nkrus":
-            genp_script = Path(info.meta["_dir"]) / "genp.sh"
+        genp_script = Path(info.meta["_dir"]) / "genp.sh"
+        if genp_script.is_file():
             act = self._add_menu_action(
                 menu, t("menu.genp_from_pack"), self.run_genp_from_pack
             )
             act.setToolTip(t("menu.genp_from_pack_tip"))
             act.setEnabled(
                 installed_ish
-                and genp_script.is_file()
                 and not busy
                 and not untrusted
             )
@@ -3059,7 +3113,16 @@ class RezeptorWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         ) != QMessageBox.StandardButton.Yes:
             return
-        report = collect_report_bundle(rid, self.session_id)
+        info = self._selected
+        bundle_kw: dict = {}
+        if info is not None:
+            bundle_kw["data_root"] = resolve_data_root(info.meta, info.rid)
+            bundle_kw["recipe_name"] = (info.meta.get("name") or "").strip()
+            bundle_kw["version_guaranteed"] = (
+                info.meta.get("version_guaranteed") or ""
+            ).strip()
+            bundle_kw["version_detected"] = (info.version_detected or "").strip()
+        report = collect_report_bundle(rid, self.session_id, **bundle_kw)
         clip = QApplication.clipboard()
         clip.setText(report_clipboard_text(rid, report, self.session_id))
         QDesktopServices.openUrl(QUrl(github_issue_url(rid, report)))
@@ -3230,7 +3293,9 @@ class RezeptorWindow(QMainWindow):
                 )
                 card.setToolTip(" · ".join(tip_bits))
                 card.apply_theme(getattr(self, "_theme", "dark"))
-                card.clicked.connect(lambda idx=i: self._select_recipe_index(idx))
+                card.clicked.connect(
+                    lambda idx=i: self._select_recipe_index(idx, user_initiated=True)
+                )
                 card.contextMenuRequested.connect(
                     lambda info=info: self._show_card_context_menu(info)
                 )
@@ -3243,7 +3308,7 @@ class RezeptorWindow(QMainWindow):
         self.recipe_cards_layout.addStretch(1)
         QTimer.singleShot(0, self._sync_sidebar_scroll_gap)
 
-    def _select_recipe_index(self, row: int) -> None:
+    def _select_recipe_index(self, row: int, *, user_initiated: bool = False) -> None:
         if row < 0 or row >= len(self.recipes):
             return
         self._set_home_btn_active(False)
@@ -3253,6 +3318,8 @@ class RezeptorWindow(QMainWindow):
         for i, (card, info) in enumerate(self._recipe_cards):
             card.set_selected(info.rid == self.recipes[row].rid)
         self._on_select(row)
+        if user_initiated:
+            QTimer.singleShot(0, self._maybe_steam_medicine_prompt)
 
     def _start_deferred_trust_verify(self) -> None:
         """After first paint: hash recipes + marker status (no validate.sh)."""
@@ -3705,16 +3772,60 @@ class RezeptorWindow(QMainWindow):
             out.append((t("tooltip.path_data"), str(dr)))
         text = (self.path_label.text() or "").strip()
         for line in text.splitlines():
-            if ": " not in line:
+            line = line.strip()
+            if not line:
                 continue
-            label, _, path = line.partition(": ")
-            path = path.strip()
-            if not path:
+            if ": " in line:
+                label, _, path = line.partition(": ")
+                path = path.strip()
+                if not path:
+                    continue
+                if any(path == p for _l, p in out):
+                    continue
+                out.append((label.strip(), path))
                 continue
-            if any(path == p for _l, p in out):
-                continue
-            out.append((label.strip(), path))
+            if ("/" in line or line.startswith("~")) and not any(
+                line == p for _l, p in out
+            ):
+                out.append((t("tooltip.path_data"), line))
         return out
+
+    def _recipe_context_text(self) -> str:
+        """Titel, Version, Status, Runtime, Pfade — für „Daten kopieren“."""
+        info = self._selected
+        if info is None:
+            return ""
+        meta = info.meta
+        name = (meta.get("name") or info.rid).strip()
+        lines = [
+            f"{t('logs.ctx_title')}: {name}",
+            f"{t('logs.ctx_id')}: {info.rid}",
+        ]
+        guaranteed = (meta.get("version_guaranteed") or "").strip()
+        if guaranteed:
+            lines.append(f"{t('logs.ctx_version_guaranteed')}: {guaranteed}")
+        detected = (info.version_detected or "").strip()
+        if detected:
+            lines.append(f"{t('logs.ctx_version_detected')}: {detected}")
+        status = ""
+        if hasattr(self, "status_pill") and self.status_pill.isVisible():
+            status = (self.status_pill.text() or "").strip()
+        if status:
+            lines.append(f"{t('logs.ctx_status')}: {status}")
+        runtime = ""
+        if hasattr(self, "proton_pill"):
+            runtime = (self.proton_pill.text() or "").strip()
+        if not runtime:
+            runtime = describe_runtime_for_report()
+        lines.append(f"{t('logs.ctx_runtime')}: {runtime}")
+        lines.append(f"{t('logs.ctx_launcher')}: v{read_version()}")
+        author = (meta.get("author") or "").strip()
+        if author:
+            lines.append(f"{t('logs.ctx_author')}: {author}")
+        lines.append(f"{t('logs.ctx_distro')}: {detect_distro()}")
+        for label, path in self._path_clipboard_targets():
+            lines.append(f"{label}: {path}")
+        return "\n".join(lines)
 
     def _copy_path_to_clipboard(self, path: str) -> None:
         path = (path or "").strip()
@@ -3723,23 +3834,60 @@ class RezeptorWindow(QMainWindow):
         QApplication.clipboard().setText(path)
         self._activity("info", t("logs.path_copied", path=path))
 
+    def _copy_recipe_context(self) -> None:
+        text = self._recipe_context_text()
+        if not text:
+            return
+        QApplication.clipboard().setText(text)
+        self._activity("info", t("status.data_copied"))
+
+    def _show_title_context_menu(self, pos) -> None:  # noqa: ANN001
+        text = (self.name_label.text() or "").strip()
+        if not text:
+            return
+        # Immer QMenu (Host-QSS) — RoundMenu/LabelContextMenu doppelt und falsch.
+        menu = QMenu(self)
+        selected = ""
+        if hasattr(self.name_label, "selectedText"):
+            selected = (self.name_label.selectedText() or "").strip()
+        if selected:
+            self._add_menu_action(
+                menu,
+                t("logs.copy_selection"),
+                lambda _c=False, p=selected: self._copy_path_to_clipboard(p),
+            )
+        self._add_menu_action(
+            menu,
+            t("logs.copy_title"),
+            lambda _c=False, p=text: self._copy_path_to_clipboard(p),
+        )
+        self._add_menu_action(
+            menu,
+            t("status.copy_data"),
+            lambda _c=False: self._copy_recipe_context(),
+        )
+        menu.exec(self.name_label.mapToGlobal(pos))
+
     def _show_path_context_menu(self, pos) -> None:  # noqa: ANN001
         targets = self._path_clipboard_targets()
-        if not targets:
-            return
-        menu = RoundMenu(parent=self) if FLUENT_AVAILABLE else QMenu(self)
+        menu = QMenu(self)
         selected = ""
         if hasattr(self.path_label, "selectedText"):
             selected = (self.path_label.selectedText() or "").strip()
-        # Prefer explicit selection when user highlighted a path fragment
-        if selected and ("/" in selected or selected.startswith("~")):
+        if selected:
             self._add_menu_action(
                 menu,
-                t("logs.copy_path"),
+                t("logs.copy_selection"),
                 lambda _c=False, p=selected: self._copy_path_to_clipboard(p),
             )
-            if hasattr(menu, "addSeparator"):
-                menu.addSeparator()
+            menu.addSeparator()
+        self._add_menu_action(
+            menu,
+            t("status.copy_data"),
+            lambda _c=False: self._copy_recipe_context(),
+        )
+        if targets:
+            menu.addSeparator()
         for label, path in targets:
             title = t("status.copy_labeled_path", label=label)
             self._add_menu_action(
@@ -3747,7 +3895,15 @@ class RezeptorWindow(QMainWindow):
                 title,
                 lambda _c=False, p=path: self._copy_path_to_clipboard(p),
             )
-        if len(targets) > 1:
+        if not targets and not selected:
+            text = (self.path_label.text() or "").strip()
+            if text and text != self._recipe_context_text():
+                self._add_menu_action(
+                    menu,
+                    t("logs.copy_path"),
+                    lambda _c=False, p=text: self._copy_path_to_clipboard(p),
+                )
+        elif len(targets) > 1:
             all_text = "\n".join(p for _l, p in targets)
             self._add_menu_action(
                 menu,
@@ -5553,11 +5709,9 @@ class RezeptorWindow(QMainWindow):
         self._prompt_and_save_source(title_key="dialog.source_title")
 
     def run_genp_from_pack(self) -> None:
-        """m0nkrus: GenP/Cure-GUI aus dem Pack unter Proton starten."""
+        """GenP/Cure-GUI aus dem Pack unter Proton (m0nkrus, Acrobat, …)."""
         rd = self._require_trusted_recipe()
         if rd is None or not self._selected:
-            return
-        if self._selected.rid != "photoshop-m0nkrus":
             return
         script = rd / "genp.sh"
         if not script.is_file():
@@ -5575,7 +5729,7 @@ class RezeptorWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         ) != QMessageBox.StandardButton.Yes:
             return
-        wine_path = self._photoshop_genp_wine_path()
+        wine_path = self._genp_target_wine_path()
         if wine_path:
             clip = QApplication.clipboard()
             if clip is not None:
@@ -5589,16 +5743,18 @@ class RezeptorWindow(QMainWindow):
             recipe_dir=rd,
         )
 
-    def _photoshop_genp_wine_path(self) -> str:
+    def _genp_target_wine_path(self) -> str:
         """Wine-Pfad für GenP-Dateidialog (Zwischenablage — GenP setzt InitialDir selbst)."""
         if not self._selected:
             return ""
-        dr = resolve_data_root(self._selected.meta, self._selected.rid)
+        rid = self._selected.rid
+        dr = resolve_data_root(self._selected.meta, rid)
+        prefix = dr / "prefix"
         for rel in (
             "drive_c/Program Files/Adobe/Adobe Photoshop 2021/Photoshop.exe",
             "drive_c/Program Files (x86)/Adobe/Adobe Photoshop 2021/Photoshop.exe",
         ):
-            if (dr / "prefix" / rel).is_file():
+            if (prefix / rel).is_file():
                 return "C:\\" + rel[len("drive_c/") :].replace("/", "\\")
         return (
             "C:\\Program Files\\Adobe\\Adobe Photoshop 2021\\Photoshop.exe"
@@ -5803,7 +5959,19 @@ class RezeptorWindow(QMainWindow):
             self._running_prev[rid] = True
             return
         # Photoshop/Premiere: Launch macht Prefs/Fonts vor wine — erster Start oft >20s.
-        max_attempts = 35 if (rid.startswith("photoshop") or rid == "premiere") else 7
+        # Halo via Steam Non-Steam: wait for client + proton/shaders (log line marks wait).
+        if rid == "halo-campaign-evolved" and "warte auf Halo unter Steam" in log_tail:
+            max_attempts = 100  # ~4 min @ 2.5s
+        elif rid.startswith("photoshop") or rid == "premiere" or rid == "halo-campaign-evolved":
+            max_attempts = 35
+        else:
+            max_attempts = 7
+        if (
+            "Steam-Client abgestürzt" in log_tail
+            or "Steam ist nicht hochgekommen" in log_tail
+            or "steam nicht installiert" in log_tail
+        ):
+            max_attempts = min(max_attempts, attempt)
         if attempt < max_attempts:
             QTimer.singleShot(
                 2500,
