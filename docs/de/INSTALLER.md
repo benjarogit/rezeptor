@@ -42,7 +42,7 @@ Varianten teilen die Core-API mit `photoshop` über dünne Wrapper:
 
 ### MSI (Master PDF Editor)
 
-`master-pdf-editor`: Pack-Ordner mit `MasterPDFEditor-setup-*.msi` (+ optional `crack/MasterPDFEditor.exe`). Core: `recipe_master_pdf_editor::run_msi` (Timeout, Erfolg wenn EXE da) + `::finalize` (WORK_ROOT / Crack). Kein Crack-Binary im Repo.
+`master-pdf-editor`: BYOS Pack-Ordner mit `MasterPDFEditor-setup-*.msi` (+ optional `fix/MasterPDFEditor.exe`). Core: `recipe_master_pdf_editor::run_msi` (Timeout, Erfolg wenn EXE da) + `::finalize` (WORK_ROOT / Fix). Rezeptor liefert weder MSI noch Fix.
 
 ## Bekannte Fallen
 

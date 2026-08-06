@@ -30,7 +30,7 @@ recipe_win10::ensure || true
 
 recipe_hooks::_source recipe-master-pdf-editor.sh 2>/dev/null || true
 if type recipe_master_pdf_editor::finalize >/dev/null 2>&1; then
-    output::step "Arbeitsordner / Crack"
+    output::step "Arbeitsordner / BYOS-Fix"
     recipe_master_pdf_editor::finalize || true
 fi
 

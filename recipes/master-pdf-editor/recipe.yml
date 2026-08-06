@@ -27,7 +27,7 @@ runtime: proton-ge
 install_type: installer_offline
 source_kind: folder
 source_formats: "msi,rar,zip,7z"
-source_label: "Pack-Ordner (MasterPDFEditor-setup-qt6-x64.msi + optional crack/)"
+source_label: "Pack-Ordner (MasterPDFEditor-setup-qt6-x64.msi + optional fix/)"
 target_default: "~/.local/share/wine-software/master-pdf-editor"
 target_label: "Datenordner (Wine-Prefix wird hier angelegt)"
 fix_kind: none

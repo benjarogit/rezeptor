@@ -8,7 +8,7 @@ GitHub Release notes should match these bullets.
 ### Added
 - **Halo Campaign Evolved:** system-tuned graphics quality presets (`HALO_GFX_PRESET`: ultra_low → ultra; default **Recommended / RTX 2060 / 1080p144**)
 - Halo: optional **Launch via Steam** (Non-Steam shortcut, Proton choice, Steam grid art, soft low-latency under Steam)
-- **Master PDF Editor** official recipe (MSI 5.9 + optional pack `crack/`; `recipe_master_pdf_editor::run_msi` / `finalize`)
+- **Master PDF Editor** official recipe (BYOS MSI 5.9; optional pack `fix/`; `recipe_master_pdf_editor::run_msi` / `finalize`)
 - Medizin `type: choice` combos (presets / Steam Proton) in the launcher
 
 ### Changed
@@ -29,6 +29,7 @@ GitHub Release notes should match these bullets.
 - USER-GUIDE / CATALOG: Halo Medizin presets + Steam medicine; choice YAML example for authors
 - INSTALLER / ENTWICKLER: Master PDF MSI pattern; drop m0nkrus-220 references
 - Halo `info.de.md` / `info.en.md` aligned with presets and Steam behaviour
+- Master PDF: user-facing docs use BYOS `fix/` only (Rezeptor ships neither MSI nor fix)
 
 ## [1.1.32] - 2026-08-05
 

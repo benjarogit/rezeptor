@@ -2,14 +2,14 @@
 
 Offline MSI on **Proton-GE** (pinned in `core/runtime.lock`).
 
-## Source
+## Source (BYOS)
 
-- Folder with `MasterPDFEditor-setup-qt6-x64.msi` (Qt6 x64)
-- Optional: `crack/MasterPDFEditor.exe` — copied over the installed EXE after MSI (not shipped in the Rezeptor repo)
+- Pack folder with `MasterPDFEditor-setup-qt6-x64.msi` (Qt6 x64) — Rezeptor ships neither the setup nor extras
+- Optional: `fix/MasterPDFEditor.exe` in the same pack — applied after MSI if present
 
 ## Notes
 
 - After install, launch uses the prefix path (`Code Industry/Master PDF Editor 5`).
-- Without `crack/`, the MSI build remains (license/trial depends on the pack).
+- Without a fix, the MSI build remains (license/trial depends on the pack).
 - Winetricks: `vcrun2019`, `corefonts` (Qt6).
 - Uninstall removes the prefix and desktop entries under the recipe `data_root`.

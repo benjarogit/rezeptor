@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Master PDF Editor 5 — MSI-Install + Finalize (WORK_ROOT + optional Crack aus Pack).
+# Master PDF Editor 5 — MSI-Install + Finalize (WORK_ROOT + optional BYOS-Fix aus Pack).
 
 recipe_master_pdf_editor::find_exe() {
     local prefix="${WINEPREFIX:-${WINE_PREFIX:-}}"
@@ -21,8 +21,10 @@ recipe_master_pdf_editor::find_exe() {
     echo "$cand"
 }
 
-recipe_master_pdf_editor::find_crack_exe() {
-    local root="" parent=""
+# BYOS: optional MasterPDFEditor.exe under fix/ (or common pack subfolders) next to the MSI.
+# Rezeptor ships neither the MSI nor any fix binary.
+recipe_master_pdf_editor::find_fix_exe() {
+    local root="" parent="" sub=""
     if [ -n "${RECIPE_SOURCE_ROOT:-}" ] && [ -d "${RECIPE_SOURCE_ROOT}" ]; then
         root="${RECIPE_SOURCE_ROOT}"
     elif [ -n "${RECIPE_INSTALLER_PATH:-}" ] && [ -f "${RECIPE_INSTALLER_PATH}" ]; then
@@ -30,33 +32,44 @@ recipe_master_pdf_editor::find_crack_exe() {
         root="$parent"
     fi
     [ -n "$root" ] || return 1
-    if [ -f "$root/crack/MasterPDFEditor.exe" ]; then
-        echo "$root/crack/MasterPDFEditor.exe"
-        return 0
-    fi
-    if [ -f "$root/Crack/MasterPDFEditor.exe" ]; then
-        echo "$root/Crack/MasterPDFEditor.exe"
-        return 0
-    fi
+    for sub in fix Fix online_fix; do
+        if [ -f "$root/$sub/MasterPDFEditor.exe" ]; then
+            echo "$root/$sub/MasterPDFEditor.exe"
+            return 0
+        fi
+    done
+    # Silent pack-layout aliases (folder names vary by pack; not advertised in UI).
+    for sub in crack Crack patch Patch; do
+        if [ -f "$root/$sub/MasterPDFEditor.exe" ]; then
+            echo "$root/$sub/MasterPDFEditor.exe"
+            return 0
+        fi
+    done
     return 1
 }
 
-recipe_master_pdf_editor::apply_crack() {
-    local installed="${1:-}" crack=""
+recipe_master_pdf_editor::apply_fix() {
+    local installed="${1:-}" fix=""
     [ -n "$installed" ] && [ -f "$installed" ] || return 1
-    crack="$(recipe_master_pdf_editor::find_crack_exe || true)"
-    if [ -z "$crack" ]; then
-        type output::warn >/dev/null 2>&1 && output::warn "Kein crack/MasterPDFEditor.exe im Pack — MSI-Build bleibt"
+    fix="$(recipe_master_pdf_editor::find_fix_exe || true)"
+    if [ -z "$fix" ]; then
+        type output::info >/dev/null 2>&1 \
+            && output::info "Kein BYOS-Fix (fix/MasterPDFEditor.exe) im Pack — MSI-Build bleibt" \
+            || true
         return 0
     fi
-    if [ ! -f "${installed}.rezeptor-pre-crack" ]; then
-        cp -f "$installed" "${installed}.rezeptor-pre-crack" || true
+    if [ ! -f "${installed}.rezeptor-pre-fix" ]; then
+        cp -f "$installed" "${installed}.rezeptor-pre-fix" || true
     fi
-    cp -f "$crack" "$installed" || {
-        type output::error >/dev/null 2>&1 && output::error "Crack-EXE konnte nicht kopiert werden"
+    # Migrate old backup name if present.
+    if [ -f "${installed}.rezeptor-pre-crack" ] && [ ! -f "${installed}.rezeptor-pre-fix" ]; then
+        mv -f "${installed}.rezeptor-pre-crack" "${installed}.rezeptor-pre-fix" 2>/dev/null || true
+    fi
+    cp -f "$fix" "$installed" || {
+        type output::error >/dev/null 2>&1 && output::error "BYOS-Fix konnte nicht übernommen werden"
         return 1
     }
-    type output::success >/dev/null 2>&1 && output::success "Crack übernommen: $(basename "$crack")"
+    type output::success >/dev/null 2>&1 && output::success "BYOS-Fix übernommen"
     return 0
 }
 
@@ -113,7 +126,7 @@ recipe_master_pdf_editor::finalize() {
     type output::success >/dev/null 2>&1 && output::success "Installiert: $(basename "$exe")"
     type output::info >/dev/null 2>&1 && output::info "Pfad: $dir"
 
-    type output::progress >/dev/null 2>&1 && output::progress 95 "Crack aus Pack"
-    recipe_master_pdf_editor::apply_crack "$exe" || true
+    type output::progress >/dev/null 2>&1 && output::progress 95 "BYOS-Fix aus Pack"
+    recipe_master_pdf_editor::apply_fix "$exe" || true
     return 0
 }

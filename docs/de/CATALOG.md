@@ -33,7 +33,7 @@ Aktuell **6** offizielle Produktrezepte in **5** Kategorien.
 
 | ID | Name | Beschreibung |
 |----|------|--------------|
-| `master-pdf-editor` | Master PDF Editor | MSI 5.9 unter Proton-GE — Pack mit Setup + optional `crack/` |
+| `master-pdf-editor` | Master PDF Editor | MSI 5.9 unter Proton-GE — BYOS Pack mit Setup, optional `fix/` |
 
 ### Spiele
 

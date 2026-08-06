@@ -88,7 +88,7 @@ Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`t
 | `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Graphics & Design | Full pack + Neural / missing_libs / GenP (optional) |
 | `premiere` | Adobe Premiere Pro 2024 | Video | NVIDIA: CUDA via nvidia-libs |
 | `wiso-steuer` | WISO Steuer (Portable) | Finance | Portable under Proton-GE |
-| `master-pdf-editor` | Master PDF Editor | Documents & PDF | MSI 5.9 under Proton-GE (optional crack/ in pack) |
+| `master-pdf-editor` | Master PDF Editor | Documents & PDF | BYOS MSI 5.9 under Proton-GE (optional fix/ in pack) |
 | `halo-campaign-evolved` | Halo Campaign Evolved | Games | ElAmigos/RUNE · graphics presets · optional Steam Non-Steam · BYOS trainer |
 
 </details>

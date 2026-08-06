@@ -27,13 +27,13 @@
     },
     "master-pdf-editor": {
       "files": {
-        "info.de.txt": "sha256:833f2067d06cfd5a50e5441705ee0fadd1ff141cc1dde1cd3f7c4ec39739bf65",
-        "info.en.txt": "sha256:8219f3c156b91e275c0c933f7d0d9c2304a72f3ab83f6e12167ff730a66c3cf9",
+        "info.de.txt": "sha256:1c458a2f2273d002291188bb115c17686b426dbe1db8af1f0d45451f5ec3c345",
+        "info.en.txt": "sha256:3ac44771018685b1182ddbd63494a4c542b4c32d50210c8ae575c35aa611a2f6",
         "install.sh": "sha256:aebc0bcdf72b4f5fb20a1d12145ad6b829183546e2b55e9566710b1be0323ca6",
         "kill.sh": "sha256:e125bcef11ba5b9f71c164bf2fa78b62ef5ce0a7ddfb742a053d4c05f50c3fff",
         "launch.sh": "sha256:7f405cbf25c89012efbbce8288546f29af3f0c942a905972068f42e7234e340b",
-        "recipe.yml": "sha256:f8c3409cf8db32002227db1cb58947e9bc3f48ccf63db5045071fda772dc85a4",
-        "repair.sh": "sha256:b11963776e9102460624fabc0e68eaf857f11c4f375d64ed5fa34b942009a89c",
+        "recipe.yml": "sha256:a0628403fa4462ff985ee0db7d2f16b90c99a48e632eb625cae3ff7492ef5c8b",
+        "repair.sh": "sha256:b06d73e121813dbe7573e985c9a3e3f0d9a291b95c9a09bd0d010da45f55f768",
         "uninstall.sh": "sha256:5d35f856c56da7cc219ee0be5a2b9bf26c9e367cf633a8e52e2dc3761e3d3c82",
         "update.sh": "sha256:08a20fc7d33a1fe9d69f21bcc35b6987a10a322bfaa770327da0368493a63aa1",
         "validate.sh": "sha256:53314a2bd7fa32b8ca649026cb53c6eed5c4061b158b86f89e976c02a91f69c8"

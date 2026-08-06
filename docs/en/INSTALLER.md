@@ -42,7 +42,7 @@ Variants share the Photoshop core API via thin wrappers:
 
 ### MSI (Master PDF Editor)
 
-`master-pdf-editor`: pack folder with `MasterPDFEditor-setup-*.msi` (+ optional `crack/MasterPDFEditor.exe`). Core: `recipe_master_pdf_editor::run_msi` (timeout; success when EXE exists) + `::finalize` (WORK_ROOT / crack). No crack binary in the repo.
+`master-pdf-editor`: BYOS pack folder with `MasterPDFEditor-setup-*.msi` (+ optional `fix/MasterPDFEditor.exe`). Core: `recipe_master_pdf_editor::run_msi` (timeout; success when EXE exists) + `::finalize` (WORK_ROOT / fix). Rezeptor ships neither MSI nor fix.
 
 ## Pitfalls
 
