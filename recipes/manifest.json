@@ -60,8 +60,8 @@
         "kill.sh": "sha256:3e0269b5c5bcc405f46031cc4f8ca781d0be5f049b6a2f18b7721f5a1ecda753",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
         "optional/cameraRawInstaller.sh": "sha256:9097568694ea8deac6e925fd5f098d6ec60298b0325a3140fce68bb7ff011b93",
-        "recipe.yml": "sha256:8e76a31e067790c4f946435b9519daead6e449873b5f242bff585f0367089628",
-        "repair.sh": "sha256:2977bbbe4f3bb580df0a53313ea78f696af6d19c36dbb247c402a57febfb271f",
+        "recipe.yml": "sha256:40e2963f5c1b4f8c74b5edf58b3d0affe58e2bee0e5b20eafe982e906e241e75",
+        "repair.sh": "sha256:15b7fc262d5d0d73602c4ea970d8298cda83b3f718b19a6a11d285314a71da51",
         "uninstall.sh": "sha256:4dd23e1814e426203305b5fa160939d62e68b00c85178ec6cca724e022df9925",
         "validate.sh": "sha256:6f9e28e3e0792c2a1cc95f65d5c0a99fc586b1e1fa7a490a2177eaa7599f8049"
       }

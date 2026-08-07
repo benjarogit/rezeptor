@@ -48,6 +48,7 @@ fi
 output::progress_tick "Grafik-DLLs"
 output::step "Proton-GE Grafik-DLLs (DXVK) + Registry"
 if wine_runtime::deploy_proton_graphics_dlls; then
+    recipe_photoshop::apply_ge11_wined3d_if_needed >> "$LOG_FILE" 2>&1 || true
     recipe_photoshop::_apply_graphics_registry >> "$LOG_FILE" 2>&1 || {
         output::error "_apply_graphics_registry fehlgeschlagen — $LOG_FILE"
         exit 1

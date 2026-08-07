@@ -3,6 +3,14 @@
 All notable changes to **Rezeptor** are documented here (English).
 GitHub Release notes should match these bullets.
 
+## [Unreleased]
+
+### Changed
+- Photoshop Medizin **Test: Proton-GE 11-3**: GE-Proton11-3 + **DXVK 2.7 from GE-Proton10-28** + **forced X11** + **`d2d1=n`** (Wine 11 builtin d2d1 painted a white main window; GDI path restores dark chrome). Still experimental; daily default stays GE-Proton10-28 ([#8](https://github.com/benjarogit/rezeptor/issues/8))
+
+### Added
+- `PROTON_GE_DXVK_TAG` / `wine_runtime::_resolve_dxvk_root` / `ensure_proton_ge_tag` — deploy DXVK from a different Proton-GE tree than the active Wine root
+
 ## [1.1.34] - 2026-08-07
 
 ### Fixed

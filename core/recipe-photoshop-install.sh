@@ -57,6 +57,12 @@ recipe_photoshop::_ensure_native_msxml() {
 
 recipe_photoshop::_apply_graphics_registry() {
     adobe_setup::apply_graphics_registry
+    # Wine 11 d2d1 paints Photoshop chrome pure white (issue #8). Disable → GDI path.
+    if recipe_photoshop::_env_bool_on "${PHOTOSHOP_PROTON_GE_11:-0}"; then
+        local wine_bin="${WINE:-wine}"
+        "$wine_bin" reg add "HKCU\\Software\\Wine\\DllOverrides" /v d2d1 /t REG_SZ /d "" /f \
+            >>"${LOG_FILE:-/dev/null}" 2>&1 || true
+    fi
 }
 
 recipe_photoshop::_configure_ie8() {
@@ -145,6 +151,10 @@ recipe_photoshop::configure_post_install() {
     photoshop_setup::disable_virtual_desktop
     if ! wine_runtime::deploy_proton_graphics_dlls; then
         recipe_hooks::log_err "deploy_proton_graphics_dlls fehlgeschlagen"
+        _err=1
+    fi
+    if ! recipe_photoshop::apply_ge11_wined3d_if_needed; then
+        recipe_hooks::log_err "GE-11 wined3d restore fehlgeschlagen"
         _err=1
     fi
     recipe_photoshop::_apply_graphics_registry || _err=1
@@ -331,19 +341,42 @@ recipe_photoshop::_env_bool_on() {
     esac
 }
 
-# Medizin PHOTOSHOP_PROTON_GE_11 (default off): lock GE-Proton10-28 vs test GE-Proton11-3.
+# Legacy no-op (older call sites). GE-11 Medizin uses DXVK 2.7 + X11 + d2d1=n instead.
+recipe_photoshop::apply_ge11_wined3d_if_needed() {
+    return 0
+}
+
+# Force X11/XWayland for GE-11 Medizin (winewayland is flaky with NVIDIA; keep splash/UI on X11).
+recipe_photoshop::apply_ge11_x11_env() {
+    if ! recipe_photoshop::_env_bool_on "${PHOTOSHOP_PROTON_GE_11:-${PHOTOSHOP_GE11_FORCE_X11:-0}}"; then
+        return 0
+    fi
+    export PHOTOSHOP_GE11_FORCE_X11=1
+    export PROTON_ENABLE_WAYLAND=0
+    # Prefer XWayland sockets; do not let winewayland.drv auto-select.
+    unset WAYLAND_DISPLAY WAYLAND_SOCKET
+    export DISPLAY="${DISPLAY:-:0}"
+}
+
+# Medizin PHOTOSHOP_PROTON_GE_11 (default off): GE-Proton11-3 + DXVK from 10-28 + X11 + d2d1=n.
+# Root cause of white chrome on Wine 11: builtin d2d1 (issue #8). Disabling d2d1 heals main UI.
 # Call before wine_runtime::init / recipe_hooks::runtime_init.
 recipe_photoshop::apply_proton_pin() {
     if recipe_photoshop::_env_bool_on "${PHOTOSHOP_PROTON_GE_11:-0}"; then
         export PROTON_GE_TAG="GE-Proton11-3"
+        export PROTON_GE_DXVK_TAG="GE-Proton10-28"
+        export PHOTOSHOP_GE11_FORCE_X11=1
+        unset PHOTOSHOP_GE11_WINED3D
         unset PROTON_GE_URL PROTON_GE_SHA256
+        recipe_photoshop::apply_ge11_x11_env
         type wine_runtime::reset >/dev/null 2>&1 && wine_runtime::reset
         type output::info >/dev/null 2>&1 \
-            && output::info "Photoshop: Proton-GE 11-3 (Medizin-Test) — bei UI-Problemen Option aus" \
+            && output::info "Photoshop: Proton-GE 11-3 + DXVK from 10-28 + X11 + d2d1=n (Medizin-Test)" \
             || true
         return 0
     fi
-    # Off / unset: drop stale PROTON_GE_TAG from an older choice medicine so lock wins.
+    # Off / unset: drop stale pins so lock wins.
+    unset PROTON_GE_DXVK_TAG PHOTOSHOP_GE11_WINED3D PHOTOSHOP_GE11_FORCE_X11
     if [ -n "${PROTON_GE_TAG:-}" ]; then
         unset PROTON_GE_TAG PROTON_GE_URL PROTON_GE_SHA256
         type wine_runtime::reset >/dev/null 2>&1 && wine_runtime::reset
@@ -549,6 +582,7 @@ recipe_photoshop::install() {
 
     output::progress 62 "Proton-GE Grafik-DLLs (DXVK)"
     wine_runtime::deploy_proton_graphics_dlls || _err=1
+    recipe_photoshop::apply_ge11_wined3d_if_needed || _err=1
     recipe_photoshop::_apply_graphics_registry
 
     output::progress 64 "Installer nach C: kopieren"

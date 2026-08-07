@@ -40,8 +40,8 @@ options:
       de: "Test: Proton-GE 11-3"
       en: "Test: Proton-GE 11-3"
     tip:
-      de: "Standard aus = GE-Proton10-28 (Heilung / QA). An = GE-Proton11-3 zum Gegenprüfen (Issue #8: UI/Tabs). Bei kaputter Oberfläche Option aus + ggf. Reparieren. Zweite Proton-Version wird bei Bedarf nachgeladen."
-      en: "Default off = GE-Proton10-28 (healing / QA). On = GE-Proton11-3 for A/B testing (issue #8: UI/tabs). If the UI breaks, turn off and Repair if needed. A second Proton build may download on demand."
+      de: "Standard aus = GE-Proton10-28 (Alltag). An = Experiment GE-Proton11-3 mit DXVK 2.7, X11 und d2d1 aus (sonst weißes Hauptfenster unter Wine 11). Bei Problemen sofort aus."
+      en: "Default off = GE-Proton10-28 (daily use). On = experimental GE-Proton11-3 with DXVK 2.7, X11, and d2d1 disabled (Wine 11 otherwise paints a white main window). Turn off if anything breaks."
   - id: ui_home_screen
     env: PHOTOSHOP_UI_HOME_SCREEN
     type: bool

@@ -462,21 +462,97 @@ wine_runtime::export_env() {
     fi
 }
 
+# Ensure a Proton-GE tag is on disk without changing the active wine runtime.
+# Used to fetch a DXVK donor (e.g. GE-Proton10-28) while Wine stays on another tag.
+wine_runtime::ensure_proton_ge_tag() {
+    local tag="${1:-}"
+    [ -n "$tag" ] || return 1
+    local s_tag s_url s_sha s_root s_mode s_bin s_init s_wt
+    s_tag="${PROTON_GE_TAG:-}"
+    s_url="${PROTON_GE_URL:-}"
+    s_sha="${PROTON_GE_SHA256:-}"
+    s_root="${_WINE_RUNTIME_ROOT:-}"
+    s_mode="${_WINE_RUNTIME_MODE:-}"
+    s_bin="${_WINE_RUNTIME_BIN:-}"
+    s_init="${_WINE_RUNTIME_INITIALIZED:-0}"
+    s_wt="${_WINETRICKS_BIN:-}"
+
+    export PROTON_GE_TAG="$tag"
+    unset PROTON_GE_URL PROTON_GE_SHA256
+    if ! wine_runtime::ensure_proton_ge; then
+        if [ -n "$s_tag" ]; then export PROTON_GE_TAG="$s_tag"; else unset PROTON_GE_TAG; fi
+        if [ -n "$s_url" ]; then export PROTON_GE_URL="$s_url"; else unset PROTON_GE_URL; fi
+        if [ -n "$s_sha" ]; then export PROTON_GE_SHA256="$s_sha"; else unset PROTON_GE_SHA256; fi
+        _WINE_RUNTIME_ROOT="$s_root"
+        _WINE_RUNTIME_MODE="$s_mode"
+        _WINE_RUNTIME_BIN="$s_bin"
+        _WINE_RUNTIME_INITIALIZED="$s_init"
+        _WINETRICKS_BIN="$s_wt"
+        return 1
+    fi
+
+    if [ -n "$s_tag" ]; then export PROTON_GE_TAG="$s_tag"; else unset PROTON_GE_TAG; fi
+    if [ -n "$s_url" ]; then export PROTON_GE_URL="$s_url"; else unset PROTON_GE_URL; fi
+    if [ -n "$s_sha" ]; then export PROTON_GE_SHA256="$s_sha"; else unset PROTON_GE_SHA256; fi
+    _WINE_RUNTIME_ROOT="$s_root"
+    _WINE_RUNTIME_MODE="$s_mode"
+    _WINE_RUNTIME_BIN="$s_bin"
+    _WINE_RUNTIME_INITIALIZED="$s_init"
+    _WINETRICKS_BIN="$s_wt"
+    return 0
+}
+
+# Proton tree for DXVK d3d11/dxgi/d3d10core. Optional PROTON_GE_DXVK_TAG overlays
+# another install's DXVK onto the active Wine root (Photoshop GE-11 white-UI healing).
+wine_runtime::_resolve_dxvk_root() {
+    local wine_root="${1:-${_WINE_RUNTIME_ROOT:-}}"
+    local tag="${PROTON_GE_DXVK_TAG:-}"
+    local found="" save_tag=""
+    [ -n "$wine_root" ] || return 1
+    if [ -z "$tag" ] || [ "$tag" = "${PROTON_GE_TAG:-}" ]; then
+        printf '%s\n' "$wine_root"
+        return 0
+    fi
+    save_tag="${PROTON_GE_TAG:-}"
+    export PROTON_GE_TAG="$tag"
+    found="$(wine_runtime::_find_proton_dir 2>/dev/null || true)"
+    if [ -n "$save_tag" ]; then
+        export PROTON_GE_TAG="$save_tag"
+    else
+        unset PROTON_GE_TAG
+    fi
+    if [ -n "$found" ] && [ -d "$found/files/lib/wine/dxvk" ]; then
+        printf '%s\n' "$found"
+        return 0
+    fi
+    return 1
+}
+
 # Proton ships vkd3d + DXVK DLLs; user prefixes from wineboot often lack libvkd3d → Photoshop won't start
+# Optional PROTON_GE_DXVK_TAG: copy DXVK from that tag; vkd3d/wined3d stay from the active Wine root.
 wine_runtime::deploy_proton_graphics_dlls() {
     wine_runtime::init || return 1
     local prefix="${WINEPREFIX:-${WINE_PREFIX:-}}"
     local root="$_WINE_RUNTIME_ROOT"
+    local dxvk_root=""
     local def_sys32="$root/files/share/default_pfx/drive_c/windows/system32"
     local def_wow64="$root/files/share/default_pfx/drive_c/windows/syswow64"
-    local dxvk64="$root/files/lib/wine/dxvk/x86_64-windows"
-    local dxvk32="$root/files/lib/wine/dxvk/i386-windows"
+    local dxvk64 dxvk32
     local sys32="$prefix/drive_c/windows/system32"
     local wow64="$prefix/drive_c/windows/syswow64"
     local dll=""
     local err=0
 
     [ -n "$prefix" ] && [ -d "$sys32" ] || wine_runtime::_fail "Wine prefix system32 missing: ${prefix:-<unset>}"
+
+    if [ -n "${PROTON_GE_DXVK_TAG:-}" ] && [ "${PROTON_GE_DXVK_TAG}" != "${PROTON_GE_TAG:-}" ]; then
+        wine_runtime::ensure_proton_ge_tag "$PROTON_GE_DXVK_TAG" || \
+            wine_runtime::_fail "DXVK source Proton-GE missing: $PROTON_GE_DXVK_TAG"
+    fi
+    dxvk_root="$(wine_runtime::_resolve_dxvk_root "$root")" || \
+        wine_runtime::_fail "DXVK root unresolved (PROTON_GE_DXVK_TAG=${PROTON_GE_DXVK_TAG:-})"
+    dxvk64="$dxvk_root/files/lib/wine/dxvk/x86_64-windows"
+    dxvk32="$dxvk_root/files/lib/wine/dxvk/i386-windows"
 
     # libvkd3d-utils + wined3d: Proton-11-DXCore hängt davon ab — ohne sie
     # scheitert DXCoreCreateAdapterFactory still (DirectML/UE5-Absturz).
