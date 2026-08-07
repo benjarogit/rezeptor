@@ -762,24 +762,15 @@ recipe_halo_campaign_evolved::steam_owns_halo() {
 }
 
 recipe_halo_campaign_evolved::find_proton_script() {
-    local c
-    # Halo needs GE-Proton11 (DXCore). Prefer that tree even if PROTON_PATH still
-    # points at a global GE-10 runtime from another recipe.
+    local c tag="${PROTON_GE_TAG:-GE-Proton11-3}"
+    # Prefer the recipe pin (PROTON_GE_TAG / PROTON_PATH after runtime_init).
     for c in \
-        "${HOME}/.local/share/wine-software/runtime/proton-ge/GE-Proton11-3/proton" \
         "${PROTON_PATH:+$PROTON_PATH/proton}" \
         "${WINE_RUNTIME_ROOT:+$WINE_RUNTIME_ROOT/proton}" \
-        "${HOME}/.local/share/Steam/compatibilitytools.d/GE-Proton11-3/proton" \
-        "${HOME}/.local/share/Steam/compatibilitytools.d/GE-Proton10-34/proton" \
+        "${HOME}/.local/share/wine-software/runtime/proton-ge/${tag}/proton" \
+        "${HOME}/.local/share/Steam/compatibilitytools.d/${tag}/proton" \
         "${HOME}/.local/share/Steam/steamapps/common/Proton - Experimental/proton"; do
         [ -n "$c" ] || continue
-        # Skip a PROTON_PATH that is not GE-11 when the Halo tree exists.
-        case "$c" in
-            */GE-Proton10*|*/GE-Proton9*)
-                [ -f "${HOME}/.local/share/wine-software/runtime/proton-ge/GE-Proton11-3/proton" ] \
-                    && continue
-                ;;
-        esac
         if [ -f "$c" ] && [ -x "$c" ]; then
             printf '%s' "$c"
             return 0

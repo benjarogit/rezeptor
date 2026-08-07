@@ -65,6 +65,21 @@
     "data_root": { "type": "string", "minLength": 1 },
     "prefix": { "type": "string" },
     "runtime": { "enum": ["proton-ge"] },
+    "proton_ge_tag": {
+      "type": "string",
+      "pattern": "^GE-Proton[0-9].*$",
+      "description": "Optional Proton-GE tag for this recipe (default: core/runtime.lock). URL/SHA from lock ALT pins or proton_ge_url/sha256."
+    },
+    "proton_ge_url": {
+      "type": "string",
+      "format": "uri",
+      "description": "Optional tarball URL when proton_ge_tag is not the lock default and not listed as PROTON_GE_ALT_*."
+    },
+    "proton_ge_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$",
+      "description": "Optional SHA256 for proton_ge_url / alternate tag."
+    },
     "install_type": {
       "enum": [
         "installer_offline",

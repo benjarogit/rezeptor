@@ -94,6 +94,23 @@ Community: `recipes/community/<id>/` (Hooks laden Core über `../../../core/`; n
 
 ---
 
+## Proton-GE pro Rezept
+
+Globaler Default: `core/runtime.lock` (aktuell **GE-Proton10-28** — Photoshop-QA). AppImage/Flatpak bundeln nur diesen Tag.
+
+| Mechanismus | Wann |
+|-------------|------|
+| nichts setzen | Rezept nutzt Lock-Default |
+| `proton_ge_tag: GE-Proton11-3` in `recipe.yml` | festes Pin (Halo: DXCore) — URL/SHA aus `PROTON_GE_ALT_*` im Lock |
+| `proton_ge_url` / `proton_ge_sha256` | nur wenn Tag weder Default noch ALT ist |
+| Medizin `PHOTOSHOP_PROTON_GE_11` (Bool, Default aus) | Photoshop A/B: aus = Lock 10-28, an = GE-Proton11-3 |
+
+Zweit-Tags landen on-demand unter `~/.local/share/wine-software/runtime/proton-ge/<tag>/`. Nicht den globalen Lock nur für ein Spiel anheben — sonst leiden alle Rezepte.
+
+Siehe [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md) · [PROJECT-LAYOUT.md](PROJECT-LAYOUT.md).
+
+---
+
 ## Pflicht-Checkliste
 
 - [ ] `recipe.yml`: Pflichtfelder + **`install_steps`** + **`uninstall`**; bei `version_guaranteed` auch **`version_detect`**

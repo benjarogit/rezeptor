@@ -29,6 +29,7 @@ else
     output::info "Abweichungen gefunden — behebe fehlende Komponenten"
 fi
 
+recipe_photoshop::apply_proton_pin
 wine_runtime::init || { output::error "Proton-GE init fehlgeschlagen"; exit 1; }
 wine_runtime::export_env
 

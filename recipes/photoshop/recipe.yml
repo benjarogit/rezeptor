@@ -31,6 +31,17 @@ launch_process_patterns: [Photoshop.exe]
 # win10 via recipe_win10::ensure; VC++ via recipe_vcrun::ensure (nicht winetricks)
 winetricks: [atmlib, corefonts, "fontsmooth=rgb", gdiplus, msxml3, msxml6, ie8]
 options:
+  - id: proton_ge_11
+    env: PHOTOSHOP_PROTON_GE_11
+    group: runtime
+    type: bool
+    default: false
+    label:
+      de: "Test: Proton-GE 11-3"
+      en: "Test: Proton-GE 11-3"
+    tip:
+      de: "Standard aus = GE-Proton10-28 (Heilung / QA). An = GE-Proton11-3 zum Gegenprüfen (Issue #8: UI/Tabs). Bei kaputter Oberfläche Option aus + ggf. Reparieren. Zweite Proton-Version wird bei Bedarf nachgeladen."
+      en: "Default off = GE-Proton10-28 (healing / QA). On = GE-Proton11-3 for A/B testing (issue #8: UI/tabs). If the UI breaks, turn off and Repair if needed. A second Proton build may download on demand."
   - id: ui_home_screen
     env: PHOTOSHOP_UI_HOME_SCREEN
     type: bool

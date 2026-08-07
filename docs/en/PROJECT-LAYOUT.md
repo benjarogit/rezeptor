@@ -71,13 +71,15 @@ Deep reference: [Core API](CORE-API.md). App updates: `scripts/rezeptor-update.s
 
 ## Runtime: Proton-GE only
 
-- Pin in `core/runtime.lock` (`PROTON_GE_TAG`, URL, SHA256)
+- **Default pin** in `core/runtime.lock` (`PROTON_GE_TAG`, URL, SHA256) — AppImage/Flatpak bundle this tag
+- **Per recipe:** optional `proton_ge_tag:` in `recipe.yml` (e.g. Halo → `GE-Proton11-3`); URL/SHA from lock `PROTON_GE_ALT_*` or `proton_ge_url` / `proton_ge_sha256`
+- **Medicine:** recipes may expose a Proton test toggle (Photoshop: `PHOTOSHOP_PROTON_GE_11`, default off = 10-28)
 - Recipes set `runtime: proton-ge`
 - **No** system Wine fallback in recipe scripts
 - Graphics: `wine_runtime::deploy_proton_graphics_dlls()` — **no** winetricks dxvk
 - Win10: `recipe_win10::ensure` — **no** winetricks winecfg
 
-Proton install location: `~/.local/share/wine-software/runtime/proton-ge/<tag>/` (shared; survives uninstall).
+Proton install location: `~/.local/share/wine-software/runtime/proton-ge/<tag>/` (shared; survives uninstall; alternate tags on demand).
 
 ## `launcher/`
 

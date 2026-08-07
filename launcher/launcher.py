@@ -99,10 +99,10 @@ from app_support import (
     github_repo_url,
     humanize_log_line,
     parse_validate_version_fields,
+    effective_proton_ge_tag,
     proton_ge_badge_label,
     prune_old_logs,
     public_docs_url,
-    read_proton_ge_tag,
     read_version,
     report_clipboard_text,
     sanitize_log_text,
@@ -3115,17 +3115,39 @@ class RezeptorWindow(QMainWindow):
             return
         info = self._selected
         bundle_kw: dict = {}
+        recipe_tag = ""
+        data_root: Path | None = None
         if info is not None:
-            bundle_kw["data_root"] = resolve_data_root(info.meta, info.rid)
+            data_root = resolve_data_root(info.meta, info.rid)
+            recipe_tag = (info.meta.get("proton_ge_tag") or "").strip()
+            bundle_kw["data_root"] = data_root
             bundle_kw["recipe_name"] = (info.meta.get("name") or "").strip()
             bundle_kw["version_guaranteed"] = (
                 info.meta.get("version_guaranteed") or ""
             ).strip()
             bundle_kw["version_detected"] = (info.version_detected or "").strip()
+            bundle_kw["recipe_proton_tag"] = recipe_tag
         report = collect_report_bundle(rid, self.session_id, **bundle_kw)
         clip = QApplication.clipboard()
-        clip.setText(report_clipboard_text(rid, report, self.session_id))
-        QDesktopServices.openUrl(QUrl(github_issue_url(rid, report)))
+        clip.setText(
+            report_clipboard_text(
+                rid,
+                report,
+                self.session_id,
+                recipe_tag=recipe_tag,
+                data_root=data_root,
+            )
+        )
+        QDesktopServices.openUrl(
+            QUrl(
+                github_issue_url(
+                    rid,
+                    report,
+                    recipe_tag=recipe_tag,
+                    data_root=data_root,
+                )
+            )
+        )
         box = QMessageBox(self)
         box.setIcon(QMessageBox.Icon.Information)
         box.setWindowTitle(t("dialog.report_opened_title"))
@@ -3716,8 +3738,12 @@ class RezeptorWindow(QMainWindow):
 
         tag = (meta.get("runtime") or "proton-ge").strip().lower()
         steam_id = (meta.get("steam_appid") or "").strip()
-        proton_label = proton_ge_badge_label()
-        ge_tag = read_proton_ge_tag() or proton_label
+        # Per-recipe pin (yml / Medizin), not the global AppImage default alone.
+        ge_tag = effective_proton_ge_tag(
+            recipe_tag=(meta.get("proton_ge_tag") or "").strip(),
+            data_root=resolve_data_root(meta, info.rid),
+        )
+        proton_label = proton_ge_badge_label(ge_tag)
         if tag == "system" and steam_id:
             self.proton_pill.set_content(t("badge.runtime_steam"), COLOR_EXPERIMENTAL)
             self.proton_pill.setToolTip(t("tooltip.runtime_steam"))

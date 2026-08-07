@@ -1,4 +1,6 @@
 # Legacy pin (canonical: core/runtime.lock). Keep in sync.
-PROTON_GE_TAG=GE-Proton11-3
-PROTON_GE_URL=https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-3/GE-Proton11-3.tar.gz
-PROTON_GE_SHA256=861c2edc8d40d051fb1e7a692deb953be52bd339c46d90f2b7dde50ddad91266
+PROTON_GE_TAG=GE-Proton10-28
+PROTON_GE_URL=https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton10-28/GE-Proton10-28.tar.gz
+PROTON_GE_SHA256=4c5cc46e7f1af53f610e02c60bc9470db0d82e072b0072372ef588a82c4de316
+PROTON_GE_ALT_GE_Proton11_3_URL=https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-3/GE-Proton11-3.tar.gz
+PROTON_GE_ALT_GE_Proton11_3_SHA256=861c2edc8d40d051fb1e7a692deb953be52bd339c46d90f2b7dde50ddad91266

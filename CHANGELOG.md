@@ -3,6 +3,21 @@
 All notable changes to **Rezeptor** are documented here (English).
 GitHub Release notes should match these bullets.
 
+## [1.1.34] - 2026-08-07
+
+### Fixed
+- **Photoshop / global runtime:** restore default Proton-GE pin to **GE-Proton10-28** (1.1.33 had bumped the global lock to 11-3 for Halo and broke PS UI for some users — [#8](https://github.com/benjarogit/rezeptor/issues/8))
+- Flatpak verify: accept Proton `wine` without separate `wine64` (same as AppImage); bundle default tag from `runtime.lock` again (**10-28**)
+
+### Added
+- Per-recipe Proton-GE pin: `proton_ge_tag` / optional `proton_ge_url` + `proton_ge_sha256` in `recipe.yml`; alternate SHA/URL via `PROTON_GE_ALT_*` in `core/runtime.lock`
+- Halo pins **GE-Proton11-3** via `proton_ge_tag` (on-demand download; not the AppImage/Flatpak default bundle)
+- Photoshop Medizin: **Test: Proton-GE 11-3** toggle (default off = GE-Proton10-28 healing; on = GE-Proton11-3 for issue #8 A/B)
+- Launcher Proton badge uses the **per-recipe** effective tag (not only the global lock)
+
+### Documentation
+- ENTWICKLER / RECIPE-AUTHORING / PROJECT-LAYOUT / CORE-API / README: per-recipe Proton pins
+
 ## [1.1.33] - 2026-08-06
 
 ### Added

@@ -321,7 +321,7 @@ def _ui_locale() -> str:
 
 
 def read_proton_ge_tag() -> str:
-    """Pinned Proton-GE tag from core/runtime.lock (no shell)."""
+    """Default Proton-GE tag from core/runtime.lock (no shell)."""
     lock = ROOT / "core" / "runtime.lock"
     if not lock.is_file():
         return ""
@@ -338,21 +338,80 @@ def read_proton_ge_tag() -> str:
     return ""
 
 
-def describe_runtime_for_report() -> str:
-    tag = read_proton_ge_tag()
+def _parse_options_env_map(data_root: Path | None) -> dict[str, str]:
+    if data_root is None:
+        return {}
+    path = Path(data_root) / "options.env"
+    if not path.is_file():
+        return {}
+    out: dict[str, str] = {}
+    try:
+        for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+            raw = line.strip()
+            if not raw or raw.startswith("#") or "=" not in raw:
+                continue
+            key, _, val = raw.partition("=")
+            key = key.strip()
+            if not key:
+                continue
+            out[key] = val.strip().strip('"').strip("'")
+    except OSError:
+        return {}
+    return out
+
+
+def _env_truthy(val: str) -> bool:
+    return val.strip().lower() in ("1", "true", "yes", "on")
+
+
+def _proton_ge_tag_from_options_env(data_root: Path | None) -> str:
+    """Medizin: Photoshop test bool, else generic PROTON_GE_TAG."""
+    stored = _parse_options_env_map(data_root)
+    if not stored:
+        return ""
+    # Photoshop issue #8 A/B: dedicated bool (default off = lock 10-28).
+    if "PHOTOSHOP_PROTON_GE_11" in stored:
+        if _env_truthy(stored.get("PHOTOSHOP_PROTON_GE_11", "")):
+            return "GE-Proton11-3"
+        return ""
+    tag = (stored.get("PROTON_GE_TAG") or "").strip()
+    return tag if tag.startswith("GE-Proton") else ""
+
+
+def effective_proton_ge_tag(
+    *,
+    recipe_tag: str = "",
+    data_root: Path | None = None,
+) -> str:
+    """Per-recipe tag: options.env → recipe.yml proton_ge_tag → runtime.lock."""
+    from_env = _proton_ge_tag_from_options_env(data_root)
+    if from_env:
+        return from_env
+    pinned = (recipe_tag or "").strip()
+    if pinned.startswith("GE-Proton"):
+        return pinned
+    return read_proton_ge_tag()
+
+
+def describe_runtime_for_report(
+    *,
+    recipe_tag: str = "",
+    data_root: Path | None = None,
+) -> str:
+    tag = effective_proton_ge_tag(recipe_tag=recipe_tag, data_root=data_root)
     return f"Proton-GE {tag}" if tag else "Proton-GE (unknown — core/runtime.lock)"
 
 
-def proton_ge_short_tag() -> str:
+def proton_ge_short_tag(tag: str = "") -> str:
     """GE-Proton11-3 → 11-3 for compact UI badges."""
-    tag = read_proton_ge_tag()
+    tag = (tag or read_proton_ge_tag()).strip()
     if tag.startswith("GE-Proton"):
         return tag[len("GE-Proton") :] or tag
     return tag
 
 
-def proton_ge_badge_label() -> str:
-    short = proton_ge_short_tag()
+def proton_ge_badge_label(tag: str = "") -> str:
+    short = proton_ge_short_tag(tag)
     return f"Proton-GE {short}" if short else "Proton-GE"
 
 
@@ -369,6 +428,7 @@ def collect_report_bundle(
     recipe_name: str = "",
     version_guaranteed: str = "",
     version_detected: str = "",
+    recipe_proton_tag: str = "",
 ) -> Path:
     from i18n import t
 
@@ -379,7 +439,9 @@ def collect_report_bundle(
         pass
     ts = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
     out = LOG_ROOT / f"github-report_{recipe_id}_{ts}.txt"
-    runtime = describe_runtime_for_report()
+    runtime = describe_runtime_for_report(
+        recipe_tag=recipe_proton_tag, data_root=data_root
+    )
     locale = _ui_locale()
     lines: list[str] = [
         t("dialog.report_file_title"),
@@ -521,7 +583,14 @@ def collect_report_bundle(
     return out
 
 
-def build_issue_body(recipe_id: str, report_path: Path, session_id: str = "") -> str:
+def build_issue_body(
+    recipe_id: str,
+    report_path: Path,
+    session_id: str = "",
+    *,
+    recipe_tag: str = "",
+    data_root: Path | None = None,
+) -> str:
     """Markdown matching locale-specific GitHub bug_report template."""
     from i18n import t
 
@@ -531,7 +600,7 @@ def build_issue_body(recipe_id: str, report_path: Path, session_id: str = "") ->
     recipe_label = (
         recipe_id if recipe_id != "launcher" else t("dialog.issue_recipe_general")
     )
-    runtime = describe_runtime_for_report()
+    runtime = describe_runtime_for_report(recipe_tag=recipe_tag, data_root=data_root)
     locale = _ui_locale()
     parts = [
         t("dialog.issue_problem_h"),
@@ -590,24 +659,44 @@ def build_issue_body(recipe_id: str, report_path: Path, session_id: str = "") ->
     return "\n".join(parts)
 
 
-def report_clipboard_text(recipe_id: str, report_path: Path, session_id: str = "") -> str:
-    return build_issue_body(recipe_id, report_path, session_id)
+def report_clipboard_text(
+    recipe_id: str,
+    report_path: Path,
+    session_id: str = "",
+    *,
+    recipe_tag: str = "",
+    data_root: Path | None = None,
+) -> str:
+    return build_issue_body(
+        recipe_id,
+        report_path,
+        session_id,
+        recipe_tag=recipe_tag,
+        data_root=data_root,
+    )
 
 
-def github_issue_url(recipe_id: str, report_path: Path | None = None) -> str:
+def github_issue_url(
+    recipe_id: str,
+    report_path: Path | None = None,
+    *,
+    recipe_tag: str = "",
+    data_root: Path | None = None,
+) -> str:
     from urllib.parse import quote
 
     from i18n import t
 
     recipe_label = recipe_id if recipe_id != "launcher" else "launcher"
     title = f"[BUG] {recipe_label} — Rezeptor"
+    runtime = describe_runtime_for_report(recipe_tag=recipe_tag, data_root=data_root)
     # Short URL body — full clipboard paste fills the form
     body = (
         f"{t('dialog.issue_problem_h')}\n\n"
         f"{t('dialog.issue_url_paste_hint')}\n\n"
         f"{t('dialog.issue_system_h')}\n\n"
         f"{t('dialog.issue_distro', distro=detect_distro())}\n"
-        f"{t('dialog.issue_runtime', runtime=describe_runtime_for_report())}\n"
+        f"{t('dialog.issue_runtime', runtime=runtime)}\n"
         f"{t('dialog.issue_recipe', recipe=recipe_label)}\n"
         f"{t('dialog.issue_launcher', version=read_version())}\n"
         f"{t('dialog.issue_ui_locale', locale=_ui_locale())}\n"

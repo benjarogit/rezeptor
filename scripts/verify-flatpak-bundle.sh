@@ -59,20 +59,35 @@ case "$pyqt_path" in
         ;;
 esac
 
-check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "/app/runtime/proton-ge/${PROTON_GE_TAG}/files/bin/wine64"
-check flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "/app/runtime/proton-ge/${PROTON_GE_TAG}/files/bin/wine"
-# Real 32-bit wine needs Compat.i386 + --allow=multiarch (not a wine64 shim).
-if flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
-    head -c 2 "/app/runtime/proton-ge/${PROTON_GE_TAG}/files/bin/wine" | grep -q '#!'; then
-    echo "FAIL: wine is a shell shim — need real ELF + Compat.i386 for msxml3" >&2
+_proton_bin="/app/runtime/proton-ge/${PROTON_GE_TAG}/files/bin"
+# Prefer wine; GE-Proton11+ may omit wine64. Accept either executable.
+if ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
+    test -x "${_proton_bin}/wine" \
+    && ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
+        test -x "${_proton_bin}/wine64"; then
+    echo "FAIL: missing ${_proton_bin}/wine (or wine64)" >&2
     fail=1
 fi
-if ! flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
-    "/app/runtime/proton-ge/${PROTON_GE_TAG}/files/bin/wine64" --version >/dev/null; then
-    echo "FAIL: wine64 --version failed inside Flatpak runtime" >&2
-    fail=1
+# Real 32-bit wine needs Compat.i386 + --allow=multiarch (not a wine64 shim).
+if flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "${_proton_bin}/wine"; then
+    if flatpak-builder --run "$BUILD_DIR" "$MANIFEST" \
+        head -c 2 "${_proton_bin}/wine" | grep -q '#!'; then
+        echo "FAIL: wine is a shell shim — need real ELF + Compat.i386 for msxml3" >&2
+        fail=1
+    fi
+fi
+_wine_run=""
+if flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "${_proton_bin}/wine64"; then
+    _wine_run="${_proton_bin}/wine64"
+elif flatpak-builder --run "$BUILD_DIR" "$MANIFEST" test -x "${_proton_bin}/wine"; then
+    _wine_run="${_proton_bin}/wine"
+fi
+if [ -n "$_wine_run" ] \
+    && flatpak-builder --run "$BUILD_DIR" "$MANIFEST" "$_wine_run" --version >/dev/null; then
+    echo "Proton wine runs inside Flatpak runtime ($_wine_run)"
 else
-    echo "wine64 runs inside Flatpak runtime"
+    echo "FAIL: Proton wine --version failed inside Flatpak runtime" >&2
+    fail=1
 fi
 # Note: flatpak-builder --run does not attach Compat.i386 — 32-bit wine is
 # verified after install from the local repo in scripts/build-flatpak.sh.

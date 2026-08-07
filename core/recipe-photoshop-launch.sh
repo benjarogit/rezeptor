@@ -307,6 +307,11 @@ recipe_photoshop::launch() {
     recipe_hooks::_source recipe-validate.sh
 
     export WINE_METHOD="${WINE_METHOD:-proton-ge}"
+    # Shared pin helper lives in install module.
+    if ! type recipe_photoshop::apply_proton_pin >/dev/null 2>&1; then
+        recipe_hooks::_source recipe-photoshop-install.sh
+    fi
+    recipe_photoshop::apply_proton_pin
     recipe_hooks::runtime_init || {
         recipe_hooks::die "Proton-GE nicht verfügbar — Rezeptor → Reparieren"
     }

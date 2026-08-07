@@ -61,7 +61,7 @@ No GPG/cosign signing in the repo — integrity via SHA256 sums.
 
 ## Proton-GE
 
-`core/runtime.lock` pins tag, URL, and `PROTON_GE_SHA256`. Download verifies the hash.
+`core/runtime.lock` pins the **default** tag, URL, and `PROTON_GE_SHA256` (AppImage/Flatpak). Recipes may set `proton_ge_tag`; alternates use `PROTON_GE_ALT_*` in the lock. Download verifies the hash.
 
 ## Next
 

@@ -38,7 +38,7 @@ Support weiterhin über [GitHub Issues](https://github.com/benjarogit/rezeptor/i
 ## Was du bekommst
 
 - **GUI-Launcher** — Rezept wählen, installieren, starten, reparieren oder entfernen
-- **Nur Proton-GE** — kein System-Wine-Fallback in Rezepten
+- **Nur Proton-GE** — kein System-Wine-Fallback in Rezepten; Default-Pin in `core/runtime.lock`, optional pro Rezept `proton_ge_tag` (Halo: GE 11; Photoshop: Default GE 10)
 - **Statusprüfung** — optional beim Start; jederzeit neu prüfen (F5)
 - **System-Tools** — fehlende Pakete einmalig vorschlagen
 - **Katalog & Quellen** — offizielle Rezepte plus Community-Pfad

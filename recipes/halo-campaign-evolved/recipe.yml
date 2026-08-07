@@ -33,6 +33,8 @@ notify_title: "Halo Campaign Evolved"
 data_root: "~/.local/share/wine-software/halo-campaign-evolved"
 prefix: "{data_root}/prefix"
 runtime: proton-ge
+# DXCore / libvkd3d-utils — not the global Photoshop baseline (GE-Proton10-28).
+proton_ge_tag: GE-Proton11-3
 install_type: installer_offline
 source_kind: folder
 source_label: "Pack-Ordner oder ISO (Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos)"

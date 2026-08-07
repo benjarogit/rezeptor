@@ -7,10 +7,7 @@ source "$RECIPE_DIR/../../core/recipe-hooks.sh"
 recipe_hooks::load repair
 recipe_hooks::log_setup "Halo_Repair"
 
-# Halo braucht Proton-GE 11 (DXCore) — global bleibt 10 für Photoshop.
-export PROTON_GE_TAG="${PROTON_GE_TAG:-GE-Proton11-3}"
-export PROTON_GE_URL="${PROTON_GE_URL:-https://github.com/GloriousEggroll/proton-ge-custom/releases/download/${PROTON_GE_TAG}/${PROTON_GE_TAG}.tar.gz}"
-export PROTON_GE_SHA256="${PROTON_GE_SHA256:-861c2edc8d40d051fb1e7a692deb953be52bd339c46d90f2b7dde50ddad91266}"
+# Proton pin: recipe.yml proton_ge_tag (GE-Proton11-3).
 
 output::progress_begin 4 "Reparatur"
 output::step "Installation prüfen"

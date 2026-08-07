@@ -17,9 +17,9 @@
         "info.en.md": "sha256:12e850c847f345ff3fc472a9411e694e9cb82d3af3b7cf8201d2049fca10e13e",
         "install.sh": "sha256:aebc0bcdf72b4f5fb20a1d12145ad6b829183546e2b55e9566710b1be0323ca6",
         "kill.sh": "sha256:03dc29c0aa7a264833c5116d6e9ed3769450d820efaa5b80d7658fbfe763a0bf",
-        "launch.sh": "sha256:f78cc15ec0df0cb7ad30fa83363a7ba4f682a1181b5035a3dd3e0c15953bd120",
-        "recipe.yml": "sha256:fd50fee5474ebbc2436165e21b46c231301cc411f6ffc400e72edef171e73b64",
-        "repair.sh": "sha256:eec88d1b95d1199639e1d148d44c2ce07724138c7efee5524fdd930b35ba63f2",
+        "launch.sh": "sha256:e7b7308736fb856628aca97df20db0b486d1ba2813e68607a2ec2927bf4ee07b",
+        "recipe.yml": "sha256:eeefba7a768b75929a6ee2702a4588234c3b1db9ea1e2ddeca6b08fb6a876eea",
+        "repair.sh": "sha256:c9ee3130a0cc685a0e4c409d984f94a754409d32fc16472bd29972fb8e265ba9",
         "uninstall.sh": "sha256:2d0370a331e4d235326da9e0daf10bd6f038b91c1fce79fe9e543b47ee42a869",
         "update.sh": "sha256:08a20fc7d33a1fe9d69f21bcc35b6987a10a322bfaa770327da0368493a63aa1",
         "validate.sh": "sha256:a9450ffc48497e3934b3421384be68bc016b26f5cf6aec0cbde83aa9ad41e9fb"
@@ -60,8 +60,8 @@
         "kill.sh": "sha256:3e0269b5c5bcc405f46031cc4f8ca781d0be5f049b6a2f18b7721f5a1ecda753",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
         "optional/cameraRawInstaller.sh": "sha256:9097568694ea8deac6e925fd5f098d6ec60298b0325a3140fce68bb7ff011b93",
-        "recipe.yml": "sha256:616f8cda5c0b243e300cbdc40abb58c7b74dbc185ad2d464e086aa59c3f51ff1",
-        "repair.sh": "sha256:7e769ac9972b1efb17f72d2a3550251e6dcbd60eecd239e8cbc5b25a8b2de5f4",
+        "recipe.yml": "sha256:8e76a31e067790c4f946435b9519daead6e449873b5f242bff585f0367089628",
+        "repair.sh": "sha256:2977bbbe4f3bb580df0a53313ea78f696af6d19c36dbb247c402a57febfb271f",
         "uninstall.sh": "sha256:4dd23e1814e426203305b5fa160939d62e68b00c85178ec6cca724e022df9925",
         "validate.sh": "sha256:6f9e28e3e0792c2a1cc95f65d5c0a99fc586b1e1fa7a490a2177eaa7599f8049"
       }

@@ -331,6 +331,26 @@ recipe_photoshop::_env_bool_on() {
     esac
 }
 
+# Medizin PHOTOSHOP_PROTON_GE_11 (default off): lock GE-Proton10-28 vs test GE-Proton11-3.
+# Call before wine_runtime::init / recipe_hooks::runtime_init.
+recipe_photoshop::apply_proton_pin() {
+    if recipe_photoshop::_env_bool_on "${PHOTOSHOP_PROTON_GE_11:-0}"; then
+        export PROTON_GE_TAG="GE-Proton11-3"
+        unset PROTON_GE_URL PROTON_GE_SHA256
+        type wine_runtime::reset >/dev/null 2>&1 && wine_runtime::reset
+        type output::info >/dev/null 2>&1 \
+            && output::info "Photoshop: Proton-GE 11-3 (Medizin-Test) — bei UI-Problemen Option aus" \
+            || true
+        return 0
+    fi
+    # Off / unset: drop stale PROTON_GE_TAG from an older choice medicine so lock wins.
+    if [ -n "${PROTON_GE_TAG:-}" ]; then
+        unset PROTON_GE_TAG PROTON_GE_URL PROTON_GE_SHA256
+        type wine_runtime::reset >/dev/null 2>&1 && wine_runtime::reset
+    fi
+    return 0
+}
+
 recipe_photoshop::_ui_opt_enabled() {
     # $1 = aktueller Env-Wert (kann leer sein); leer + Legacy → an
     local cur="${1-}"
@@ -487,6 +507,7 @@ recipe_photoshop::install() {
     recipe_hooks::_source sharedFuncs.sh
     recipe_hooks::_source recipe-fonts.sh
     recipe_hooks::_source recipe-validate.sh
+    recipe_photoshop::apply_proton_pin
 
     output::section "Adobe Photoshop CC 2021 — Installation"
     output::progress 2 "Vorbereitung"

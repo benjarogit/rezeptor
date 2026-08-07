@@ -57,6 +57,17 @@ recipe_export_env() {
     local wow64
     wow64="$(recipe_get "$yml" disable_wow64 2>/dev/null || true)"
     export RECIPE_DISABLE_WOW64="$wow64"
+    # Optional per-recipe Proton-GE pin (default = core/runtime.lock).
+    # Medizin/options.env may still override PROTON_GE_TAG afterwards.
+    local ptag purl psha
+    ptag="$(recipe_get "$yml" proton_ge_tag 2>/dev/null || true)"
+    if [ -n "$ptag" ]; then
+        export PROTON_GE_TAG="$ptag"
+        purl="$(recipe_get "$yml" proton_ge_url 2>/dev/null || true)"
+        psha="$(recipe_get "$yml" proton_ge_sha256 2>/dev/null || true)"
+        [ -n "$purl" ] && export PROTON_GE_URL="$purl"
+        [ -n "$psha" ] && export PROTON_GE_SHA256="$psha"
+    fi
     recipe_export_yaml_env "$yml"
 }
 

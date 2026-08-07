@@ -94,8 +94,8 @@ modules:
           - site
           - .cursor
       - type: archive
-        url: https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-3/GE-Proton11-3.tar.gz
-        sha256: 861c2edc8d40d051fb1e7a692deb953be52bd339c46d90f2b7dde50ddad91266
+        url: https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton10-28/GE-Proton10-28.tar.gz
+        sha256: 4c5cc46e7f1af53f610e02c60bc9470db0d82e072b0072372ef588a82c4de316
         dest: proton-ge-src
       - type: archive
         url: https://github.com/astral-sh/python-build-standalone/releases/download/20251217/cpython-3.12.12%2B20251217-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz

@@ -38,7 +38,7 @@ Support stays on [GitHub Issues](https://github.com/benjarogit/rezeptor/issues) 
 ## What you get
 
 - **GUI launcher** — pick a recipe, install, start, repair, or remove
-- **Proton-GE only** — no system Wine fallback in recipes
+- **Proton-GE only** — no system Wine fallback in recipes; default pin in `core/runtime.lock`, optional per-recipe `proton_ge_tag` (Halo uses GE 11; Photoshop defaults to GE 10)
 - **Status checks** — optional validate on startup; refresh anytime (F5)
 - **Host tools check** — missing packages suggested once
 - **Catalog & sources** — official recipes plus a community path

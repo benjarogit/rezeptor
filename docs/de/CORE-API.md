@@ -170,7 +170,7 @@ CLI: `scripts/recipe-relocate.sh <recipe_dir>` mit Env `RECIPE_RELOCATE_TO`.
 | `wine_runtime::winetricks` | `WINE=$_WINE_RUNTIME_BIN winetricks` |
 | `wine_runtime::describe` | Menschenlesbare Runtime-Zeile |
 
-Pin: `core/runtime.lock`. System-Wine existiert im Code nur bei explizitem `runtime: system` / Env — in Rezepten **verboten**.
+Pin: `core/runtime.lock` (Default). Rezept-Override: `proton_ge_tag:` (+ optional URL/SHA) oder Env `PROTON_GE_TAG` vor `wine_runtime::init` — `_load_lock` überschreibt gesetzte Tags nicht und löst ALT-Pins auf. System-Wine existiert im Code nur bei explizitem `runtime: system` / Env — in Rezepten **verboten**.
 
 ---
 

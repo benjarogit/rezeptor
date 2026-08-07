@@ -187,7 +187,6 @@ for f in \
     /app/share/rezeptor/launcher/launcher.py \
     /app/share/rezeptor/recipes/manifest.json \
     /app/runtime/winetricks/winetricks \
-    /app/runtime/proton-ge/"$PROTON_GE_TAG"/files/bin/wine64 \
     /app/python/bin/python3
 do
     if [ ! -e "$f" ]; then
@@ -195,6 +194,12 @@ do
         fail=1
     fi
 done
+# GE-Proton11+: often only files/bin/wine (no separate wine64). Prefer wine; accept wine64.
+_proton_bin="/app/runtime/proton-ge/${PROTON_GE_TAG}/files/bin"
+if [ ! -x "$_proton_bin/wine" ] && [ ! -x "$_proton_bin/wine64" ]; then
+    echo "MISSING: $_proton_bin/wine (or wine64)" >&2
+    fail=1
+fi
 if ! /app/python/bin/python3 -c "import PyQt6; import PyQt6.QtCore"; then
     echo "PyQt6 import check failed" >&2
     fail=1

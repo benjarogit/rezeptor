@@ -1,12 +1,19 @@
 # Pinned runtimes — update only after QA with target software
+# AppImage / Flatpak bundle the DEFAULT Proton-GE tag below.
 # AppImage: relocatable CPython (no host /usr/bin/python3 in venv)
 PYTHON_STANDALONE_TAG=20251217
 PYTHON_STANDALONE_VERSION=3.12.12
 PYTHON_STANDALONE_URL=https://github.com/astral-sh/python-build-standalone/releases/download/20251217/cpython-3.12.12%2B20251217-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz
 PYTHON_STANDALONE_SHA256=9f5474351378aeca746ee8a2ff3b187edec71d791ef92827eca14ab5b0e15441
-PROTON_GE_TAG=GE-Proton11-3
-PROTON_GE_URL=https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-3/GE-Proton11-3.tar.gz
-PROTON_GE_SHA256=861c2edc8d40d051fb1e7a692deb953be52bd339c46d90f2b7dde50ddad91266
+# Default for Photoshop and most recipes (QA baseline)
+PROTON_GE_TAG=GE-Proton10-28
+PROTON_GE_URL=https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton10-28/GE-Proton10-28.tar.gz
+PROTON_GE_SHA256=4c5cc46e7f1af53f610e02c60bc9470db0d82e072b0072372ef588a82c4de316
+# Alternate pins: recipes may set proton_ge_tag: (or Medizin PROTON_GE_TAG).
+# Downloaded on demand into ~/.local/share/wine-software/runtime/proton-ge/<tag>/
+# Key form: PROTON_GE_ALT_<tag_with_underscores>_{URL,SHA256}
+PROTON_GE_ALT_GE_Proton11_3_URL=https://github.com/GloriousEggroll/proton-ge-custom/releases/download/GE-Proton11-3/GE-Proton11-3.tar.gz
+PROTON_GE_ALT_GE_Proton11_3_SHA256=861c2edc8d40d051fb1e7a692deb953be52bd339c46d90f2b7dde50ddad91266
 WINE_MONO_VERSION=11.1.0
 WINE_MONO_URL=https://dl.winehq.org/wine/wine-mono/11.1.0/wine-mono-11.1.0-x86.msi
 # Optional: CUDA/NVAPI im Wine-Prefix (Premiere NVIDIA) — SveSop/nvidia-libs

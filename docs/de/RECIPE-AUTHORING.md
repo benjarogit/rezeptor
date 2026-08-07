@@ -104,6 +104,17 @@ icon: "{repo}/images/<id>-icon.png"
 - Lint prüft: Feld gesetzt **und** Datei existiert
 - Quelle z. B. EXE-Icon (`wrestool`/`icotool`) oder Steam-Library-Art
 
+### Proton-GE (optional, pro Rezept)
+
+```yaml
+runtime: proton-ge
+proton_ge_tag: GE-Proton11-3          # sonst core/runtime.lock (Default)
+# proton_ge_url: https://...          # nur wenn nicht Default und nicht PROTON_GE_ALT_*
+# proton_ge_sha256: <64 hex>
+```
+
+Medizin-Alternative: Bool-Test-Schalter (siehe Photoshop `PHOTOSHOP_PROTON_GE_11`) oder generisches `PROTON_GE_TAG`. Details: [ENTWICKLER.md](ENTWICKLER.md#proton-ge-pro-rezept).
+
 ### Empfohlen
 
 | Feld | Rolle |

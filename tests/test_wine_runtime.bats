@@ -86,3 +86,26 @@ setup() {
     run wine_runtime::_find_proton_dir
     [ "$status" -ne 0 ]
 }
+
+@test "wine_runtime _load_lock preserves recipe PROTON_GE_TAG override" {
+    export HOME="$BATS_TEST_TMPDIR/wine-home-pin"
+    mkdir -p "$HOME"
+    wine_runtime::reset
+    export PROTON_GE_TAG="GE-Proton11-3"
+    unset PROTON_GE_URL PROTON_GE_SHA256
+    wine_runtime::_load_lock
+    [ "$PROTON_GE_TAG" = "GE-Proton11-3" ]
+    [[ "$PROTON_GE_URL" == *GE-Proton11-3* ]]
+    [ -n "$PROTON_GE_SHA256" ]
+    [ "${#PROTON_GE_SHA256}" -eq 64 ]
+}
+
+@test "wine_runtime _load_lock default tag is GE-Proton10-28" {
+    export HOME="$BATS_TEST_TMPDIR/wine-home-default"
+    mkdir -p "$HOME"
+    wine_runtime::reset
+    unset PROTON_GE_TAG PROTON_GE_URL PROTON_GE_SHA256
+    wine_runtime::_load_lock
+    [ "$PROTON_GE_TAG" = "GE-Proton10-28" ]
+    [[ "$PROTON_GE_URL" == *GE-Proton10-28* ]]
+}
