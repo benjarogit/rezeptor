@@ -3,7 +3,7 @@
 All notable changes to **Rezeptor** are documented here (English).
 GitHub Release notes should match these bullets.
 
-## [Unreleased]
+## [1.1.35] - 2026-08-08
 
 ### Changed
 - Photoshop Medizin **Test: Proton-GE 11-3**: GE-Proton11-3 + **DXVK 2.7 from GE-Proton10-28** + **forced X11** + **`d2d1=n`** (Wine 11 builtin d2d1 painted a white main window; GDI path restores dark chrome). Still experimental; daily default stays GE-Proton10-28 ([#8](https://github.com/benjarogit/rezeptor/issues/8))
