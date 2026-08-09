@@ -6,6 +6,16 @@ GitHub Release notes should match these bullets.
 ## [Unreleased]
 
 ### Fixed
+- Photoshop: stop DXVK spoofing Nvidia as AMD (`dxgi.hideNvidiaGpu = False` + prefix `dxvk.conf`, same idea as Premiere)
+- Photoshop: experimental `opengl32` stub for Hand-tool (#9) stays **opt-in** (`PHOTOSHOP_OPENGL_STUB=1` only). Default off — stub caused minimize/window regressions for users while Hand failure often remained; launch/repair remove leftover `opengl32.dll` next to `Photoshop.exe`
+
+### Added
+- Photoshop debug env overrides: `REZEPTOR_WINEDEBUG`, `REZEPTOR_WINE_CPU_TOPOLOGY`, `REZEPTOR_CSMT`; `recipes/photoshop/assets/prepare-ghidra.sh` + `hand-tool-notes.md` for [#9](https://github.com/benjarogit/rezeptor/issues/9)
+- `recipes/photoshop/assets/opengl32-stub/` — source + prebuilt stub + `build.sh` (mingw)
+
+## [1.1.36] - 2026-08-09
+
+### Fixed
 - Photoshop: after closing the PS window, Rezeptor runs orphan cleanup (Spaces/CEP/IPC + wineserver) so helpers do not linger and the next launch keeps session prefs; Quit also asks PS to exit before forcing. Cleanup is **prefix-scoped** (`WINEPREFIX` in process environ / `wineserver -k`) so parallel Wine sessions stay untouched ([#10](https://github.com/benjarogit/rezeptor/issues/10))
 - Do not rewrite a recipe’s `data_root.path` when `RECIPE_DATA_ROOT` and `DATA_ROOT` disagree (stale env from another selected recipe, e.g. Halo → Photoshop). Exit-cleanup now sets both roots for the stopped recipe; Activity lines for cleanup only when that recipe is selected
 
