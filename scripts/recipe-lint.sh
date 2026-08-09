@@ -13,7 +13,8 @@ OPTIONAL_HOOKS=(update)
 INSTALL_TYPES=(installer_offline portable_launch portable_bootstrap game_install game_portable adobe_offline portable)
 SOURCE_KINDS=(folder installer archive fixed_path)
 FIX_KINDS=(none optional required online_fix_optional online_fix_required)
-ALLOWED_ROOT_SH=(install launch validate repair kill uninstall genp update)
+# cleanup-orphans: optional post-exit helper (Photoshop #10); discovered by filename, not recipe.yml
+ALLOWED_ROOT_SH=(install launch validate repair kill uninstall genp update cleanup-orphans)
 
 errors=0
 warnings=0
