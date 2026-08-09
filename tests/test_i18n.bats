@@ -29,3 +29,17 @@ setup() {
     [ "$status" -eq 0 ]
     [[ "$output" == "Installer: Setup.exe" ]]
 }
+
+@test "msg::t photoshop cleanup keys bilingual" {
+    RECIPE_UI_LANG=de
+    run msg::t ps.cleanup.section
+    [ "$status" -eq 0 ]
+    [[ "$output" == "Photoshop-Nachbereitung" ]]
+    RECIPE_UI_LANG=en
+    run msg::t ps.cleanup.section
+    [ "$status" -eq 0 ]
+    [[ "$output" == "Photoshop cleanup" ]]
+    RECIPE_UI_LANG=en
+    run msg::t ps.kill.done
+    [[ "$output" == "Photoshop quit" ]]
+}

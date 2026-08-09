@@ -37,6 +37,7 @@ HOOK_NAMES = (
     "validate.sh",
     "repair.sh",
     "kill.sh",
+    "cleanup-orphans.sh",
     "uninstall.sh",
 )
 

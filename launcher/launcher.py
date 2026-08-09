@@ -1071,6 +1071,10 @@ def _collect_recipe_statuses(
             if full_validate:
                 recipe_env = dict(env)
                 recipe_env["RECIPE_ID"] = info.rid
+                # Drop selected-recipe roots before query_recipe_state fills
+                # the correct ones — avoids leaking Halo DATA_ROOT into PS, etc.
+                for _k in ("DATA_ROOT", "RECIPE_DATA_ROOT", "WINEPREFIX", "WINE_PREFIX"):
+                    recipe_env.pop(_k, None)
                 (
                     info.state,
                     info.status_detail,
@@ -1154,6 +1158,8 @@ class RezeptorWindow(QMainWindow):
         self._running_poll.timeout.connect(self._refresh_running_indicators)
         self._running_prev: dict[str, bool] = {}
         self._watched_launch_rid: str | None = None
+        # Skip cleanup-orphans.sh when Quit/kill.sh already tears the session down.
+        self._skip_exit_cleanup: set[str] = set()
         self._status_thread: QThread | None = None
         self._status_worker: _RecipeStatusWorker | None = None
         self._status_refresh_announce = False
@@ -3676,13 +3682,78 @@ class RezeptorWindow(QMainWindow):
         selected = bool(self._selected and self._selected.rid == info.rid)
         if watched:
             self._watched_launch_rid = None
+        skip_cleanup = info.rid in self._skip_exit_cleanup
+        if skip_cleanup:
+            self._skip_exit_cleanup.discard(info.rid)
         if not (watched or selected):
+            # Still allow orphan cleanup when the recipe closed in the background.
+            if not skip_cleanup:
+                self._schedule_exit_cleanup(info)
             return
         if not self._busy:
             self.step_label.setText(t("status.app_stopped_step", name=name))
             self.step_label.setStyleSheet("")
         self._activity("info", t("status.app_stopped", name=name))
         self._switch_to_progress_tab()
+        if not skip_cleanup:
+            self._schedule_exit_cleanup(info)
+
+    def _schedule_exit_cleanup(self, info: RecipeInfo) -> None:
+        """After natural app exit, run recipe cleanup-orphans.sh if present (issue #10)."""
+        rd = Path(info.meta.get("_dir") or "")
+        script = rd / "cleanup-orphans.sh"
+        if not script.is_file():
+            return
+        rid = info.rid
+        # Activity is recipe-scoped UI — only when this recipe is selected.
+        if self._selected and self._selected.rid == rid:
+            self._activity(
+                "info", t("status.exit_cleanup", name=str(info.meta.get("name") or rid))
+            )
+        QTimer.singleShot(300, lambda r=rid, s=script: self._spawn_exit_cleanup(r, s))
+
+    def _spawn_exit_cleanup(self, rid: str, script: Path) -> None:
+        if rid in self._skip_exit_cleanup:
+            return
+        info = next((i for i in self.recipes if i.rid == rid), None)
+        if info is None:
+            return
+        # Relaunch raced cleanup — leave the new session alone.
+        if recipe_process_running(rid, info.meta):
+            return
+        env = self._base_env()
+        dr = resolve_data_root(info.meta, rid)
+        env["RECIPE_ID"] = rid
+        env["RECIPE_DIR"] = str(Path(info.meta.get("_dir") or script.parent))
+        # Must match DATA_ROOT — stale RECIPE_DATA_ROOT from _base_env (other
+        # selected recipe) would rewrite that recipe's data_root.path via recipe.sh.
+        env["DATA_ROOT"] = str(dr)
+        env["RECIPE_DATA_ROOT"] = str(dr)
+        env["SCR_PATH"] = env["DATA_ROOT"]
+        env["WINE_PREFIX"] = str(recipe_wine_prefix(info.meta, rid))
+        env["WINEPREFIX"] = env["WINE_PREFIX"]
+        log_path = LOG_ROOT / f"cleanup_{rid}_{self.session_id[:8]}.log"
+        LOG_ROOT.mkdir(parents=True, exist_ok=True)
+        try:
+            log_f = open(log_path, "a", encoding="utf-8")  # noqa: SIM115
+            log_f.write(f"\n--- {rid} exit cleanup ---\n")
+            log_f.flush()
+            subprocess.Popen(
+                ["bash", str(script)],
+                cwd=str(ROOT),
+                env=env,
+                start_new_session=True,
+                stdin=subprocess.DEVNULL,
+                stdout=log_f,
+                stderr=subprocess.STDOUT,
+            )
+        except OSError as exc:
+            _debug_log(f"exit cleanup spawn failed for {rid}: {exc}")
+            if self._selected and self._selected.rid == rid:
+                self._activity("warn", t("status.exit_cleanup_fail", name=rid))
+            return
+        if self._selected and self._selected.rid == rid:
+            self._activity("info", t("status.exit_cleanup_log", name=log_path.name))
 
     def _update_status_pills(self, info: RecipeInfo) -> None:
         meta = info.meta
@@ -6093,6 +6164,8 @@ class RezeptorWindow(QMainWindow):
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
         ) != QMessageBox.StandardButton.Yes:
             return
+        # kill.sh already cleans orphans — do not schedule cleanup-orphans.sh on stop.
+        self._skip_exit_cleanup.add(self._selected.rid)
         self._switch_to_progress_tab()
         self._run_async(kill, done_label=t("action.kill"), dialog=False)
 

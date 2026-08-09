@@ -23,9 +23,22 @@ recipe_export_env() {
     # RECIPE_DATA_ROOT oder Persistenz in data_root.path.
     canonical="$(paths_expand "$(recipe_get "$yml" data_root)")"
     mkdir -p "$canonical" 2>/dev/null || true
+    # RECIPE_DATA_ROOT = optional override. Persist only when it matches DATA_ROOT
+    # (or DATA_ROOT unset). Mismatch = stale parent env (e.g. exit-cleanup spawned
+    # with another recipe selected) — never rewrite data_root.path in that case.
     if [ -n "${RECIPE_DATA_ROOT:-}" ]; then
         chosen="$(paths_expand "$RECIPE_DATA_ROOT")"
-        printf '%s\n' "$chosen" >"$canonical/data_root.path"
+        persist=1
+        if [ -n "${DATA_ROOT:-}" ]; then
+            data_exp="$(paths_expand "$DATA_ROOT")"
+            if [ -n "$data_exp" ] && [ "$data_exp" != "$chosen" ]; then
+                chosen="$data_exp"
+                persist=0
+            fi
+        fi
+        if [ "$persist" -eq 1 ] && [ -n "$chosen" ]; then
+            printf '%s\n' "$chosen" >"$canonical/data_root.path"
+        fi
     elif [ -f "$canonical/data_root.path" ]; then
         chosen="$(tr -d '\r\n' <"$canonical/data_root.path")"
         chosen="$(paths_expand "${chosen:-}")"

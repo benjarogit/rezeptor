@@ -3,6 +3,13 @@
 All notable changes to **Rezeptor** are documented here (English).
 GitHub Release notes should match these bullets.
 
+## [Unreleased]
+
+### Fixed
+- Photoshop: after closing the PS window, Rezeptor runs orphan cleanup (Spaces/CEP/IPC + wineserver) so helpers do not linger and the next launch keeps session prefs; Quit also asks PS to exit before forcing. Cleanup is **prefix-scoped** (`WINEPREFIX` in process environ / `wineserver -k`) so parallel Wine sessions stay untouched ([#10](https://github.com/benjarogit/rezeptor/issues/10))
+- Do not rewrite a recipe’s `data_root.path` when `RECIPE_DATA_ROOT` and `DATA_ROOT` disagree (stale env from another selected recipe, e.g. Halo → Photoshop). Exit-cleanup now sets both roots for the stopped recipe; Activity lines for cleanup only when that recipe is selected
+
+
 ## [1.1.35] - 2026-08-08
 
 ### Changed

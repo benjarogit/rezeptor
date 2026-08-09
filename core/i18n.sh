@@ -47,6 +47,33 @@ msg::_lookup() {
         en:err.win10_failed) echo "win10 registry failed" ;;
         de:step.proton_init) echo "Proton-GE initialisieren" ;;
         en:step.proton_init) echo "Initializing Proton-GE" ;;
+        # Photoshop kill / exit cleanup (issue #10)
+        de:ps.kill.section) echo "Photoshop beenden" ;;
+        en:ps.kill.section) echo "Quit Photoshop" ;;
+        de:ps.kill.progress) echo "Beenden" ;;
+        en:ps.kill.progress) echo "Quit" ;;
+        de:ps.kill.tick) echo "Photoshop" ;;
+        en:ps.kill.tick) echo "Photoshop" ;;
+        de:ps.kill.done) echo "Photoshop beendet" ;;
+        en:ps.kill.done) echo "Photoshop quit" ;;
+        de:ps.cleanup.section) echo "Photoshop-Nachbereitung" ;;
+        en:ps.cleanup.section) echo "Photoshop cleanup" ;;
+        de:ps.cleanup.progress) echo "Aufräumen" ;;
+        en:ps.cleanup.progress) echo "Cleanup" ;;
+        de:ps.cleanup.done) echo "Adobe-Helfer beendet" ;;
+        en:ps.cleanup.done) echo "Adobe helpers stopped" ;;
+        de:ps.exit.soft) echo "Photoshop beenden (sanft)" ;;
+        en:ps.exit.soft) echo "Quitting Photoshop (graceful)" ;;
+        de:ps.exit.force) echo "Photoshop reagiert nicht, erzwungenes Beenden" ;;
+        en:ps.exit.force) echo "Photoshop not responding, forcing quit" ;;
+        de:ps.cleanup.helpers) echo "Adobe-Helfer / Orphans" ;;
+        en:ps.cleanup.helpers) echo "Adobe helpers / orphans" ;;
+        de:ps.cleanup.wineserver) echo "wineserver" ;;
+        en:ps.cleanup.wineserver) echo "wineserver" ;;
+        de:ps.cleanup.still_running) echo "Photoshop läuft noch, wineserver bleibt aktiv" ;;
+        en:ps.cleanup.still_running) echo "Photoshop still running, leaving wineserver up" ;;
+        de:ps.cleanup.no_prefix) echo "WINEPREFIX fehlt, Aufräumen übersprungen" ;;
+        en:ps.cleanup.no_prefix) echo "WINEPREFIX missing, skipping cleanup" ;;
         *)
             # Missing key: try English, else echo key
             if [ "$lang" != en ]; then
