@@ -5,13 +5,11 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
-### Fixed
-- Photoshop: stop DXVK spoofing Nvidia as AMD (`dxgi.hideNvidiaGpu = False` + prefix `dxvk.conf`, same idea as Premiere)
-- Photoshop: experimental `opengl32` stub for Hand-tool (#9) stays **opt-in** (`PHOTOSHOP_OPENGL_STUB=1` only). Default off — stub caused minimize/window regressions for users while Hand failure often remained; launch/repair remove leftover `opengl32.dll` next to `Photoshop.exe`
+## [1.1.37] - 2026-08-10
 
-### Added
-- Photoshop debug env overrides: `REZEPTOR_WINEDEBUG`, `REZEPTOR_WINE_CPU_TOPOLOGY`, `REZEPTOR_CSMT`; `recipes/photoshop/assets/prepare-ghidra.sh` + `hand-tool-notes.md` for [#9](https://github.com/benjarogit/rezeptor/issues/9)
-- `recipes/photoshop/assets/opengl32-stub/` — source + prebuilt stub + `build.sh` (mingw)
+### Fixed
+- Photoshop Quit: ask for a normal exit first (host window-close / `taskkill` without `/F`) so Recent Files and prefs can flush; only escalate if Photoshop stays up ([#10](https://github.com/benjarogit/rezeptor/issues/10))
+- Host check for 32-bit loader (`lib32-glibc` / `libc6-i386`): fail early with a clear install hint instead of obscure winetricks `syswow64\\regedit` `c0000135` failures ([#11](https://github.com/benjarogit/rezeptor/issues/11))
 
 ## [1.1.36] - 2026-08-09
 
