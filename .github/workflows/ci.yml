@@ -13,9 +13,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install tools
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y shellcheck bats python3-yaml python3-pyqt6 p7zip-full
+        run: bash scripts/ci-apt-install.sh shellcheck bats python3-yaml python3-pyqt6 p7zip-full
 
       - name: Shellcheck
         run: make shellcheck
