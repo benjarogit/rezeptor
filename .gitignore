@@ -123,6 +123,15 @@ site/
 # ============================================================
 .audit/
 
+# RepoWise local index (wiki.db, caches — machine-local, not for git)
+.repowise/
+
+# RepoWise / editor MCP stubs (local tooling only — not for GitHub)
+.mcp.json
+
+# Local Photoshop/runtime debug screenshots (agent/lab)
+.tmp-ps-*.png
+
 # ============================================================
 # IDE/Editor Files
 # ============================================================
