@@ -179,16 +179,19 @@ wine_runtime::_apply_proton_env() {
     bin32="$_WINE_RUNTIME_ROOT/files/bin/wine"
     bin64="$_WINE_RUNTIME_ROOT/files/bin/wine64"
     # Prefer classic wine when it actually runs; else wine64 wrap (Flatpak / no multiarch).
+    unset REZEPTOR_WINE64_WRAP 2>/dev/null || true
     if wine_runtime::_proton_bin_works "$bin32"; then
         _WINE_RUNTIME_BIN="$bin32"
         export PATH="$_WINE_RUNTIME_ROOT/files/bin:$_WINE_RUNTIME_ROOT/files/bin/w64:$_WINE_RUNTIME_ROOT/files/bin/w32:${PATH}"
     elif wine_runtime::_proton_bin_works "$bin64"; then
         wrap="$(wine_runtime::_proton_wine64_wrap_dir "$bin32" "$bin64")"
         _WINE_RUNTIME_BIN="$wrap/wine"
+        export REZEPTOR_WINE64_WRAP=1
         export PATH="$wrap:$_WINE_RUNTIME_ROOT/files/bin:$_WINE_RUNTIME_ROOT/files/bin/w64:$_WINE_RUNTIME_ROOT/files/bin/w32:${PATH}"
     elif [ -x "$bin64" ]; then
         wrap="$(wine_runtime::_proton_wine64_wrap_dir "$bin32" "$bin64")"
         _WINE_RUNTIME_BIN="$wrap/wine"
+        export REZEPTOR_WINE64_WRAP=1
         export PATH="$wrap:$_WINE_RUNTIME_ROOT/files/bin:${PATH}"
     else
         _WINE_RUNTIME_BIN="$bin32"
@@ -196,6 +199,32 @@ wine_runtime::_apply_proton_env() {
     fi
     export PROTON_PATH="$_WINE_RUNTIME_ROOT"
     export WINE_RUNTIME_MODE="proton-ge"
+}
+
+# Host can run 32-bit ELF (ld-linux.so.2). Flatpak uses its own runtime.
+wine_runtime::host_has_i386_loader() {
+    [ -n "${FLATPAK_ID:-}" ] && return 0
+    [ -f /.flatpak-info ] && return 0
+    [ -e /lib/ld-linux.so.2 ] && return 0
+    [ -e /lib32/ld-linux.so.2 ] && return 0
+    [ -e /usr/lib32/ld-linux.so.2 ] && return 0
+    [ -e /lib/i386-linux-gnu/ld-linux.so.2 ] && return 0
+    [ -e /usr/lib/i386-linux-gnu/ld-linux.so.2 ] && return 0
+    return 1
+}
+
+# Fail early when winetricks would hit syswow64/regedit with a wine→wine64 shim (issue #11).
+wine_runtime::require_wow64_host() {
+    wine_runtime::host_has_i386_loader && return 0
+    if type output::error >/dev/null 2>&1; then
+        output::error "32-Bit-Systembibliotheken fehlen (kein /lib/ld-linux.so.2) — Wine kann syswow64/regedit nicht starten"
+        output::error "Arch/CachyOS: [multilib] in /etc/pacman.conf aktivieren, dann: sudo pacman -S lib32-glibc"
+        output::error "Debian/Ubuntu: sudo apt install libc6-i386"
+        output::error "Fedora: sudo dnf install glibc.i686"
+    else
+        echo "ERROR: missing 32-bit loader (/lib/ld-linux.so.2) — enable multilib / install lib32-glibc (or libc6-i386)" >&2
+    fi
+    return 1
 }
 
 wine_runtime::_user_runtime_base() {

@@ -14,7 +14,7 @@ from pathlib import Path
 class HostDep:
     """One host dependency check."""
 
-    id: str  # stable id: download | tar | unzip | sevenzip | winetricks | qt_xcb_cursor
+    id: str  # stable id: download | tar | … | qt_xcb_cursor | wine_i386
     required: bool
     present: bool
     # Human label keys resolved by UI via t(f"deps.item_{id}")
@@ -23,6 +23,24 @@ class HostDep:
 
 def _which_any(*names: str) -> bool:
     return any(shutil.which(n) for n in names)
+
+
+def _in_flatpak() -> bool:
+    return bool(os.environ.get("FLATPAK_ID")) or Path("/.flatpak-info").is_file()
+
+
+def _i386_loader_present() -> bool:
+    """True if the host can exec 32-bit ELF (needed for Wine WoW64 / syswow64)."""
+    for path in (
+        Path("/lib/ld-linux.so.2"),
+        Path("/lib32/ld-linux.so.2"),
+        Path("/usr/lib32/ld-linux.so.2"),
+        Path("/lib/i386-linux-gnu/ld-linux.so.2"),
+        Path("/usr/lib/i386-linux-gnu/ld-linux.so.2"),
+    ):
+        if path.is_file():
+            return True
+    return False
 
 
 def _soname_present(name: str) -> bool:
@@ -98,6 +116,8 @@ def _packages_for(family: str, dep_id: str) -> tuple[str, ...]:
             "winetricks": ("winetricks",),
             # Qt6 xcb platform (AppImage/pip PyQt6); Arch package name = libxcb-cursor
             "qt_xcb_cursor": ("libxcb-cursor",),
+            # 32-bit dynamic linker for Wine syswow64 (needs [multilib] enabled)
+            "wine_i386": ("lib32-glibc",),
         },
         "apt": {
             "download": ("curl",),
@@ -106,6 +126,7 @@ def _packages_for(family: str, dep_id: str) -> tuple[str, ...]:
             "sevenzip": ("p7zip-full",),
             "winetricks": ("winetricks",),
             "qt_xcb_cursor": ("libxcb-cursor0",),
+            "wine_i386": ("libc6-i386",),
         },
         "dnf": {
             "download": ("curl",),
@@ -114,6 +135,7 @@ def _packages_for(family: str, dep_id: str) -> tuple[str, ...]:
             "sevenzip": ("p7zip", "p7zip-plugins"),
             "winetricks": ("winetricks",),
             "qt_xcb_cursor": ("libxcb-cursor",),
+            "wine_i386": ("glibc.i686",),
         },
         "zypper": {
             "download": ("curl",),
@@ -122,6 +144,7 @@ def _packages_for(family: str, dep_id: str) -> tuple[str, ...]:
             "sevenzip": ("p7zip",),
             "winetricks": ("winetricks",),
             "qt_xcb_cursor": ("libxcb-cursor0",),
+            "wine_i386": ("glibc-32bit",),
         },
     }
     fam = table.get(family) or table["pacman"]
@@ -139,6 +162,9 @@ def scan_host_deps() -> list[HostDep]:
         # Required for GUI: Qt xcb plugin loads libxcb-cursor.so.0 (often missing on minimal Ubuntu)
         ("qt_xcb_cursor", True, _soname_present("xcb-cursor")),
     ]
+    # Flatpak ships its own i386 runtime; native hosts need multilib for Photoshop WoW64.
+    if not _in_flatpak():
+        checks.append(("wine_i386", True, _i386_loader_present()))
     out: list[HostDep] = []
     for dep_id, required, present in checks:
         out.append(

@@ -80,6 +80,11 @@ recipe_winetricks::sanitize_win7sp1_cache() {
 recipe_winetricks::prepare() {
     wine_runtime::init || return 1
     wine_runtime::export_env
+    # Native hosts without i386 loader fall back to wine→wine64 wrap; winetricks then
+    # fails on syswow64\regedit with c0000135 (GitHub issue #11).
+    if type wine_runtime::require_wow64_host >/dev/null 2>&1; then
+        wine_runtime::require_wow64_host || return 1
+    fi
     wine_runtime::cache_dir >/dev/null
     export WINEDEBUG="${WINEDEBUG:--all}"
     # Geerbtes Session-D-Bus → oft Assertion-Abort in wine/regedit, dann hängt wineserver -w.
