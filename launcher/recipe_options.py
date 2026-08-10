@@ -356,13 +356,6 @@ def write_option_env(data_root: Path, key: str, value: str) -> None:
     _env_file_write(data_root, key, value)
 
 
-def read_stored_env(data_root: Path, key: str) -> str:
-    """Raw value from options.env, or empty string."""
-    if not _ENV_KEY_RE.match(key):
-        return ""
-    return _parse_env_file(options_env_path(data_root)).get(key, "")
-
-
 def env_overrides_for_options(
     data_root: Path, options: list[RecipeOption]
 ) -> dict[str, str]:

@@ -8,7 +8,7 @@ from typing import Literal
 
 from PyQt6.QtCore import QByteArray, QEvent, QObject, Qt, QTimer
 from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox, QSplitter, QWidget
+from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox, QWidget
 
 from diagnostics import log_call_site
 from i18n import t
@@ -62,26 +62,6 @@ def restore_geometry(widget: QWidget, b64: str) -> bool:
     if data.isEmpty():
         return False
     return bool(widget.restoreGeometry(data))
-
-
-def splitter_to_b64(splitter: QSplitter) -> str:
-    raw = bytes(splitter.saveState())
-    if not raw:
-        return ""
-    return base64.b64encode(raw).decode("ascii")
-
-
-def restore_splitter(splitter: QSplitter, b64: str) -> bool:
-    text = (b64 or "").strip()
-    if not text:
-        return False
-    try:
-        data = QByteArray(base64.b64decode(text))
-    except Exception:
-        return False
-    if data.isEmpty():
-        return False
-    return bool(splitter.restoreState(data))
 
 
 def widget_belongs_to_main(w: QWidget | None, main: QWidget) -> bool:

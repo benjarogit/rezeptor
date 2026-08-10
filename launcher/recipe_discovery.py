@@ -227,16 +227,6 @@ def sidebar_card_texts(
     return out
 
 
-def disambiguate_sidebar_labels(
-    items: list[tuple[str, dict[str, str]]],
-) -> dict[str, str]:
-    """Backward-compatible: single-line labels (title · subtitle)."""
-    return {
-        rid: " · ".join(p for p in texts if p)
-        for rid, texts in sidebar_card_texts(items).items()
-    }
-
-
 def _collect_yml_paths(recipes_dir: Path) -> list[Path]:
     yml_paths: list[Path] = []
     if not recipes_dir.is_dir():

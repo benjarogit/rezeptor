@@ -497,12 +497,6 @@ QSplitter::handle {{ background-color: {BORDER}; width: 1px; }}
 _HOST_CACHE: str | None = None
 
 
-def clear_host_stylesheet_cache() -> None:
-    """Drop cached Host-QSS (tests / after token edits)."""
-    global _HOST_CACHE
-    _HOST_CACHE = None
-
-
 def get_host_stylesheet() -> str:
     """Cached Host-QSS (erst nach QApplication sicher für QPainter-Arrows)."""
     global _HOST_CACHE

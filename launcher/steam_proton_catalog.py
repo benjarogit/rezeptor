@@ -243,26 +243,6 @@ def curated_steam_proton_choices() -> list[SteamProtonChoice]:
     return choices
 
 
-def is_steam_default_tool(tool: str) -> bool:
-    t = (tool or "").strip().lower()
-    return t in (
-        STEAM_DEFAULT_TOOL,
-        "steam-default",
-        "steam_play_default",
-        "global",
-        "none",
-        "",
-    )
-
-
-def label_for_tool(tool: str, locale: str) -> str:
-    code = (locale or "de").split("-", 1)[0].lower()
-    for c in curated_steam_proton_choices():
-        if c.tool == tool:
-            return c.label_de if code == "de" else c.label_en
-    return tool
-
-
 def is_steam_medicine_option(opt) -> bool:  # noqa: ANN001
     if getattr(opt, "type", "bool") != "bool":
         return False

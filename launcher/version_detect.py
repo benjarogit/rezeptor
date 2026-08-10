@@ -137,10 +137,6 @@ def source_hints_list(data: dict[str, Any] | None) -> list[str]:
     return []
 
 
-# Allowlisted hosts for optional source_refs (release indexes — not download mirrors).
-SOURCE_REF_ALLOWED_HOSTS = frozenset({"xrel.to", "www.xrel.to"})
-
-
 def source_refs_list(data: dict[str, Any] | None) -> list[dict[str, str]]:
     """Normalize ``source_refs`` to ``[{label, url}, …]`` (invalid/empty skipped)."""
     if not data:
@@ -160,17 +156,6 @@ def source_refs_list(data: dict[str, Any] | None) -> list[dict[str, str]]:
             label = "ref"
         out.append({"label": label, "url": url})
     return out
-
-
-def source_ref_host_allowed(url: str) -> bool:
-    """True if URL host is on the release-index allowlist."""
-    from urllib.parse import urlparse
-
-    try:
-        host = (urlparse(url).hostname or "").lower()
-    except Exception:
-        return False
-    return host in SOURCE_REF_ALLOWED_HOSTS
 
 
 def _line_indent(line: str) -> int:
