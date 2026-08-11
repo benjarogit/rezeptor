@@ -23,12 +23,14 @@ Vom Repository-Root (empfohlen für Agenten und CI):
 
 ```bash
 make test      # bats tests/
+make pytest    # Python unit tests (tests/*.py; needs pytest + PyQt6)
 make validate  # shellcheck + syntax + compile + recipe-check
 ```
 
 Alternativ direkt:
 ```bash
 bats tests/
+QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ -q
 ```
 
 Einzelne Test-Datei ausführen:

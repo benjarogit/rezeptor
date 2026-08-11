@@ -4,7 +4,7 @@
 
 ## Test plan
 
-- [ ] `make validate` (must match CI job `validate`)
+- [ ] `make validate` (and ideally `make test` / `make pytest`; CI aggregator job is still named `validate`)
 - [ ] `make test` (or note why skipped)
 - [ ] Manual check if UI / recipe / Flatpak / AppImage touched:
 

@@ -7,7 +7,9 @@ on:
     branches: [main, master]
 
 jobs:
-  validate:
+  # Bash/YAML/recipe checks + bats (once). Host python3/PyQt6 only for bats
+  # snippets that import launcher modules — not a Python version matrix.
+  shell-validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,6 +23,38 @@ jobs:
       - name: Bash syntax
         run: make syntax
 
+      - name: Recipe structure
+        run: make recipes-check
+
+      - name: Recipe lint
+        run: make recipe-lint
+
+      - name: Recipe manifest
+        run: make recipe-manifest-check
+
+      - name: Bats tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: make test
+
+  # Launcher Python: compile, ruff, i18n parity, pytest across supported versions.
+  python-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install Python test deps
+        run: python -m pip install -q PyQt6 pytest
+
       - name: Python compile
         run: make compile
 
@@ -33,14 +67,21 @@ jobs:
           version: "0.12.10"
           args: check launcher
 
-      - name: Recipe structure
-        run: make recipes-check
+      - name: Pytest (launcher unit tests)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: make pytest
 
-      - name: Recipe lint
-        run: make recipe-lint
-
-      - name: Recipe manifest
-        run: make recipe-manifest-check
-
-      - name: Bats tests
-        run: make test
+  # Stable required status check name for branch protection (Protect main).
+  # Internals may gain jobs without renaming the GitHub required check.
+  validate:
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [shell-validate, python-tests]
+    steps:
+      - name: Require shell-validate and python-tests
+        run: |
+          echo "shell-validate=${{ needs.shell-validate.result }}"
+          echo "python-tests=${{ needs.python-tests.result }}"
+          test "${{ needs.shell-validate.result }}" = "success"
+          test "${{ needs.python-tests.result }}" = "success"

@@ -105,6 +105,7 @@ See [GUI launcher](LAUNCHER.md) and [Architecture](ARCHITECTURE-LAUNCHER.md).
 ```bash
 make validate    # shellcheck, syntax, compile, i18n-check, ruff, recipes-check, recipe-lint, manifest
 make test        # bats
+make pytest      # launcher unit tests (tests/*.py; needs pytest + PyQt6)
 ./scripts/recipe-lint.sh
 ./scripts/recipe-manifest.sh
 ```

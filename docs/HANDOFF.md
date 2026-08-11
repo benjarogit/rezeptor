@@ -37,7 +37,8 @@ Flatpak menu entry is hidden via `NoDisplay=true` override (still: `flatpak run 
 ## Open work
 
 - Local `main` ahead of `origin/main` (see `git log origin/main..HEAD`) — land via PR when Benny asks to push.
-- Backlog **1–21 complete** locally (Phases A–C). No further scheduled backlog points.
+- Backlog **1–22 complete** locally. CI matrix (shell-validate + python-tests 3.11–3.13 + aggregator `validate`) may be uncommitted WIP — check `git status`.
+- Later product backlog (not CI): Proton-GE management UI, exception→diagnose zip CTA, Snapshot/Restore as own point.
 
 ### Done (committed locally, pending PR)
 

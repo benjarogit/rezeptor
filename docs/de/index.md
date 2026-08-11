@@ -158,6 +158,7 @@ Siehe [BRAND.md](BRAND.md).
 ```bash
 make validate                 # shellcheck, syntax, compile, i18n-check, ruff, recipes-check, recipe-lint, manifest
 make test                     # bats
+make pytest                   # Launcher-Unit-Tests unter tests/*.py (braucht pytest + PyQt6)
 ```
 
 !!! success "Lokal die Site prüfen"

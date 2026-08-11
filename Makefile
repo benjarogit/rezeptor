@@ -1,10 +1,14 @@
-.PHONY: test validate shellcheck syntax compile i18n-check ruff dead-code shell-dup-check recipes-check recipe-lint recipe-manifest recipe-manifest-check
+.PHONY: test pytest validate shellcheck syntax compile i18n-check ruff dead-code shell-dup-check recipes-check recipe-lint recipe-manifest recipe-manifest-check
 
-# Vollständige Test-Suite (bats)
+# Shell test suite (bats). Python unit tests: make pytest (CI runs both).
 test:
 	bats tests/
 
-# Agent/CI-Validierung ohne Wine/Proton
+# Launcher Python unit tests under tests/*.py (needs: pip install pytest PyQt6).
+pytest:
+	QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ -q
+
+# Agent/CI-Validierung ohne Wine/Proton (local; CI also runs make test + make pytest).
 validate: shellcheck syntax compile i18n-check ruff recipes-check recipe-lint recipe-manifest-check
 
 shellcheck:
