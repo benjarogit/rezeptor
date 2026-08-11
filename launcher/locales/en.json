@@ -57,6 +57,16 @@
     "home_pill_recipes": "{n} recipes",
     "sidebar_search_empty": "No recipes match \"{query}\"."
   },
+  "home": {
+    "activity_title": "Recent",
+    "activity_empty": "No activity yet — Install, Validate, or Repair will show up here.",
+    "activity_line": "{ago}: {name} — {action}",
+    "activity_line_failed": "{ago}: {name} — {action} (failed)",
+    "activity_ago_just_now": "Just now",
+    "activity_ago_minutes": "{n} min ago",
+    "activity_ago_hours": "{n} h ago",
+    "activity_ago_days": "{n} day(s) ago"
+  },
   "category": {
     "finance": "Finance & tax",
     "design": "Graphics & design",

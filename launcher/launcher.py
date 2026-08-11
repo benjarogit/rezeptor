@@ -2373,6 +2373,25 @@ class RezeptorWindow(QMainWindow):
         self._home_tip = tip
         lay.addWidget(tip)
 
+        activity_title = QLabel(t("home.activity_title"))
+        activity_title.setObjectName("homeActivityTitle")
+        self._home_activity_title = activity_title
+        lay.addWidget(activity_title)
+
+        self._home_activity_list = QListWidget()
+        self._home_activity_list.setObjectName("homeActivityList")
+        self._home_activity_list.setFrameShape(QFrame.Shape.StyledPanel)
+        self._home_activity_list.setMaximumHeight(196)
+        self._home_activity_list.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self._home_activity_list.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        self._home_activity_list.itemClicked.connect(self._on_home_activity_clicked)
+        lay.addWidget(self._home_activity_list)
+        self._refresh_home_activity()
+
         links_hint = QLabel(t("app.home_links_hint"))
         links_hint.setObjectName("homeLinksHint")
         links_hint.setWordWrap(True)
@@ -2551,9 +2570,46 @@ class RezeptorWindow(QMainWindow):
         self._sync_medizin_button()
 
         self._refresh_home_stats()
+        self._refresh_home_activity()
         if hasattr(self, "_detail_stack"):
             self._detail_stack.setCurrentIndex(0)
         self._rebuild_more_menu()
+
+    def _refresh_home_activity(self) -> None:
+        """Newest completed recipe ops on the home page (cap DISPLAY_CAP)."""
+        from activity_history import (
+            DISPLAY_CAP,
+            format_activity_line,
+            load_activity_history,
+        )
+
+        lst = getattr(self, "_home_activity_list", None)
+        if lst is None:
+            return
+        lst.clear()
+        entries = load_activity_history()[:DISPLAY_CAP]
+        if not entries:
+            item = QListWidgetItem(t("home.activity_empty"))
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
+            item.setForeground(QColor(MUTED))
+            lst.addItem(item)
+            return
+        for entry in entries:
+            item = QListWidgetItem(format_activity_line(entry))
+            item.setData(Qt.ItemDataRole.UserRole, entry.rid)
+            item.setToolTip(item.text())
+            if not entry.ok:
+                item.setForeground(QColor("#ffb86c"))
+            lst.addItem(item)
+
+    def _on_home_activity_clicked(self, item: QListWidgetItem) -> None:
+        rid = str(item.data(Qt.ItemDataRole.UserRole) or "").strip()
+        if not rid:
+            return
+        for i, info in enumerate(self.recipes):
+            if info.rid == rid:
+                self._select_recipe_index(i, user_initiated=True)
+                return
 
     def _create_progress_tab(self) -> QWidget:
         tab = QWidget()
@@ -5465,6 +5521,9 @@ class RezeptorWindow(QMainWindow):
             self._home_intro.setText(t("app.home_intro"))
         if hasattr(self, "_home_tip"):
             self._home_tip.setText(t("app.home_tip"))
+        if hasattr(self, "_home_activity_title"):
+            self._home_activity_title.setText(t("home.activity_title"))
+        self._refresh_home_activity()
         if hasattr(self, "_home_links_hint"):
             self._home_links_hint.setText(t("app.home_links_hint"))
         if hasattr(self, "_home_github_btn"):

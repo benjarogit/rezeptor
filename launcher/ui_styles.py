@@ -195,6 +195,21 @@ QLabel#homeLinksHint {{
     letter-spacing: 0.04em;
     background: transparent;
 }}
+QLabel#homeActivityTitle {{
+    color: {MUTED};
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    background: transparent;
+}}
+QListWidget#homeActivityList {{
+    background-color: {COLOR_ANTHRACITE};
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    color: {COLOR_PARCHMENT};
+    font-size: 12px;
+}}
+QListWidget#homeActivityList::item {{ padding: 4px 8px; border: none; }}
 QPushButton#homeLinkCard {{
     background-color: {COLOR_ANTHRACITE};
     border: 1px solid {BORDER};

@@ -32,11 +32,12 @@ Flatpak menu entry is hidden via `NoDisplay=true` override (still: `flatpak run 
 
 - Ruleset **Protect main** (active): no direct push, no force-push, no branch delete; PR required; CI job `validate` must be green; 0 approving reviews required (solo ok).
 - Land local commits via feature branch + `gh pr create` (not `git push origin main`).
-- **No release** until Benny asks. App-visible changes (1–9) need a release decision when landing.
+- **No release** until Benny asks. App-visible changes need a release decision when landing.
 
 ## Open work
 
 - Local `main` ahead of `origin/main` (see `git log origin/main..HEAD`) — land via PR when Benny asks to push.
+- Backlog **1–21 complete** locally (Phases A–C). No further scheduled backlog points.
 
 ### Done (committed locally, pending PR)
 
@@ -51,13 +52,13 @@ Flatpak menu entry is hidden via `NoDisplay=true` override (still: `flatpak run 
 | 15 | `vulture` / `make dead-code` |
 | 16 | `make shell-dup-check` + wiso `log_err` → `recipe_hooks::log_err` |
 | 17 | PR workflow docs + GitHub ruleset on `main` (+ manifest sync for CI) |
-
-### Next backlog
-
-| Points | Topic | Notes |
-|--------|--------|--------|
-| 18–21 | GUI features (diagnose zip, tested-on date, backup hint, activity history) | Plan + freigabe per point |
+| 18 | Sanitized diagnose zip export |
+| 19 | Optional `tested_on` date next to Proton-GE (official recipes unset until confirmed) |
+| 20 | Backup hints before relocate / uninstall (WISO names tax data) |
+| 21 | Cross-recipe activity history on home (`activity-history.json`) |
 
 ### Later candidates (not scheduled)
 
 - Key-parity check for Bash `.lang` trees (`core/locales`, `scripts/locales`) — documented gap in I18N.md.
+- Fill confirmed `tested_on` values on official recipes (manual; one line + `make recipe-manifest` each).
+- Visual “stale tested_on” hint (separate UI freigabe — not in P19).

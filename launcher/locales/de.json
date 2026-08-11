@@ -57,6 +57,16 @@
     "home_pill_recipes": "{n} Rezepte",
     "sidebar_search_empty": "Keine Rezepte für „{query}\"."
   },
+  "home": {
+    "activity_title": "Zuletzt",
+    "activity_empty": "Noch keine Aktivität — Installieren, Prüfen oder Reparieren erscheint hier.",
+    "activity_line": "{ago}: {name} — {action}",
+    "activity_line_failed": "{ago}: {name} — {action} (fehlgeschlagen)",
+    "activity_ago_just_now": "Gerade eben",
+    "activity_ago_minutes": "Vor {n} Min.",
+    "activity_ago_hours": "Vor {n} Std.",
+    "activity_ago_days": "Vor {n} Tag(en)"
+  },
   "category": {
     "finance": "Finanzen & Steuer",
     "design": "Grafik & Design",

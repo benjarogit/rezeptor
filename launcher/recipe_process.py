@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any
 from PyQt6.QtCore import QProcess, QProcessEnvironment, QTimer
 from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox
 
+from activity_history import append_activity, is_tracked_op
 from diagnostics import log_call_site, log_line
 from i18n import t
 from log_context import E_LAUNCH_NO_PROCESS, E_SCRIPT_FAILED, LogEvent
@@ -285,6 +286,7 @@ class RecipeProcessOps:
                 if self._w._process is proc:
                     self._w._process = None
                 return
+            self._record_home_activity(op_kind, busy_rid, ok=code == 0)
             if code == 0:
                 self._w._activity(
                     "ok",
@@ -686,6 +688,28 @@ class RecipeProcessOps:
         if rid == "wiso-steuer":
             return t("dialog.repair_wiso")
         return t("dialog.repair_default")
+
+    def _record_home_activity(self, op: str, rid: str, *, ok: bool) -> None:
+        """Persist completed recipe ops for the home-page history (not launch/kill)."""
+        rid = (rid or "").strip()
+        op = (op or "").strip()
+        if not rid or not is_tracked_op(op):
+            return
+        name = rid
+        if self._w._selected and self._w._selected.rid == rid:
+            name = str(self._w._selected.meta.get("name") or rid)
+        else:
+            for info in getattr(self._w, "recipes", []) or []:
+                if getattr(info, "rid", "") == rid:
+                    name = str(getattr(info, "meta", {}).get("name") or rid)
+                    break
+        try:
+            append_activity(rid=rid, name=name, op=op, ok=ok)
+        except OSError:
+            return
+        refresh = getattr(self._w, "_refresh_home_activity", None)
+        if callable(refresh):
+            refresh()
 
     def _uninstall_confirm_message(self, rid: str, name: str) -> str:
         base = t("dialog.uninstall_confirm", name=name)
