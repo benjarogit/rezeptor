@@ -56,7 +56,17 @@ Ideas: [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?tem
 - UI strings: [Translations](CONTRIBUTING-TRANSLATIONS.md)
 - Brand: [BRAND](BRAND.md) — no purple themes
 
-## Git notes
+## Git notes / PR workflow
+
+`main` is protected (GitHub ruleset): **no direct pushes** — land changes via pull request. The CI job `validate` must be green before merge. Approving reviews are not required (solo maintainer is fine).
+
+```bash
+git switch -c topic/short-name
+# … edit, locally: make validate && make test …
+git push -u origin HEAD
+gh pr create --fill   # or with title/body
+# wait for CI → merge (squash or merge commit)
+```
 
 - SemVer via the `VERSION` file — bump only when a release is intended
 - No editor-agent co-author trailers in commits
@@ -64,7 +74,7 @@ Ideas: [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?tem
 
 ## Releases
 
-- Bump SemVer in `VERSION` and push to `main` → GitHub Actions builds AppImage, Flatpak, and `tar.gz` and publishes the release
+- Bump SemVer in `VERSION` and merge to `main` via PR → GitHub Actions builds AppImage, Flatpak, and `tar.gz` and publishes the release
 - Assets: https://github.com/benjarogit/rezeptor/releases
 
 ## Next

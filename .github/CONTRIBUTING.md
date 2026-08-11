@@ -10,3 +10,5 @@ Please use the curated docs — this file only exists so GitHub’s Community he
 | **Recipe ideas** | [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?template=recipe_submission.md) |
 
 Before opening a PR: `make validate` and `make test` (see the docs above).
+
+`main` is protected: open a PR (direct pushes are blocked). CI job `validate` must pass before merge; approving reviews are optional for the solo maintainer.

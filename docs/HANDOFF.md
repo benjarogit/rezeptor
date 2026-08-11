@@ -28,12 +28,17 @@ Flatpak menu entry is hidden via `NoDisplay=true` override (still: `flatpak run 
 - `origin` → `https://github.com/benjarogit/rezeptor.git`
 - Do **not** use archived `benjarogit/photoshopCClinux`
 
+## Git / main protection
+
+- Ruleset **Protect main** (active): no direct push, no force-push, no branch delete; PR required; CI job `validate` must be green; 0 approving reviews required (solo ok).
+- Land local commits via feature branch + `gh pr create` (not `git push origin main`).
+- **No release** until Benny asks. App-visible changes (1–9) need a release decision when landing.
+
 ## Open work
 
-- **No push / no release** until Benny asks. App-visible changes (1–9) need a release decision at push time; docs-only (10–14) do not.
-- Local `main` ahead of `origin/main` (see `git log origin/main..HEAD`).
+- Local `main` ahead of `origin/main` (see `git log origin/main..HEAD`) — land via PR when Benny asks to push.
 
-### Done (committed locally)
+### Done (committed locally, pending PR)
 
 | Points | Topic |
 |--------|--------|
@@ -42,16 +47,15 @@ Flatpak menu entry is hidden via `NoDisplay=true` override (still: `flatpak run 
 | 7 | ruff for `launcher/` |
 | 8 | bats coverage (discovery / sync / version_detect) |
 | 9 | `launcher/recipe_process.py` (`RecipeProcessOps`) |
-| 10–13 | Docs sync: ARCHITECTURE-LAUNCHER, LAUNCHER, CONTRIBUTING, index, PROJECT-LAYOUT, I18N |
-| 14 | This handoff file |
+| 10–14 | Docs sync + HANDOFF |
+| 15 | `vulture` / `make dead-code` |
+| 16 | `make shell-dup-check` + wiso `log_err` → `recipe_hooks::log_err` |
+| 17 | PR workflow docs + GitHub ruleset on `main` (+ manifest sync for CI) |
 
 ### Next backlog
 
 | Points | Topic | Notes |
 |--------|--------|--------|
-| 15 | `vulture` / `make dead-code` | Process tooling |
-| 16 | Shell redundancy check (`core/` vs `recipes/`) | Process tooling |
-| 17 | PR workflow / branch protection on `main` | Needs GitHub settings |
 | 18–21 | GUI features (diagnose zip, tested-on date, backup hint, activity history) | Plan + freigabe per point |
 
 ### Later candidates (not scheduled)
