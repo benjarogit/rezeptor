@@ -3,16 +3,11 @@
     "halo-campaign-evolved": {
       "files": {
         "assets/ensure_steam_nonsteam.py": "sha256:fc6c9ec9d514b12267444699f94b57b9cfcb216d1899df133f28b4b4beb5bae7",
-        "assets/ghidra-login-trace.md": "sha256:e36f0abb8b5266ab49f791601ee55a5b68e130bee2c3fbb4a5c991f98c1068ae",
-        "assets/halo-analyse-leitfaden.md": "sha256:9eb36f3fa75280cdca9dfd80b25b8aea3c5f02c8e189021a8d92f9ec2702aae1",
-        "assets/login-patch-inventory.md": "sha256:95c3ea2192e9fa39183f92f6e8bec7b119d53ac92ba58e67fb3cf372dd4b0223",
-        "assets/prepare-ghidra.sh": "sha256:6aab08dc73b067fe1aa5ac7bb8be10ab296d75b7075528202a691969927f83a2",
         "assets/skip-intro-LogoParade.mp4": "sha256:53122b321ad79f7c82f844b7c72883c8ba370527b51f896ce08c4ad4ebaf3f37",
         "assets/steam-grid/cover.png": "sha256:78490df8d4b1fe8259610858104d283abf976c6270116587faa6ef1fec9a2a3c",
         "assets/steam-grid/hero.png": "sha256:c45d5eace8fb389b43d0a5ecb9dad8e8207f73ac9cee36e0126090568a99a8ca",
         "assets/steam-grid/logo.png": "sha256:96a15116fd024828718c201bad84c02f42e9676bf0cb0fbf6f98970678670473",
         "assets/steam-grid/wide.png": "sha256:8232319f3c9e9ce39f75e7f5e90713df16c31054cd3211a83a360055fb826e66",
-        "assets/trace-login.sh": "sha256:a876aa830557772891a9029f6328257c696268731d7444f406393e8e289a5890",
         "info.de.md": "sha256:87cc8922281eef4f5bda66b328e4219a020ffe21cb1597f73972b6cb7f9487ad",
         "info.en.md": "sha256:12e850c847f345ff3fc472a9411e694e9cb82d3af3b7cf8201d2049fca10e13e",
         "install.sh": "sha256:aebc0bcdf72b4f5fb20a1d12145ad6b829183546e2b55e9566710b1be0323ca6",

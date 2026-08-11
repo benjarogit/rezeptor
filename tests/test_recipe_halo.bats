@@ -180,12 +180,6 @@ EOF
         "$WINEPREFIX/drive_c/users/steamuser/AppData/Local/Meteorite/Saved/Config/Windows/Engine.ini"
 }
 
-@test "prepare-ghidra.sh copies vanilla exe path" {
-    run bash "$PROJECT_ROOT/recipes/halo-campaign-evolved/assets/prepare-ghidra.sh" --help
-    [ "$status" -eq 0 ]
-    [[ "$output" == *Usage* ]]
-}
-
 @test "vanilla_exe_path prefers pre_xsapi_patch backup" {
     run bash -c "
 source '$PROJECT_ROOT/core/recipe-hooks.sh'
