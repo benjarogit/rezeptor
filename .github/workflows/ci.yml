@@ -53,7 +53,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install Python test deps
-        run: python -m pip install -q PyQt6 pytest
+        run: python -m pip install -q PyQt6 pytest "ruff==0.12.10"
 
       - name: Python compile
         run: make compile
@@ -61,11 +61,10 @@ jobs:
       - name: i18n key parity
         run: make i18n-check
 
+      # Prefer make ruff over ruff-action: the action appends the repo root and
+      # would lint scripts/vulture_whitelist.py (intentional undefined names).
       - name: Ruff (launcher)
-        uses: astral-sh/ruff-action@v3
-        with:
-          version: "0.12.10"
-          args: check launcher
+        run: make ruff
 
       - name: Pytest (launcher unit tests)
         env:
