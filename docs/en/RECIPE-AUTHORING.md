@@ -123,6 +123,7 @@ Medicine alternative: bool test toggle (see Photoshop `PHOTOSHOP_PROTON_GE_11`) 
 | `author` | Shown in the overview |
 | `notify_title` | Desktop notify `-a` / title; else `name` |
 | `version_label` / `version_guaranteed` | Tested version (display + healing in GUI; YAML key unchanged) |
+| `tested_on` | Optional: `YYYY-MM-DD` – date of the author’s last **deliberate** healing check. Shown next to Proton-GE in the GUI. Maintain manually; update when version/pin changes. Do not derive from CI or git mtime. |
 | `version_detect` | **Required with `version_guaranteed`** — declarative detection (see below) |
 | `source_hints` | Optional: search text / pack titles for BYOS (**no URLs**) |
 | `sidebar_label` | Optional: short sidebar **title**; version/pack appear on a small second line when needed |

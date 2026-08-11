@@ -166,6 +166,7 @@
     "runtime_proton_steam": "Rezeptor Proton-GE {tag} (priority). Steam compatdata stays for online-fix / Spacewar — no Rezeptor prefix.",
     "runtime_steam": "Launches via Steam Proton (compatdata) — no Rezeptor prefix. Typical for Steam games.",
     "runtime_system": "Launches with host/system Wine (not bundled Proton-GE).",
+    "tested_on": "Date of the author’s last deliberate healing check (software version and Proton-GE pin): {date}. An older date does not mean the recipe is invalid. Re-check and update the date when the version or pin changes.",
     "open_data_root": "Open install data (Wine prefix / files stored for this recipe)",
     "open_data_root_missing": "No install data yet — available after Install",
     "path_data": "Data",
@@ -205,7 +206,8 @@
     "version": "v{version}",
     "runtime_proton": "Proton-GE",
     "runtime_steam": "Steam Proton",
-    "runtime_system": "System Wine"
+    "runtime_system": "System Wine",
+    "tested_on": "Checked · {date}"
   },
   "status": {
     "installed_actions": "Installed — use “Launch” or “Repair”",

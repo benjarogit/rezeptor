@@ -419,6 +419,27 @@ def proton_ge_badge_label(tag: str = "") -> str:
     return f"Proton-GE {short}" if short else "Proton-GE"
 
 
+def format_tested_on_display(raw: str) -> str | None:
+    """Format recipe.yml ``tested_on`` (YYYY-MM-DD) for the active UI locale.
+
+    Returns None when missing or not a valid ISO date. Display pattern follows
+    ``_ui_locale()`` (not i18n string templates), so new languages only need a
+    locale branch here.
+    """
+    from datetime import date
+
+    s = (raw or "").strip()
+    if not s:
+        return None
+    try:
+        d = date.fromisoformat(s)
+    except ValueError:
+        return None
+    if _ui_locale() == "de":
+        return d.strftime("%d.%m.%Y")
+    return d.strftime("%d %b %Y")
+
+
 def bug_report_template_name() -> str:
     """GitHub ISSUE_TEMPLATE filename matching UI locale."""
     return "bug_report_de.md" if _ui_locale() == "de" else "bug_report.md"

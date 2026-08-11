@@ -98,6 +98,7 @@ from app_support import (
     humanize_log_line,
     parse_validate_version_fields,
     effective_proton_ge_tag,
+    format_tested_on_display,
     proton_ge_badge_label,
     prune_old_logs,
     public_docs_url,
@@ -1566,11 +1567,13 @@ class RezeptorWindow(QMainWindow):
         self.version_pill.clicked.connect(self._show_version_guarantee_info)
         self.tested_pill = StatusPill("—", COLOR_TESTED)
         self.proton_pill = StatusPill("Proton-GE", COLOR_EXPERIMENTAL)
+        self.tested_on_pill = StatusPill("", MUTED)
         self.author_pill = StatusPill("", MUTED)
         pills_row.addWidget(self.status_pill)
         pills_row.addWidget(self.version_pill)
         pills_row.addWidget(self.tested_pill)
         pills_row.addWidget(self.proton_pill)
+        pills_row.addWidget(self.tested_on_pill)
         pills_row.addWidget(self.author_pill)
         self.health_chip = QToolButton()
         self.health_chip.setObjectName("healthChip")
@@ -2526,6 +2529,7 @@ class RezeptorWindow(QMainWindow):
             t("app.home_pill_recipes", n=stats["recipes"]), COLOR_TESTED
         )
         self.proton_pill.set_content("Proton-GE", COLOR_EXPERIMENTAL)
+        self.tested_on_pill.set_content("", MUTED)
         self.author_pill.set_content("", MUTED)
 
         self.path_label.setText(t("app.home_tagline"))
@@ -3972,6 +3976,18 @@ class RezeptorWindow(QMainWindow):
             self.proton_pill.setToolTip(t("tooltip.runtime_proton", tag=ge_tag))
         # Arrow + tooltip: WhatsThisCursor showed a stray "?" on some desktops.
         self.proton_pill.setCursor(Qt.CursorShape.ArrowCursor)
+
+        tested_disp = format_tested_on_display(str(meta.get("tested_on") or ""))
+        if tested_disp:
+            self.tested_on_pill.set_content(
+                t("badge.tested_on", date=tested_disp), MUTED
+            )
+            self.tested_on_pill.setToolTip(
+                t("tooltip.tested_on", date=tested_disp)
+            )
+        else:
+            self.tested_on_pill.set_content("", MUTED)
+            self.tested_on_pill.setToolTip("")
 
         author = (meta.get("author") or "").strip()
         if author:
@@ -5420,6 +5436,7 @@ class RezeptorWindow(QMainWindow):
             getattr(self, "version_pill", None),
             getattr(self, "tested_pill", None),
             getattr(self, "proton_pill", None),
+            getattr(self, "tested_on_pill", None),
             getattr(self, "author_pill", None),
         ):
             if pill is not None and hasattr(pill, "apply_theme"):

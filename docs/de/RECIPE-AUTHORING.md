@@ -123,6 +123,7 @@ Medizin-Alternative: Bool-Test-Schalter (siehe Photoshop `PHOTOSHOP_PROTON_GE_11
 | `author` | Anzeige in der Übersicht |
 | `notify_title` | Desktop-Notify `-a` / Titel; sonst `name` |
 | `version_label` / `version_guaranteed` | Getestete Version (Anzeige + Heilung in der GUI; YAML-Key unverändert) |
+| `tested_on` | Optional: `YYYY-MM-DD` – Datum der letzten **bewussten** Heilungsprüfung (Autor). GUI zeigt es neben Proton-GE. Manuell pflegen; bei geänderter Version/Pin aktualisieren. Nicht aus CI/Git-mtime ableiten. |
 | `version_detect` | **Pflicht bei `version_guaranteed`** — deklarative Erkennung (siehe unten) |
 | `source_hints` | Optional: Suchtexte / Pack-Titel für BYOS (**keine URLs**) |
 | `sidebar_label` | Optional: kurzer **Titel** in der Seitenleiste; Version/Pack erscheinen bei Bedarf in einer zweiten kleinen Zeile |

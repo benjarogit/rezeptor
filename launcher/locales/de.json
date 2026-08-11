@@ -166,6 +166,7 @@
     "runtime_proton_steam": "Rezeptor Proton-GE {tag} (Prio). Steam-compatdata bleibt für Online-Fix / Spacewar — kein eigener Rezeptor-Prefix.",
     "runtime_steam": "Start über Steam-Proton (compatdata) — kein Rezeptor-Prefix. Typisch für Steam-Spiele.",
     "runtime_system": "Start mit Host-/System-Wine (nicht das gebündelte Proton-GE).",
+    "tested_on": "Datum der letzten bewussten Prüfung der Heilung durch den Autor (Software-Version und Proton-GE-Pin): {date}. Ein älteres Datum heißt nicht, dass das Rezept ungültig ist. Neu prüfen und das Datum aktualisieren, wenn sich Version oder Pin ändern.",
     "open_data_root": "Installationsdaten öffnen (Wine-Prefix / gespeicherte Dateien dieses Rezepts)",
     "open_data_root_missing": "Noch keine Installationsdaten — nach „Installieren“ verfügbar",
     "path_data": "Daten",
@@ -205,7 +206,8 @@
     "version": "v{version}",
     "runtime_proton": "Proton-GE",
     "runtime_steam": "Steam-Proton",
-    "runtime_system": "System-Wine"
+    "runtime_system": "System-Wine",
+    "tested_on": "Geprüft · {date}"
   },
   "status": {
     "installed_actions": "Installiert — „Starten“ oder „Reparieren“",
