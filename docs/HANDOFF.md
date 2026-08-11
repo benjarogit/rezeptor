@@ -30,5 +30,30 @@ Flatpak menu entry is hidden via `NoDisplay=true` override (still: `flatpak run 
 
 ## Open work
 
-- Pending Quelle/Ziel in header (`launcher/launcher.py`)
-- Legacy screenshots removed from `images/`
+- **No push / no release** until Benny asks. App-visible changes (1–9) need a release decision at push time; docs-only (10–14) do not.
+- Local `main` ahead of `origin/main` (see `git log origin/main..HEAD`).
+
+### Done (committed locally)
+
+| Points | Topic |
+|--------|--------|
+| 1–5 | Launcher UX (window icon, overview tab, Mehr-menu, empty Vorgang, install dialog) |
+| 6 | `make i18n-check` / CI key parity (launcher JSON only) |
+| 7 | ruff for `launcher/` |
+| 8 | bats coverage (discovery / sync / version_detect) |
+| 9 | `launcher/recipe_process.py` (`RecipeProcessOps`) |
+| 10–13 | Docs sync: ARCHITECTURE-LAUNCHER, LAUNCHER, CONTRIBUTING, index, PROJECT-LAYOUT, I18N |
+| 14 | This handoff file |
+
+### Next backlog
+
+| Points | Topic | Notes |
+|--------|--------|--------|
+| 15 | `vulture` / `make dead-code` | Process tooling |
+| 16 | Shell redundancy check (`core/` vs `recipes/`) | Process tooling |
+| 17 | PR workflow / branch protection on `main` | Needs GitHub settings |
+| 18–21 | GUI features (diagnose zip, tested-on date, backup hint, activity history) | Plan + freigabe per point |
+
+### Later candidates (not scheduled)
+
+- Key-parity check for Bash `.lang` trees (`core/locales`, `scripts/locales`) — documented gap in I18N.md.
