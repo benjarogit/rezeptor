@@ -39,7 +39,7 @@ After changes: `./scripts/recipe-manifest.sh`.
 
 ## What not to translate
 
-- Shell script messages in `core/` (optional / separate `.lang` files)
+- Shell messages in `core/i18n.sh` (`msg::t` / hard-coded `case` — extend there when needed)
 - Code identifiers, YAML keys, recipe IDs
 
 ## Pull request tips

@@ -39,7 +39,7 @@ Nach Änderungen: `./scripts/recipe-manifest.sh`.
 
 ## Was nicht übersetzt wird
 
-- Shell-Meldungen in `core/` (optional / eigene `.lang`-Dateien)
+- Shell-Meldungen in `core/i18n.sh` (`msg::t` / festes `case` — bei Bedarf dort erweitern)
 - Code-Identifier, YAML-Schlüssel, Rezept-IDs
 
 ## Tipps für Pull Requests

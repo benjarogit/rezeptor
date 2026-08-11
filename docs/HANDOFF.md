@@ -59,6 +59,10 @@ Flatpak menu entry is hidden via `NoDisplay=true` override (still: `flatpak run 
 
 ### Later candidates (not scheduled)
 
-- Key-parity check for Bash `.lang` trees (`core/locales`, `scripts/locales`) — documented gap in I18N.md.
 - Fill confirmed `tested_on` values on official recipes (manual; one line + `make recipe-manifest` each).
 - Visual “stale tested_on” hint (separate UI freigabe — not in P19).
+
+### Note (shell i18n)
+
+- Legacy `core/locales/*.lang` and `scripts/locales/*.lang` removed (unreferenced after `msg::t` rewrite).
+- Dead `launcher()` in `sharedFuncs.sh` removed; `photoshop::*` helpers remain.
