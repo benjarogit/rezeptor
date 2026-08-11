@@ -5,6 +5,13 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.38] - 2026-08-11
+
+### Fixed
+- Photoshop Quit: close only real Photoshop windows via WM_CLASS (never by title substring), so browser tabs mentioning “Photoshop” stay open ([#10](https://github.com/benjarogit/rezeptor/issues/10))
+- Photoshop launch cleanup: prefix-scoped process kills (no global `pkill` on `Photoshop.exe` / Adobe IPC broker)
+- Adobe diagnose / case-alias helpers: do not abort under `set -e` when `output::*` is not loaded
+
 ## [1.1.37] - 2026-08-10
 
 ### Fixed
