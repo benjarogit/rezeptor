@@ -49,6 +49,7 @@ Varianten teilen die Core-API mit `photoshop` über dünne Wrapper:
 | Falle | Hinweis |
 |-------|---------|
 | GPU/OpenGL in Adobe-Apps | Rezept setzt Prefs über Proton-Grafik-DLLs |
+| MSXML/IE8 scheitert mit `no valid cabinets` | Oft kaputter Win7-SP1-Download unter `~/.cache/winetricks/win7sp1/`. Aktuelle Builds: Cache prüfen, löschen, einmal Retry. Manuell: Ordner löschen, Install/Repair erneut. |
 | Quelle ≠ Repo-Pfad | Nutzer bringt Offline-Medium; Heuristik: Pack-Ordner / `Downloads/` |
 | Nur-ISO statt Pack | Install ok, Neural Filters / missing_libs fehlen |
 | Leeres Ziel | Pflichtwahl — kein stiller Default aus `target_default` / Home |

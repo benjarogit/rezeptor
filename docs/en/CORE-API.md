@@ -80,6 +80,8 @@ During bootstrap: `WINEDLLOVERRIDES=mscoree=d;mshtml=d;winemenubuilder.exe=d`.
 | `recipe_winetricks::run <log> <pkgs…>` | Main entry; timeouts 600 s (900 s fonts/dotnet/vcrun) |
 | `recipe_winetricks::prepare` | Runtime + cache |
 | `recipe_winetricks::stabilize_prefix` | `wineboot -u` with timeout |
+| `recipe_winetricks::sanitize_win7sp1_cache` | Drop broken/undersized `win7sp1` downloads or promote hashed file → canonical name |
+| `recipe_winetricks::purge_win7sp1_cache` | Delete Win7 SP1 cache file(s) (before MSXML/IE8 retry) |
 
 **Invariants:**
 
@@ -88,6 +90,7 @@ During bootstrap: `WINEDLLOVERRIDES=mscoree=d;mshtml=d;winemenubuilder.exe=d`.
 - Before invoke: `unset -f wine wineboot` (wrappers would break winetricks)
 - No `recipe_wine_silent::run` around winetricks (SEGV under Proton)
 - `vcrun*` → prefer `recipe_vcrun::ensure`; `dotnet*` → `recipe_dotnet::ensure`; `win10` → `recipe_win10::ensure`
+- Adobe MSXML/IE8 (`adobe_setup::ensure_native_msxml` / `install_ie8`): run `sanitize_win7sp1_cache` first; on failure purge + one retry (do not keep forcing a corrupt cache)
 
 ---
 

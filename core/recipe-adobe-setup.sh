@@ -7,6 +7,19 @@ if ! type recipe_validate::dll_is_wine_builtin >/dev/null 2>&1; then
     source "$(dirname "${BASH_SOURCE[0]}")/recipe-validate.sh"
 fi
 
+# Safe under `set -e`: `type foo && foo` aborts the caller when foo is missing.
+adobe_setup::_out_info() {
+    if type output::info >/dev/null 2>&1; then
+        output::info "$1"
+    fi
+}
+
+adobe_setup::_out_error() {
+    if type output::error >/dev/null 2>&1; then
+        output::error "$1"
+    fi
+}
+
 adobe_setup::kill_all_wineservers() {
     # Nur Proton-wineserver dieses Prefix — kein globales pkill (andere Rezepte).
     if type wine_runtime::wineserver >/dev/null 2>&1; then
@@ -53,7 +66,7 @@ adobe_setup::_link_or_copy_case() {
     fi
 
     if ln -sfn "$existing" "$dest" 2>/dev/null; then
-        type output::info >/dev/null 2>&1 && output::info "Case-Alias: $missing → $existing"
+        adobe_setup::_out_info "Case-Alias: $missing → $existing"
         return 0
     fi
     err="$(ln -sfn "$existing" "$dest" 2>&1 || true)"
@@ -61,14 +74,15 @@ adobe_setup::_link_or_copy_case() {
         echo "[$(date '+%H:%M:%S')] WARN: Symlink $missing: ${err:-failed}" >>"$ERROR_LOG"
     fi
     if cp -f "$src" "$dest" 2>/dev/null; then
-        type output::info >/dev/null 2>&1 \
-            && output::info "Case-Alias: $missing (Kopie — Symlink nicht möglich)"
-        [ -n "${ERROR_LOG:-}" ] \
-            && echo "[$(date '+%H:%M:%S')] INFO: Case-Alias $missing via cp" >>"$ERROR_LOG"
+        adobe_setup::_out_info "Case-Alias: $missing (Kopie — Symlink nicht möglich)"
+        if [ -n "${ERROR_LOG:-}" ]; then
+            echo "[$(date '+%H:%M:%S')] INFO: Case-Alias $missing via cp" >>"$ERROR_LOG"
+        fi
         return 0
     fi
-    type recipe_hooks::log_err >/dev/null 2>&1 \
-        && recipe_hooks::log_err "Case-Alias $dir/$missing fehlgeschlagen (${err:-cp failed}) — weiter ohne Alias"
+    if type recipe_hooks::log_err >/dev/null 2>&1; then
+        recipe_hooks::log_err "Case-Alias $dir/$missing fehlgeschlagen (${err:-cp failed}) — weiter ohne Alias"
+    fi
     return 0
 }
 
@@ -198,10 +212,8 @@ adobe_setup::diagnose_failed_install() {
         echo "=== Ende Diagnose ==="
     } | tee -a "${LOG_FILE:-/dev/null}" >>"$log" 2>/dev/null || true
 
-    type output::error >/dev/null 2>&1 \
-        && output::error "Adobe Set-up exit $rc — Diagnose in ERROR_LOG / Install-Log"
-    type output::info >/dev/null 2>&1 \
-        && output::info "Log: ${LOG_FILE:-?} · Fehlerlog: ${ERROR_LOG:-?}"
+    adobe_setup::_out_error "Adobe Set-up exit $rc — Diagnose in ERROR_LOG / Install-Log"
+    adobe_setup::_out_info "Log: ${LOG_FILE:-?} · Fehlerlog: ${ERROR_LOG:-?}"
 }
 
 adobe_setup::deploy_installer_to_c_drive() {

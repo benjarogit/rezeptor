@@ -49,6 +49,7 @@ Variants share the Photoshop core API via thin wrappers:
 | Pitfall | Note |
 |---------|------|
 | GPU/OpenGL in Adobe apps | Recipe sets prefs via Proton graphics DLLs |
+| MSXML/IE8 fails with `no valid cabinets` | Often a corrupt Win7 SP1 download under `~/.cache/winetricks/win7sp1/`. Current builds: validate cache, delete, one retry. Manual: remove that folder, run Install/Repair again. |
 | Source ≠ repo path | User brings the offline media; heuristic: pack folder / `Downloads/` |
 | ISO-only instead of pack | Install ok, Neural Filters / missing_libs missing |
 | Empty target | Required choice — no silent default from `target_default` / home |

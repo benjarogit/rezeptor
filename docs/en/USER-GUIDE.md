@@ -97,6 +97,7 @@ Releases from GitHub; auto-update where offered. After a manual download, verify
 
 - In-app: **Help → Developer documentation…** (author pages)
 - GitHub issues / bug-report template (clipboard may hold the full report body)
+- Report file under `~/.local/share/wine-software/logs/github-report_*.txt` (sanitized; includes recent install/winetricks logs when present)
 - Session ID is in the report file, not the status bar
 
 ## Next

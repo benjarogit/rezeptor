@@ -97,6 +97,7 @@ Releases von GitHub; Auto-Update wo angeboten. Nach dem Update `sha256sum` der A
 
 - In-App: **Hilfe → Entwickler-Dokumentation…** (Autoren-Seiten)
 - GitHub Issues / Bug-Report-Vorlage (Zwischenablage kann den Report-Body enthalten)
+- Report-Datei unter `~/.local/share/wine-software/logs/github-report_*.txt` (sanitisiert; inkl. letzter Install-/winetricks-Logs wenn vorhanden)
 - Session-ID steht im Report-File, nicht in der Statusleiste
 
 ## Weiter
