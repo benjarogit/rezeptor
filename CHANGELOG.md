@@ -5,6 +5,25 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.39] - 2026-08-11
+
+### Added
+- Home: cross-recipe activity history (recent installs/repairs/etc., click to select the recipe)
+- Optional recipe `tested_on` date next to the Proton-GE badge (when set in `recipe.yml`)
+- Diagnose: export a sanitized zip of recent logs (allowlisted paths)
+- Backup reminders before relocate and before uninstall (WISO names tax data explicitly)
+- Friendlier install path preview (pending source and target) and related launcher UX polish
+
+### Changed
+- Recipe process ops live in `launcher/recipe_process.py` (same behaviour, clearer structure)
+
+### Fixed
+- Recipe trust manifest stays in sync after Halo asset edits (`make recipe-manifest-check`)
+
+### Internal
+- CI: Python 3.11–3.13 matrix with pytest; shell/bats job once; aggregator job still named `validate`
+- Dead unused `.lang` trees and legacy Bash `launcher()` removed from core
+
 ## [1.1.38] - 2026-08-11
 
 ### Fixed
