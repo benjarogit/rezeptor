@@ -156,7 +156,7 @@ Siehe [BRAND.md](BRAND.md).
 | Marke | [BRAND.md](BRAND.md) |
 
 ```bash
-make validate                 # Shellcheck, Syntax, recipe-lint, Manifest
+make validate                 # shellcheck, syntax, compile, i18n-check, ruff, recipes-check, recipe-lint, manifest
 make test                     # bats
 ```
 

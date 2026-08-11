@@ -27,14 +27,16 @@ mkdocs serve
 Before every PR:
 
 ```bash
-make validate          # shellcheck, syntax, compile, recipes-check, lint, manifest
+make validate          # shellcheck, syntax, compile, i18n-check, ruff, recipes-check, recipe-lint, manifest
 make test              # bats
 ./scripts/recipe-lint.sh
 ./scripts/recipe-manifest.sh   # after recipe file changes → commit
 ```
 
 `make validate` → `shellcheck` covers only `core/`, `recipes/photoshop`, `recipes/wiso-steuer`, `launcher/`, `scripts/`.  
-`bash -n` (`syntax` target) covers all `recipes/*/*.sh`; for other recipes also run `./scripts/recipe-lint.sh`.
+`bash -n` (`syntax` target) covers all `recipes/*/*.sh`; for other recipes also run `./scripts/recipe-lint.sh`.  
+`i18n-check` compares key sets of `launcher/locales/de.json` and `en.json` (`make i18n-check`).  
+`ruff` lints `launcher/` (`make ruff`; CI also runs `astral-sh/ruff-action`).
 
 ## Recipes
 
