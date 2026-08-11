@@ -1,0 +1,3 @@
+# Optional host tooling for contributors / local CI parity.
+# Runtime PyQt6 stays a distro package (see GETTING-STARTED).
+ruff==0.12.10

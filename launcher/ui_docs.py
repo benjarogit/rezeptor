@@ -181,7 +181,8 @@ def markdown_to_html(md: str) -> str:
             if not in_ul:
                 out.append("<ul>")
                 in_ul = True
-            out.append(f"<li>{_inline(re.sub(r'^[-*]\\s+', '', line))}</li>")
+            bullet = re.sub(r"^[-*]\s+", "", line)
+            out.append(f"<li>{_inline(bullet)}</li>")
             continue
         flush_ul()
 

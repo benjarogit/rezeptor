@@ -1,11 +1,11 @@
-.PHONY: test validate shellcheck syntax compile i18n-check recipes-check recipe-lint recipe-manifest recipe-manifest-check
+.PHONY: test validate shellcheck syntax compile i18n-check ruff recipes-check recipe-lint recipe-manifest recipe-manifest-check
 
 # Vollständige Test-Suite (bats)
 test:
 	bats tests/
 
 # Agent/CI-Validierung ohne Wine/Proton
-validate: shellcheck syntax compile i18n-check recipes-check recipe-lint recipe-manifest-check
+validate: shellcheck syntax compile i18n-check ruff recipes-check recipe-lint recipe-manifest-check
 
 shellcheck:
 	find ./core ./recipes/wiso-steuer ./recipes/photoshop ./recipes/premiere ./launcher ./scripts \
@@ -23,6 +23,16 @@ compile:
 
 i18n-check:
 	python3 scripts/check-i18n-parity.py
+
+ruff:
+	@if command -v ruff >/dev/null 2>&1; then \
+		ruff check launcher; \
+	elif python3 -m ruff --version >/dev/null 2>&1; then \
+		python3 -m ruff check launcher; \
+	else \
+		echo "ruff missing — install: pacman -S ruff  OR  pipx install ruff  OR  see requirements-dev.txt" >&2; \
+		exit 1; \
+	fi
 
 recipes-check:
 	@for f in recipes/*/recipe.yml recipes/community/*/recipe.yml; do \
