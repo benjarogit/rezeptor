@@ -33,7 +33,7 @@ make test              # bats
 ./scripts/recipe-manifest.sh   # nach Rezept-Dateiänderungen → commit
 ```
 
-`make validate` → `shellcheck` prüft nur `core/`, `recipes/photoshop`, `recipes/wiso-steuer`, `launcher/`, `scripts/`.  
+`make validate` → `shellcheck` prüft `core/`, `recipes/photoshop`, `recipes/premiere`, `recipes/wiso-steuer`, `launcher/`, `scripts/`.  
 `bash -n` (Target `syntax`) deckt alle `recipes/*/*.sh` ab; für andere Rezepte zusätzlich `./scripts/recipe-lint.sh`.  
 `i18n-check` vergleicht Key-Sets von `launcher/locales/de.json` und `en.json` (`make i18n-check`).  
 `ruff` lintet `launcher/` (`make ruff`; in CI zusätzlich `astral-sh/ruff-action`).

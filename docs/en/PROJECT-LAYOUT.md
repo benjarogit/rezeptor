@@ -16,6 +16,10 @@ rezeptor/
 │   ├── manifest.json     # SHA256 integrity
 │   └── recipe.schema.json
 ├── launcher/             # PyQt6 GUI (host PyQt6 for clone/tar.gz; AppImage/Flatpak bundle it)
+│   ├── launcher.py          # RezeptorWindow, menus/tabs, delegates
+│   ├── recipe_process.py    # RecipeProcessOps — QProcess orchestration
+│   ├── recipe_discovery.py  # RecipeInfo / discover
+│   └── …                    # see [GUI launcher](LAUNCHER.md) / [Architecture](ARCHITECTURE-LAUNCHER.md)
 ├── scripts/              # Lint, manifest, new-recipe, builds
 ├── tests/                # bats + Python
 ├── docs/{de,en}/         # This site (MkDocs)
@@ -83,7 +87,9 @@ Proton install location: `~/.local/share/wine-software/runtime/proton-ge/<tag>/`
 
 ## `launcher/`
 
-PyQt6 app: catalog, trust, settings, hook processes, activity log (`recipe_discovery.py` for listing/trust flags). See [GUI launcher](LAUNCHER.md) and [Architecture](ARCHITECTURE-LAUNCHER.md).
+PyQt6 app: catalog, trust, settings, hook processes, activity log.  
+`RezeptorWindow` (`launcher.py`) + `RecipeProcessOps` (`recipe_process.py`) for install/repair/…/launch.  
+See [GUI launcher](LAUNCHER.md) and [Architecture](ARCHITECTURE-LAUNCHER.md).
 
 ## Runtime data locations
 
@@ -97,13 +103,13 @@ PyQt6 app: catalog, trust, settings, hook processes, activity log (`recipe_disco
 ## CI & quality
 
 ```bash
-make validate    # shellcheck, bash -n, compileall, recipes-check, recipe-lint, manifest-check
+make validate    # shellcheck, syntax, compile, i18n-check, ruff, recipes-check, recipe-lint, manifest
 make test        # bats
 ./scripts/recipe-lint.sh
 ./scripts/recipe-manifest.sh
 ```
 
-`shellcheck` in `make validate` covers only `core/`, `photoshop`, `wiso-steuer`, `launcher/`, `scripts/` — not every recipe. `bash -n` checks all `recipes/*/*.sh`.
+`shellcheck` in `make validate` covers `core/`, `recipes/wiso-steuer`, `recipes/photoshop`, `recipes/premiere`, `launcher/`, `scripts/` — not every recipe (e.g. not `photoshop-m0nkrus`, Halo, community). `bash -n` (`syntax`) checks all `recipes/*/*.sh`.
 
 Workflows: `.github/workflows/ci.yml`, `docs.yml`, `release.yml`.
 
