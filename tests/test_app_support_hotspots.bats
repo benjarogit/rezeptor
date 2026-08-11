@@ -110,6 +110,66 @@ print('ok', out.name)
     [[ "$output" == *ok* ]]
 }
 
+@test "build_diagnose_zip allowlists logs, tails bytes, sanitizes, skips secrets files" {
+    run python3 -c "
+import sys
+from pathlib import Path
+import zipfile
+sys.path.insert(0, '$PROJECT_ROOT/launcher')
+import app_support
+from i18n import set_locale, clear_cache
+
+tmp = Path('$BATS_TEST_TMPDIR/logs')
+tmp.mkdir()
+app_support.LOG_ROOT = tmp
+
+# Allowlisted
+(tmp / 'launch_photoshop_deadbeef.log').write_text(
+    'x' * 4000 + '\nERROR at /home/elsarraf/secret\nOK\n', encoding='utf-8'
+)
+(tmp / 'winetricks_foo.log').write_text('winetricks ok\n', encoding='utf-8')
+(tmp / 'rezeptor-exit-diagnostics.log').write_text('diag\n', encoding='utf-8')
+# Must NOT be packed
+(tmp / 'archive-passwords.json').write_text('{\"p\":\"x\"}\n', encoding='utf-8')
+(tmp / 'random.txt').write_text('nope\n', encoding='utf-8')
+(tmp / 'diagnose_old.zip').write_bytes(b'PK\x03\x04')
+
+data = Path('$BATS_TEST_TMPDIR/recipe-data')
+data.mkdir()
+(data / 'install.log').write_text('@step:Prefix\npath=/home/benny/x\n', encoding='utf-8')
+(data / 'options.env').write_text('SECRET=1\n', encoding='utf-8')
+
+clear_cache()
+set_locale('en')
+built = app_support.build_diagnose_zip(
+    'photoshop',
+    'sessdeadbeef',
+    data_root=data,
+    recipe_name='Adobe Photoshop CC 2021',
+    per_file_bytes=512,
+)
+assert built is not None, built
+out, count = built
+assert out.is_file() and out.name.startswith('diagnose_photoshop_')
+assert count >= 2
+with zipfile.ZipFile(out, 'r') as zf:
+    names = set(zf.namelist())
+assert 'README.txt' in names
+assert 'logs/launch_photoshop_deadbeef.log' in names
+assert 'data_logs/install.log' in names
+assert 'logs/archive-passwords.json' not in names
+assert 'data_logs/options.env' not in names
+assert not any(n.endswith('random.txt') for n in names)
+launch = zipfile.ZipFile(out).read('logs/launch_photoshop_deadbeef.log').decode()
+assert '/home/elsarraf' not in launch
+assert '/home/<USER>' in launch
+assert len(launch.encode()) <= 512 + 80  # tail + sanitize slack
+print('ok', out.name, count)
+"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *ok* ]]
+}
+
 @test "sanitize_log_text redacts home paths and secrets" {
     run python3 -c "
 import sys

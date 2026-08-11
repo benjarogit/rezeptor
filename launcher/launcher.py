@@ -85,6 +85,7 @@ if str(_LAUNCHER_DIR) not in sys.path:
 
 from app_support import (
     GITHUB_REPO,
+    build_diagnose_zip,
     collect_report_bundle,
     community_reddit_url,
     describe_runtime_for_report,
@@ -1310,6 +1311,7 @@ class RezeptorWindow(QMainWindow):
         help_menu.addAction(t("menu.check_update"), self.check_updates)
         help_menu.addSeparator()
         help_menu.addAction(t("menu.report_bug"), self.report_bug)
+        help_menu.addAction(t("menu.diagnose_zip"), self.export_diagnose_zip)
         help_menu.addAction(t("menu.open_log_folder"), self.open_log_folder)
         help_menu.addAction(t("menu.about"), self.show_about)
         self._ensure_lang_toggle()
@@ -2655,6 +2657,10 @@ class RezeptorWindow(QMainWindow):
         self._logs_copy_content_btn.setObjectName("ghostBtn")
         self._logs_copy_content_btn.clicked.connect(self.copy_selected_log_content)
         actions.addWidget(self._logs_copy_content_btn)
+        self._logs_diagnose_btn = QPushButton(t("btn.diagnose_zip"))
+        self._logs_diagnose_btn.setObjectName("ghostBtn")
+        self._logs_diagnose_btn.clicked.connect(self.export_diagnose_zip)
+        actions.addWidget(self._logs_diagnose_btn)
         actions.addStretch(1)
         lay.addLayout(actions)
         self.file_log = QTextEdit()
@@ -3256,6 +3262,71 @@ class RezeptorWindow(QMainWindow):
                 "info", t("dialog.report_path_copied", path=str(report.resolve()))
             )
         self._activity("info", t("dialog.report_clipboard", name=report.name))
+
+    def export_diagnose_zip(self) -> None:
+        """Write allowlisted, sanitized logs into diagnose_<rid>_<ts>.zip under LOG_ROOT."""
+        rid = self._selected.rid if self._selected else "launcher"
+        if QMessageBox.question(
+            self,
+            t("dialog.diagnose_title"),
+            t("dialog.diagnose_confirm"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            return
+        info = self._selected
+        data_root: Path | None = None
+        recipe_name = ""
+        recipe_tag = ""
+        if info is not None:
+            data_root = resolve_data_root(info.meta, info.rid)
+            recipe_name = (info.meta.get("name") or "").strip()
+            recipe_tag = (info.meta.get("proton_ge_tag") or "").strip()
+        built = build_diagnose_zip(
+            rid,
+            self.session_id,
+            data_root=data_root,
+            recipe_name=recipe_name,
+            recipe_proton_tag=recipe_tag,
+        )
+        if built is None:
+            QMessageBox.information(
+                self,
+                t("dialog.diagnose_title"),
+                t("dialog.diagnose_empty"),
+            )
+            return
+        zip_path, count = built
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(t("dialog.diagnose_done_title"))
+        box.setText(
+            t(
+                "dialog.diagnose_done_body",
+                name=zip_path.name,
+                count=count,
+                folder=str(LOG_ROOT),
+            )
+        )
+        open_folder = box.addButton(
+            t("btn.open_log_folder"), QMessageBox.ButtonRole.ActionRole
+        )
+        copy_path = box.addButton(
+            t("btn.copy_log_path"), QMessageBox.ButtonRole.ActionRole
+        )
+        box.addButton(QMessageBox.StandardButton.Ok)
+        box.exec()
+        clicked = box.clickedButton()
+        clip = QApplication.clipboard()
+        if clicked == open_folder:
+            self.open_log_folder()
+        elif clicked == copy_path:
+            clip.setText(str(zip_path.resolve()))
+            self._activity(
+                "info",
+                t("dialog.diagnose_path_copied", path=str(zip_path.resolve())),
+            )
+        self._activity("info", t("dialog.diagnose_activity", name=zip_path.name))
+        self.populate_log_files()
 
     def _show_failure(self, done_label: str, code: int) -> None:
         box = QMessageBox(self)
