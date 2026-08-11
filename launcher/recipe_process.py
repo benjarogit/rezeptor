@@ -687,6 +687,12 @@ class RecipeProcessOps:
             return t("dialog.repair_wiso")
         return t("dialog.repair_default")
 
+    def _uninstall_confirm_message(self, rid: str, name: str) -> str:
+        base = t("dialog.uninstall_confirm", name=name)
+        if rid == "wiso-steuer":
+            return f"{base}\n\n{t('dialog.uninstall_backup_wiso')}"
+        return f"{base}\n\n{t('dialog.uninstall_backup_hint')}"
+
     def _spawn_detached(self, cmd: list[str], env: dict[str, str]) -> Path:
         rid = env.get("RECIPE_ID", "app")
         log_path = self._L.LOG_ROOT / f"launch_{rid}_{self._w.session_id[:8]}.log"
@@ -861,13 +867,12 @@ class RecipeProcessOps:
         if not un.is_file():
             QMessageBox.warning(self._w, t("dialog.missing"), t("dialog.no_uninstall"))
             return
+        rid = self._w._selected.rid
+        name = self._w._selected.meta.get("name", rid)
         if QMessageBox.question(
             self._w,
             t("dialog.uninstall_title"),
-            t(
-                "dialog.uninstall_confirm",
-                name=self._w._selected.meta.get("name", self._w._selected.rid),
-            ),
+            self._uninstall_confirm_message(rid, name),
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         ) != QMessageBox.StandardButton.Yes:
