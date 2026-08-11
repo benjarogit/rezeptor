@@ -78,12 +78,26 @@ recipe_photoshop::wait_photoshop_gone() {
 }
 
 # Close Photoshop windows via the host WM (same path as clicking the window ✕).
+# IMPORTANT: never wmctrl -c by title substring — that closes browser tabs titled
+# "…Photoshop…" (issue #10 follow-up). Match WM_CLASS only (StartupWMClass=Photoshop.exe).
+recipe_photoshop::_wm_class_is_photoshop() {
+    local wclass="${1,,}"
+    case "$wclass" in
+        *photoshop.exe*|photoshop.exe|photoshop.exe.*) return 0 ;;
+    esac
+    return 1
+}
+
 recipe_photoshop::_wm_close_photoshop() {
-    if command -v wmctrl >/dev/null 2>&1; then
-        # Titles vary by locale/version; ignore failures.
-        wmctrl -c 'Adobe Photoshop' 2>/dev/null || true
-        wmctrl -c 'Photoshop' 2>/dev/null || true
-    fi
+    command -v wmctrl >/dev/null 2>&1 || return 0
+    local id desk wclass
+    # wmctrl -lx columns: id desktop WM_CLASS host title…
+    # Do not use IFS= here — we need default whitespace field splitting.
+    while read -r id desk wclass _; do
+        [ -n "$id" ] || continue
+        recipe_photoshop::_wm_class_is_photoshop "$wclass" || continue
+        wmctrl -ic "$id" 2>/dev/null || true
+    done < <(wmctrl -lx 2>/dev/null || true)
 }
 
 # Windows taskkill without /F sends WM_CLOSE (prefs/recents can flush). /F is hard kill.

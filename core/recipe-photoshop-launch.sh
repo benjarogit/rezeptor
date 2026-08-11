@@ -34,6 +34,26 @@ recipe_photoshop::_notify() {
     fi
 }
 
+# Kill matching PIDs only when WINEPREFIX matches this recipe (no global pkill).
+recipe_photoshop::_kill_pat_in_prefix() {
+    local pat="${1:?}"
+    local sig="${2:-TERM}"
+    local prefix="${WINEPREFIX:-${WINE_PREFIX:-}}"
+    local pid environ
+    [ -n "$prefix" ] || return 0
+    while IFS= read -r pid; do
+        [ -n "$pid" ] || continue
+        [[ "$pid" =~ ^[0-9]+$ ]] || continue
+        [ -r "/proc/$pid/environ" ] || continue
+        environ="$(tr '\0' '\n' <"/proc/$pid/environ" 2>/dev/null || true)"
+        case "$environ" in
+            *"WINEPREFIX=${prefix}"*) ;;
+            *) continue ;;
+        esac
+        kill "-${sig}" "$pid" 2>/dev/null || true
+    done < <(pgrep -f "$pat" 2>/dev/null || true)
+}
+
 # Orphan AdobeIPCBroker (cmdline embeds Photoshop.exe path) — not a real session.
 recipe_photoshop::_clear_orphan_ipc_broker() {
     if recipe_guard::process_matches 'Photoshop.exe'; then
@@ -44,9 +64,9 @@ recipe_photoshop::_clear_orphan_ipc_broker() {
     fi
     echo "⚠ Verwaisten Adobe IPC Broker beenden…"
     recipe_photoshop::_runtime_log "Orphan AdobeIPCBroker — kill"
-    pkill -f '[Aa]dobe[Ii][Pp][Cc][Bb]roker' 2>/dev/null || true
+    recipe_photoshop::_kill_pat_in_prefix '[Aa]dobe[Ii][Pp][Cc][Bb]roker' TERM
     sleep 0.5
-    pkill -9 -f '[Aa]dobe[Ii][Pp][Cc][Bb]roker' 2>/dev/null || true
+    recipe_photoshop::_kill_pat_in_prefix '[Aa]dobe[Ii][Pp][Cc][Bb]roker' 9
 }
 
 # Weißer Vollbild-Desktop ohne Photoshop: explorer.exe /desktop (Wine-VD).
@@ -119,6 +139,7 @@ recipe_photoshop::_drop_virtual_desktop_shell() {
 }
 
 # Hängende unsichtbare Session (explorer /desktop) beenden — sonst „läuft bereits“ ohne Fenster.
+# Prefix-scoped only — never global pkill (would hit other Wine apps / wrong hosts).
 recipe_photoshop::_clear_stuck_session() {
     if ! recipe_guard::process_matches 'Photoshop.exe'; then
         return 0
@@ -127,11 +148,11 @@ recipe_photoshop::_clear_stuck_session() {
         || pgrep -f 'explorer\.exe.*\/desktop' >/dev/null 2>&1; then
         echo "⚠ Hängende unsichtbare Photoshop-Session (Virtual Desktop) — beende…"
         recipe_photoshop::_runtime_log "Stuck session: Photoshop + explorer /desktop — kill"
-        pkill -f 'Photoshop\.exe' 2>/dev/null || true
-        pkill -f 'explorer\.exe /desktop' 2>/dev/null || true
+        recipe_photoshop::_kill_pat_in_prefix '[\\/]Photoshop\.exe|[\\/]photoshop\.exe' TERM
+        recipe_photoshop::_drop_virtual_desktop_shell
         sleep 1
-        pkill -9 -f 'Photoshop\.exe' 2>/dev/null || true
-        pkill -9 -f 'explorer\.exe /desktop' 2>/dev/null || true
+        recipe_photoshop::_kill_pat_in_prefix '[\\/]Photoshop\.exe|[\\/]photoshop\.exe' 9
+        recipe_photoshop::_drop_virtual_desktop_shell
         if [ -n "${WINEPREFIX:-}" ] && type wine_runtime::wineserver >/dev/null 2>&1; then
             wine_runtime::wineserver -k 2>/dev/null || true
         fi
@@ -169,10 +190,32 @@ recipe_photoshop::_export_launch_env() {
     else
         export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d;d3d11=native,builtin;d2d1=builtin;gdiplus=native;mshtml=native,builtin;jscript=native,builtin;vbscript=native,builtin;urlmon=native,builtin;wininet=native,builtin;shdocvw=native,builtin;ieframe=native,builtin;actxprxy=native,builtin;browseui=native,builtin;dxtrans=native,builtin;msimtf=native,builtin;shlwapi=native,builtin;shell32=native,builtin;iertutil=native,builtin;jsproxy=native,builtin}"
     fi
-    export WINE_CPU_TOPOLOGY="4:2"
+    # Experimental Hand-tool stub (#9). Default off — caused minimize/window regressions.
+    case "${PHOTOSHOP_OPENGL_STUB:-0}" in
+        1|true|yes|on|TRUE|YES|ON)
+            case ";${WINEDLLOVERRIDES};" in
+                *\;opengl32=*) ;;
+                *) export WINEDLLOVERRIDES="${WINEDLLOVERRIDES};opengl32=n" ;;
+            esac
+            ;;
+    esac
+    # Match Premiere: do not spoof Nvidia as AMD (Hand-tool / canvas quirks, issue #9).
+    export DXVK_CONFIG="${DXVK_CONFIG:-dxgi.hideNvidiaGpu = False}"
+    if [ -z "${DXVK_CONFIG_FILE:-}" ] && [ -f "${WINEPREFIX:-}/dxvk.conf" ]; then
+        export DXVK_CONFIG_FILE="${WINEPREFIX}/dxvk.conf"
+    fi
+    # Optional debug overrides (recipe.yml env otherwise forces WINEDEBUG=-all,+err).
+    if [ -n "${REZEPTOR_WINEDEBUG:-}" ]; then
+        export WINEDEBUG="$REZEPTOR_WINEDEBUG"
+    fi
+    if [ -n "${REZEPTOR_WINE_CPU_TOPOLOGY:-}" ]; then
+        export WINE_CPU_TOPOLOGY="$REZEPTOR_WINE_CPU_TOPOLOGY"
+    else
+        export WINE_CPU_TOPOLOGY="4:2"
+    fi
     export __GL_THREADED_OPTIMIZATIONS=1
     export __GL_YIELD="USLEEP"
-    export CSMT=enabled
+    export CSMT="${REZEPTOR_CSMT:-enabled}"
     export DXVK_ASYNC=0
     export DXVK_HUD=0
 }
@@ -191,10 +234,26 @@ recipe_photoshop::_validate_prefix() {
     return 0
 }
 
+recipe_photoshop::_ensure_dxvk_conf() {
+    # Stop DXVK from spoofing Nvidia as AMD (same idea as Premiere). Helps GPU
+    # identity; Hand-tool (#9): opengl32 stub → NumGLGPUs=0 (see assets/opengl32-stub/).
+    local conf="${WINEPREFIX:-${WINE_PREFIX:-}}/dxvk.conf"
+    [ -n "${WINEPREFIX:-${WINE_PREFIX:-}}" ] || return 0
+    mkdir -p "$(dirname "$conf")" 2>/dev/null || true
+    if [ ! -f "$conf" ] || ! grep -q 'hideNvidiaGpu' "$conf" 2>/dev/null; then
+        cat >"$conf" <<'EOF'
+dxgi.hideNvidiaGpu = False
+dxgi.hideNvkGpu = False
+EOF
+    fi
+    export DXVK_CONFIG_FILE="${DXVK_CONFIG_FILE:-$conf}"
+}
+
 recipe_photoshop::_prepare_prefix() {
     recipe_hooks::_source recipe-photoshop-install.sh
     recipe_guard::kill_stale_winetricks 2>/dev/null || true
     recipe_guard::require_mem 4096 || return 1
+    recipe_photoshop::_ensure_dxvk_conf
     recipe_photoshop::_clear_orphan_ipc_broker
     recipe_photoshop::_clear_orphan_virtual_desktop
     recipe_photoshop::_clear_stuck_session
@@ -235,6 +294,11 @@ recipe_photoshop::_prepare_prefix() {
         || recipe_photoshop::_runtime_log "FEHLER: Proton-Grafik-DLLs nicht deploybar — Reparieren"
     if recipe_photoshop::_env_bool_on "${PHOTOSHOP_PROTON_GE_11:-0}"; then
         recipe_photoshop::_runtime_log "GE-11 Medizin: DXVK from ${PROTON_GE_DXVK_TAG:-?} + X11 + d2d1=n"
+    fi
+    # Drop leftover opengl32 stub (or deploy if PHOTOSHOP_OPENGL_STUB=1).
+    if type recipe_photoshop::deploy_opengl_stub >/dev/null 2>&1; then
+        recipe_photoshop::deploy_opengl_stub || \
+            recipe_photoshop::_runtime_log "WARN: opengl32 stub deploy/cleanup failed"
     fi
 
     # Nur leichte Prefs/Plugins — kein winetricks (gdiplus gehört in Reparieren).
@@ -365,8 +429,19 @@ recipe_photoshop::launch() {
 
     # Nur einmal Notifier registrieren. Kein -script bei jedem Start —
     # Text-Glatt auf der Startseite → „Programmfehler“ unter Wine.
+    # PHOTOSHOP_FORCE_JSX: one-shot debug/repair script (absolute host path).
     local script_args=() jsx wine_script
-    if ! recipe_photoshop::startup_event_registered; then
+    if [ -n "${PHOTOSHOP_FORCE_JSX:-}" ] && [ -f "${PHOTOSHOP_FORCE_JSX}" ]; then
+        jsx="$PHOTOSHOP_FORCE_JSX"
+        recipe_photoshop::_runtime_log "FORCE JSX: $jsx"
+        if type wine_runtime::winepath >/dev/null 2>&1; then
+            wine_script="$(wine_runtime::winepath -w "$jsx" 2>/dev/null || true)"
+        else
+            wine_script=""
+        fi
+        [ -n "$wine_script" ] || wine_script="$(echo "$jsx" | sed 's|^/|Z:/|' | sed 's|/|\\|g')"
+        script_args=(-script "$wine_script")
+    elif ! recipe_photoshop::startup_event_registered; then
         jsx="$(dirname "$photoshop_exe")/Presets/Scripts/Rezeptor-Register-Startup.jsx"
         echo "📝 Text-Glatt Autostart registrieren…"
         recipe_photoshop::_runtime_log "Launch mit -script Register-Startup"
