@@ -1,4 +1,4 @@
-.PHONY: test validate shellcheck syntax compile i18n-check ruff dead-code recipes-check recipe-lint recipe-manifest recipe-manifest-check
+.PHONY: test validate shellcheck syntax compile i18n-check ruff dead-code shell-dup-check recipes-check recipe-lint recipe-manifest recipe-manifest-check
 
 # Vollständige Test-Suite (bats)
 test:
@@ -45,6 +45,11 @@ dead-code:
 		echo "vulture missing — install: pacman -S vulture  OR  pip install -r requirements-dev.txt (venv)" >&2; \
 		exit 1; \
 	fi
+
+# Opt-in: recipe hook scripts must not redefine core/ function names.
+# Not in validate — rare intentional overlaps go in scripts/shell-dup-allowlist.txt.
+shell-dup-check:
+	python3 scripts/check-shell-dup-funcs.py
 
 recipes-check:
 	@for f in recipes/*/recipe.yml recipes/community/*/recipe.yml; do \

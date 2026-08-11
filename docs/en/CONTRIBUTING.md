@@ -37,7 +37,8 @@ make test              # bats
 `bash -n` (`syntax` target) covers all `recipes/*/*.sh`; for other recipes also run `./scripts/recipe-lint.sh`.  
 `i18n-check` compares key sets of `launcher/locales/de.json` and `en.json` (`make i18n-check`).  
 `ruff` lints `launcher/` (`make ruff`; CI also runs `astral-sh/ruff-action`).  
-Optional: `make dead-code` (`vulture`, see `requirements-dev.txt`) — not part of `validate`; whitelist in `scripts/vulture_whitelist.py`.
+Optional: `make dead-code` (`vulture`, see `requirements-dev.txt`) — not part of `validate`; whitelist in `scripts/vulture_whitelist.py`.  
+Optional: `make shell-dup-check` — fails when recipe hooks redefine `core/` function names; allowlist: `scripts/shell-dup-allowlist.txt`.
 
 ## Recipes
 
