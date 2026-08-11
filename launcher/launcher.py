@@ -902,7 +902,7 @@ def format_recipe_info_html(
 
 
 class InfoConfirmDialog(QDialog):
-    """Install-Bestätigung mit formatiertem Rezept-Info (kein Roh-Markdown)."""
+    """Install confirmation: scrollable recipe info, sticky Install/Cancel footer."""
 
     def __init__(
         self,
@@ -914,25 +914,43 @@ class InfoConfirmDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.resize(560, 520)
+        # Tall enough for sticky footer + recipe info (browser min 360).
+        self.setMinimumSize(480, 520)
+        self.resize(560, 560)
         lay = QVBoxLayout(self)
+        lay.setContentsMargins(12, 12, 12, 12)
+        lay.setSpacing(0)
+
         browser = QTextBrowser()
         browser.setOpenExternalLinks(True)
         browser.setHtml(html)
         browser.setMinimumHeight(360)
         lay.addWidget(browser, stretch=1)
+
+        # Footer stays visible; only the browser scrolls for long recipe info.
+        footer = QWidget()
+        footer_l = QVBoxLayout(footer)
+        footer_l.setContentsMargins(0, 12, 0, 0)
+        footer_l.setSpacing(10)
         q = QLabel(question)
         q.setWordWrap(True)
         q.setObjectName("stepLabel")
-        lay.addWidget(q)
+        footer_l.addWidget(q)
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.No
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.button(QDialogButtonBox.StandardButton.Yes).setText(t("dialog.yes"))
-        buttons.button(QDialogButtonBox.StandardButton.No).setText(t("dialog.no"))
+        ok_btn = buttons.button(QDialogButtonBox.StandardButton.Ok)
+        cancel_btn = buttons.button(QDialogButtonBox.StandardButton.Cancel)
+        if ok_btn is not None:
+            ok_btn.setText(t("btn.install"))
+            ok_btn.setDefault(True)
+        if cancel_btn is not None:
+            cancel_btn.setText(t("btn.cancel_install"))
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
-        lay.addWidget(buttons)
+        footer_l.addWidget(buttons)
+        lay.addWidget(footer, stretch=0)
 
 
 def _recipe_has_install_marker(meta: dict[str, str], rid: str) -> bool:
@@ -1869,8 +1887,11 @@ class RezeptorWindow(QMainWindow):
         menu.exec(pos)
 
     def _rebuild_more_menu(self) -> None:
-        """Full Mehr-menu; unavailable items stay visible but disabled (no hide)."""
-        # Always a fresh RoundMenu: clear() leaves separator rows in the list view.
+        """Mehr-menu: only applicable actions (omit instead of disable).
+
+        Fresh RoundMenu each time — clear() leaves empty separator rows.
+        Do not add hidden QActions; omission avoids Fluent empty cells.
+        """
         self._more_menu = (
             RoundMenu(parent=self) if FLUENT_AVAILABLE else QMenu(self)
         )
@@ -1897,77 +1918,99 @@ class RezeptorWindow(QMainWindow):
             RecipeState.INSTALLED,
             RecipeState.PARTIAL,
         )
-
-        def _add(label: str, slot: object, *, enabled: bool) -> None:
-            act = self._add_menu_action(menu, label, slot)
-            act.setEnabled(bool(enabled) and not busy and not untrusted)
-
         pending_repair = self._pending_repair_rid == info.rid
-        _add(t("menu.validate"), self.run_validate, enabled=True)
+        ops_ok = not busy and not untrusted
+        since_sep = 0
+
+        def _add(
+            label: str,
+            slot: object,
+            *,
+            show: bool,
+            tip: str = "",
+        ) -> None:
+            nonlocal since_sep
+            if not show:
+                return
+            act = self._add_menu_action(menu, label, slot)
+            if tip:
+                act.setToolTip(tip)
+            since_sep += 1
+
+        def _sep() -> None:
+            nonlocal since_sep
+            if since_sep <= 0:
+                return
+            menu.addSeparator()
+            since_sep = 0
+
+        _add(t("menu.validate"), self.run_validate, show=ops_ok)
         _add(
             t("menu.repair"),
             self.run_repair,
-            enabled=repair_ok and mode != "repair",
+            show=ops_ok and repair_ok and mode != "repair",
         )
         _add(
             t("menu.launch"),
             self.run_launch,
             # Freigabe/Medizin: kein Start-Umweg, solange Repair aussteht
-            enabled=can_launch and mode != "launch" and not pending_repair,
+            show=ops_ok and can_launch and mode != "launch" and not pending_repair,
         )
         _add(
             t("menu.kill"),
             self.run_kill,
-            enabled=kill_ok and running and mode != "kill",
+            show=ops_ok and kill_ok and running and mode != "kill",
         )
         update_ok = recipe_supports_update(info.meta) and installed_ish
-        _add(
-            t("menu.update"),
-            self.run_update,
-            enabled=update_ok,
-        )
+        _add(t("menu.update"), self.run_update, show=ops_ok and update_ok)
         relocate_ok = installed_ish and (
             needs_target_dir(info.meta) or data_root_browsable(dr)
         )
-        act = self._add_menu_action(menu, t("menu.relocate"), self.run_relocate)
-        act.setToolTip(t("menu.relocate_tip"))
-        act.setEnabled(relocate_ok and not busy and not untrusted and not running)
-
-        menu.addSeparator()
-        if needs_source_dialog(info.meta):
-            act = self._add_menu_action(
-                menu, source_configure_label(info.meta), self.run_source_configure
-            )
-            act.setToolTip(t("menu.source_tip"))
-            act.setEnabled(not busy and not untrusted)
-        # Installationsdaten: nur am Pfad-Icon neben dem Pfad (klarer als im Mehr-Menü)
-        act = self._add_menu_action(
-            menu, t("menu.shortcuts"), self.run_desktop_shortcuts
+        _add(
+            t("menu.relocate"),
+            self.run_relocate,
+            show=ops_ok and relocate_ok and not running,
+            tip=t("menu.relocate_tip"),
         )
-        act.setEnabled(installed_ish and not busy and not untrusted)
 
+        _sep()
+        if needs_source_dialog(info.meta):
+            _add(
+                source_configure_label(info.meta),
+                self.run_source_configure,
+                show=ops_ok,
+                tip=t("menu.source_tip"),
+            )
+        # Installationsdaten: nur am Pfad-Icon neben dem Pfad (klarer als im Mehr-Menü)
+        _add(
+            t("menu.shortcuts"),
+            self.run_desktop_shortcuts,
+            show=ops_ok and installed_ish,
+        )
         genp_script = Path(info.meta["_dir"]) / "genp.sh"
         if genp_script.is_file():
-            act = self._add_menu_action(
-                menu, t("menu.genp_from_pack"), self.run_genp_from_pack
-            )
-            act.setToolTip(t("menu.genp_from_pack_tip"))
-            act.setEnabled(
-                installed_ish
-                and not busy
-                and not untrusted
+            _add(
+                t("menu.genp_from_pack"),
+                self.run_genp_from_pack,
+                show=ops_ok and installed_ish,
+                tip=t("menu.genp_from_pack_tip"),
             )
 
-        menu.addSeparator()
-        act = self._add_menu_action(
-            menu, self._view_recipe_label(), self.show_recipe_view
+        _sep()
+        # Recipe view stays available while untrusted (read-only inspection).
+        _add(
+            self._view_recipe_label(),
+            self.show_recipe_view,
+            show=not busy,
+            tip=self._view_recipe_tip(),
         )
-        act.setToolTip(self._view_recipe_tip())
-        act.setEnabled(not busy)
 
-        menu.addSeparator()
-        act = self._add_menu_action(menu, t("menu.uninstall"), self.run_uninstall)
-        act.setEnabled(installed_ish and not busy and not untrusted)
+        _sep()
+        _add(
+            t("menu.uninstall"),
+            self.run_uninstall,
+            show=ops_ok and installed_ish,
+        )
 
     def _on_primary_cta(self) -> None:
         w = QApplication.focusWidget()
@@ -2586,6 +2629,7 @@ class RezeptorWindow(QMainWindow):
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
         lay.addWidget(self.activity_list, stretch=2)
+        self._show_activity_empty_hint()
 
         log_label = QLabel(t("progress.live"))
         log_label.setObjectName("muted")
@@ -3010,7 +3054,7 @@ class RezeptorWindow(QMainWindow):
             self._pending_repair_rid = rid
         self._assert_recipe_trusted(rid)
         self.raw_log.clear()
-        self.activity_list.clear()
+        self._clear_activity_list()
         self._switch_to_progress_tab()
         self._set_busy(True, rid=rid)
         self._apply_primary_cta(
@@ -3539,8 +3583,10 @@ class RezeptorWindow(QMainWindow):
         meta = info.meta
         dr = resolve_data_root(meta, info.rid)
 
+        # Window/taskbar icon stays Rezeptor; header shows the recipe icon.
+        if REZEPTOR_ICON.is_file():
+            self.setWindowIcon(QIcon(str(REZEPTOR_ICON)))
         icon = recipe_icon(meta)
-        self.setWindowIcon(icon)
         pix = icon.pixmap(64, 64)
         if not pix.isNull():
             self.icon_label.setPixmap(rounded_pixmap(pix, 12))
@@ -3572,6 +3618,8 @@ class RezeptorWindow(QMainWindow):
             )
             self._sync_medizin_button()
             self._refresh_running_indicators()
+            if info.state == RecipeState.NOT_INSTALLED and not self._busy:
+                self._set_content_tab("overview")
             return
         if checking or untrusted:
             raw = info.trust_reason or info.status_detail or "?"
@@ -3598,6 +3646,8 @@ class RezeptorWindow(QMainWindow):
             self._sync_medizin_button()
             self._refresh_running_indicators()
             self._schedule_header_refit()
+            if info.state == RecipeState.NOT_INSTALLED and not self._busy:
+                self._set_content_tab("overview")
             return
 
         if self._busy and self._busy_belongs_to_selected():
@@ -3648,6 +3698,9 @@ class RezeptorWindow(QMainWindow):
                 self._switch_to_progress_tab()
             else:
                 self._set_content_tab("overview")
+        elif info.state == RecipeState.NOT_INSTALLED:
+            # Empty Vorgang is noise before the first install — start on Übersicht.
+            self._set_content_tab("overview")
 
     def _busy_belongs_to_selected(self) -> bool:
         if not self._busy or not self._selected:
@@ -4410,6 +4463,22 @@ class RezeptorWindow(QMainWindow):
         if kind == "info":
             self._flash_status(text)
 
+    def _show_activity_empty_hint(self) -> None:
+        """Friendly placeholder when the Schritte list has no real events yet."""
+        self._clear_activity_list()
+        item = QListWidgetItem(t("progress.empty_hint"))
+        item.setFlags(Qt.ItemFlag.NoItemFlags)
+        item.setForeground(QColor(MUTED))
+        self.activity_list.addItem(item)
+        self._activity_empty_shown = True
+
+
+    def _clear_activity_list(self) -> None:
+        """Clear Schritte for a new run (no empty hint until idle again)."""
+        self._clear_activity_list()
+        self._activity_empty_shown = False
+
+
     def _set_busy(self, busy: bool, *, rid: str | None = None) -> None:
         self._busy = busy
         if busy:
@@ -4607,7 +4676,7 @@ class RezeptorWindow(QMainWindow):
                 env.insert(k, v)
 
         self.raw_log.clear()
-        self.activity_list.clear()
+        self._clear_activity_list()
         self._raw_log_buffer.clear()
         self._last_activity_key = None
         self._last_error_log = ""
@@ -6190,7 +6259,7 @@ class RezeptorWindow(QMainWindow):
             return
         log_path = self._spawn_detached(["bash", str(launch)], env)
         self._switch_to_progress_tab()
-        self.activity_list.clear()
+        self._clear_activity_list()
         self.raw_log.clear()
         self._launch_alive_reported = False
         name = meta.get("name", self._selected.rid)

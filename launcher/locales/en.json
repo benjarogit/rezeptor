@@ -215,7 +215,7 @@
     "hint_source_ready": "Source and target saved — choose “Install” to continue",
     "running_suffix": "{base} · running now",
     "gpu_experiment": "GPU experiment active — Launch possible; on failure: scripts/photoshop-gpu-profile.sh stable",
-    "no_process": "No operation in progress.",
+    "no_process": "No activity yet — start an install to see progress here.",
     "done": "Done",
     "busy": "Operation running — see Progress",
     "busy_other": "Operation running for “{name}” — this recipe is not involved",
@@ -712,7 +712,8 @@
   "progress": {
     "steps": "Steps",
     "live": "Live output",
-    "live_placeholder": "Technical extra output — steps appear only in the list above…"
+    "live_placeholder": "Technical output appears here once an operation is running.",
+    "empty_hint": "No steps yet — after Install or Repair, the run appears here."
   },
   "logs": {
     "label": "File:",

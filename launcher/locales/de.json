@@ -215,7 +215,7 @@
     "hint_source_ready": "Quelle und Ziel gespeichert — jetzt „Installieren“ wählen",
     "running_suffix": "{base} · läuft gerade",
     "gpu_experiment": "GPU-Experiment aktiv — Starten möglich; bei Fail: scripts/photoshop-gpu-profile.sh stable",
-    "no_process": "Kein Vorgang aktiv.",
+    "no_process": "Noch keine Aktivität — starte eine Installation, um hier den Fortschritt zu sehen.",
     "done": "Fertig",
     "busy": "Vorgang läuft — Details unter „Vorgang“",
     "busy_other": "Vorgang läuft für „{name}“ — dieses Rezept ist nicht betroffen",
@@ -712,7 +712,8 @@
   "progress": {
     "steps": "Schritte",
     "live": "Live-Ausgabe",
-    "live_placeholder": "Technische Zusatzausgabe — Schritte stehen nur oben in der Liste…"
+    "live_placeholder": "Technische Ausgabe erscheint hier, sobald ein Vorgang läuft.",
+    "empty_hint": "Noch keine Schritte — nach „Installieren“ oder „Reparieren“ siehst du den Ablauf hier."
   },
   "logs": {
     "label": "Datei:",
