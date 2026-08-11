@@ -212,6 +212,7 @@
     "hint_wiso": "“Launch” or “Repair” · portable path under More ▾",
     "hint_partial": "Incomplete — “Repair” recommended",
     "hint_not_installed": "Not set up yet — choose “Install”",
+    "hint_source_ready": "Source and target saved — choose “Install” to continue",
     "running_suffix": "{base} · running now",
     "gpu_experiment": "GPU experiment active — Launch possible; on failure: scripts/photoshop-gpu-profile.sh stable",
     "no_process": "No operation in progress.",

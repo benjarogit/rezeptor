@@ -212,6 +212,7 @@
     "hint_wiso": "„Starten“ oder „Reparieren“ · Portable-Pfad unter Mehr ▾",
     "hint_partial": "Unvollständig — „Reparieren“ empfohlen",
     "hint_not_installed": "Noch nicht eingerichtet — „Installieren“ wählen",
+    "hint_source_ready": "Quelle und Ziel gespeichert — jetzt „Installieren“ wählen",
     "running_suffix": "{base} · läuft gerade",
     "gpu_experiment": "GPU-Experiment aktiv — Starten möglich; bei Fail: scripts/photoshop-gpu-profile.sh stable",
     "no_process": "Kein Vorgang aktiv.",

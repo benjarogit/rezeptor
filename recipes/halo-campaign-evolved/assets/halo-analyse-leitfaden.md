@@ -47,7 +47,7 @@ Karte der Login-Pfade, aber nichts davon wird noch angewendet.
 ## 1. Einmalig: Analyse-EXE vorbereiten
 
 ```bash
-cd /home/benny/Dokumente/photoshopCClinux
+cd /home/benny/Dokumente/rezeptor
 bash recipes/halo-campaign-evolved/assets/prepare-ghidra.sh
 ```
 

@@ -486,14 +486,10 @@ def _parse_env_file_values(path: Path) -> dict[str, str]:
     return out
 
 
-def installed_paths_text(meta: dict[str, str], rid: str, dr: Path) -> str:
-    """Mehrzeilig: Daten + Programm/Quelle/Ziel aus recipe.env / portable.env."""
-    lines = [f"{t('tooltip.path_data')}: {dr}"]
-    env: dict[str, str] = {}
-    env.update(_parse_env_file_values(dr / "recipe.env"))
-    env.update(_parse_env_file_values(dr / "portable.env"))
-
-    # WORK_ROOT = Installationsordner im Prefix — nicht die BYOS-Quelle
+def source_target_from_env(
+    env: dict[str, str], *, install_type: str = ""
+) -> tuple[str, str, str]:
+    """Extract (source, target, work) paths from install/pending env."""
     work = (env.get("WORK_ROOT") or "").strip()
     source = (
         (env.get("GAME_DIR") or "").strip()
@@ -504,23 +500,76 @@ def installed_paths_text(meta: dict[str, str], rid: str, dr: Path) -> str:
     target = (
         (env.get("WISO_PORTABLE_ROOT") or "").strip()
         or (env.get("RECIPE_TARGET_DIR") or "").strip()
+        or (env.get("RECIPE_DATA_ROOT") or "").strip()
+        or (env.get("DATA_ROOT") or "").strip()
         or (env.get("TRAINER_EXE") or "").strip()
     )
     # Trainer/portable: EXE copy is the deploy target — show as target, not source
-    if meta.get("install_type") == "portable_launch":
+    if install_type == "portable_launch":
         trainer = (env.get("TRAINER_EXE") or "").strip()
         if trainer:
             target = trainer
             source = source if source and source != trainer else ""
+    return source, target, work
 
-    dr_s = str(dr)
-    if work and work not in (dr_s, source, target):
+
+def format_source_target_lines(
+    *,
+    source: str = "",
+    target: str = "",
+    work: str = "",
+    data_root: str = "",
+    include_data: bool = False,
+) -> str:
+    """Labeled multiline path summary for the header path row."""
+    lines: list[str] = []
+    dr_s = (data_root or "").strip()
+    if include_data and dr_s:
+        lines.append(f"{t('tooltip.path_data')}: {dr_s}")
+    # When Daten is shown, skip Ziel/Programm that only repeat data_root.
+    skip_dr = {dr_s} if include_data and dr_s else set()
+    if work and work not in skip_dr | {source, target}:
         lines.append(f"{t('tooltip.path_app')}: {work}")
-    if source and source not in (dr_s, work, target):
+    if source and source not in skip_dr | {work, target}:
         lines.append(f"{t('tooltip.path_source')}: {source}")
-    if target and target not in (dr_s, work, source):
+    if target and target not in skip_dr | {work, source}:
         lines.append(f"{t('tooltip.path_target')}: {target}")
     return "\n".join(lines)
+
+
+def installed_paths_text(meta: dict[str, str], rid: str, dr: Path) -> str:
+    """Mehrzeilig: Daten + Programm/Quelle/Ziel aus recipe.env / portable.env."""
+    _ = rid
+    env: dict[str, str] = {}
+    env.update(_parse_env_file_values(dr / "recipe.env"))
+    env.update(_parse_env_file_values(dr / "portable.env"))
+    source, target, work = source_target_from_env(
+        env, install_type=meta.get("install_type", "")
+    )
+    return format_source_target_lines(
+        source=source,
+        target=target,
+        work=work,
+        data_root=str(dr),
+        include_data=True,
+    )
+
+
+def pending_paths_text(meta: dict[str, str], pending: dict[str, str], dr: Path) -> str:
+    """Quelle/Ziel from settings.recipe_install_env (chosen, not installed yet)."""
+    source, target, work = source_target_from_env(
+        pending, install_type=meta.get("install_type", "")
+    )
+    # Explicit target from dialog, else canonical data root (prefix / recipe home).
+    if not target:
+        target = str(dr)
+    return format_source_target_lines(
+        source=source,
+        target=target,
+        work=work,
+        data_root=str(dr),
+        include_data=False,
+    )
 
 
 def data_root_browsable(dr: Path) -> bool:
@@ -3841,9 +3890,10 @@ class RezeptorWindow(QMainWindow):
             self.author_pill.set_content("", MUTED)
 
     def _set_path_row(self, dr: Path, info: RecipeInfo | None = None) -> None:
-        """HEADER: Daten + Quelle/Ziel (wenn installiert / in recipe.env)."""
+        """HEADER: Daten + Quelle/Ziel (installiert) or pending Quelle/Ziel."""
         self._current_data_root = dr
         usable = data_root_browsable(dr)
+        path_color = MUTED
         if info is not None and (
             usable
             or info.state in (RecipeState.INSTALLED, RecipeState.PARTIAL)
@@ -3851,8 +3901,18 @@ class RezeptorWindow(QMainWindow):
             or (dr / "portable.env").is_file()
         ):
             self.path_label.setText(installed_paths_text(info.meta, info.rid, dr))
+        elif info is not None and info.state == RecipeState.NOT_INSTALLED:
+            pending = load_recipe_install_env(self._settings, info.rid)
+            if has_recipe_install_source(pending):
+                self.path_label.setText(
+                    pending_paths_text(info.meta, pending or {}, dr)
+                )
+                path_color = COLOR_TESTED
+            else:
+                self.path_label.setText("")
         else:
             self.path_label.setText(str(dr) if usable else "")
+        self._style_secondary_label(self.path_label, path_color, size_px=11)
         self.open_path_btn.setEnabled(usable)
         self.open_path_btn.setToolTip(
             t("tooltip.open_data_root")
@@ -4052,6 +4112,9 @@ class RezeptorWindow(QMainWindow):
         if info.state == RecipeState.PARTIAL:
             return t("status.hint_partial")
         if info.state == RecipeState.NOT_INSTALLED:
+            pending = load_recipe_install_env(self._settings, info.rid)
+            if has_recipe_install_source(pending):
+                return t("status.hint_source_ready")
             return t("status.hint_not_installed")
         if info.state == RecipeState.INSTALLED and info.rid == "wiso-steuer":
             return t("status.hint_wiso")
@@ -5710,9 +5773,13 @@ class RezeptorWindow(QMainWindow):
         if not has_recipe_install_source(extra):
             clear_recipe_install_env(self._settings, rid)
             self._activity("info", t("source.cleared"))
+            if self._selected_index >= 0:
+                self._on_select(self._selected_index)
             return None
         save_recipe_install_env(self._settings, rid, extra)
         self._activity("info", t("source.saved_ready"))
+        if self._selected_index >= 0:
+            self._on_select(self._selected_index)
         return dict(extra)
 
     def _prepare_install_env(self, extra: dict[str, str]) -> bool:

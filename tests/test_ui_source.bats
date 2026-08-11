@@ -159,3 +159,32 @@ print('ok', env)
     [ "$status" -eq 0 ]
     [[ "$output" == *ok* ]]
 }
+
+@test "pending_paths_text shows Quelle and Ziel before install" {
+    _require_pyqt6
+    run env QT_QPA_PLATFORM=offscreen PYTHONPATH="$PROJECT_ROOT/launcher" python3 -c "
+from pathlib import Path
+from launcher import pending_paths_text
+
+text = pending_paths_text(
+    {},
+    {
+        'RECIPE_SOURCE_ROOT': '/mnt/iso/WISO',
+        'RECIPE_TARGET_DIR': '/home/u/WISO-Portable',
+    },
+    Path('/tmp/data-root'),
+)
+assert '/mnt/iso/WISO' in text
+assert '/home/u/WISO-Portable' in text
+text2 = pending_paths_text(
+    {},
+    {'RECIPE_ARCHIVE_PATH': '/tmp/pack.zip'},
+    Path('/tmp/dr'),
+)
+assert '/tmp/pack.zip' in text2 and '/tmp/dr' in text2
+assert 'Target:' in text2 or 'Ziel:' in text2
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *ok* ]]
+}
