@@ -24,6 +24,9 @@ jobs:
       - name: Python compile
         run: make compile
 
+      - name: i18n key parity
+        run: make i18n-check
+
       - name: Recipe structure
         run: make recipes-check
 

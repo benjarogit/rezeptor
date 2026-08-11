@@ -1,11 +1,11 @@
-.PHONY: test validate shellcheck syntax compile recipes-check recipe-lint recipe-manifest recipe-manifest-check
+.PHONY: test validate shellcheck syntax compile i18n-check recipes-check recipe-lint recipe-manifest recipe-manifest-check
 
 # Vollständige Test-Suite (bats)
 test:
 	bats tests/
 
 # Agent/CI-Validierung ohne Wine/Proton
-validate: shellcheck syntax compile recipes-check recipe-lint recipe-manifest-check
+validate: shellcheck syntax compile i18n-check recipes-check recipe-lint recipe-manifest-check
 
 shellcheck:
 	find ./core ./recipes/wiso-steuer ./recipes/photoshop ./recipes/premiere ./launcher ./scripts \
@@ -20,6 +20,9 @@ syntax:
 
 compile:
 	python3 -m compileall -q launcher/
+
+i18n-check:
+	python3 scripts/check-i18n-parity.py
 
 recipes-check:
 	@for f in recipes/*/recipe.yml recipes/community/*/recipe.yml; do \
