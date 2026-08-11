@@ -1,4 +1,4 @@
-.PHONY: test validate shellcheck syntax compile i18n-check ruff recipes-check recipe-lint recipe-manifest recipe-manifest-check
+.PHONY: test validate shellcheck syntax compile i18n-check ruff dead-code recipes-check recipe-lint recipe-manifest recipe-manifest-check
 
 # Vollständige Test-Suite (bats)
 test:
@@ -31,6 +31,18 @@ ruff:
 		python3 -m ruff check launcher; \
 	else \
 		echo "ruff missing — install: pacman -S ruff  OR  pipx install ruff  OR  see requirements-dev.txt" >&2; \
+		exit 1; \
+	fi
+
+# Opt-in: unreachable Python in launcher/ (see pyproject.toml [tool.vulture]).
+# Not in validate — Qt/Fluent false positives need curated whitelist.
+dead-code:
+	@if command -v vulture >/dev/null 2>&1; then \
+		vulture; \
+	elif python3 -m vulture --version >/dev/null 2>&1; then \
+		python3 -m vulture; \
+	else \
+		echo "vulture missing — install: pacman -S vulture  OR  pip install -r requirements-dev.txt (venv)" >&2; \
 		exit 1; \
 	fi
 

@@ -34,7 +34,6 @@ from i18n import t
 
 ROOT = Path(__file__).resolve().parent.parent
 REZEPTOR_ICON = ROOT / "images" / "rezeptor-icon.svg"
-REZEPTOR_WORDMARK = ROOT / "images" / "rezeptor-wordmark.svg"
 
 STATE_DOT = {
     "installed": COLOR_TESTED,

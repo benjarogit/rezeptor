@@ -36,7 +36,8 @@ make test              # bats
 `make validate` → `shellcheck` covers `core/`, `recipes/photoshop`, `recipes/premiere`, `recipes/wiso-steuer`, `launcher/`, `scripts/`.  
 `bash -n` (`syntax` target) covers all `recipes/*/*.sh`; for other recipes also run `./scripts/recipe-lint.sh`.  
 `i18n-check` compares key sets of `launcher/locales/de.json` and `en.json` (`make i18n-check`).  
-`ruff` lints `launcher/` (`make ruff`; CI also runs `astral-sh/ruff-action`).
+`ruff` lints `launcher/` (`make ruff`; CI also runs `astral-sh/ruff-action`).  
+Optional: `make dead-code` (`vulture`, see `requirements-dev.txt`) — not part of `validate`; whitelist in `scripts/vulture_whitelist.py`.
 
 ## Recipes
 

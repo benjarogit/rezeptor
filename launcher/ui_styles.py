@@ -32,13 +32,6 @@ STATUS_FG = {
     "info": MUTED,
 }
 
-STATE_COLORS = {
-    "not_installed": (MUTED, SURFACE_1),
-    "partial": (COLOR_EXPERIMENTAL, "#3d3200"),
-    "installed": (COLOR_TESTED, "#0d3320"),
-    "unknown": (MUTED, SURFACE_1),
-}
-
 DARK = {
     "bg": COLOR_ANTHRACITE,
     "fg": COLOR_PARCHMENT,

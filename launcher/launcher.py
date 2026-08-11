@@ -4730,10 +4730,6 @@ class RezeptorWindow(QMainWindow):
     def _switch_to_logs_tab(self) -> None:
         self._set_content_tab("logs")
 
-    def open_log_file(self) -> None:
-        self._switch_to_logs_tab()
-        self.populate_log_files()
-
     def _maybe_wine_dialog_hint(self, action: str) -> None:
         if action not in ("install", "repair"):
             return
@@ -5303,9 +5299,6 @@ class RezeptorWindow(QMainWindow):
         _signal_qprocess_tree(proc, signal.SIGTERM)
         if pid > 0:
             QTimer.singleShot(1500, lambda p=proc, i=pid: self._force_kill_install(p, i))
-
-    def _force_close_tool_windows(self) -> None:
-        dismiss_all_top_level_windows(self, force=True)
 
     def closeEvent(self, event) -> None:  # type: ignore[no-untyped-def]
         if getattr(self, "_force_quitting", False):

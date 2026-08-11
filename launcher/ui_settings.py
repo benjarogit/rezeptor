@@ -412,6 +412,3 @@ class SettingsDialog(QDialog):
 
     def result_settings(self) -> RezeptorSettings:
         return self._settings
-
-    def show_passwords_tab(self) -> None:
-        self.tabs.setCurrentIndex(1)

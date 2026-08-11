@@ -26,3 +26,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 # Fluent optional imports re-export names for typing/call sites.
 "launcher/ui_fluent.py" = ["F401"]
+
+[tool.vulture]
+# Opt-in dead-code scan (make dead-code). Not part of make validate:
+# Qt slots/attributes and optional Fluent re-exports produce noise below 80%.
+min_confidence = 80
+paths = ["launcher", "scripts/vulture_whitelist.py"]
+exclude = ["launcher/assets"]
