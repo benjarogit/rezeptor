@@ -67,3 +67,50 @@ PY
     [ "$status" -eq 0 ]
     [[ "$output" == *ok* ]]
 }
+
+@test "source_hints_sidebar_adobe_and_maintainer helpers" {
+    run python3 - "$ROOT" "$BATS_TEST_TMPDIR" <<'PY'
+import os
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+tmp = Path(sys.argv[2])
+sys.path.insert(0, str(root / "launcher"))
+from recipe_discovery import (
+    is_adobe_offline_recipe,
+    is_maintainer_only,
+    merge_recipe_yml_paths,
+    sidebar_label_for_meta,
+    source_hints_from_meta,
+)
+
+assert source_hints_from_meta({"source_hints": "a; b, c"}) == ["a", "b", "c"]
+assert source_hints_from_meta({}) == []
+assert sidebar_label_for_meta({"sidebar_label": "PS"}, "photoshop") == "PS"
+assert sidebar_label_for_meta({"name": "WISO"}, "wiso-steuer") == "WISO"
+assert is_adobe_offline_recipe("photoshop") is True
+assert is_adobe_offline_recipe("wiso-steuer") is False
+assert is_maintainer_only({"maintainer_only": "true"}) is True
+assert is_maintainer_only({"maintainer_only": "no"}) is False
+
+bundled = tmp / "bundled"
+wip = bundled / "wip-demo"
+wip.mkdir(parents=True)
+(wip / "recipe.yml").write_text(
+    "id: wip-demo\nname: WIP\nmaintainer_only: true\n",
+    encoding="utf-8",
+)
+import recipe_discovery as rd
+
+rd._dev_recipes_visible = lambda: False  # type: ignore[assignment]
+hidden = {p.parent.name for p in merge_recipe_yml_paths(bundled)}
+assert "wip-demo" not in hidden, hidden
+rd._dev_recipes_visible = lambda: True  # type: ignore[assignment]
+shown = {p.parent.name for p in merge_recipe_yml_paths(bundled)}
+assert "wip-demo" in shown, shown
+print("ok")
+PY
+    [ "$status" -eq 0 ]
+    [[ "$output" == *ok* ]]
+}

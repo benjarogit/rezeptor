@@ -214,6 +214,7 @@ def stale_recipe_ids(recipes_dir: Path, manifest_path: Path) -> set[str]:
 
 
 def manifest_needs_sync(recipes_dir: Path, manifest_path: Path) -> bool:
+    """True when any recipe tree is newer/stale vs manifest (used by bats)."""
     return bool(stale_recipe_ids(recipes_dir, manifest_path))
 
 

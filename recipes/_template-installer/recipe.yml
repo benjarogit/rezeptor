@@ -7,6 +7,8 @@ author: ""
 category: "Vorlage"
 version_guaranteed: "1.0.0"
 version_label: "Example 1.0.0"
+# Optional: last deliberate healing check (YYYY-MM-DD). Update when version/pin changes.
+tested_on: "2026-01-01"
 version_detect:
   - kind: pe_field
     glob: "Set-up.exe"

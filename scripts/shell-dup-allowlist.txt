@@ -1,0 +1,3 @@
+# Bare or full function names that recipe hooks may redefine on purpose.
+# Used by scripts/check-shell-dup-funcs.py (make shell-dup-check).
+# Keep empty unless a recipe needs a documented, intentional local name.

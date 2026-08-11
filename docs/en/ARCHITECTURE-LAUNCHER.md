@@ -10,9 +10,12 @@ RezeptorWindow (launcher.py)
   ├── recipe_trust       — manifest SHA-256; sync only with REZEPTOR_DEV
   ├── recipe_catalog     — remote install (path containment)
   ├── settings           — UI prefs (0600); passwords stored separately encrypted
-  ├── QProcess / _run_async — install/repair/validate/uninstall/kill
+  ├── recipe_process     — RecipeProcessOps: QProcess / _run_async
+  │                        (install/repair/validate/update/relocate/launch/uninstall/kill)
   └── Domain UI          — ui_source, ui_settings, ui_catalog, …
 ```
+
+`RezeptorWindow` owns process state (`_busy`, `_process`, …) and thin delegates with the same method names; orchestration lives in `RecipeProcessOps` (`launcher/recipe_process.py`).
 
 ## Trust
 
@@ -32,15 +35,17 @@ RezeptorWindow (launcher.py)
 
 ## Processes
 
-- Install/Repair/Validate: `QProcess` via `_run_async` (log → activity tab)
-- Launch: detached `bash launch.sh`, alive check via process patterns
-- Busy guard: `_require_recipe` blocks while a QProcess is running
+- Install/Repair/Validate/Update/Relocate/Uninstall: `QProcess` via `RecipeProcessOps._run_async` (log → activity tab)
+- Launch: detached `bash launch.sh`, alive check via process patterns (`RecipeProcessOps`)
+- Busy guard: `_require_recipe` / `_reject_if_subprocess_busy` blocks while a QProcess is running
+- Cancel: SIGTERM via `_signal_qprocess_tree`; force-kill: SIGKILL via `signal_subprocess_tree`
 
 ## Module map (excerpt)
 
 | Module | Responsibility |
 |--------|----------------|
-| `launcher.py` | `RezeptorWindow`, QProcess hooks, launch, busy guard |
+| `launcher.py` | `RezeptorWindow`, menus/tabs, status refresh, app self-update; delegates to `_ops` |
+| `recipe_process.py` | `RecipeProcessOps` — install/repair/validate/update/relocate/launch/uninstall/kill, QProcess orchestration |
 | `recipe_discovery.py` | `RecipeInfo` / `RecipeState`, `discover_recipes` → `DiscoverOutcome` (trust/sync messages, no `os.environ`), `parse_recipe_yml` |
 | `recipe_trust.py` | Manifest SHA-256, dev-only sync |
 | `recipe_catalog.py` | Remote install + path containment |
@@ -50,7 +55,7 @@ RezeptorWindow (launcher.py)
 | `app_support.py` | Log humanize, reports `0600`, releases |
 | `ui_*.py` | UI layer only (Fluent Dark + copper) |
 
-Further splits of `launcher.py` (status refresh, update check) as needed.
+Further splits of `launcher.py` (e.g. status refresh, update check) only as needed; process orchestration already lives in `recipe_process.py`.
 
 ## `recipe.yml` schema
 

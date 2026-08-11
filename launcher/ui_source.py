@@ -1197,10 +1197,6 @@ class RecipeSourceDialog(QDialog):
     def _on_primary_changed(self, _text: str = "") -> None:
         self._refresh_update_status()
 
-    def _show_fix_info(self) -> None:
-        title, body = fix_help_text(self._meta)
-        QMessageBox.information(self, title, body)
-
     def _online_fix_folder_ok(self, path: Path) -> bool:
         if not path.is_dir():
             return False

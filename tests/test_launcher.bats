@@ -29,6 +29,7 @@ from app_support import (
     build_issue_body,
     bug_report_template_name,
     describe_runtime_for_report,
+    format_tested_on_display,
     proton_ge_badge_label,
 )
 clear_cache()
@@ -42,7 +43,12 @@ assert 'Support session' in body_en
 assert bug_report_template_name() == 'bug_report.md'
 assert 'Proton-GE' in describe_runtime_for_report()
 assert 'Proton-GE' in proton_ge_badge_label()
+set_locale('en')
+assert format_tested_on_display('2026-08-11') == '11 Aug 2026'
+assert format_tested_on_display('') is None
+assert format_tested_on_display('nope') is None
 set_locale('de')
+assert format_tested_on_display('2026-08-11') == '11.08.2026'
 body_de = build_issue_body('wiso-steuer', p, 'abc123')
 for s in ['## 🐛 Problem', 'Rezept:', 'Schritte zum Reproduzieren', 'Support-Session']:
     assert s in body_de, s

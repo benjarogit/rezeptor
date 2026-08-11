@@ -27,14 +27,19 @@ mkdocs serve
 Before every PR:
 
 ```bash
-make validate          # shellcheck, syntax, compile, recipes-check, lint, manifest
+make validate          # shellcheck, syntax, compile, i18n-check, ruff, recipes-check, recipe-lint, manifest
 make test              # bats
+make pytest            # launcher unit tests (tests/*.py; needs pytest + PyQt6)
 ./scripts/recipe-lint.sh
 ./scripts/recipe-manifest.sh   # after recipe file changes → commit
 ```
 
-`make validate` → `shellcheck` covers only `core/`, `recipes/photoshop`, `recipes/wiso-steuer`, `launcher/`, `scripts/`.  
-`bash -n` (`syntax` target) covers all `recipes/*/*.sh`; for other recipes also run `./scripts/recipe-lint.sh`.
+`make validate` → `shellcheck` covers `core/`, `recipes/photoshop`, `recipes/premiere`, `recipes/wiso-steuer`, `launcher/`, `scripts/`.  
+`bash -n` (`syntax` target) covers all `recipes/*/*.sh`; for other recipes also run `./scripts/recipe-lint.sh`.  
+`i18n-check` compares key sets of `launcher/locales/de.json` and `en.json` (`make i18n-check`).  
+`ruff` lints `launcher/` (`make ruff`; CI also runs `astral-sh/ruff-action`).  
+Optional: `make dead-code` (`vulture`, see `requirements-dev.txt`) — not part of `validate`; whitelist in `scripts/vulture_whitelist.py`.  
+Optional: `make shell-dup-check` — fails when recipe hooks redefine `core/` function names; allowlist: `scripts/shell-dup-allowlist.txt`.
 
 ## Recipes
 
@@ -52,7 +57,17 @@ Ideas: [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?tem
 - UI strings: [Translations](CONTRIBUTING-TRANSLATIONS.md)
 - Brand: [BRAND](BRAND.md) — no purple themes
 
-## Git notes
+## Git notes / PR workflow
+
+`main` is protected (GitHub ruleset): **no direct pushes** — land changes via pull request. The CI job `validate` must be green before merge. Approving reviews are not required (solo maintainer is fine).
+
+```bash
+git switch -c topic/short-name
+# … edit, locally: make validate && make test …
+git push -u origin HEAD
+gh pr create --fill   # or with title/body
+# wait for CI → merge (squash or merge commit)
+```
 
 - SemVer via the `VERSION` file — bump only when a release is intended
 - No editor-agent co-author trailers in commits
@@ -60,7 +75,7 @@ Ideas: [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?tem
 
 ## Releases
 
-- Bump SemVer in `VERSION` and push to `main` → GitHub Actions builds AppImage, Flatpak, and `tar.gz` and publishes the release
+- Bump SemVer in `VERSION` and merge to `main` via PR → GitHub Actions builds AppImage, Flatpak, and `tar.gz` and publishes the release
 - Assets: https://github.com/benjarogit/rezeptor/releases
 
 ## Next

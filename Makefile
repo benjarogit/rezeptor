@@ -1,11 +1,15 @@
-.PHONY: test validate shellcheck syntax compile recipes-check recipe-lint recipe-manifest recipe-manifest-check
+.PHONY: test pytest validate shellcheck syntax compile i18n-check ruff dead-code shell-dup-check recipes-check recipe-lint recipe-manifest recipe-manifest-check
 
-# Vollständige Test-Suite (bats)
+# Shell test suite (bats). Python unit tests: make pytest (CI runs both).
 test:
 	bats tests/
 
-# Agent/CI-Validierung ohne Wine/Proton
-validate: shellcheck syntax compile recipes-check recipe-lint recipe-manifest-check
+# Launcher Python unit tests under tests/*.py (needs: pip install pytest PyQt6).
+pytest:
+	QT_QPA_PLATFORM=offscreen python3 -m pytest tests/ -q
+
+# Agent/CI-Validierung ohne Wine/Proton (local; CI also runs make test + make pytest).
+validate: shellcheck syntax compile i18n-check ruff recipes-check recipe-lint recipe-manifest-check
 
 shellcheck:
 	find ./core ./recipes/wiso-steuer ./recipes/photoshop ./recipes/premiere ./launcher ./scripts \
@@ -20,6 +24,36 @@ syntax:
 
 compile:
 	python3 -m compileall -q launcher/
+
+i18n-check:
+	python3 scripts/check-i18n-parity.py
+
+ruff:
+	@if command -v ruff >/dev/null 2>&1; then \
+		ruff check launcher; \
+	elif python3 -m ruff --version >/dev/null 2>&1; then \
+		python3 -m ruff check launcher; \
+	else \
+		echo "ruff missing — install: pacman -S ruff  OR  pipx install ruff  OR  see requirements-dev.txt" >&2; \
+		exit 1; \
+	fi
+
+# Opt-in: unreachable Python in launcher/ (see pyproject.toml [tool.vulture]).
+# Not in validate — Qt/Fluent false positives need curated whitelist.
+dead-code:
+	@if command -v vulture >/dev/null 2>&1; then \
+		vulture; \
+	elif python3 -m vulture --version >/dev/null 2>&1; then \
+		python3 -m vulture; \
+	else \
+		echo "vulture missing — install: pacman -S vulture  OR  pip install -r requirements-dev.txt (venv)" >&2; \
+		exit 1; \
+	fi
+
+# Opt-in: recipe hook scripts must not redefine core/ function names.
+# Not in validate — rare intentional overlaps go in scripts/shell-dup-allowlist.txt.
+shell-dup-check:
+	python3 scripts/check-shell-dup-funcs.py
 
 recipes-check:
 	@for f in recipes/*/recipe.yml recipes/community/*/recipe.yml; do \

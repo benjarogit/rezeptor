@@ -16,8 +16,10 @@ rezeptor/
 │   ├── manifest.json     # SHA256-Integrität
 │   └── recipe.schema.json
 ├── launcher/             # PyQt6-GUI (Host-PyQt6 bei Clone/tar.gz; AppImage/Flatpak bundeln)
+│   ├── launcher.py          # RezeptorWindow, Menüs/Tabs, Delegates
+│   ├── recipe_process.py    # RecipeProcessOps — QProcess-Orchestrierung
 │   ├── recipe_discovery.py  # RecipeInfo / Discover
-│   └── …                 # siehe [GUI-Launcher](LAUNCHER.md) / [Architektur](ARCHITECTURE-LAUNCHER.md)
+│   └── …                    # siehe [GUI-Launcher](LAUNCHER.md) / [Architektur](ARCHITECTURE-LAUNCHER.md)
 ├── scripts/              # Lint, Manifest, new-recipe, Builds
 ├── tests/                # bats + Python
 ├── docs/{de,en}/         # Diese Site (MkDocs)
@@ -85,7 +87,9 @@ Installationsort Proton: `~/.local/share/wine-software/runtime/proton-ge/<tag>/`
 
 ## `launcher/`
 
-PyQt6-App: Katalog, Trust, Settings, Hook-Prozesse, Activity-Log. Siehe [GUI-Launcher](LAUNCHER.md) und [Architektur](ARCHITECTURE-LAUNCHER.md).
+PyQt6-App: Katalog, Trust, Settings, Hook-Prozesse, Activity-Log.  
+`RezeptorWindow` (`launcher.py`) + `RecipeProcessOps` (`recipe_process.py`) für Install/Repair/…/Launch.  
+Siehe [GUI-Launcher](LAUNCHER.md) und [Architektur](ARCHITECTURE-LAUNCHER.md).
 
 ## Datenorte (Laufzeit)
 
@@ -99,13 +103,14 @@ PyQt6-App: Katalog, Trust, Settings, Hook-Prozesse, Activity-Log. Siehe [GUI-Lau
 ## CI & Qualität
 
 ```bash
-make validate    # shellcheck, bash -n, compileall, recipes-check, recipe-lint, manifest-check
+make validate    # shellcheck, syntax, compile, i18n-check, ruff, recipes-check, recipe-lint, manifest
 make test        # bats
+make pytest      # Launcher-Unit-Tests (tests/*.py; braucht pytest + PyQt6)
 ./scripts/recipe-lint.sh
 ./scripts/recipe-manifest.sh
 ```
 
-`shellcheck` in `make validate` deckt nur `core/`, `photoshop`, `wiso-steuer`, `launcher/`, `scripts/` ab — nicht jedes Rezept. `bash -n` prüft alle `recipes/*/*.sh`.
+`shellcheck` in `make validate` deckt `core/`, `recipes/wiso-steuer`, `recipes/photoshop`, `recipes/premiere`, `launcher/`, `scripts/` ab — nicht jedes Rezept (z. B. nicht `photoshop-m0nkrus`, Halo, Community). `bash -n` (`syntax`) prüft alle `recipes/*/*.sh`.
 
 Workflows: `.github/workflows/ci.yml`, `docs.yml`, `release.yml`.
 

@@ -121,6 +121,15 @@ def validate_embedded(data: dict, label: str) -> list[str]:
     if sk == "fixed_path" and not data.get("installer_dir"):
         errs.append(f"{label}: fixed_path erfordert installer_dir")
 
+    tested_on = data.get("tested_on")
+    if tested_on is not None and tested_on != "":
+        if not isinstance(tested_on, str) or not re.match(
+            r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$", tested_on
+        ):
+            errs.append(
+                f"{label}: tested_on muss YYYY-MM-DD sein (ist: {tested_on!r})"
+            )
+
     steps = data.get("install_steps")
     if steps is None:
         return errs

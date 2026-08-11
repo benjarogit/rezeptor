@@ -56,16 +56,6 @@ class RecipeState(str, Enum):
     CHECKING = "checking"  # first paint — trust verify still running
 
 
-STATE_LABEL = {
-    RecipeState.NOT_INSTALLED: "state.not_installed",
-    RecipeState.PARTIAL: "state.partial",
-    RecipeState.INSTALLED: "state.installed",
-    RecipeState.UNKNOWN: "state.unknown",
-    RecipeState.UNTRUSTED: "state.untrusted",
-    RecipeState.CHECKING: "state.checking",
-}
-
-
 @dataclass
 class RecipeInfo:
     rid: str

@@ -184,3 +184,38 @@ print('ok')
     [ "$status" -eq 0 ]
     [[ "$output" == *ok* ]]
 }
+
+@test "path_regex source_refs and empty version_detect" {
+    mkdir -p "$FIXTURE/Adobe Photoshop 22.0/extra"
+    run python3 -c "
+import sys
+from pathlib import Path
+sys.path.insert(0, '$PROJECT_ROOT/launcher')
+from version_detect import detect_recipe_version, detect_with_rules, source_refs_list
+
+root = Path('$FIXTURE')
+rules = [{'kind': 'path_regex', 'regex': r'Adobe Photoshop ([0-9.]+)'}]
+assert detect_with_rules(str(root), rules) == '22.0', detect_with_rules(str(root), rules)
+
+refs = source_refs_list({
+    'source_refs': [
+        {'label': 'ISO', 'url': 'https://example.invalid/a.iso'},
+        {'url': 'https://example.invalid/b.iso'},
+        {'label': 'missing'},
+        'noise',
+    ]
+})
+assert refs == [
+    {'label': 'ISO', 'url': 'https://example.invalid/a.iso'},
+    {'label': 'ref', 'url': 'https://example.invalid/b.iso'},
+], refs
+assert source_refs_list(None) == []
+
+yml = Path('$BATS_TEST_TMPDIR/empty.yml')
+yml.write_text('id: bare\nname: Bare\n', encoding='utf-8')
+assert detect_recipe_version(str(root), yml) == ''
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *ok* ]]
+}

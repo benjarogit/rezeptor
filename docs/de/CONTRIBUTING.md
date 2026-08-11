@@ -27,14 +27,19 @@ mkdocs serve
 Vor jedem PR:
 
 ```bash
-make validate          # shellcheck, syntax, compile, recipes-check, lint, manifest
+make validate          # shellcheck, syntax, compile, i18n-check, ruff, recipes-check, recipe-lint, manifest
 make test              # bats
+make pytest            # Launcher-Unit-Tests (tests/*.py; braucht pytest + PyQt6)
 ./scripts/recipe-lint.sh
 ./scripts/recipe-manifest.sh   # nach Rezept-Dateiänderungen → commit
 ```
 
-`make validate` → `shellcheck` prüft nur `core/`, `recipes/photoshop`, `recipes/wiso-steuer`, `launcher/`, `scripts/`.  
-`bash -n` (Target `syntax`) deckt alle `recipes/*/*.sh` ab; für andere Rezepte zusätzlich `./scripts/recipe-lint.sh`.
+`make validate` → `shellcheck` prüft `core/`, `recipes/photoshop`, `recipes/premiere`, `recipes/wiso-steuer`, `launcher/`, `scripts/`.  
+`bash -n` (Target `syntax`) deckt alle `recipes/*/*.sh` ab; für andere Rezepte zusätzlich `./scripts/recipe-lint.sh`.  
+`i18n-check` vergleicht Key-Sets von `launcher/locales/de.json` und `en.json` (`make i18n-check`).  
+`ruff` lintet `launcher/` (`make ruff`; in CI zusätzlich `astral-sh/ruff-action`).  
+Optional: `make dead-code` (`vulture`, siehe `requirements-dev.txt`) — nicht Teil von `validate`; Whitelist unter `scripts/vulture_whitelist.py`.  
+Optional: `make shell-dup-check` — schlägt fehl, wenn Rezept-Hooks Funktionen aus `core/` neu definieren; Allowlist: `scripts/shell-dup-allowlist.txt`.
 
 ## Rezepte
 
@@ -52,7 +57,17 @@ Ideen: [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?tem
 - UI-Strings: [Übersetzungen](CONTRIBUTING-TRANSLATIONS.md)
 - Marke: [BRAND](BRAND.md) — keine Purple-Themes
 
-## Git-Hinweise
+## Git-Hinweise / PR-Workflow
+
+`main` ist geschützt (GitHub Ruleset): **kein Direct-Push**, Änderungen nur per Pull Request. CI-Job `validate` muss grün sein, bevor gemergt werden darf. Review-Approvals sind nicht Pflicht (Solo-Maintainer ok).
+
+```bash
+git switch -c topic/kurzname
+# … ändern, lokal: make validate && make test …
+git push -u origin HEAD
+gh pr create --fill   # oder mit Titel/Body
+# CI abwarten → Merge (Squash oder Merge-Commit)
+```
 
 - SemVer über Datei `VERSION` — nur bumpen, wenn ein Release beabsichtigt ist
 - Keine Co-Author-Trailer von Editor-Agenten in Commits
@@ -60,7 +75,7 @@ Ideen: [Recipe Submission](https://github.com/benjarogit/rezeptor/issues/new?tem
 
 ## Releases
 
-- SemVer in `VERSION` bumpen und auf `main` pushen → GitHub Actions baut AppImage, Flatpak und `tar.gz` und veröffentlicht das Release
+- SemVer in `VERSION` bumpen und per PR nach `main` mergen → GitHub Actions baut AppImage, Flatpak und `tar.gz` und veröffentlicht das Release
 - Assets: https://github.com/benjarogit/rezeptor/releases
 
 ## Weiter

@@ -120,6 +120,11 @@ lint_recipe_dir() {
         [ -n "$val" ] || lint_err "$base: fixed_path erfordert installer_dir"
     fi
 
+    tested_on="$(recipe_get "$yml" tested_on 2>/dev/null || true)"
+    if [ -n "$tested_on" ] && ! [[ "$tested_on" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+        lint_err "$base: tested_on muss YYYY-MM-DD sein (ist: $tested_on)"
+    fi
+
     deploy_mode="$(recipe_get "$yml" deploy_mode 2>/dev/null || echo copy)"
     if [ "$install_type" = "portable_launch" ] && [ "$deploy_mode" = "copy" ]; then
         val="$(recipe_get "$yml" target_default 2>/dev/null || true)"

@@ -17,7 +17,8 @@ Dependencies for **git clone / tar.gz / `./setup.sh`**: host **PyQt6**; optional
 
 | File | Role |
 |------|------|
-| `launcher.py` | Main window, QProcess hooks, activity, updates |
+| `launcher.py` | Main window, menus/tabs, activity UI, updates; delegates to `_ops` |
+| `recipe_process.py` | `RecipeProcessOps` — QProcess orchestration (install/repair/…/launch) |
 | `recipe_discovery.py` | `RecipeInfo` / discover / YAML metadata |
 | `ARCHITECTURE-LAUNCHER.md` | Process / trust / secrets model |
 | `ui_fluent.py` | Fluent `Theme.DARK` + copper `#B87333` |
@@ -38,7 +39,7 @@ Dependencies for **git clone / tar.gz / `./setup.sh`**: host **PyQt6**; optional
 
 ## UI conventions
 
-- Sidebar **fixed 240 px**, primary CTA + **More ▾**, segment tabs
+- Sidebar **fixed 268 px**, primary CTA + **More ▾**, segment tabs
 - Always Fluent Dark + copper — no system light hybrid, no PyQtDarkTheme
 - Do not override Fluent widgets with host QSS
 - Visual changes (colors, radii, scrollbars) only with explicit approval

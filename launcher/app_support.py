@@ -10,6 +10,7 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
+import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -24,6 +25,9 @@ COMMUNITY_REDDIT_URL = (
 LOG_ROOT = Path.home() / ".local/share/wine-software/logs"
 LOG_RETENTION_DAYS = 14
 LOG_MAX_FILES = 50
+# Diagnose zip: tail per allowlisted log (not full DXVK dumps).
+DIAGNOSE_PER_FILE_BYTES = 256 * 1024
+DIAGNOSE_MAX_FILES = 16
 
 SENSITIVE_PATTERNS = [
     (re.compile(r"/home/[^/\s]+", re.I), "/home/<USER>"),
@@ -415,6 +419,27 @@ def proton_ge_badge_label(tag: str = "") -> str:
     return f"Proton-GE {short}" if short else "Proton-GE"
 
 
+def format_tested_on_display(raw: str) -> str | None:
+    """Format recipe.yml ``tested_on`` (YYYY-MM-DD) for the active UI locale.
+
+    Returns None when missing or not a valid ISO date. Display pattern follows
+    ``_ui_locale()`` (not i18n string templates), so new languages only need a
+    locale branch here.
+    """
+    from datetime import date
+
+    s = (raw or "").strip()
+    if not s:
+        return None
+    try:
+        d = date.fromisoformat(s)
+    except ValueError:
+        return None
+    if _ui_locale() == "de":
+        return d.strftime("%d.%m.%Y")
+    return d.strftime("%d %b %Y")
+
+
 def bug_report_template_name() -> str:
     """GitHub ISSUE_TEMPLATE filename matching UI locale."""
     return "bug_report_de.md" if _ui_locale() == "de" else "bug_report.md"
@@ -581,6 +606,187 @@ def collect_report_bundle(
     except OSError:
         pass
     return out
+
+
+def _diagnose_log_root_allowlisted(name: str, recipe_id: str) -> bool:
+    """Hard allowlist for LOG_ROOT basenames (defense in depth vs text sanitize)."""
+    n = name.lower()
+    if not n.endswith(".log"):
+        return False
+    if n.startswith("diagnose_") or n.startswith("github-report_"):
+        return False
+    if n == "rezeptor-exit-diagnostics.log":
+        return True
+    if n.startswith("winetricks_"):
+        return True
+    rid = (recipe_id or "").lower()
+    if not rid or rid == "launcher":
+        # Launcher-wide: only known diagnostic / launch / winetricks names.
+        return (
+            n == "rezeptor-exit-diagnostics.log"
+            or n.startswith("winetricks_")
+            or n.startswith("launch_")
+            or n.startswith("cleanup_")
+        )
+    if n.startswith(f"launch_{rid}_") or n.startswith(f"cleanup_{rid}_"):
+        return True
+    # Recipe-tagged install/repair/validate logs (e.g. WISO_Repair_….log, photoshop_…).
+    if rid in n:
+        return True
+    return False
+
+
+def _diagnose_data_root_allowlisted(name: str) -> bool:
+    """Only ``*.log`` basenames under the recipe data root — never .json/.key/.env."""
+    n = name.lower()
+    return n.endswith(".log") and "/" not in name and "\\" not in name
+
+
+def _read_log_tail_text(path: Path, max_bytes: int) -> str:
+    """Read the last max_bytes of a log (binary-safe), decode, drop partial first line."""
+    try:
+        with path.open("rb") as fh:
+            fh.seek(0, os.SEEK_END)
+            size = fh.tell()
+            if size <= 0:
+                return ""
+            if size <= max_bytes:
+                fh.seek(0)
+                raw = fh.read()
+            else:
+                fh.seek(-max_bytes, os.SEEK_END)
+                raw = fh.read()
+                nl = raw.find(b"\n")
+                if 0 <= nl < len(raw) - 1:
+                    raw = raw[nl + 1 :]
+    except OSError:
+        return ""
+    text = raw.decode("utf-8", errors="replace")
+    cleaned: list[str] = []
+    for ln in text.splitlines():
+        h = humanize_log_line(ln) if ln.startswith("@") else ln
+        if h is None or LOG_NOISE_RE.search(h):
+            continue
+        cleaned.append(sanitize_log_text(h))
+    return "\n".join(cleaned)
+
+
+def build_diagnose_zip(
+    recipe_id: str,
+    session_id: str = "",
+    *,
+    data_root: Path | None = None,
+    recipe_name: str = "",
+    recipe_proton_tag: str = "",
+    per_file_bytes: int = DIAGNOSE_PER_FILE_BYTES,
+    max_files: int = DIAGNOSE_MAX_FILES,
+) -> tuple[Path, int] | None:
+    """Build a sanitized diagnose zip from an allowlist of log files only.
+
+    Retention: output lives under LOG_ROOT as ``diagnose_*.zip`` and is covered by
+    the existing ``prune_old_logs`` (startup / settings cleanup) — no separate rule.
+
+    Returns ``(zip_path, file_count)`` or None when no allowlisted logs were found.
+    """
+    from i18n import t
+
+    LOG_ROOT.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(LOG_ROOT, 0o700)
+    except OSError:
+        pass
+
+    rid = recipe_id or "launcher"
+    candidates: list[tuple[str, Path]] = []  # (arcname, path)
+    seen: set[Path] = set()
+
+    def _add(arc_prefix: str, path: Path) -> None:
+        try:
+            resolved = path.resolve()
+        except OSError:
+            return
+        if not path.is_file() or resolved in seen:
+            return
+        seen.add(resolved)
+        candidates.append((f"{arc_prefix}/{path.name}", path))
+
+    if LOG_ROOT.is_dir():
+        for path in LOG_ROOT.iterdir():
+            if not path.is_file():
+                continue
+            if _diagnose_log_root_allowlisted(path.name, rid):
+                _add("logs", path)
+
+    if data_root is not None and data_root.is_dir():
+        for path in data_root.iterdir():
+            if not path.is_file():
+                continue
+            if _diagnose_data_root_allowlisted(path.name):
+                _add("data_logs", path)
+
+    def _rank(item: tuple[str, Path]) -> tuple[int, float]:
+        _arc, path = item
+        name = path.name.lower()
+        try:
+            mtime = path.stat().st_mtime
+        except OSError:
+            mtime = 0.0
+        if "_errors" in name:
+            tier = 0
+        elif name.startswith("launch_") or "install" in name:
+            tier = 1
+        elif any(k in name for k in ("repair", "validate", "winetricks", "diagnostics")):
+            tier = 2
+        else:
+            tier = 3
+        return (tier, -mtime)
+
+    picked = sorted(candidates, key=_rank)[: max(1, max_files)]
+    if not picked:
+        return None
+
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
+    out = LOG_ROOT / f"diagnose_{rid}_{ts}.zip"
+    runtime = describe_runtime_for_report(
+        recipe_tag=recipe_proton_tag, data_root=data_root
+    )
+    readme = [
+        t("dialog.diagnose_file_title"),
+        t("dialog.diagnose_file_time", time=datetime.now(timezone.utc).isoformat()),
+        t("dialog.diagnose_file_recipe", recipe=rid),
+    ]
+    if recipe_name.strip():
+        readme.append(t("dialog.diagnose_file_recipe_name", name=recipe_name.strip()))
+    readme.extend(
+        [
+            t("dialog.diagnose_file_version", version=read_version()),
+            t("dialog.diagnose_file_runtime", runtime=runtime),
+            t(
+                "dialog.diagnose_file_limits",
+                bytes=per_file_bytes,
+                files=len(picked),
+            ),
+            "",
+            t("dialog.diagnose_file_contents"),
+        ]
+    )
+    if session_id:
+        readme.insert(3, t("dialog.diagnose_file_session", session=session_id))
+
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for arc, path in picked:
+            body = _read_log_tail_text(path, per_file_bytes)
+            if not body.endswith("\n"):
+                body += "\n"
+            zf.writestr(arc, body)
+            readme.append(f"- {arc} ({path.name})")
+        zf.writestr("README.txt", "\n".join(readme) + "\n")
+
+    try:
+        os.chmod(out, 0o600)
+    except OSError:
+        pass
+    return out, len(picked)
 
 
 def build_issue_body(

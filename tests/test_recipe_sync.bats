@@ -270,3 +270,78 @@ PY
     [ "$status" -eq 0 ]
     [[ "$output" == *ok* ]]
 }
+
+@test "pick_recipes_asset pending_count file_sha256 format_plan_summary" {
+    run python3 - "$ROOT" "$BATS_TEST_TMPDIR" <<'PY'
+import hashlib
+import sys
+from pathlib import Path
+
+root = Path(sys.argv[1])
+tmp = Path(sys.argv[2])
+sys.path.insert(0, str(root / "launcher"))
+from recipe_sync import (
+    RecipeChange,
+    RecipeSyncError,
+    RecipeSyncPlan,
+    file_sha256,
+    format_plan_summary,
+    pending_attention_count,
+    pick_recipes_asset,
+)
+
+release = {
+    "tag_name": "v1.2.0",
+    "assets": [
+        {
+            "name": "rezeptor-recipes-1.0.0.tar.gz",
+            "browser_download_url": "https://example.invalid/old",
+        },
+        {
+            "name": "rezeptor-recipes-1.2.0.tar.gz",
+            "browser_download_url": "https://example.invalid/match",
+        },
+    ],
+}
+name, url, ver = pick_recipes_asset(release)
+assert name == "rezeptor-recipes-1.2.0.tar.gz"
+assert url.endswith("/match")
+assert ver == "1.2.0"
+
+try:
+    pick_recipes_asset({"assets": []})
+except RecipeSyncError:
+    pass
+else:
+    raise AssertionError("expected RecipeSyncError for empty assets")
+
+blob = tmp / "blob.bin"
+blob.write_bytes(b"rezeptor-sha")
+assert file_sha256(blob) == hashlib.sha256(b"rezeptor-sha").hexdigest()
+
+plan = RecipeSyncPlan(
+    bundle_version="1.2.0",
+    asset_name=name,
+    asset_url=url,
+    sha256_expected="0" * 64,
+    release_url="https://example.invalid/r",
+    changes=[
+        RecipeChange(id="a", kind="added"),
+        RecipeChange(id="b", kind="blocked", detail="needs app"),
+        RecipeChange(id="c", kind="deprecated"),
+    ],
+)
+assert [c.id for c in plan.actionable] == ["a"]
+assert plan.pending_count == 3
+assert pending_attention_count(
+    {"pending": {"added": ["a"], "blocked": [{"id": "b"}], "deprecated": ["c"]}}
+) == 3
+assert pending_attention_count({}) == 0
+summary = format_plan_summary(plan)
+assert "added: a" in summary
+assert "blocked: b (needs app)" in summary
+print("ok")
+PY
+    [ "$status" -eq 0 ]
+    [[ "$output" == *ok* ]]
+}

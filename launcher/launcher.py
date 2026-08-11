@@ -37,7 +37,6 @@ try:
         QIcon,
         QKeySequence,
         QPalette,
-        QPixmap,
         QShortcut,
     )
     from PyQt6.QtWidgets import (
@@ -45,7 +44,6 @@ try:
         QCheckBox,
         QDialog,
         QDialogButtonBox,
-        QFormLayout,
         QFrame,
         QGridLayout,
         QHBoxLayout,
@@ -63,7 +61,6 @@ try:
         QSizePolicy,
         QStackedWidget,
         QStatusBar,
-        QTabWidget,
         QTextBrowser,
         QTextEdit,
         QToolButton,
@@ -88,6 +85,7 @@ if str(_LAUNCHER_DIR) not in sys.path:
 
 from app_support import (
     GITHUB_REPO,
+    build_diagnose_zip,
     collect_report_bundle,
     community_reddit_url,
     describe_runtime_for_report,
@@ -100,6 +98,7 @@ from app_support import (
     humanize_log_line,
     parse_validate_version_fields,
     effective_proton_ge_tag,
+    format_tested_on_display,
     proton_ge_badge_label,
     prune_old_logs,
     public_docs_url,
@@ -114,17 +113,12 @@ from ui_fluent import (
     COLOR_EXPERIMENTAL,
     COLOR_TESTED,
     FLUENT_AVAILABLE,
-    CaptionLabel,
     CardWidget,
-    FluentIcon,
-    Pivot,
     PrimaryPushButton,
     PushButton,
     RoundMenu,
-    SubtitleLabel,
     TitleLabel,
     apply_rezeptor_theme,
-    app_stylesheet,
 )
 from ui_rezeptor import (
     REZEPTOR_ICON,
@@ -138,12 +132,10 @@ from ui_rezeptor import (
 )
 from host_deps import has_gaps
 from settings import (
-    RezeptorSettings,
     clear_recipe_install_env,
     has_recipe_install_source,
     load_recipe_install_env,
     load_settings,
-    prepend_archive_password,
     recipe_edit_allowed,
     save_recipe_install_env,
     save_settings,
@@ -158,14 +150,10 @@ from ui_recipe_wizard import (
     RecipeWizardDialog,
     can_create_recipes,
 )
-from ui_archive_passwords import ensure_archive_passwords
 from ui_source import (
     RecipeSourceDialog,
-    UpdateSourceDialog,
-    attach_archive_password_files,
     needs_source_dialog,
     needs_target_dir,
-    pick_directory,
     recipe_supports_update,
     source_configure_label,
 )
@@ -177,7 +165,6 @@ from recipe_categories import (
     sort_recipes_in_category,
 )
 from recipe_discovery import (
-    STATE_LABEL,
     DiscoverOutcome,
     RecipeInfo,
     RecipeState,
@@ -209,6 +196,7 @@ from recipe_sync import (
     format_plan_summary,
     pending_attention_count,
 )
+from recipe_process import RecipeProcessOps
 from recipe_trust import (
     approve_recipe_manifest,
     friendly_trust_reason,
@@ -216,7 +204,7 @@ from recipe_trust import (
     rezeptor_dev_mode,
     verify_recipe_trust,
 )
-from ui_styles import COLOR_PARCHMENT, MUTED, STATE_COLORS, palette
+from ui_styles import COLOR_PARCHMENT, MUTED, palette
 from ui_icons import (
     ensure_fa_brands_font,
     ensure_fa_font,
@@ -247,13 +235,9 @@ from diagnostics import (
 )
 from i18n import get_locale, set_locale, t
 from log_context import (
-    E_LAUNCH_NO_PROCESS,
-    E_SCRIPT_FAILED,
     E_STATUS_QUERY,
-    E_TRUST_MANIFEST,
     E_UNCAUGHT,
     E_UPDATE_APPLY,
-    E_UPDATE_ROLLBACK,
     LogEvent,
 )
 RECIPES_DIR = ROOT / "recipes"
@@ -902,7 +886,7 @@ def format_recipe_info_html(
 
 
 class InfoConfirmDialog(QDialog):
-    """Install-Bestätigung mit formatiertem Rezept-Info (kein Roh-Markdown)."""
+    """Install confirmation: scrollable recipe info, sticky Install/Cancel footer."""
 
     def __init__(
         self,
@@ -914,25 +898,43 @@ class InfoConfirmDialog(QDialog):
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(title)
-        self.resize(560, 520)
+        # Tall enough for sticky footer + recipe info (browser min 360).
+        self.setMinimumSize(480, 520)
+        self.resize(560, 560)
         lay = QVBoxLayout(self)
+        lay.setContentsMargins(12, 12, 12, 12)
+        lay.setSpacing(0)
+
         browser = QTextBrowser()
         browser.setOpenExternalLinks(True)
         browser.setHtml(html)
         browser.setMinimumHeight(360)
         lay.addWidget(browser, stretch=1)
+
+        # Footer stays visible; only the browser scrolls for long recipe info.
+        footer = QWidget()
+        footer_l = QVBoxLayout(footer)
+        footer_l.setContentsMargins(0, 12, 0, 0)
+        footer_l.setSpacing(10)
         q = QLabel(question)
         q.setWordWrap(True)
         q.setObjectName("stepLabel")
-        lay.addWidget(q)
+        footer_l.addWidget(q)
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Yes | QDialogButtonBox.StandardButton.No
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
         )
-        buttons.button(QDialogButtonBox.StandardButton.Yes).setText(t("dialog.yes"))
-        buttons.button(QDialogButtonBox.StandardButton.No).setText(t("dialog.no"))
+        ok_btn = buttons.button(QDialogButtonBox.StandardButton.Ok)
+        cancel_btn = buttons.button(QDialogButtonBox.StandardButton.Cancel)
+        if ok_btn is not None:
+            ok_btn.setText(t("btn.install"))
+            ok_btn.setDefault(True)
+        if cancel_btn is not None:
+            cancel_btn.setText(t("btn.cancel_install"))
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
-        lay.addWidget(buttons)
+        footer_l.addWidget(buttons)
+        lay.addWidget(footer, stretch=0)
 
 
 def _recipe_has_install_marker(meta: dict[str, str], rid: str) -> bool:
@@ -997,7 +999,6 @@ def query_recipe_state(
             except OSError:
                 pass
         roots.append(dr)
-        yml = rd / "recipe.yml"
         guaranteed = meta.get("version_guaranteed", "")
         for root in roots:
             if not root.exists():
@@ -1217,6 +1218,8 @@ class RezeptorWindow(QMainWindow):
         # Nach Freigabe/Medizin: Primary = „Jetzt aktualisieren“, bis Repair durch ist
         self._pending_repair_rid: str | None = None
 
+        self._ops = RecipeProcessOps(self)
+
         self._build_menus()
         self._build_status_bar()
         self._build_layout()
@@ -1309,6 +1312,7 @@ class RezeptorWindow(QMainWindow):
         help_menu.addAction(t("menu.check_update"), self.check_updates)
         help_menu.addSeparator()
         help_menu.addAction(t("menu.report_bug"), self.report_bug)
+        help_menu.addAction(t("menu.diagnose_zip"), self.export_diagnose_zip)
         help_menu.addAction(t("menu.open_log_folder"), self.open_log_folder)
         help_menu.addAction(t("menu.about"), self.show_about)
         self._ensure_lang_toggle()
@@ -1563,11 +1567,13 @@ class RezeptorWindow(QMainWindow):
         self.version_pill.clicked.connect(self._show_version_guarantee_info)
         self.tested_pill = StatusPill("—", COLOR_TESTED)
         self.proton_pill = StatusPill("Proton-GE", COLOR_EXPERIMENTAL)
+        self.tested_on_pill = StatusPill("", MUTED)
         self.author_pill = StatusPill("", MUTED)
         pills_row.addWidget(self.status_pill)
         pills_row.addWidget(self.version_pill)
         pills_row.addWidget(self.tested_pill)
         pills_row.addWidget(self.proton_pill)
+        pills_row.addWidget(self.tested_on_pill)
         pills_row.addWidget(self.author_pill)
         self.health_chip = QToolButton()
         self.health_chip.setObjectName("healthChip")
@@ -1869,8 +1875,11 @@ class RezeptorWindow(QMainWindow):
         menu.exec(pos)
 
     def _rebuild_more_menu(self) -> None:
-        """Full Mehr-menu; unavailable items stay visible but disabled (no hide)."""
-        # Always a fresh RoundMenu: clear() leaves separator rows in the list view.
+        """Mehr-menu: only applicable actions (omit instead of disable).
+
+        Fresh RoundMenu each time — clear() leaves empty separator rows.
+        Do not add hidden QActions; omission avoids Fluent empty cells.
+        """
         self._more_menu = (
             RoundMenu(parent=self) if FLUENT_AVAILABLE else QMenu(self)
         )
@@ -1897,77 +1906,99 @@ class RezeptorWindow(QMainWindow):
             RecipeState.INSTALLED,
             RecipeState.PARTIAL,
         )
-
-        def _add(label: str, slot: object, *, enabled: bool) -> None:
-            act = self._add_menu_action(menu, label, slot)
-            act.setEnabled(bool(enabled) and not busy and not untrusted)
-
         pending_repair = self._pending_repair_rid == info.rid
-        _add(t("menu.validate"), self.run_validate, enabled=True)
+        ops_ok = not busy and not untrusted
+        since_sep = 0
+
+        def _add(
+            label: str,
+            slot: object,
+            *,
+            show: bool,
+            tip: str = "",
+        ) -> None:
+            nonlocal since_sep
+            if not show:
+                return
+            act = self._add_menu_action(menu, label, slot)
+            if tip:
+                act.setToolTip(tip)
+            since_sep += 1
+
+        def _sep() -> None:
+            nonlocal since_sep
+            if since_sep <= 0:
+                return
+            menu.addSeparator()
+            since_sep = 0
+
+        _add(t("menu.validate"), self.run_validate, show=ops_ok)
         _add(
             t("menu.repair"),
             self.run_repair,
-            enabled=repair_ok and mode != "repair",
+            show=ops_ok and repair_ok and mode != "repair",
         )
         _add(
             t("menu.launch"),
             self.run_launch,
             # Freigabe/Medizin: kein Start-Umweg, solange Repair aussteht
-            enabled=can_launch and mode != "launch" and not pending_repair,
+            show=ops_ok and can_launch and mode != "launch" and not pending_repair,
         )
         _add(
             t("menu.kill"),
             self.run_kill,
-            enabled=kill_ok and running and mode != "kill",
+            show=ops_ok and kill_ok and running and mode != "kill",
         )
         update_ok = recipe_supports_update(info.meta) and installed_ish
-        _add(
-            t("menu.update"),
-            self.run_update,
-            enabled=update_ok,
-        )
+        _add(t("menu.update"), self.run_update, show=ops_ok and update_ok)
         relocate_ok = installed_ish and (
             needs_target_dir(info.meta) or data_root_browsable(dr)
         )
-        act = self._add_menu_action(menu, t("menu.relocate"), self.run_relocate)
-        act.setToolTip(t("menu.relocate_tip"))
-        act.setEnabled(relocate_ok and not busy and not untrusted and not running)
-
-        menu.addSeparator()
-        if needs_source_dialog(info.meta):
-            act = self._add_menu_action(
-                menu, source_configure_label(info.meta), self.run_source_configure
-            )
-            act.setToolTip(t("menu.source_tip"))
-            act.setEnabled(not busy and not untrusted)
-        # Installationsdaten: nur am Pfad-Icon neben dem Pfad (klarer als im Mehr-Menü)
-        act = self._add_menu_action(
-            menu, t("menu.shortcuts"), self.run_desktop_shortcuts
+        _add(
+            t("menu.relocate"),
+            self.run_relocate,
+            show=ops_ok and relocate_ok and not running,
+            tip=t("menu.relocate_tip"),
         )
-        act.setEnabled(installed_ish and not busy and not untrusted)
 
+        _sep()
+        if needs_source_dialog(info.meta):
+            _add(
+                source_configure_label(info.meta),
+                self.run_source_configure,
+                show=ops_ok,
+                tip=t("menu.source_tip"),
+            )
+        # Installationsdaten: nur am Pfad-Icon neben dem Pfad (klarer als im Mehr-Menü)
+        _add(
+            t("menu.shortcuts"),
+            self.run_desktop_shortcuts,
+            show=ops_ok and installed_ish,
+        )
         genp_script = Path(info.meta["_dir"]) / "genp.sh"
         if genp_script.is_file():
-            act = self._add_menu_action(
-                menu, t("menu.genp_from_pack"), self.run_genp_from_pack
-            )
-            act.setToolTip(t("menu.genp_from_pack_tip"))
-            act.setEnabled(
-                installed_ish
-                and not busy
-                and not untrusted
+            _add(
+                t("menu.genp_from_pack"),
+                self.run_genp_from_pack,
+                show=ops_ok and installed_ish,
+                tip=t("menu.genp_from_pack_tip"),
             )
 
-        menu.addSeparator()
-        act = self._add_menu_action(
-            menu, self._view_recipe_label(), self.show_recipe_view
+        _sep()
+        # Recipe view stays available while untrusted (read-only inspection).
+        _add(
+            self._view_recipe_label(),
+            self.show_recipe_view,
+            show=not busy,
+            tip=self._view_recipe_tip(),
         )
-        act.setToolTip(self._view_recipe_tip())
-        act.setEnabled(not busy)
 
-        menu.addSeparator()
-        act = self._add_menu_action(menu, t("menu.uninstall"), self.run_uninstall)
-        act.setEnabled(installed_ish and not busy and not untrusted)
+        _sep()
+        _add(
+            t("menu.uninstall"),
+            self.run_uninstall,
+            show=ops_ok and installed_ish,
+        )
 
     def _on_primary_cta(self) -> None:
         w = QApplication.focusWidget()
@@ -2115,8 +2146,7 @@ class RezeptorWindow(QMainWindow):
             btn.setToolTip("")
             btn.setIcon(QIcon())
 
-        # Mehr-Menü wird bei jedem Öffnen neu gebaut (_popup_more_menu) —
-        # kein setVisible(False) auf RoundMenu-Actions (erzeugt Leerzellen).
+        # Mehr-Menü: neu gebaut in _popup_more_menu (omit inapplicable actions).
 
     def _on_sidebar_search(self, _text: str = "") -> None:
         self._populate_list()
@@ -2343,6 +2373,25 @@ class RezeptorWindow(QMainWindow):
         self._home_tip = tip
         lay.addWidget(tip)
 
+        activity_title = QLabel(t("home.activity_title"))
+        activity_title.setObjectName("homeActivityTitle")
+        self._home_activity_title = activity_title
+        lay.addWidget(activity_title)
+
+        self._home_activity_list = QListWidget()
+        self._home_activity_list.setObjectName("homeActivityList")
+        self._home_activity_list.setFrameShape(QFrame.Shape.StyledPanel)
+        self._home_activity_list.setMaximumHeight(196)
+        self._home_activity_list.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+        self._home_activity_list.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+        self._home_activity_list.itemClicked.connect(self._on_home_activity_clicked)
+        lay.addWidget(self._home_activity_list)
+        self._refresh_home_activity()
+
         links_hint = QLabel(t("app.home_links_hint"))
         links_hint.setObjectName("homeLinksHint")
         links_hint.setWordWrap(True)
@@ -2499,6 +2548,7 @@ class RezeptorWindow(QMainWindow):
             t("app.home_pill_recipes", n=stats["recipes"]), COLOR_TESTED
         )
         self.proton_pill.set_content("Proton-GE", COLOR_EXPERIMENTAL)
+        self.tested_on_pill.set_content("", MUTED)
         self.author_pill.set_content("", MUTED)
 
         self.path_label.setText(t("app.home_tagline"))
@@ -2520,9 +2570,46 @@ class RezeptorWindow(QMainWindow):
         self._sync_medizin_button()
 
         self._refresh_home_stats()
+        self._refresh_home_activity()
         if hasattr(self, "_detail_stack"):
             self._detail_stack.setCurrentIndex(0)
         self._rebuild_more_menu()
+
+    def _refresh_home_activity(self) -> None:
+        """Newest completed recipe ops on the home page (cap DISPLAY_CAP)."""
+        from activity_history import (
+            DISPLAY_CAP,
+            format_activity_line,
+            load_activity_history,
+        )
+
+        lst = getattr(self, "_home_activity_list", None)
+        if lst is None:
+            return
+        lst.clear()
+        entries = load_activity_history()[:DISPLAY_CAP]
+        if not entries:
+            item = QListWidgetItem(t("home.activity_empty"))
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
+            item.setForeground(QColor(MUTED))
+            lst.addItem(item)
+            return
+        for entry in entries:
+            item = QListWidgetItem(format_activity_line(entry))
+            item.setData(Qt.ItemDataRole.UserRole, entry.rid)
+            item.setToolTip(item.text())
+            if not entry.ok:
+                item.setForeground(QColor("#ffb86c"))
+            lst.addItem(item)
+
+    def _on_home_activity_clicked(self, item: QListWidgetItem) -> None:
+        rid = str(item.data(Qt.ItemDataRole.UserRole) or "").strip()
+        if not rid:
+            return
+        for i, info in enumerate(self.recipes):
+            if info.rid == rid:
+                self._select_recipe_index(i, user_initiated=True)
+                return
 
     def _create_progress_tab(self) -> QWidget:
         tab = QWidget()
@@ -2586,6 +2673,7 @@ class RezeptorWindow(QMainWindow):
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
         lay.addWidget(self.activity_list, stretch=2)
+        self._show_activity_empty_hint()
 
         log_label = QLabel(t("progress.live"))
         log_label.setObjectName("muted")
@@ -2629,6 +2717,10 @@ class RezeptorWindow(QMainWindow):
         self._logs_copy_content_btn.setObjectName("ghostBtn")
         self._logs_copy_content_btn.clicked.connect(self.copy_selected_log_content)
         actions.addWidget(self._logs_copy_content_btn)
+        self._logs_diagnose_btn = QPushButton(t("btn.diagnose_zip"))
+        self._logs_diagnose_btn.setObjectName("ghostBtn")
+        self._logs_diagnose_btn.clicked.connect(self.export_diagnose_zip)
+        actions.addWidget(self._logs_diagnose_btn)
         actions.addStretch(1)
         lay.addLayout(actions)
         self.file_log = QTextEdit()
@@ -3010,7 +3102,7 @@ class RezeptorWindow(QMainWindow):
             self._pending_repair_rid = rid
         self._assert_recipe_trusted(rid)
         self.raw_log.clear()
-        self.activity_list.clear()
+        self._clear_activity_list()
         self._switch_to_progress_tab()
         self._set_busy(True, rid=rid)
         self._apply_primary_cta(
@@ -3230,6 +3322,71 @@ class RezeptorWindow(QMainWindow):
                 "info", t("dialog.report_path_copied", path=str(report.resolve()))
             )
         self._activity("info", t("dialog.report_clipboard", name=report.name))
+
+    def export_diagnose_zip(self) -> None:
+        """Write allowlisted, sanitized logs into diagnose_<rid>_<ts>.zip under LOG_ROOT."""
+        rid = self._selected.rid if self._selected else "launcher"
+        if QMessageBox.question(
+            self,
+            t("dialog.diagnose_title"),
+            t("dialog.diagnose_confirm"),
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        ) != QMessageBox.StandardButton.Yes:
+            return
+        info = self._selected
+        data_root: Path | None = None
+        recipe_name = ""
+        recipe_tag = ""
+        if info is not None:
+            data_root = resolve_data_root(info.meta, info.rid)
+            recipe_name = (info.meta.get("name") or "").strip()
+            recipe_tag = (info.meta.get("proton_ge_tag") or "").strip()
+        built = build_diagnose_zip(
+            rid,
+            self.session_id,
+            data_root=data_root,
+            recipe_name=recipe_name,
+            recipe_proton_tag=recipe_tag,
+        )
+        if built is None:
+            QMessageBox.information(
+                self,
+                t("dialog.diagnose_title"),
+                t("dialog.diagnose_empty"),
+            )
+            return
+        zip_path, count = built
+        box = QMessageBox(self)
+        box.setIcon(QMessageBox.Icon.Information)
+        box.setWindowTitle(t("dialog.diagnose_done_title"))
+        box.setText(
+            t(
+                "dialog.diagnose_done_body",
+                name=zip_path.name,
+                count=count,
+                folder=str(LOG_ROOT),
+            )
+        )
+        open_folder = box.addButton(
+            t("btn.open_log_folder"), QMessageBox.ButtonRole.ActionRole
+        )
+        copy_path = box.addButton(
+            t("btn.copy_log_path"), QMessageBox.ButtonRole.ActionRole
+        )
+        box.addButton(QMessageBox.StandardButton.Ok)
+        box.exec()
+        clicked = box.clickedButton()
+        clip = QApplication.clipboard()
+        if clicked == open_folder:
+            self.open_log_folder()
+        elif clicked == copy_path:
+            clip.setText(str(zip_path.resolve()))
+            self._activity(
+                "info",
+                t("dialog.diagnose_path_copied", path=str(zip_path.resolve())),
+            )
+        self._activity("info", t("dialog.diagnose_activity", name=zip_path.name))
+        self.populate_log_files()
 
     def _show_failure(self, done_label: str, code: int) -> None:
         box = QMessageBox(self)
@@ -3539,8 +3696,10 @@ class RezeptorWindow(QMainWindow):
         meta = info.meta
         dr = resolve_data_root(meta, info.rid)
 
+        # Window/taskbar icon stays Rezeptor; header shows the recipe icon.
+        if REZEPTOR_ICON.is_file():
+            self.setWindowIcon(QIcon(str(REZEPTOR_ICON)))
         icon = recipe_icon(meta)
-        self.setWindowIcon(icon)
         pix = icon.pixmap(64, 64)
         if not pix.isNull():
             self.icon_label.setPixmap(rounded_pixmap(pix, 12))
@@ -3572,6 +3731,8 @@ class RezeptorWindow(QMainWindow):
             )
             self._sync_medizin_button()
             self._refresh_running_indicators()
+            if info.state == RecipeState.NOT_INSTALLED and not self._busy:
+                self._set_content_tab("overview")
             return
         if checking or untrusted:
             raw = info.trust_reason or info.status_detail or "?"
@@ -3598,6 +3759,8 @@ class RezeptorWindow(QMainWindow):
             self._sync_medizin_button()
             self._refresh_running_indicators()
             self._schedule_header_refit()
+            if info.state == RecipeState.NOT_INSTALLED and not self._busy:
+                self._set_content_tab("overview")
             return
 
         if self._busy and self._busy_belongs_to_selected():
@@ -3648,26 +3811,15 @@ class RezeptorWindow(QMainWindow):
                 self._switch_to_progress_tab()
             else:
                 self._set_content_tab("overview")
+        elif info.state == RecipeState.NOT_INSTALLED:
+            # Empty Vorgang is noise before the first install — start on Übersicht.
+            self._set_content_tab("overview")
 
     def _busy_belongs_to_selected(self) -> bool:
-        if not self._busy or not self._selected:
-            return False
-        if not self._busy_rid:
-            return False
-        return self._selected.rid == self._busy_rid
+        return self._ops._busy_belongs_to_selected()
 
     def _busy_recipe_label(self) -> str:
-        rid = self._busy_rid
-        if not rid:
-            return "Rezeptor"
-        for info in self.recipes:
-            if info.rid == rid:
-                return (
-                    (info.meta.get("notify_title") or "").strip()
-                    or (info.meta.get("name") or "").strip()
-                    or rid
-                )
-        return rid
+        return self._ops._busy_recipe_label()
 
     def _refresh_running_indicators(self) -> None:
         for card, info in list(self._recipe_cards):
@@ -3880,6 +4032,18 @@ class RezeptorWindow(QMainWindow):
             self.proton_pill.setToolTip(t("tooltip.runtime_proton", tag=ge_tag))
         # Arrow + tooltip: WhatsThisCursor showed a stray "?" on some desktops.
         self.proton_pill.setCursor(Qt.CursorShape.ArrowCursor)
+
+        tested_disp = format_tested_on_display(str(meta.get("tested_on") or ""))
+        if tested_disp:
+            self.tested_on_pill.set_content(
+                t("badge.tested_on", date=tested_disp), MUTED
+            )
+            self.tested_on_pill.setToolTip(
+                t("tooltip.tested_on", date=tested_disp)
+            )
+        else:
+            self.tested_on_pill.set_content("", MUTED)
+            self.tested_on_pill.setToolTip("")
 
         author = (meta.get("author") or "").strip()
         if author:
@@ -4372,10 +4536,27 @@ class RezeptorWindow(QMainWindow):
         if sb is not None:
             sb.showMessage(text, ms)
 
+    def _show_activity_empty_hint(self) -> None:
+        """Friendly placeholder when the Schritte list has no real events yet."""
+        self.activity_list.clear()
+        item = QListWidgetItem(t("progress.empty_hint"))
+        item.setFlags(Qt.ItemFlag.NoItemFlags)
+        item.setForeground(QColor(MUTED))
+        self.activity_list.addItem(item)
+        self._activity_empty_shown = True
+
+    def _clear_activity_list(self) -> None:
+        """Clear Schritte for a new run (no empty hint until idle again)."""
+        self.activity_list.clear()
+        self._activity_empty_shown = False
+
     def _activity(self, kind: str, text: str) -> None:
         text = (text or "").strip()
         if not text:
             return
+        if getattr(self, "_activity_empty_shown", False):
+            self.activity_list.clear()
+            self._activity_empty_shown = False
         key = (kind, text)
         # output::progress emits @step; callers sometimes also call output::step
         if kind == "step" and self._last_activity_key == key:
@@ -4411,76 +4592,10 @@ class RezeptorWindow(QMainWindow):
             self._flash_status(text)
 
     def _set_busy(self, busy: bool, *, rid: str | None = None) -> None:
-        self._busy = busy
-        if busy:
-            if rid is not None:
-                self._busy_rid = rid
-            elif self._selected is not None:
-                self._busy_rid = self._selected.rid
-            else:
-                self._busy_rid = ""
-            self.progress.setVisible(True)
-            if hasattr(self, "progress_pct_label"):
-                self.progress_pct_label.setVisible(True)
-            self._progress_changed_at = time.monotonic()
-            if hasattr(self, "progress_busy"):
-                self.progress_busy.start()
-            if not self._progress_stall_timer.isActive():
-                self._progress_stall_timer.start()
-            if self._busy_belongs_to_selected():
-                self.status_detail_label.setText(t("status.busy"))
-            elif self._selected is not None:
-                self.status_detail_label.setText(
-                    t("status.busy_other", name=self._busy_recipe_label())
-                )
-            else:
-                self.status_detail_label.setText(t("status.busy"))
-            self.status_detail_label.setVisible(True)
-            self._update_progress_chip()
-            for b in (
-                self.primary_btn,
-                self.more_btn,
-                getattr(self, "medizin_btn", None),
-            ):
-                if b is not None:
-                    b.setEnabled(False)
-            self.action_refresh.setEnabled(False)
-            self._sync_cancel_install_btn()
-            self._sync_sidebar_busy_progress()
-            return
-        self._busy_rid = ""
-        self._progress_stall_timer.stop()
-        if hasattr(self, "progress_busy"):
-            self.progress_busy.stop()
-        self.progress.setRange(0, 100)
-        self.progress.setValue(100)
-        if hasattr(self, "progress_pct_label"):
-            self.progress_pct_label.setText("100%")
-            self.progress_pct_label.setVisible(True)
-        self._update_progress_chip()
-        self._set_step_text(t("status.done"))
-        self.action_refresh.setEnabled(True)
-        # busy=True deaktiviert Mehr — hier wieder an (CTA folgt über _select_recipe_index).
-        if hasattr(self, "more_btn"):
-            self.more_btn.setEnabled(True)
-        self._sync_medizin_button()
-        self._sync_cancel_install_btn()
-        self._sync_sidebar_busy_progress()
-        if self._selected:
-            self._select_recipe_index(self._selected_index)
+        return self._ops._set_busy(busy, rid=rid)
 
     def _sync_cancel_install_btn(self) -> None:
-        btn = getattr(self, "cancel_install_btn", None)
-        if btn is None:
-            return
-        show = bool(
-            self._busy
-            and self._busy_belongs_to_selected()
-            and self._current_op in ("install", "reinstall")
-            and not self._cancel_requested
-        )
-        btn.setVisible(show)
-        btn.setEnabled(show)
+        return self._ops._sync_cancel_install_btn()
 
     def _set_content_tab(self, key: str) -> None:
         pages = {
@@ -4504,18 +4619,10 @@ class RezeptorWindow(QMainWindow):
         self._set_content_tab("progress")
 
     def _subprocess_running(self) -> bool:
-        proc = self._process
-        return (
-            proc is not None
-            and proc.state() != QProcess.ProcessState.NotRunning
-        )
+        return self._ops._subprocess_running()
 
     def _reject_if_subprocess_busy(self) -> bool:
-        """Return True when a QProcess op is already running (caller should abort)."""
-        if self._subprocess_running():
-            QMessageBox.warning(self, t("dialog.running"), t("dialog.busy_warn"))
-            return True
-        return False
+        return self._ops._reject_if_subprocess_busy()
 
     def _require_recipe(self) -> Path | None:
         if self._reject_if_subprocess_busy():
@@ -4561,27 +4668,7 @@ class RezeptorWindow(QMainWindow):
     def _finish_archive_password_files(
         self, extra: dict[str, str] | None, *, success: bool
     ) -> None:
-        """Learn working archive password (JDownloader-style) and scrub temp files."""
-        if not extra:
-            return
-        used = (extra.get("RECIPE_ARCHIVE_PASSWORD_USED_FILE") or "").strip()
-        pw_list = (extra.get("RECIPE_ARCHIVE_PASSWORD_FILE") or "").strip()
-        if success and used:
-            try:
-                used_path = Path(used)
-                if used_path.is_file():
-                    pw = used_path.read_text(encoding="utf-8")
-                    if prepend_archive_password(self._settings, pw):
-                        save_settings(self._settings)
-            except OSError:
-                pass
-        for path in (used, pw_list):
-            if not path:
-                continue
-            try:
-                Path(path).unlink(missing_ok=True)
-            except OSError:
-                pass
+        return self._ops._finish_archive_password_files(extra, success=success)
 
     def _run_async(
         self,
@@ -4595,220 +4682,16 @@ class RezeptorWindow(QMainWindow):
         recipe_dir: Path | None = None,
         script_args: list[str] | None = None,
     ) -> None:
-        if self._reject_if_subprocess_busy():
-            return
-        if not done_label:
-            done_label = t("action.done")
-        env = QProcessEnvironment.systemEnvironment()
-        for k, v in self._base_env().items():
-            env.insert(k, v)
-        if extra:
-            for k, v in extra.items():
-                env.insert(k, v)
-
-        self.raw_log.clear()
-        self.activity_list.clear()
-        self._raw_log_buffer.clear()
-        self._last_activity_key = None
-        self._last_error_log = ""
-        self._last_recipe_log = ""
-        self._error_log_tail_mode = False
-        self._post_config_dir = None
-        self._progress_pct = 0
-        self._progress_anchor = 0
-        self._progress_pulse = 0
-        self._progress_got_tick = False
-        self._progress_changed_at = time.monotonic()
-        self.progress.setValue(0)
-        self.progress.setRange(0, 100)
-        self.progress_pct_label.setText("0%")
-        self.progress_pct_label.setVisible(True)
-        self.progress_busy.start()
-        self.progress.setVisible(True)
-        self._switch_to_progress_tab()
-        self._set_step_text(t("status.op_starting"))
-        self.status_detail_label.setText(t("status.busy"))
-        self._activity("step", f"{script.name} (Session {self.session_id[:8]})")
-        self._cancel_requested = False
-        self._current_op = op or script.stem
-        self._install_recipe_dir = (
-            recipe_dir if self._current_op in ("install", "reinstall") else None
-        )
-        busy_rid = self._selected.rid if self._selected else ""
-        self._set_busy(True, rid=busy_rid)
-
-        proc = QProcess(self)
-        self._process = proc
-        proc.setProcessEnvironment(env)
-        proc.setWorkingDirectory(str(ROOT))
-        bash_args = [str(script), *(script_args or [])]
-        # Neue Session → Cancel kann die Prozessgruppe inkl. Wine-Kinder killen.
-        if shutil.which("setsid"):
-            proc.setProgram("setsid")
-            proc.setArguments(["bash", *bash_args])
-        else:
-            proc.setProgram("bash")
-            proc.setArguments(bash_args)
-        def on_started() -> None:
-            pid = int(proc.processId())
-            self._install_pgid = own_process_group(pid)
-            log_line(
-                "PROC-START",
-                f"{script.name} pid={pid} pgid={self._install_pgid} own={os.getpgrp()}",
-            )
-
-        proc.started.connect(on_started)
-        proc.readyReadStandardOutput.connect(
-            lambda: self._feed_line(bytes(proc.readAllStandardOutput()).decode("utf-8", errors="replace"))
-        )
-        proc.readyReadStandardError.connect(
-            lambda: self._feed_line(bytes(proc.readAllStandardError()).decode("utf-8", errors="replace"))
-        )
-
-        def done(code: int, _s: QProcess.ExitStatus) -> None:
-            if self._process is not proc:
-                return
-            cancelled = self._cancel_requested
-            op_kind = self._current_op
-            busy_rid = self._busy_rid
-            install_dir = self._install_recipe_dir
-            log_line("PROC-DONE", f"{script.name} code={code} cancelled={cancelled}")
-            self._install_pgid = 0
-            self._current_op = ""
-            self._install_recipe_dir = None
-            self._cancel_requested = False
-            self._set_busy(False)
-            self.populate_log_files()
-            self._finish_archive_password_files(
-                extra, success=code == 0 and not cancelled
-            )
-            if cancelled and op_kind in ("install", "reinstall"):
-                self._activity("warn", t("status.install_cancelled"))
-                self._rollback_cancelled_install(install_dir)
-                self.refresh_statuses()
-                if self._process is proc:
-                    self._process = None
-                return
-            if code == 0:
-                self._activity(
-                    "ok",
-                    t("status.exit_code", label=done_label, code=code),
-                )
-                if op_kind == "repair" and busy_rid:
-                    self._clear_pending_repair(busy_rid)
-            else:
-                ev = LogEvent(
-                    level="error",
-                    code=E_SCRIPT_FAILED,
-                    message_key="error.E_SCRIPT_FAILED",
-                    extras={"label": done_label, "code": code},
-                    session_id=self.session_id,
-                    recipe_id=(self._selected.rid if self._selected else ""),
-                )
-                self._activity("error", ev.display_text())
-            self.refresh_statuses()
-            if code != 0 and dialog:
-                self._show_failure(done_label, code)
-            elif code == 0 and on_success is not None:
-                on_success()
-            elif code == 0 and dialog:
-                QMessageBox.information(
-                    self,
-                    t("status.done"),
-                    t("status.done_body", label=done_label),
-                )
-            if code == 0 and op_kind in ("install", "reinstall"):
-                self._maybe_offer_post_config()
-            if self._process is proc:
-                self._process = None
-
-        def on_install_error(err: QProcess.ProcessError) -> None:
-            ev = LogEvent(
-                level="error",
-                code=E_SCRIPT_FAILED,
-                message_key="error.E_SCRIPT_FAILED",
-                detail=f"QProcess error: {err}",
-                extras={"label": done_label, "code": int(err)},
-                session_id=self.session_id,
-                recipe_id=(self._selected.rid if self._selected else ""),
-            )
-            self._activity("error", ev.display_text())
-
-        proc.errorOccurred.connect(on_install_error)
-        proc.finished.connect(done)
-        proc.start()
+        return self._ops._run_async(script, extra, done_label, dialog, on_success, op=op, recipe_dir=recipe_dir, script_args=script_args)
 
     def _cancel_current_install(self) -> None:
-        if not self._busy or self._current_op not in ("install", "reinstall"):
-            return
-        if self._cancel_requested:
-            return
-        log_call_site("CANCEL", f"op={self._current_op} pgid={self._install_pgid}")
-        self._cancel_requested = True
-        self._sync_cancel_install_btn()
-        self._activity("warn", t("status.install_cancelled"))
-        self._set_step_text(t("status.install_cancelled"))
-        proc = self._process
-        if proc is None or proc.state() == QProcess.ProcessState.NotRunning:
-            return
-        pid = int(proc.processId())
-        _signal_qprocess_tree(proc, signal.SIGTERM)
-        if pid > 0:
-            QTimer.singleShot(2500, lambda p=proc, i=pid: self._force_kill_install(p, i))
+        return self._ops._cancel_current_install()
 
     def _force_kill_install(self, proc: QProcess, pid: int) -> None:
-        if proc.state() == QProcess.ProcessState.NotRunning:
-            return
-        signal_subprocess_tree(pid, signal.SIGKILL)
-        if proc.state() != QProcess.ProcessState.NotRunning:
-            proc.kill()
+        return self._ops._force_kill_install(proc, pid)
 
     def _rollback_cancelled_install(self, recipe_dir: Path | None) -> None:
-        """Nach Abbruch: uninstall.sh / Purge — Portable außerhalb DATA_ROOT bleibt."""
-        if recipe_dir is None or not recipe_dir.is_dir():
-            QMessageBox.information(
-                self, t("status.done"), t("status.install_cancelled")
-            )
-            return
-        uninstall = recipe_dir / "uninstall.sh"
-        ok = False
-        if uninstall.is_file():
-            env = {**os.environ, **self._base_env()}
-            self._set_step_text(t("status.install_rollback_running"))
-            app = QApplication.instance()
-            if app is not None:
-                app.processEvents()
-            try:
-                # start_new_session: eigene Prozessgruppe, damit ein pkill/kill im
-                # Rezept-Skript nicht die GUI-Gruppe trifft.
-                result = subprocess.run(
-                    ["bash", str(uninstall)],
-                    cwd=str(ROOT),
-                    env=env,
-                    capture_output=True,
-                    text=True,
-                    timeout=_ROLLBACK_UNINSTALL_TIMEOUT_SEC,
-                    check=False,
-                    start_new_session=True,
-                )
-                ok = result.returncode == 0
-                if result.stdout:
-                    self._feed_line(result.stdout)
-                if result.stderr:
-                    self._feed_line(result.stderr)
-            except (OSError, subprocess.TimeoutExpired) as exc:
-                self._activity("error", str(exc))
-                ok = False
-        if ok:
-            self._activity("ok", t("status.install_rolled_back"))
-            QMessageBox.information(
-                self, t("status.done"), t("status.install_rolled_back")
-            )
-        else:
-            self._activity("error", t("status.install_rollback_fail"))
-            QMessageBox.warning(
-                self, t("dialog.error"), t("status.install_rollback_fail")
-            )
+        return self._ops._rollback_cancelled_install(recipe_dir)
 
     def _desktop_cli(self) -> Path:
         return ROOT / "scripts" / "recipe-desktop.sh"
@@ -4989,10 +4872,6 @@ class RezeptorWindow(QMainWindow):
 
     def _switch_to_logs_tab(self) -> None:
         self._set_content_tab("logs")
-
-    def open_log_file(self) -> None:
-        self._switch_to_logs_tab()
-        self.populate_log_files()
 
     def _maybe_wine_dialog_hint(self, action: str) -> None:
         if action not in ("install", "repair"):
@@ -5564,9 +5443,6 @@ class RezeptorWindow(QMainWindow):
         if pid > 0:
             QTimer.singleShot(1500, lambda p=proc, i=pid: self._force_kill_install(p, i))
 
-    def _force_close_tool_windows(self) -> None:
-        dismiss_all_top_level_windows(self, force=True)
-
     def closeEvent(self, event) -> None:  # type: ignore[no-untyped-def]
         if getattr(self, "_force_quitting", False):
             event.accept()
@@ -5616,6 +5492,7 @@ class RezeptorWindow(QMainWindow):
             getattr(self, "version_pill", None),
             getattr(self, "tested_pill", None),
             getattr(self, "proton_pill", None),
+            getattr(self, "tested_on_pill", None),
             getattr(self, "author_pill", None),
         ):
             if pill is not None and hasattr(pill, "apply_theme"):
@@ -5644,6 +5521,9 @@ class RezeptorWindow(QMainWindow):
             self._home_intro.setText(t("app.home_intro"))
         if hasattr(self, "_home_tip"):
             self._home_tip.setText(t("app.home_tip"))
+        if hasattr(self, "_home_activity_title"):
+            self._home_activity_title.setText(t("home.activity_title"))
+        self._refresh_home_activity()
         if hasattr(self, "_home_links_hint"):
             self._home_links_hint.setText(t("app.home_links_hint"))
         if hasattr(self, "_home_github_btn"):
@@ -5679,6 +5559,11 @@ class RezeptorWindow(QMainWindow):
             self._progress_live_label.setText(t("progress.live"))
         if hasattr(self, "raw_log"):
             self.raw_log.setPlaceholderText(t("progress.live_placeholder"))
+        if getattr(self, "_activity_empty_shown", False):
+            self._show_activity_empty_hint()
+            if hasattr(self, "step_label") and not self._busy:
+                self.step_label.setText(t("status.no_process"))
+                self.step_label.setStyleSheet("")
         if hasattr(self, "_logs_file_label"):
             self._logs_file_label.setText(t("logs.label"))
         if hasattr(self, "_logs_refresh_btn"):
@@ -5783,85 +5668,10 @@ class RezeptorWindow(QMainWindow):
         return dict(extra)
 
     def _prepare_install_env(self, extra: dict[str, str]) -> bool:
-        """Archiv-Passwort-Tempdateien für den Install-Lauf nachziehen."""
-        archive = (extra.get("RECIPE_ARCHIVE_PATH") or "").strip()
-        if not archive:
-            return True
-        path = Path(archive)
-        passwords = ensure_archive_passwords(self, path)
-        if passwords is None:
-            return False
-        attach_archive_password_files(extra, passwords)
-        return True
+        return self._ops._prepare_install_env(extra)
 
     def run_install(self) -> None:
-        rd = self._require_trusted_recipe()
-        if rd is None:
-            return
-        install = rd / "install.sh"
-        if not install.is_file():
-            QMessageBox.critical(self, t("dialog.missing"), str(install))
-            return
-
-        meta = self._selected.meta
-        rid = self._selected.rid
-        extra: dict[str, str] = {}
-
-        if needs_source_dialog(meta):
-            pending = load_recipe_install_env(self._settings, rid)
-            if not has_recipe_install_source(pending):
-                # Install-CTA: Quelle wählen, dann direkt weiterinstallieren.
-                saved = self._prompt_and_save_source()
-                if not saved:
-                    return
-                extra = dict(saved)
-            else:
-                extra = dict(pending or {})
-            if not self._prepare_install_env(extra):
-                return
-
-        info = recipe_info_text(rid, rd)
-        name = meta.get("name", rid)
-        if self._selected.state == RecipeState.INSTALLED:
-            if QMessageBox.question(
-                self,
-                t("dialog.install_title"),
-                t("dialog.install_reconfirm", name=name),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            ) != QMessageBox.StandardButton.Yes:
-                return
-        else:
-            html = format_recipe_info_html(
-                info,
-                theme=getattr(self, "_theme", "dark"),
-                author=(meta.get("author") or ""),
-            )
-            dlg = InfoConfirmDialog(
-                self,
-                title=t("dialog.install_title"),
-                html=html,
-                question=t("dialog.install_question"),
-            )
-            if dlg.exec() != QDialog.DialogCode.Accepted:
-                return
-
-        self._maybe_wine_dialog_hint("install")
-        is_reinstall = self._selected.state == RecipeState.INSTALLED
-        label = t("action.reinstall") if is_reinstall else t("action.install")
-        op = "reinstall" if is_reinstall else "install"
-
-        def _after_ok() -> None:
-            clear_recipe_install_env(self._settings, rid)
-            self._offer_desktop_shortcuts(label)
-
-        self._run_async(
-            install,
-            extra,
-            label,
-            on_success=_after_ok,
-            op=op,
-            recipe_dir=rd,
-        )
+        return self._ops.run_install()
 
     def run_source_configure(self) -> None:
         """Nur Quelle/Ziel speichern — startet keine Installation."""
@@ -5873,407 +5683,42 @@ class RezeptorWindow(QMainWindow):
         self._prompt_and_save_source(title_key="dialog.source_title")
 
     def run_genp_from_pack(self) -> None:
-        """GenP/Cure-GUI aus dem Pack unter Proton (m0nkrus, Acrobat, …)."""
-        rd = self._require_trusted_recipe()
-        if rd is None or not self._selected:
-            return
-        script = rd / "genp.sh"
-        if not script.is_file():
-            QMessageBox.warning(self, t("dialog.missing"), str(script))
-            return
-        if self._selected.state == RecipeState.NOT_INSTALLED:
-            QMessageBox.warning(
-                self, t("dialog.not_installed_title"), t("dialog.install_first")
-            )
-            return
-        if QMessageBox.question(
-            self,
-            t("dialog.genp_title"),
-            t("dialog.genp_body"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        ) != QMessageBox.StandardButton.Yes:
-            return
-        wine_path = self._genp_target_wine_path()
-        if wine_path:
-            clip = QApplication.clipboard()
-            if clip is not None:
-                clip.setText(wine_path)
-            self._activity("info", t("status.genp_path_clipboard", path=wine_path))
-        self._run_async(
-            script,
-            None,
-            t("status.genp_done"),
-            op="genp",
-            recipe_dir=rd,
-        )
+        return self._ops.run_genp_from_pack()
 
     def _genp_target_wine_path(self) -> str:
-        """Wine-Pfad für GenP-Dateidialog (Zwischenablage — GenP setzt InitialDir selbst)."""
-        if not self._selected:
-            return ""
-        rid = self._selected.rid
-        dr = resolve_data_root(self._selected.meta, rid)
-        prefix = dr / "prefix"
-        for rel in (
-            "drive_c/Program Files/Adobe/Adobe Photoshop 2021/Photoshop.exe",
-            "drive_c/Program Files (x86)/Adobe/Adobe Photoshop 2021/Photoshop.exe",
-        ):
-            if (prefix / rel).is_file():
-                return "C:\\" + rel[len("drive_c/") :].replace("/", "\\")
-        return (
-            "C:\\Program Files\\Adobe\\Adobe Photoshop 2021\\Photoshop.exe"
-        )
+        return self._ops._genp_target_wine_path()
 
     def run_repair(self) -> None:
-        rd = self._require_trusted_recipe()
-        if rd is None:
-            return
-        repair = rd / "repair.sh"
-        if not repair.is_file():
-            QMessageBox.warning(self, t("dialog.missing"), t("dialog.no_repair"))
-            return
-        if self._selected.state == RecipeState.NOT_INSTALLED:
-            QMessageBox.warning(
-                self, t("dialog.not_installed_title"), t("dialog.install_first")
-            )
-            return
-        if QMessageBox.question(
-            self,
-            t("dialog.repair_title"),
-            self._repair_message(self._selected.rid),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        ) != QMessageBox.StandardButton.Yes:
-            return
-        self._maybe_wine_dialog_hint("repair")
-        self._run_async(repair, done_label=t("action.repair"))
+        return self._ops.run_repair()
 
     def run_update(self) -> None:
-        """Mehr → Update anwenden — nur Update-Quelle, kein Reinstall."""
-        rd = self._require_trusted_recipe()
-        if rd is None or not self._selected:
-            return
-        meta = self._selected.meta
-        if not recipe_supports_update(meta):
-            return
-        update_script = rd / (meta.get("update") or "update.sh")
-        if not update_script.is_file():
-            QMessageBox.warning(self, t("dialog.missing"), str(update_script))
-            return
-        if self._selected.state == RecipeState.NOT_INSTALLED:
-            QMessageBox.warning(
-                self, t("dialog.not_installed_title"), t("dialog.install_first")
-            )
-            return
-        dlg = UpdateSourceDialog(
-            self,
-            rid=self._selected.rid,
-            meta=meta,
-            root=Path.home(),
-            title=t("dialog.update_title"),
-        )
-        apply_tool_window(dlg, icon=self.windowIcon(), modal=True)
-        if dlg.exec() != QDialog.DialogCode.Accepted:
-            return
-        extra = dlg.build_env()
-        if not extra.get("RECIPE_UPDATE_ROOT"):
-            return
-        if QMessageBox.question(
-            self,
-            t("dialog.update_title"),
-            t("dialog.update_body"),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        ) != QMessageBox.StandardButton.Yes:
-            return
-        self._maybe_wine_dialog_hint("install")
-        self._run_async(
-            update_script,
-            extra,
-            t("action.update"),
-            op="update",
-            recipe_dir=rd,
-        )
+        return self._ops.run_update()
 
     def run_relocate(self) -> None:
-        """Mehr → Ziel verschieben — DATA_ROOT inkl. Prefix umziehen."""
-        rd = self._require_trusted_recipe()
-        if rd is None or not self._selected:
-            return
-        if self._selected.state == RecipeState.NOT_INSTALLED:
-            QMessageBox.warning(
-                self, t("dialog.not_installed_title"), t("dialog.install_first")
-            )
-            return
-        if recipe_process_running(self._selected.rid, self._selected.meta):
-            QMessageBox.warning(
-                self, t("dialog.relocate_title"), t("dialog.relocate_running")
-            )
-            return
-        old = resolve_data_root(self._selected.meta, self._selected.rid)
-        if not old.is_dir():
-            QMessageBox.warning(
-                self, t("dialog.relocate_title"), t("dialog.relocate_need_target")
-            )
-            return
-        new = pick_directory(
-            self,
-            t("dialog.relocate_pick"),
-            str(old.parent if old.parent.is_dir() else old),
-        )
-        if not new:
-            return
-        new_p = Path(new)
-        try:
-            if old.resolve() == new_p.resolve():
-                QMessageBox.information(
-                    self, t("dialog.relocate_title"), t("dialog.relocate_same")
-                )
-                return
-        except OSError:
-            pass
-        name = self._selected.meta.get("name", self._selected.rid)
-        if QMessageBox.question(
-            self,
-            t("dialog.relocate_title"),
-            t("dialog.relocate_body", name=name, old=str(old), new=str(new_p)),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        ) != QMessageBox.StandardButton.Yes:
-            return
-        script = ROOT / "scripts" / "recipe-relocate.sh"
-        if not script.is_file():
-            QMessageBox.warning(self, t("dialog.missing"), str(script))
-            return
-
-        def _after_ok() -> None:
-            self.refresh_statuses()
-            self._activity("ok", t("dialog.relocate_title") + f": {new_p}")
-            QMessageBox.information(
-                self,
-                t("dialog.relocate_title"),
-                t("status.done_body", label=t("action.relocate")),
-            )
-
-        self._run_async(
-            script,
-            {
-                "RECIPE_RELOCATE_TO": str(new_p),
-                "RECIPE_DIR": str(rd),
-            },
-            t("action.relocate"),
-            op="relocate",
-            recipe_dir=rd,
-            script_args=[str(rd)],
-            on_success=_after_ok,
-        )
+        return self._ops.run_relocate()
 
     def _repair_message(self, rid: str) -> str:
-        if rid == "wiso-steuer":
-            return t("dialog.repair_wiso")
-        return t("dialog.repair_default")
+        return self._ops._repair_message(rid)
 
     def _spawn_detached(self, cmd: list[str], env: dict[str, str]) -> Path:
-        rid = env.get("RECIPE_ID", "app")
-        log_path = LOG_ROOT / f"launch_{rid}_{self.session_id[:8]}.log"
-        LOG_ROOT.mkdir(parents=True, exist_ok=True)
-        try:
-            os.chmod(LOG_ROOT, 0o700)
-        except OSError:
-            pass
-        log_f = open(log_path, "a", encoding="utf-8")  # noqa: SIM115
-        try:
-            os.chmod(log_path, 0o600)
-        except OSError:
-            pass
-        log_f.write(f"\n--- {rid} launch ---\n")
-        log_f.flush()
-        subprocess.Popen(
-            cmd,
-            cwd=str(ROOT),
-            env=env,
-            start_new_session=True,
-            stdin=subprocess.DEVNULL,
-            stdout=log_f,
-            stderr=subprocess.STDOUT,
-        )
-        self._activity("info", f"Log: {log_path.name}")
-        return log_path
+        return self._ops._spawn_detached(cmd, env)
 
     def _check_launch_alive(
         self, rid: str, log_path: Path, attempt: int = 0
     ) -> None:
-        # launch.sh kann sofort abbrechen („Läuft bereits“) — Log prüfen.
-        try:
-            log_tail = log_path.read_text(encoding="utf-8", errors="replace")[-4000:]
-        except OSError:
-            log_tail = ""
-        if "Läuft bereits:" in log_tail:
-            name = self._selected.meta.get("name", rid) if self._selected else rid
-            self._activity(
-                "warn",
-                t("dialog.launch_already", name=name),
-            )
-            return
-        if "Hängende unsichtbare" in log_tail and attempt == 0:
-            self._activity("info", t("dialog.launch_hung"))
-        meta = self._selected.meta if self._selected else None
-        if not launch_process_patterns(rid, meta):
-            return
-        if recipe_process_running(rid, meta):
-            # „läuft“ / später „beendet“ meldet _refresh_running_indicators unter Vorgang.
-            self._launch_alive_reported = True
-            self._running_prev[rid] = True
-            return
-        # Photoshop/Premiere: Launch macht Prefs/Fonts vor wine — erster Start oft >20s.
-        # Halo via Steam Non-Steam: wait for client + proton/shaders (log line marks wait).
-        if rid == "halo-campaign-evolved" and "warte auf Halo unter Steam" in log_tail:
-            max_attempts = 100  # ~4 min @ 2.5s
-        elif rid.startswith("photoshop") or rid == "premiere" or rid == "halo-campaign-evolved":
-            max_attempts = 35
-        else:
-            max_attempts = 7
-        if (
-            "Steam-Client abgestürzt" in log_tail
-            or "Steam ist nicht hochgekommen" in log_tail
-            or "steam nicht installiert" in log_tail
-        ):
-            max_attempts = min(max_attempts, attempt)
-        if attempt < max_attempts:
-            QTimer.singleShot(
-                2500,
-                lambda: self._check_launch_alive(rid, log_path, attempt + 1),
-            )
-            return
-        name = self._selected.meta.get("name", rid) if self._selected else rid
-        tips = (
-            t("dialog.launch_tips_wiso")
-            if rid == "wiso-steuer"
-            else t("dialog.launch_tips_default")
-        )
-        QMessageBox.warning(
-            self,
-            t("status.app_not_running"),
-            t("dialog.launch_not_alive", name=name, log=log_path, tips=tips),
-        )
-        ev = LogEvent(
-            level="warn",
-            code=E_LAUNCH_NO_PROCESS,
-            message_key="error.E_LAUNCH_NO_PROCESS",
-            detail=log_path.name,
-            session_id=self.session_id,
-            recipe_id=rid,
-        )
-        self._activity("warn", ev.display_text())
-        self._switch_to_logs_tab()
-        self.populate_log_files()
+        return self._ops._check_launch_alive(rid, log_path, attempt)
 
     def run_launch(self) -> None:
-        rd = self._require_trusted_recipe()
-        if rd is None:
-            return
-        if self._selected and self._selected.version_warning:
-            if QMessageBox.warning(
-                self,
-                t("dialog.version_warn_title"),
-                t(
-                    "dialog.version_warn_body",
-                    warning=self._selected.version_warning,
-                ),
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            ) != QMessageBox.StandardButton.Yes:
-                return
-        env = self._base_env()
-        if self._selected and self._selected.rid == "wiso-steuer":
-            env.pop("WINE_DISABLE_WOW64", None)
-        meta = self._selected.meta
-        launch = rd / "launch.sh"
-        if not launch.is_file():
-            QMessageBox.warning(self, t("dialog.missing"), t("dialog.no_launch"))
-            return
-        log_path = self._spawn_detached(["bash", str(launch)], env)
-        self._switch_to_progress_tab()
-        self.activity_list.clear()
-        self.raw_log.clear()
-        self._launch_alive_reported = False
-        name = meta.get("name", self._selected.rid)
-        rid = self._selected.rid
-        self._watched_launch_rid = rid
-        self._running_prev[rid] = False
-        self.step_label.setText(t("status.starting", name=name))
-        self.step_label.setStyleSheet("")
-        self._activity("step", t("status.start_triggered", name=name))
-        self._activity("info", t("status.window_soon", name=name))
-        if launch_process_patterns(rid, meta):
-            QTimer.singleShot(
-                2500, lambda: self._check_launch_alive(rid, log_path, 0)
-            )
+        return self._ops.run_launch()
 
     def run_validate(self) -> None:
-        rd = self._require_trusted_recipe()
-        if rd is None:
-            return
-        v = rd / "validate.sh"
-        if v.is_file():
-            # No error dialog: FAIL lines belong in Vorgang (e.g. not installed → expected).
-            self._run_async(v, done_label=t("action.validate"), dialog=False)
+        return self._ops.run_validate()
 
     def run_kill(self) -> None:
-        rd = self._require_recipe()
-        if rd is None:
-            return
-        kill = rd / "kill.sh"
-        if not kill.is_file():
-            QMessageBox.warning(self, t("dialog.missing"), t("dialog.no_kill"))
-            return
-        name = self._selected.meta.get("name", self._selected.rid)
-        if QMessageBox.question(
-            self,
-            t("dialog.kill_title"),
-            t("dialog.kill_body", name=name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        ) != QMessageBox.StandardButton.Yes:
-            return
-        # kill.sh already cleans orphans — do not schedule cleanup-orphans.sh on stop.
-        self._skip_exit_cleanup.add(self._selected.rid)
-        self._switch_to_progress_tab()
-        self._run_async(kill, done_label=t("action.kill"), dialog=False)
+        return self._ops.run_kill()
 
     def run_uninstall(self) -> None:
-        rd = self._require_trusted_recipe()
-        if rd is None:
-            return
-        un = rd / "uninstall.sh"
-        if not un.is_file():
-            QMessageBox.warning(self, t("dialog.missing"), t("dialog.no_uninstall"))
-            return
-        if QMessageBox.question(
-            self,
-            t("dialog.uninstall_title"),
-            t(
-                "dialog.uninstall_confirm",
-                name=self._selected.meta.get("name", self._selected.rid),
-            ),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        ) != QMessageBox.StandardButton.Yes:
-            return
-        extra = {"PHOTOSHOP_UNINSTALL_YES": "1", "UNINSTALL_YES": "1"}
-        recipe_dir = rd
-
-        def _after_uninstall() -> None:
-            # Purge already removes shortcuts; re-run in GUI env (correct HOME/XDG).
-            if self._remove_desktop_shortcuts(recipe_dir):
-                self._activity("ok", t("dialog.shortcuts_removed"))
-            QMessageBox.information(
-                self,
-                t("status.done"),
-                t("status.done_body", label=t("action.uninstall")),
-            )
-
-        self._run_async(
-            un,
-            extra,
-            t("action.uninstall"),
-            on_success=_after_uninstall,
-        )
+        return self._ops.run_uninstall()
 
 
 def main() -> int:

@@ -17,7 +17,8 @@ Abhängigkeiten beim **Git-Clone / tar.gz / `./setup.sh`**: **PyQt6** auf dem Ho
 
 | Datei | Rolle |
 |-------|--------|
-| `launcher.py` | Hauptfenster, QProcess-Hooks, Activity, Updates |
+| `launcher.py` | Hauptfenster, Menüs/Tabs, Activity-UI, Updates; Delegates an `_ops` |
+| `recipe_process.py` | `RecipeProcessOps` — QProcess-Orchestrierung (Install/Repair/…/Launch) |
 | `recipe_discovery.py` | `RecipeInfo` / Discover / YAML-Metadaten |
 | `ARCHITECTURE-LAUNCHER.md` | Prozess-/Trust-/Secrets-Modell |
 | `ui_fluent.py` | Fluent `Theme.DARK` + Kupfer `#B87333` |
@@ -38,7 +39,7 @@ Abhängigkeiten beim **Git-Clone / tar.gz / `./setup.sh`**: **PyQt6** auf dem Ho
 
 ## UI-Konventionen
 
-- Sidebar **fix 240 px**, Primary-CTA + **Mehr ▾**, Segment-Tabs
+- Sidebar **fix 268 px**, Primary-CTA + **Mehr ▾**, Segment-Tabs
 - Immer Fluent Dark + Kupfer — kein System-Light-Hybrid, kein PyQtDarkTheme
 - Fluent-Widgets nicht mit Host-QSS „übermalen“
 - Optik-Änderungen (Farben, Radien, Scrollbars) nur mit expliziter Freigabe

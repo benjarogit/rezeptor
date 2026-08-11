@@ -10,6 +10,8 @@ category: "Spiele"
 origin: official
 version_guaranteed: "Steam + OnlineFix (anpassen)"
 version_label: "Steam game — BYOS + Online-Fix"
+# Optional: last deliberate healing check (YYYY-MM-DD). Update when version/pin changes.
+tested_on: "2026-01-01"
 version_detect:
   - kind: stack
     identity_file: "Game.exe"

@@ -10,7 +10,6 @@ recipe_hooks::load repair
 recipe_hooks::_source recipe-vcrun.sh
 
 recipe_hooks::log_setup "WISO_Repair"
-log_err() { recipe_hooks::log_err "$@"; }
 
 export WINEARCH=win64
 
@@ -51,7 +50,7 @@ else
     output::info "Abweichungen gefunden — behebe fehlende Komponenten"
 fi
 
-wine_runtime::init || { log_err "Proton-GE init failed"; exit 1; }
+wine_runtime::init || { recipe_hooks::log_err "Proton-GE init failed"; exit 1; }
 wine_runtime::export_env
 
 output::progress_tick "Launcher & Grafik"
@@ -63,7 +62,7 @@ output::step "Wine-Grafik (wined3d statt DXVK für Qt/WebEngine)"
 if recipe_wiso::restore_wined3d_prefix >> "$LOG_FILE" 2>&1; then
     output::success "wined3d wiederhergestellt (DXVK für WISO deaktiviert)"
 else
-    log_err "wined3d-Wiederherstellung fehlgeschlagen — $LOG_FILE"
+    recipe_hooks::log_err "wined3d-Wiederherstellung fehlgeschlagen — $LOG_FILE"
     exit 1
 fi
 recipe_wiso::ensure_graphics_x11 "$WINE" >> "$LOG_FILE" 2>&1 || true
@@ -103,7 +102,7 @@ if ! recipe_validate::prefix_initialized "$WINEPREFIX"; then
 fi
 
 output::step "Prefix prüfen"
-recipe_prefix::ensure "$WINEPREFIX" || { log_err "Prefix nicht bereit"; exit 1; }
+recipe_prefix::ensure "$WINEPREFIX" || { recipe_hooks::log_err "Prefix nicht bereit"; exit 1; }
 recipe_winetricks::stabilize_prefix
 output::success "Prefix bereit"
 
@@ -126,7 +125,7 @@ _wt_if_missing() {
         fixed=1
         return 0
     fi
-    log_err "winetricks $* fehlgeschlagen — $wt_log"
+    recipe_hooks::log_err "winetricks $* fehlgeschlagen — $wt_log"
     return 1
 }
 
@@ -139,7 +138,7 @@ if [ "$_font_n" -lt 5 ]; then
         output::success "Schriften installiert"
         fixed=1
     else
-        log_err "Schriften fehlgeschlagen — $wt_fonts"
+        recipe_hooks::log_err "Schriften fehlgeschlagen — $wt_fonts"
         _wt_ok=1
     fi
 fi
@@ -151,7 +150,7 @@ if ! recipe_validate::vcrun_dll_ok "$wow64/msvcp140.dll" \
         output::success "vcrun2019 installiert"
         fixed=1
     else
-        log_err "vcrun2019 fehlgeschlagen"
+        recipe_hooks::log_err "vcrun2019 fehlgeschlagen"
         _wt_ok=1
     fi
 fi
@@ -164,7 +163,7 @@ if ! recipe_validate::native_pe "$wow64/gdiplus.dll" \
         output::success "gdiplus (native) installiert"
         fixed=1
     else
-        log_err "gdiplus fehlgeschlagen"
+        recipe_hooks::log_err "gdiplus fehlgeschlagen"
         _wt_ok=1
     fi
 fi
@@ -183,7 +182,7 @@ if ! recipe_validate::windows_version "$WINEPREFIX" "win10"; then
         output::success "win10 gesetzt"
         fixed=1
     else
-        log_err "win10 Registry fehlgeschlagen"
+        recipe_hooks::log_err "win10 Registry fehlgeschlagen"
         _wt_ok=1
     fi
 fi
@@ -194,7 +193,7 @@ if ! recipe_dotnet::installed; then
         output::success "dotnet48 installiert"
         fixed=1
     else
-        log_err "dotnet48 fehlgeschlagen — $LOG_DIR/winetricks_dotnet48_${TIMESTAMP_ISO}.log"
+        recipe_hooks::log_err "dotnet48 fehlgeschlagen — $LOG_DIR/winetricks_dotnet48_${TIMESTAMP_ISO}.log"
         _wt_ok=1
     fi
 fi
@@ -222,7 +221,7 @@ if [ -n "$_wiso_portable" ] && [ -d "$_wiso_portable" ]; then
             fixed=1
         else
             output::step "Qt-Startfix (qnetworklistmanager.dll)"
-            log_err "qnetworklistmanager.dll nicht umbenennbar — $_sw_dir/networkinformation/"
+            recipe_hooks::log_err "qnetworklistmanager.dll nicht umbenennbar — $_sw_dir/networkinformation/"
             _wt_ok=1
         fi
         cp -f "$RECIPE_DIR/assets/wiso-mit-wine.sh" "$_wiso_portable/wiso-mit-wine.sh" 2>/dev/null || true

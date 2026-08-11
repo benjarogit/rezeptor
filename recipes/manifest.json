@@ -4,7 +4,7 @@
       "files": {
         "assets/ensure_steam_nonsteam.py": "sha256:fc6c9ec9d514b12267444699f94b57b9cfcb216d1899df133f28b4b4beb5bae7",
         "assets/ghidra-login-trace.md": "sha256:e36f0abb8b5266ab49f791601ee55a5b68e130bee2c3fbb4a5c991f98c1068ae",
-        "assets/halo-analyse-leitfaden.md": "sha256:eeccc7ee458ea5980761f67f3d9abccd8650103cbe2fb9e8640cc7dce651e654",
+        "assets/halo-analyse-leitfaden.md": "sha256:9eb36f3fa75280cdca9dfd80b25b8aea3c5f02c8e189021a8d92f9ec2702aae1",
         "assets/login-patch-inventory.md": "sha256:95c3ea2192e9fa39183f92f6e8bec7b119d53ac92ba58e67fb3cf372dd4b0223",
         "assets/prepare-ghidra.sh": "sha256:6aab08dc73b067fe1aa5ac7bb8be10ab296d75b7075528202a691969927f83a2",
         "assets/skip-intro-LogoParade.mp4": "sha256:53122b321ad79f7c82f844b7c72883c8ba370527b51f896ce08c4ad4ebaf3f37",
@@ -104,7 +104,7 @@
         "kill.sh": "sha256:45cd86774ab92681a70cc7069460e96d54baec3567292f8073ce571350a06ef8",
         "launch.sh": "sha256:2fc1b57e79f5c1aeac3962920a43d197281df4976bee361b585303994c713414",
         "recipe.yml": "sha256:1effc98866a8e37959216d94c318145f3e2dee8da307ddc1956a27ae3cf52486",
-        "repair.sh": "sha256:b33937ad49655bd63835cb492a9bcb650fb4d96052aa317a54a9d8a7b36e44b3",
+        "repair.sh": "sha256:e30916e5f7aba290da09c91fe1c3fc2ff977d2e11f232b31968ba814c18c5381",
         "uninstall.sh": "sha256:81327d97a234ad2b34ab7ff6d9e56f8e163feed1739a89ebb70f417e22f8e793",
         "validate.sh": "sha256:db5bf9235de2713625f1667048d35516b9202109e344debf42500c5f52a2965c"
       }

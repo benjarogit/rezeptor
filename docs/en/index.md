@@ -156,8 +156,9 @@ See [BRAND.md](BRAND.md).
 | Brand | [BRAND.md](BRAND.md) |
 
 ```bash
-make validate                 # shellcheck, syntax, recipe-lint, manifest
+make validate                 # shellcheck, syntax, compile, i18n-check, ruff, recipes-check, recipe-lint, manifest
 make test                     # bats
+make pytest                   # launcher unit tests under tests/*.py (needs pytest + PyQt6)
 ```
 
 !!! success "Preview the site locally"

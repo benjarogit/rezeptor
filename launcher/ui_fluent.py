@@ -21,8 +21,6 @@ from ui_styles import (
     get_host_stylesheet,
 )
 
-ACCENT = ACCENT_COPPER
-
 FLUENT_AVAILABLE = False
 Pivot = None  # type: ignore[misc, assignment]
 IconWidget = None  # type: ignore[misc, assignment]
@@ -175,15 +173,4 @@ def apply_rezeptor_theme() -> str:
             # Theme persistence must never block launch on immutable media.
             print(f"rezeptor: fluent theme skipped ({exc})", file=sys.stderr)
 
-    return get_host_stylesheet()
-
-
-# Aliase
-ignore_system_light_theme = apply_rezeptor_theme
-enforce_standard_design = apply_rezeptor_theme
-apply_app_theme = apply_rezeptor_theme
-
-
-def app_stylesheet() -> str:
-    """Host-QSS (Fluent Dark Surfaces + Brand). Immer — auch mit Fluent."""
     return get_host_stylesheet()
