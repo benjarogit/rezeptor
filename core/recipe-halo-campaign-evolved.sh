@@ -1909,6 +1909,8 @@ recipe_halo_campaign_evolved::ensure_game_visible_at_data_root() {
         recipe_hooks::state_set GAME_ROOT "$root"
     fi
     export GAME_ROOT="$root"
+    # Match recipe.yml app_link_name when RECIPE_YML is not loaded yet.
+    export APP_LINK_NAME="${APP_LINK_NAME:-HaloCampaignEvolved}"
     if type recipe_app_link::ensure >/dev/null 2>&1; then
         recipe_app_link::ensure || true
         return 0

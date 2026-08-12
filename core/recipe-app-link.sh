@@ -77,7 +77,10 @@ recipe_app_link::resolve_target() {
 
 recipe_app_link::link_name() {
     local raw="" name
-    if [ -n "${RECIPE_YML:-}" ] && [ -f "$RECIPE_YML" ] && type recipe_get >/dev/null 2>&1; then
+    # Explicit override (Halo unit tests / early hooks without recipe.yml loaded).
+    if [ -n "${APP_LINK_NAME:-}" ]; then
+        raw="$APP_LINK_NAME"
+    elif [ -n "${RECIPE_YML:-}" ] && [ -f "$RECIPE_YML" ] && type recipe_get >/dev/null 2>&1; then
         raw="$(recipe_get "$RECIPE_YML" app_link_name 2>/dev/null || true)"
     fi
     if [ -z "$raw" ]; then
