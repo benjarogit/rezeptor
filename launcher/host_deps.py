@@ -43,6 +43,57 @@ def _i386_loader_present() -> bool:
     return False
 
 
+def _i386_lib_dirs() -> list[Path]:
+    """Directories where 32-bit shared libs usually live."""
+    return [
+        Path("/usr/lib32"),
+        Path("/lib32"),
+        Path("/usr/lib/i386-linux-gnu"),
+        Path("/lib/i386-linux-gnu"),
+        Path("/usr/lib/i686-linux-gnu"),
+        Path("/lib/i686-linux-gnu"),
+    ]
+
+
+def _i386_soname_present(name: str) -> bool:
+    """True if lib{name}.so* exists in a 32-bit library directory (issue #11)."""
+    pattern = f"lib{name}.so*"
+    for base in _i386_lib_dirs():
+        try:
+            if any(base.glob(pattern)):
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def recipe_needs_host_wow64(meta: dict[str, str] | None) -> bool:
+    """True when install/winetricks will exercise 32-bit Wine (syswow64)."""
+    if not meta:
+        return False
+    runtime = (meta.get("runtime") or "").strip().lower()
+    if runtime in ("steam", "steam-proton"):
+        return False
+    if meta.get("steam_appid"):
+        return False
+    if runtime not in ("proton-ge", "proton", "wine", "system", ""):
+        # Empty runtime still often uses Proton via defaults — treat offline installers.
+        if runtime:
+            return False
+    install_type = (meta.get("install_type") or "").strip().lower()
+    if install_type in (
+        "installer_offline",
+        "installer",
+        "archive",
+        "adobe_offline",
+    ):
+        return True
+    tricks = meta.get("winetricks")
+    if tricks:
+        return True
+    return False
+
+
 def _soname_present(name: str) -> bool:
     """True if lib{name}.so* is loadable (ldconfig / ctypes / LD_LIBRARY_PATH)."""
     if ctypes.util.find_library(name):
@@ -118,6 +169,8 @@ def _packages_for(family: str, dep_id: str) -> tuple[str, ...]:
             "qt_xcb_cursor": ("libxcb-cursor",),
             # 32-bit dynamic linker for Wine syswow64 (needs [multilib] enabled)
             "wine_i386": ("lib32-glibc",),
+            "wine_i386_freetype": ("lib32-freetype2",),
+            "wine_i386_gcc": ("lib32-gcc-libs",),
         },
         "apt": {
             "download": ("curl",),
@@ -127,6 +180,8 @@ def _packages_for(family: str, dep_id: str) -> tuple[str, ...]:
             "winetricks": ("winetricks",),
             "qt_xcb_cursor": ("libxcb-cursor0",),
             "wine_i386": ("libc6-i386",),
+            "wine_i386_freetype": ("libfreetype6:i386",),
+            "wine_i386_gcc": ("libgcc-s1:i386",),
         },
         "dnf": {
             "download": ("curl",),
@@ -136,6 +191,8 @@ def _packages_for(family: str, dep_id: str) -> tuple[str, ...]:
             "winetricks": ("winetricks",),
             "qt_xcb_cursor": ("libxcb-cursor",),
             "wine_i386": ("glibc.i686",),
+            "wine_i386_freetype": ("freetype.i686",),
+            "wine_i386_gcc": ("libgcc.i686",),
         },
         "zypper": {
             "download": ("curl",),
@@ -145,6 +202,8 @@ def _packages_for(family: str, dep_id: str) -> tuple[str, ...]:
             "winetricks": ("winetricks",),
             "qt_xcb_cursor": ("libxcb-cursor0",),
             "wine_i386": ("glibc-32bit",),
+            "wine_i386_freetype": ("libfreetype6-32bit",),
+            "wine_i386_gcc": ("libgcc_s1-32bit",),
         },
     }
     fam = table.get(family) or table["pacman"]
@@ -165,6 +224,9 @@ def scan_host_deps() -> list[HostDep]:
     # Flatpak ships its own i386 runtime; native hosts need multilib for Photoshop WoW64.
     if not _in_flatpak():
         checks.append(("wine_i386", True, _i386_loader_present()))
+        # Loader alone is not enough (issue #11): IE8 / Adobe Setup need FreeType + libgcc.
+        checks.append(("wine_i386_freetype", True, _i386_soname_present("freetype")))
+        checks.append(("wine_i386_gcc", True, _i386_soname_present("gcc_s")))
     out: list[HostDep] = []
     for dep_id, required, present in checks:
         out.append(
@@ -183,8 +245,22 @@ def missing_deps(deps: list[HostDep] | None = None) -> list[HostDep]:
     return [d for d in items if not d.present]
 
 
+def missing_required_deps(deps: list[HostDep] | None = None) -> list[HostDep]:
+    return [d for d in missing_deps(deps) if d.required]
+
+
+def missing_wow64_deps(deps: list[HostDep] | None = None) -> list[HostDep]:
+    """Required 32-bit Wine host gaps (loader + common Adobe/winetricks libs)."""
+    wow64_ids = frozenset({"wine_i386", "wine_i386_freetype", "wine_i386_gcc"})
+    return [d for d in missing_required_deps(deps) if d.id in wow64_ids]
+
+
 def has_gaps(deps: list[HostDep] | None = None) -> bool:
     return bool(missing_deps(deps))
+
+
+def has_required_gaps(deps: list[HostDep] | None = None) -> bool:
+    return bool(missing_required_deps(deps))
 
 
 def install_command(missing: list[HostDep]) -> str:

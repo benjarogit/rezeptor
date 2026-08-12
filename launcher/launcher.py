@@ -130,7 +130,12 @@ from ui_rezeptor import (
     StatusPill,
     STATE_DOT,
 )
-from host_deps import has_gaps
+from host_deps import (
+    has_gaps,
+    has_required_gaps,
+    missing_wow64_deps,
+    recipe_needs_host_wow64,
+)
 from settings import (
     clear_recipe_install_env,
     has_recipe_install_source,
@@ -212,7 +217,7 @@ from ui_icons import (
     fa_icon,
     rounded_pixmap,
 )
-from ui_dialogs import apply_fa_message_icon
+from ui_dialogs import apply_fa_message_icon, show_warning
 from ui_medizin import MedizinDialog
 from ui_progress import WaitingSpinner
 from ui_window import (
@@ -5281,14 +5286,31 @@ class RezeptorWindow(QMainWindow):
         self._maybe_startup_validate()
 
     def _maybe_host_deps_first_run(self) -> None:
-        if self._settings.host_deps_prompt_done:
-            return
-        if not has_gaps():
+        # Re-prompt whenever required packages are missing (issue #11 follow-up),
+        # not only on the very first launch.
+        if has_required_gaps():
+            dlg = HostDepsDialog(self, first_run=not self._settings.host_deps_prompt_done)
+            dlg.exec()
             mark_host_deps_prompt_done(self._settings)
             return
-        dlg = HostDepsDialog(self, first_run=True)
+        if not self._settings.host_deps_prompt_done:
+            if has_gaps():
+                dlg = HostDepsDialog(self, first_run=True)
+                dlg.exec()
+            mark_host_deps_prompt_done(self._settings)
+
+    def ensure_host_wow64_for_install(self, meta: dict[str, str]) -> bool:
+        """Show system check and block install when WoW64 host libs are missing."""
+        if not recipe_needs_host_wow64(meta):
+            return True
+        if not missing_wow64_deps():
+            return True
+        dlg = HostDepsDialog(self, block_install=True)
         dlg.exec()
-        mark_host_deps_prompt_done(self._settings)
+        if missing_wow64_deps():
+            show_warning(self, t("deps.title"), t("deps.block_install"))
+            return False
+        return True
 
     def _maybe_startup_validate(self) -> None:
         """Hinweisdialog + optionale validate.sh-Runde beim Start."""

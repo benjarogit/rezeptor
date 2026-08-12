@@ -5,6 +5,15 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.41] - 2026-08-12
+
+### Added
+- System check: detect 32-bit FreeType and libgcc (Arch `lib32-freetype2` / `lib32-gcc-libs` and equivalents) needed for Adobe Setup / IE8 under Wine ([#11](https://github.com/benjarogit/rezeptor/issues/11))
+
+### Changed
+- System check re-opens when required packages are still missing (not only on first launch)
+- Install/Repair for WoW64 recipes (e.g. Photoshop) is blocked until required 32-bit host libraries are present; user can install via pkexec or copy the command
+
 ## [1.1.40] - 2026-08-12
 
 ### Fixed

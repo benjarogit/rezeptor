@@ -27,6 +27,15 @@ def test_packages_wine_i386_per_family() -> None:
     assert host_deps._packages_for("zypper", "wine_i386") == ("glibc-32bit",)
 
 
+def test_packages_wine_i386_freetype_gcc_per_family() -> None:
+    assert host_deps._packages_for("pacman", "wine_i386_freetype") == ("lib32-freetype2",)
+    assert host_deps._packages_for("pacman", "wine_i386_gcc") == ("lib32-gcc-libs",)
+    assert host_deps._packages_for("apt", "wine_i386_freetype") == ("libfreetype6:i386",)
+    assert host_deps._packages_for("apt", "wine_i386_gcc") == ("libgcc-s1:i386",)
+    assert host_deps._packages_for("dnf", "wine_i386_freetype") == ("freetype.i686",)
+    assert host_deps._packages_for("dnf", "wine_i386_gcc") == ("libgcc.i686",)
+
+
 def test_install_command_includes_qt_when_missing() -> None:
     missing = [
         host_deps.HostDep(
@@ -71,22 +80,57 @@ def test_scan_includes_wine_i386_outside_flatpak() -> None:
         deps = host_deps.scan_host_deps()
     ids = [d.id for d in deps]
     assert "wine_i386" in ids
-    dep = next(d for d in deps if d.id == "wine_i386")
-    assert dep.required is True
+    assert "wine_i386_freetype" in ids
+    assert "wine_i386_gcc" in ids
+    for dep_id in ("wine_i386", "wine_i386_freetype", "wine_i386_gcc"):
+        dep = next(d for d in deps if d.id == dep_id)
+        assert dep.required is True
 
 
 def test_scan_skips_wine_i386_in_flatpak() -> None:
     with mock.patch.object(host_deps, "_in_flatpak", return_value=True):
         deps = host_deps.scan_host_deps()
-    assert "wine_i386" not in [d.id for d in deps]
+    ids = [d.id for d in deps]
+    assert "wine_i386" not in ids
+    assert "wine_i386_freetype" not in ids
+    assert "wine_i386_gcc" not in ids
+
+
+def test_recipe_needs_host_wow64() -> None:
+    assert host_deps.recipe_needs_host_wow64(
+        {"runtime": "proton-ge", "install_type": "installer_offline"}
+    )
+    assert host_deps.recipe_needs_host_wow64(
+        {"runtime": "proton-ge", "winetricks": "corefonts"}
+    )
+    assert not host_deps.recipe_needs_host_wow64(
+        {"runtime": "steam", "install_type": "installer_offline"}
+    )
+    assert not host_deps.recipe_needs_host_wow64(
+        {"runtime": "proton-ge", "install_type": "portable_launch"}
+    )
+
+
+def test_missing_wow64_deps_filters() -> None:
+    deps = [
+        host_deps.HostDep("download", True, True, ()),
+        host_deps.HostDep("wine_i386", True, False, ("lib32-glibc",)),
+        host_deps.HostDep("wine_i386_freetype", True, False, ("lib32-freetype2",)),
+        host_deps.HostDep("sevenzip", False, False, ("p7zip",)),
+    ]
+    wow = host_deps.missing_wow64_deps(deps)
+    assert [d.id for d in wow] == ["wine_i386", "wine_i386_freetype"]
 
 
 if __name__ == "__main__":
     test_packages_qt_xcb_cursor_per_family()
     test_packages_wine_i386_per_family()
+    test_packages_wine_i386_freetype_gcc_per_family()
     test_install_command_includes_qt_when_missing()
     test_zypper_install_argv()
     test_scan_includes_qt_xcb_cursor()
     test_scan_includes_wine_i386_outside_flatpak()
     test_scan_skips_wine_i386_in_flatpak()
+    test_recipe_needs_host_wow64()
+    test_missing_wow64_deps_filters()
     print("OK")

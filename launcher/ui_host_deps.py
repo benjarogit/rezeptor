@@ -34,15 +34,22 @@ class HostDepsDialog(QDialog):
         parent: QWidget | None,
         *,
         first_run: bool = False,
+        block_install: bool = False,
     ) -> None:
         super().__init__(parent)
         self._first_run = first_run
+        self._block_install = block_install
         self.setWindowTitle(t("deps.title"))
         self.resize(520, 360)
         self.setMinimumSize(400, 280)
 
         layout = QVBoxLayout(self)
-        intro_key = "deps.intro_first" if first_run else "deps.intro"
+        if block_install:
+            intro_key = "deps.intro_block"
+        elif first_run:
+            intro_key = "deps.intro_first"
+        else:
+            intro_key = "deps.intro"
         intro = QLabel(t(intro_key))
         intro.setWordWrap(True)
         intro.setObjectName("muted")
