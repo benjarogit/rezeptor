@@ -13,8 +13,8 @@
         "install.sh": "sha256:4d27d8dd9d320e03299af597fe25e0fc21cc9e393b46c6bb5d6c589fd55be7b0",
         "kill.sh": "sha256:3ff16b971e80224bec2641e94afd7773613f0a910f453e7732c1c44e1b808271",
         "launch.sh": "sha256:2ab8902bb32c0be68103851a7902de6cb73199014c5e7761261845be27492457",
-        "recipe.yml": "sha256:96ec45cffeaad0de76fb296e8a7a9f6c752a87e851fbd94d57c28cd2dfa10d1f",
-        "repair.sh": "sha256:60300b0ecb134c0cb9b900749b73e1476a6737c6a9f662f7ec24d9201a4bb5b7",
+        "recipe.yml": "sha256:7af0e4c0d827ff466284e09b91964f9aa16ac4d0a02747953d798d8d12012a3c",
+        "repair.sh": "sha256:1d08e9d6a4bcb066f625acbd60eb21a9299ec14c49e781c9aa339e9449cd5b8d",
         "uninstall.sh": "sha256:03ac3e58d2b7c4392c13facfa079b84b5f9bb4bed8d3748fa96abdaa302b3c93",
         "update.sh": "sha256:b80b3d149964934e1437a48cd4873d1ccb4c1726ea4b311d76f4d7c398a5f32a",
         "validate.sh": "sha256:16159ad9d9c52e3e00b1356e8e301b57924b784979c601a96c4b2f4b5998f0b3"

@@ -603,6 +603,20 @@ wine_runtime::deploy_proton_graphics_dlls() {
             cp -f "$dxvk32/$dll" "$wow64/$dll" 2>/dev/null || err=1
         fi
     done
+
+    # vkd3d-proton D3D12 (Halo/UE5). default_pfx often symlinks Wine builtins — copy from
+    # files/lib/wine/vkd3d-proton/ only, never from x86_64-windows Wine stubs.
+    local vk64="$root/files/lib/wine/vkd3d-proton/x86_64-windows"
+    local vk32="$root/files/lib/wine/vkd3d-proton/i386-windows"
+    for dll in d3d12.dll d3d12core.dll; do
+        if [ -f "$vk64/$dll" ]; then
+            cp -f "$vk64/$dll" "$sys32/$dll" 2>/dev/null || err=1
+        fi
+        if [ -f "$vk32/$dll" ]; then
+            cp -f "$vk32/$dll" "$wow64/$dll" 2>/dev/null || err=1
+        fi
+    done
+
     if [ "$err" -ne 0 ]; then
         wine_runtime::_fail "Proton graphics DLL deploy failed for prefix $prefix"
     fi

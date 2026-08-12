@@ -142,6 +142,52 @@ setup() {
     [[ "$output" == "$wine11" ]]
 }
 
+@test "deploy_proton_graphics_dlls copies vkd3d-proton d3d12 not Wine stubs" {
+    export HOME="$BATS_TEST_TMPDIR/wine-home-d3d12"
+    mkdir -p "$HOME"
+    wine_runtime::reset
+    export PROTON_GE_TAG="GE-Proton11-3"
+    unset PROTON_GE_DXVK_TAG
+    root="$BATS_TEST_TMPDIR/fake-proton"
+    prefix="$BATS_TEST_TMPDIR/pfx"
+    mkdir -p \
+        "$root/files/bin" \
+        "$root/files/lib/wine/dxvk/x86_64-windows" \
+        "$root/files/lib/wine/dxvk/i386-windows" \
+        "$root/files/lib/wine/vkd3d-proton/x86_64-windows" \
+        "$root/files/lib/wine/vkd3d-proton/i386-windows" \
+        "$root/files/lib/wine/x86_64-windows" \
+        "$root/files/share/default_pfx/drive_c/windows/system32" \
+        "$root/files/share/default_pfx/drive_c/windows/syswow64" \
+        "$prefix/drive_c/windows/system32" \
+        "$prefix/drive_c/windows/syswow64"
+    touch "$root/files/bin/wine"
+    chmod +x "$root/files/bin/wine"
+    # Wine stub vs native payload (content must differ)
+    printf 'WINE_STUB' >"$root/files/lib/wine/x86_64-windows/d3d12core.dll"
+    printf 'VKD3D_NATIVE_CORE' >"$root/files/lib/wine/vkd3d-proton/x86_64-windows/d3d12core.dll"
+    printf 'VKD3D_NATIVE_D3D12' >"$root/files/lib/wine/vkd3d-proton/x86_64-windows/d3d12.dll"
+    printf 'VKD3D_NATIVE_CORE32' >"$root/files/lib/wine/vkd3d-proton/i386-windows/d3d12core.dll"
+    printf 'VKD3D_NATIVE_D3D1232' >"$root/files/lib/wine/vkd3d-proton/i386-windows/d3d12.dll"
+    for dll in libvkd3d-1.dll libvkd3d-shader-1.dll libvkd3d-utils-1.dll wined3d.dll; do
+        printf 'lib' >"$root/files/share/default_pfx/drive_c/windows/system32/$dll"
+        printf 'lib' >"$root/files/share/default_pfx/drive_c/windows/syswow64/$dll"
+    done
+    for dll in d3d11.dll dxgi.dll d3d10core.dll; do
+        printf 'dxvk' >"$root/files/lib/wine/dxvk/x86_64-windows/$dll"
+        printf 'dxvk' >"$root/files/lib/wine/dxvk/i386-windows/$dll"
+    done
+    export WINEPREFIX="$prefix"
+    _WINE_RUNTIME_INITIALIZED=1
+    _WINE_RUNTIME_MODE="proton-ge"
+    _WINE_RUNTIME_ROOT="$root"
+    run wine_runtime::deploy_proton_graphics_dlls
+    [ "$status" -eq 0 ]
+    [ "$(cat "$prefix/drive_c/windows/system32/d3d12core.dll")" = "VKD3D_NATIVE_CORE" ]
+    [ "$(cat "$prefix/drive_c/windows/system32/d3d12.dll")" = "VKD3D_NATIVE_D3D12" ]
+    [ "$(cat "$prefix/drive_c/windows/syswow64/d3d12core.dll")" = "VKD3D_NATIVE_CORE32" ]
+}
+
 @test "recipe_photoshop apply_proton_pin sets GE-11 DXVK overlay and X11 flags" {
     # shellcheck source=/dev/null
     source "$ROOT/core/recipe-photoshop-install.sh"

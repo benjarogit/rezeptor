@@ -35,14 +35,18 @@ cd /home/benny/Dokumente/rezeptor
 
 ## Open work
 
-- Latest released: see `VERSION` / GitHub Releases.
-- **Local WIP:** Themes Standard / Dracula / Alucard (official Dracula hex; Alucard = light + purple accent).
-  Pills/path/activity use `theme_tokens` (no fixed dark `MUTED`). Theme switch = status flash only.
-  Home-Links: Favicons + button-like Accent-Rand/Hover. Sidebar-Liste wächst mit Rezepten, Scroll erst wenn Budget voll.
-  Fensterhöhe folgt Inhalt (Startseite kompakt); Action-Bar wieder über Home+Rezept. Kein Fixed-Height-Hack am Detail-Stack.
-  Beta-Toggle aus der GUI entfernt.
-- App-/Spielordner-Symlink in `DATA_ROOT` via `core/recipe-app-link.sh` (done locally).
-- Product backlog (when scheduled): Proton-GE management UI, exception→diagnose zip CTA, Snapshot/Restore as own point.
+- Latest released: **v1.1.42**.
+- **Local WIP (unreleased):**
+  - Halo: `data_root.path` → `/mnt/ssd2/Games/Halo Evolved` (echte Installation).
+    Leerer Prefix unter `~/.local/share/wine-software/halo-campaign-evolved` war die
+    Ursache für „Halo-EXE fehlt“ / Steam-Stack-FAIL.
+  - Halo: `winetricks: []` — `vcrun2019` (14.29) hat bei jedem Repair die CRT
+    downgraded; CRT kommt über `ensure_modern_crt` (14.40+).
+  - `deploy_proton_graphics_dlls` kopiert vkd3d-proton d3d12/d3d12core.
+  - Vorgang-UI: keine Fixed-Heights mehr (Schritte/Live stretch); OK/FAIL auch in Schritte.
+  - Fenster-Icon: opakes Anthrazit-PNG.
+  - Beta-GUI untracked.
+- Product backlog: Proton-GE management UI, exception→diagnose zip CTA, Snapshot/Restore.
 
 ## Halo recipe assets (public)
 

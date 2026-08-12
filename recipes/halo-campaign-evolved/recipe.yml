@@ -45,7 +45,9 @@ fix_kind: optional
 update: update.sh
 exe_glob: "**/HaloCampaignEvolved.exe"
 launch_process_patterns: [HaloCampaignEvolved.exe]
-winetricks: [vcrun2019]
+winetricks: []
+# CRT 14.40+ via recipe_halo ensure_modern_crt (release/_CommonRedist or MS VC_redist).
+# winetricks vcrun2019 pins 14.29 and breaks libHttpClient — do not re-add.
 env:
   WINEDEBUG: "-all"
   RECIPE_WINE_SILENT: "1"
