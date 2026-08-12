@@ -768,6 +768,36 @@ class RecipeProcessOps:
                 t("dialog.launch_already", name=name),
             )
             return
+        # Immediate script failure (missing EXE / not installed) — not "not alive".
+        fail_markers = (
+            "Nicht installiert",
+            "Halo-EXE fehlt",
+            "ERROR: ",
+            "ERROR:Nicht",
+        )
+        if any(m in log_tail for m in fail_markers):
+            name = self._w._selected.meta.get("name", rid) if self._w._selected else rid
+            detail = ""
+            for line in reversed(log_tail.splitlines()):
+                s = line.strip()
+                if not s:
+                    continue
+                if s.startswith("ERROR:") or "Nicht installiert" in s or "fehlt" in s:
+                    detail = s.removeprefix("ERROR:").strip()
+                    break
+            if not detail:
+                detail = t("dialog.launch_tips_default")
+            QMessageBox.warning(
+                self._w,
+                t("dialog.launch_failed"),
+                t(
+                    "dialog.launch_failed_body",
+                    name=name,
+                    detail=detail,
+                    log=str(log_path),
+                ),
+            )
+            return
         if "Hängende unsichtbare" in log_tail and attempt == 0:
             self._w._activity("info", t("dialog.launch_hung"))
         meta = self._w._selected.meta if self._w._selected else None
