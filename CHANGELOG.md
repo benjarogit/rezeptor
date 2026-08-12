@@ -13,6 +13,8 @@ GitHub Release notes should match these bullets.
 - Vorgang tab: Schritte/Live no longer overlap; OK/FAIL rows appear in Schritte
 - Header health chip text no longer clipped (e.g. “4 Hinweise”)
 - Window icon: opaque anthracite PNG/ICO (no white corners in title bars)
+- Keep relocated data_root.path when the target disk is temporarily unmounted
+- Launch dialog: show real script errors (missing EXE) instead of “not active after launch”
 
 ## [1.1.42] - 2026-08-12
 

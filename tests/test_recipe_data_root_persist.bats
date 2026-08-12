@@ -56,3 +56,16 @@ teardown() {
     [ "$ptr" = "$NEW" ]
     [ "$DATA_ROOT" = "$NEW" ]
 }
+
+@test "canonical RECIPE_DATA_ROOT does not wipe offline relocated pointer" {
+    # Simulate unmounted disk: pointer targets missing path; GUI falls back to canonical.
+    OFFLINE="$TMP/ssd-offline-halo"
+    printf '%s\n' "$OFFLINE" >"$CANON/data_root.path"
+    unset DATA_ROOT || true
+    export RECIPE_DATA_ROOT="$CANON"
+    export DATA_ROOT="$CANON"
+    recipe_export_env "$YML"
+    ptr="$(tr -d '\r\n' <"$CANON/data_root.path")"
+    [ "$ptr" = "$OFFLINE" ]
+    [ "$DATA_ROOT" = "$CANON" ]
+}

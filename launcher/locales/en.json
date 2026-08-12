@@ -621,6 +621,8 @@
     "launch_already": "“{name}” was already running (possibly hidden) — Quit, then Launch again",
     "launch_hung": "Hung session ended — restarting…",
     "launch_not_alive": "“{name}” does not appear to be active after launch.\n\nLog: {log}\n\n{tips}",
+    "launch_failed": "Launch failed",
+    "launch_failed_body": "“{name}” did not start.\n\n{detail}\n\nLog: {log}\n\nCheck: disk mounted? Install folder selected? Then try Repair.",
     "launch_tips_wiso": "Rezeptor → WISO → Repair (sets wined3d + Qt launch fix).\nFirst start can take 10–20 s — check the Log tab.\nLinux internet stays active; only one WISO Qt plugin is disabled.",
     "launch_tips_default": "Quit → Launch again, or Repair. Check the Log tab."
   },

@@ -621,6 +621,8 @@
     "launch_already": "„{name}“ lief bereits (evtl. unsichtbar) — Beenden, dann erneut Starten",
     "launch_hung": "Hängende Session beendet — starte neu…",
     "launch_not_alive": "„{name}“ scheint nach dem Start nicht aktiv zu sein.\n\nLog: {log}\n\n{tips}",
+    "launch_failed": "Start fehlgeschlagen",
+    "launch_failed_body": "„{name}“ ist nicht gestartet.\n\n{detail}\n\nLog: {log}\n\nPrüfe: Festplatte gemountet? Installationsordner gewählt? Dann Reparieren.",
     "launch_tips_wiso": "Rezeptor → WISO → Reparieren (stellt wined3d + Qt-Startfix ein).\nErster Start kann 10–20 s dauern — Log-Tab prüfen.\nLinux-Internet bleibt aktiv; nur ein WISO-Qt-Plugin wird deaktiviert.",
     "launch_tips_default": "Beenden → erneut Starten, oder Reparieren. Log-Tab prüfen."
   },

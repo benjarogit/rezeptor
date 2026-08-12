@@ -37,7 +37,20 @@ recipe_export_env() {
             fi
         fi
         if [ "$persist" -eq 1 ] && [ -n "$chosen" ]; then
-            printf '%s\n' "$chosen" >"$canonical/data_root.path"
+            # Don't overwrite a relocated pointer with the YAML canonical path when
+            # the real target is only temporarily offline (unmounted disk). The GUI
+            # falls back to canonical for that run; the pointer must survive.
+            if [ -f "$canonical/data_root.path" ]; then
+                existing="$(tr -d '\r\n' <"$canonical/data_root.path" 2>/dev/null || true)"
+                existing="$(paths_expand "${existing:-}")"
+                if [ -n "$existing" ] && [ "$existing" != "$chosen" ] \
+                    && [ "$chosen" = "$canonical" ]; then
+                    persist=0
+                fi
+            fi
+            if [ "$persist" -eq 1 ]; then
+                printf '%s\n' "$chosen" >"$canonical/data_root.path"
+            fi
         fi
     elif [ -f "$canonical/data_root.path" ]; then
         chosen="$(tr -d '\r\n' <"$canonical/data_root.path")"
