@@ -1769,6 +1769,10 @@ class RezeptorWindow(QMainWindow):
         self.health_chip.setObjectName("healthChip")
         self.health_chip.setCursor(Qt.CursorShape.PointingHandCursor)
         self.health_chip.setAutoRaise(True)
+        self.health_chip.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
+        self.health_chip.setSizePolicy(
+            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed
+        )
         self.health_chip.setVisible(False)
         self.health_chip.clicked.connect(self._show_health_dialog)
         pills_row.addWidget(self.health_chip)
@@ -2486,6 +2490,7 @@ class RezeptorWindow(QMainWindow):
                 fails = [detail]
         if fails and info.state == RecipeState.PARTIAL:
             chip.setText(t("app.health_hints", n=str(len(fails))))
+            chip.adjustSize()
             chip.setVisible(True)
             chip.setToolTip("\n".join(fails[:8]))
         else:
@@ -3005,9 +3010,11 @@ class RezeptorWindow(QMainWindow):
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
         self.activity_list.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        lay.addWidget(self.activity_list, stretch=0)
+        # Keep row paint inside the framed list (avoids last step over Live-Ausgabe).
+        self.activity_list.viewport().setAutoFillBackground(True)
+        lay.addWidget(self.activity_list, stretch=2)
         self._show_activity_empty_hint()
 
         log_label = QLabel(t("progress.live"))
@@ -3020,32 +3027,25 @@ class RezeptorWindow(QMainWindow):
         self.raw_log.setFont(QFont("monospace", 9))
         self.raw_log.setPlaceholderText(t("progress.live_placeholder"))
         self.raw_log.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
         )
-        lay.addWidget(self.raw_log, stretch=0)
-        lay.addStretch(1)
+        lay.addWidget(self.raw_log, stretch=3)
         self._fit_progress_panels()
         return tab
 
     def _fit_progress_panels(self) -> None:
-        """Idle: compact Schritte/Live boxes. Busy: taller, still content-capped."""
+        """Min heights only — stretch shares leftover space (no fixed-height bleed)."""
         if not hasattr(self, "activity_list") or not hasattr(self, "raw_log"):
             return
         lst = self.activity_list
-        n = max(1, lst.count())
-        row = lst.sizeHintForRow(0)
-        if row <= 0:
-            row = 22
         busy = bool(getattr(self, "_busy", False))
-        cap = 12 if busy else min(n, 3)
-        h = min(cap, n) * row + 8
-        lst.setFixedHeight(max(h, 40 if not busy else 72))
-
         has_log = bool(getattr(self, "_raw_log_buffer", None))
-        if busy or has_log:
-            self.raw_log.setFixedHeight(140)
-        else:
-            self.raw_log.setFixedHeight(56)
+        # Drop any prior setFixedHeight from older builds.
+        lst.setMinimumHeight(72 if busy else 48)
+        lst.setMaximumHeight(16777215)
+        self.raw_log.setMinimumHeight(120 if (busy or has_log) else 64)
+        self.raw_log.setMaximumHeight(16777215)
+        lst.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
 
     def _create_logs_tab(self) -> QWidget:
         tab = QWidget()
@@ -4966,7 +4966,19 @@ class RezeptorWindow(QMainWindow):
                 self._set_step_text(msg)
                 continue
 
-            # Konsolen-/Rohzeilen → nur Live-Ausgabe (kein zweites Mal in Schritte)
+            # Validate OK/FAIL/WARN → Schritte + Live (status must be visible in both)
+            if human.startswith(("OK:", "FAIL:", "WARN:")):
+                kind = (
+                    "ok"
+                    if human.startswith("OK:")
+                    else ("error" if human.startswith("FAIL:") else "warn")
+                )
+                detail = human.split(":", 1)[-1].strip()
+                self._activity(kind, detail)
+                self._append_raw_log(human)
+                continue
+
+            # Other console lines → Live-Ausgabe only
             self._append_raw_log(human)
 
     def _append_raw_log(self, line: str) -> None:
@@ -5066,6 +5078,8 @@ class RezeptorWindow(QMainWindow):
         self.activity_list.addItem(item)
         self.activity_list.scrollToBottom()
         self._fit_progress_panels()
+        # Row hints settle after polish — refit once so the last step cannot bleed.
+        QTimer.singleShot(0, self._fit_progress_panels)
         if kind in ("step", "ok", "warn", "error"):
             style = f"color: {fg}; font-weight: 600;"
             self._set_step_text(text, style=style)

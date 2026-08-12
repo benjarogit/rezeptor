@@ -85,6 +85,7 @@ def host_stylesheet(theme: str | None = None) -> str:
     SURFACE_1 = tok["surface1"]
     SURFACE_2 = tok["surface2"]
     SURFACE_3 = tok["surface3"]
+    COLOR_EXPERIMENTAL = tok["experimental"]
     ACCENT_16 = _hex_rgba(ACCENT_COPPER, 0.16)
     ACCENT_18 = _hex_rgba(ACCENT_COPPER, 0.18)
     ACCENT_22 = _hex_rgba(ACCENT_COPPER, 0.22)
@@ -92,6 +93,8 @@ def host_stylesheet(theme: str | None = None) -> str:
     ACCENT_35 = _hex_rgba(ACCENT_COPPER, 0.35)
     ACCENT_45 = _hex_rgba(ACCENT_COPPER, 0.45)
     ACCENT_55 = _hex_rgba(ACCENT_COPPER, 0.55)
+    WARN_16 = _hex_rgba(COLOR_EXPERIMENTAL, 0.16)
+    WARN_28 = _hex_rgba(COLOR_EXPERIMENTAL, 0.28)
     SCROLL_HOVER = _hex_rgba(COLOR_PARCHMENT, 0.35)
     arrow_down = ensure_chevron_png("down", COLOR_PARCHMENT).as_posix()
     arrow_up = ensure_chevron_png("up", COLOR_PARCHMENT).as_posix()
@@ -474,8 +477,7 @@ QToolButton:hover {{
 /* Kompakte Header-Chips — globales ToolButton-Padding würgt 22px-Icons sonst leer */
 QToolButton#versionInfoBtn,
 QToolButton#sourceInfoBtn,
-QToolButton#openPathBtn,
-QToolButton#healthChip {{
+QToolButton#openPathBtn {{
     padding: 2px;
     margin: 0;
     min-width: 26px;
@@ -483,6 +485,25 @@ QToolButton#healthChip {{
     min-height: 26px;
     max-height: 28px;
     background-color: rgba(255, 255, 255, 0.08);
+}}
+/* Text chip (e.g. "4 Hinweise") — must not share the 28px icon-button max-width */
+QToolButton#healthChip {{
+    padding: 2px 10px;
+    margin: 0;
+    min-width: 0;
+    max-width: none;
+    min-height: 22px;
+    max-height: 26px;
+    border: 1px solid {COLOR_EXPERIMENTAL};
+    border-radius: 10px;
+    background-color: {WARN_16};
+    color: {COLOR_EXPERIMENTAL};
+    font-size: 11px;
+    font-weight: 600;
+}}
+QToolButton#healthChip:hover {{
+    background-color: {WARN_28};
+    border-color: {COLOR_EXPERIMENTAL};
 }}
 /* Menubar corner: flag + theme — compact, no chrome */
 QToolButton#langToggle,

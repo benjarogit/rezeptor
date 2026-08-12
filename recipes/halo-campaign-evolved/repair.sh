@@ -37,9 +37,19 @@ recipe_halo_campaign_evolved::finalize || true
 output::step "Steam-Stack / MSVC-Runtime / libHttpClient / DirectML"
 EXE="$(recipe_hooks::state_get GAME_EXE 2>/dev/null || true)"
 [ -n "$EXE" ] && [ -f "$EXE" ] || EXE="$(recipe_halo_campaign_evolved::find_game_exe || true)"
+GAME_ROOT_HINT="$(recipe_hooks::state_get GAME_ROOT 2>/dev/null || true)"
+if [ -z "$GAME_ROOT_HINT" ] && [ -n "$EXE" ] && [ -f "$EXE" ]; then
+    GAME_ROOT_HINT="$(recipe_halo_campaign_evolved::game_root_from_exe_dir "$(dirname "$EXE")")"
+fi
 if [ -n "$EXE" ] && [ -f "$EXE" ]; then
     recipe_halo_campaign_evolved::prepare_runtime "$EXE" || true
+else
+    output::step "MSVC-Runtime (14.40+)"
+    recipe_halo_campaign_evolved::ensure_modern_crt "${GAME_ROOT_HINT:-}" || true
 fi
+# Always re-assert CRT after any winetricks path (vcrun2019 must not stick at 14.29).
+output::step "MSVC-Runtime prüfen"
+recipe_halo_campaign_evolved::ensure_modern_crt "${GAME_ROOT_HINT:-}" || true
 
 output::step "Erneut prüfen"
 if bash "$RECIPE_DIR/validate.sh"; then

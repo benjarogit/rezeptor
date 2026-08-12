@@ -10,10 +10,43 @@ set -eu
 
 recipe_halo_campaign_evolved::find_game_exe() {
     local prefix="${WINEPREFIX:-${DATA_ROOT}/prefix}"
-    local f preferred
+    local f preferred state_exe link_root
+    # Persisted path from a previous successful finalize (may sit outside prefix).
+    if type recipe_hooks::state_get >/dev/null 2>&1; then
+        state_exe="$(recipe_hooks::state_get GAME_EXE 2>/dev/null || true)"
+        if [ -n "$state_exe" ] && [ -f "$state_exe" ]; then
+            echo "$state_exe"
+            return 0
+        fi
+    fi
+    # App link / visible game folder under DATA_ROOT
+    if [ -n "${DATA_ROOT:-}" ]; then
+        for link_root in \
+            "${DATA_ROOT}/${APP_LINK_NAME:-HaloCampaignEvolved}" \
+            "${DATA_ROOT}/HaloCampaignEvolved" \
+            "${DATA_ROOT}/Halo.Campaign.Evolved"; do
+            if [ -d "$link_root" ]; then
+                preferred="$link_root/Meteorite/Binaries/Win64/HaloCampaignEvolved.exe"
+                if [ -f "$preferred" ]; then
+                    echo "$preferred"
+                    return 0
+                fi
+                preferred="$link_root/HaloCampaignEvolved.exe"
+                if [ -f "$preferred" ]; then
+                    echo "$preferred"
+                    return 0
+                fi
+            fi
+        done
+    fi
     [ -d "$prefix/drive_c" ] || return 1
     # Bevorzugter /DIR=-Pfad aus Silent-Install
     preferred="$prefix/drive_c/Games/HaloCampaignEvolved/HaloCampaignEvolved.exe"
+    if [ -f "$preferred" ]; then
+        echo "$preferred"
+        return 0
+    fi
+    preferred="$prefix/drive_c/Games/HaloCampaignEvolved/Meteorite/Binaries/Win64/HaloCampaignEvolved.exe"
     if [ -f "$preferred" ]; then
         echo "$preferred"
         return 0
@@ -1767,7 +1800,7 @@ recipe_halo_campaign_evolved::_install_crt_from_redist() {
 recipe_halo_campaign_evolved::ensure_modern_crt() {
     local root="${1:-}"
     local sys32="${WINEPREFIX:-${DATA_ROOT:-}/prefix}/drive_c/windows/system32"
-    local cur redist
+    local cur redist cache
     [ -d "$sys32" ] || return 0
     cur="$(recipe_halo_campaign_evolved::pe_file_version "$sys32/msvcp140.dll" 2>/dev/null || true)"
     if recipe_halo_campaign_evolved::crt_version_ok "$cur"; then
@@ -1775,15 +1808,40 @@ recipe_halo_campaign_evolved::ensure_modern_crt() {
         return 0
     fi
     redist="$(recipe_halo_campaign_evolved::bundled_vcredist "$root" 2>/dev/null || true)"
+    # winetricks vcrun2019 leaves 14.29; without the release folder, unpack Microsoft's
+    # current VC_redist the same way (Wine /quiet install is unreliable — winehq 57518).
     if [ -z "$redist" ]; then
-        output::warning "VC_redist.x64.exe fehlt unter _CommonRedist — Xbox-Login stürzt ab"
+        if [ -n "${CORE_DIR:-}" ] && [ -f "${CORE_DIR}/recipe-vcrun.sh" ]; then
+            # shellcheck source=/dev/null
+            source "${CORE_DIR}/recipe-vcrun.sh" 2>/dev/null || true
+        fi
+        if type recipe_vcrun::cache_dir >/dev/null 2>&1; then
+            cache="$(recipe_vcrun::cache_dir)"
+        else
+            cache="${HOME}/.local/share/wine-software/cache/vcredist"
+        fi
+        mkdir -p "$cache" 2>/dev/null || true
+        redist="$cache/vc_redist.x64.exe"
+        if [ ! -f "$redist" ] && type recipe_vcrun::download >/dev/null 2>&1; then
+            recipe_vcrun::download "https://aka.ms/vc14/vc_redist.x64.exe" "$redist" || redist=""
+        elif [ ! -f "$redist" ]; then
+            if command -v curl >/dev/null 2>&1; then
+                curl -fsSL -o "$redist" "https://aka.ms/vc14/vc_redist.x64.exe" || redist=""
+            else
+                redist=""
+            fi
+        fi
+        [ -f "$redist" ] || redist=""
+    fi
+    if [ -z "$redist" ]; then
+        output::warning "VC_redist.x64.exe fehlt — Xbox-Login stürzt ab (MSVC 14.40+ nötig)"
         return 0
     fi
     if recipe_halo_campaign_evolved::_install_crt_from_redist "$redist" "$sys32"; then
         cur="$(recipe_halo_campaign_evolved::pe_file_version "$sys32/msvcp140.dll" 2>/dev/null || true)"
-        output::success "MSVC-Runtime ${cur:-14.40+} aus dem Release nachinstalliert"
+        output::success "MSVC-Runtime ${cur:-14.40+} nachinstalliert"
     else
-        output::warning "MSVC-Runtime aus dem Release nicht entpackbar (alt: ${cur:-unbekannt})"
+        output::warning "MSVC-Runtime nicht entpackbar (alt: ${cur:-unbekannt})"
     fi
     return 0
 }

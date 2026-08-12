@@ -33,7 +33,8 @@ from ui_icons import ensure_chevron_png, fa_icon, rounded_icon
 from i18n import t
 
 ROOT = Path(__file__).resolve().parent.parent
-REZEPTOR_ICON = ROOT / "images" / "rezeptor-icon.svg"
+REZEPTOR_ICON = ROOT / "images" / "rezeptor-icon.png"
+# SVG keeps crisp docs/README embeds; window managers often paint SVG alpha as white.
 
 STATE_DOT = {
     "installed": COLOR_TESTED,
