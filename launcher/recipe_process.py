@@ -434,6 +434,8 @@ class RecipeProcessOps:
 
         meta = self._w._selected.meta
         rid = self._w._selected.rid
+        if not self._w.ensure_host_wow64_for_install(meta):
+            return
         extra: dict[str, str] = {}
 
         if needs_source_dialog(meta):
@@ -556,6 +558,8 @@ class RecipeProcessOps:
             QMessageBox.warning(
                 self._w, t("dialog.not_installed_title"), t("dialog.install_first")
             )
+            return
+        if not self._w.ensure_host_wow64_for_install(self._w._selected.meta):
             return
         if QMessageBox.question(
             self._w,
