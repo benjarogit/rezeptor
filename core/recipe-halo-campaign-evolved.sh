@@ -1903,7 +1903,7 @@ recipe_halo_campaign_evolved::prepare_runtime() {
 # Wine installers write under prefix/drive_c/… — users expect the game at DATA_ROOT.
 # Delegates to recipe_app_link (absolute symlink; relocate/repair refresh it).
 recipe_halo_campaign_evolved::ensure_game_visible_at_data_root() {
-    local root="${1:-}"
+    local root="${1:-}" core="${CORE_DIR:-}"
     [ -n "$root" ] && [ -d "$root" ] || return 0
     if type recipe_hooks::state_set >/dev/null 2>&1; then
         recipe_hooks::state_set GAME_ROOT "$root"
@@ -1911,11 +1911,13 @@ recipe_halo_campaign_evolved::ensure_game_visible_at_data_root() {
     export GAME_ROOT="$root"
     # Match recipe.yml app_link_name when RECIPE_YML is not loaded yet.
     export APP_LINK_NAME="${APP_LINK_NAME:-HaloCampaignEvolved}"
-    if type recipe_app_link::ensure >/dev/null 2>&1; then
-        recipe_app_link::ensure || true
-        return 0
+    if ! type recipe_app_link::ensure >/dev/null 2>&1; then
+        if [ -z "$core" ] || [ ! -f "$core/recipe-app-link.sh" ]; then
+            core="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        fi
+        # shellcheck source=/dev/null
+        source "$core/recipe-app-link.sh" 2>/dev/null || true
     fi
-    recipe_hooks::_source recipe-app-link.sh 2>/dev/null || true
     if type recipe_app_link::ensure >/dev/null 2>&1; then
         recipe_app_link::ensure || true
     fi
