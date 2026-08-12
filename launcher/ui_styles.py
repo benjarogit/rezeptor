@@ -85,7 +85,6 @@ def host_stylesheet(theme: str | None = None) -> str:
     SURFACE_1 = tok["surface1"]
     SURFACE_2 = tok["surface2"]
     SURFACE_3 = tok["surface3"]
-    ACCENT_SOFT = tok.get("accent_soft") or _hex_rgba(ACCENT_COPPER, 0.14)
     ACCENT_16 = _hex_rgba(ACCENT_COPPER, 0.16)
     ACCENT_18 = _hex_rgba(ACCENT_COPPER, 0.18)
     ACCENT_22 = _hex_rgba(ACCENT_COPPER, 0.22)

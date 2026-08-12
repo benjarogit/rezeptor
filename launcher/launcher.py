@@ -22,7 +22,6 @@ try:
         QObject,
         QProcess,
         QProcessEnvironment,
-        QRect,
         QRectF,
         QSize,
         QThread,

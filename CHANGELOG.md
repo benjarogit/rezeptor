@@ -5,6 +5,22 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.42] - 2026-08-12
+
+### Added
+- UI themes: Standard (brand), Dracula, and Alucard (persisted; menubar cycle)
+- Home community links use site favicons (LinuxChooser, CachyOS, LinuxGuides)
+- Recipe app/game folder symlink into `DATA_ROOT` via `core/recipe-app-link.sh`
+
+### Changed
+- Home and sidebar layout: content-sized recipe list, compact window height when not maximized
+- Theme-aware status pills, activity colors, and header watermark clipped to card radius
+- Action bar stays visible on the home page (docs CTA)
+
+### Fixed
+- Home link URLs for LinuxChooser and LinuxGuides forum
+- Low-contrast secondary text when switching to Alucard/Dracula
+
 ## [1.1.41] - 2026-08-12
 
 ### Added
