@@ -5,6 +5,15 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.43] - 2026-08-12
+
+### Fixed
+- Halo repair: stop `winetricks vcrun2019` from pinning MSVC 14.29; ensure CRT 14.40+ via cabextract
+- Deploy vkd3d-proton `d3d12` / `d3d12core` into the prefix (validate no longer reports missing D3D12 after repair)
+- Vorgang tab: Schritte/Live no longer overlap; OK/FAIL rows appear in Schritte
+- Header health chip text no longer clipped (e.g. “4 Hinweise”)
+- Window icon: opaque anthracite PNG/ICO (no white corners in title bars)
+
 ## [1.1.42] - 2026-08-12
 
 ### Added
