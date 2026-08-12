@@ -235,6 +235,11 @@ lint_recipe_dir() {
         [ -f "$f" ] || continue
         grep -q 'recipe-hooks\.sh' "$f" 2>/dev/null \
             || lint_err "$base: $(basename "$f") muss core/recipe-hooks.sh nutzen"
+        # Overlay-safe: prefer PROJECT_ROOT; bare ../../core alone breaks under ~/.local/share/rezeptor/recipes/
+        if grep -qE 'source[[:space:]]+"\$RECIPE_DIR/\.\./\.\./core/recipe-hooks\.sh"' "$f" 2>/dev/null \
+            && ! grep -qE 'PROJECT_ROOT:-\}/core/recipe-hooks\.sh|\$PROJECT_ROOT/core/recipe-hooks\.sh' "$f" 2>/dev/null; then
+            lint_err "$base: $(basename "$f") muss PROJECT_ROOT/core/recipe-hooks.sh vor ../../core nutzen (Overlay)"
+        fi
         lint_forbidden_patterns "$base" "$f"
     done
 

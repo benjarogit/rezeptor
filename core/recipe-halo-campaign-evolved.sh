@@ -1900,35 +1900,26 @@ recipe_halo_campaign_evolved::prepare_runtime() {
     return 0
 }
 
-# Wine installers write under prefix/drive_c/… — users expect the game at the
-# chosen target root. Symlink so DATA_ROOT/HaloCampaignEvolved opens the real tree.
+# Wine installers write under prefix/drive_c/… — users expect the game at DATA_ROOT.
+# Delegates to recipe_app_link (absolute symlink; relocate/repair refresh it).
 recipe_halo_campaign_evolved::ensure_game_visible_at_data_root() {
-    local root="${1:-}" data link real
-    data="${DATA_ROOT:-}"
-    [ -n "$data" ] && [ -d "$data" ] || return 0
+    local root="${1:-}" core="${CORE_DIR:-}"
     [ -n "$root" ] && [ -d "$root" ] || return 0
-    real="$(cd "$root" && pwd)" || return 0
-    link="$data/HaloCampaignEvolved"
-    # Already a correct symlink
-    if [ -L "$link" ]; then
-        if [ "$(readlink -f "$link" 2>/dev/null || true)" = "$(readlink -f "$real" 2>/dev/null || true)" ]; then
-            return 0
-        fi
-        rm -f "$link"
-    elif [ -e "$link" ]; then
-        # Do not clobber a real directory the user created
-        if [ "$(readlink -f "$link" 2>/dev/null || true)" = "$(readlink -f "$real" 2>/dev/null || true)" ]; then
-            return 0
-        fi
-        output::info "Ziel enthält bereits HaloCampaignEvolved/ — kein Symlink"
-        return 0
+    if type recipe_hooks::state_set >/dev/null 2>&1; then
+        recipe_hooks::state_set GAME_ROOT "$root"
     fi
-    # Prefer relative link so relocate stays readable
-    if ln -sfn "prefix/drive_c/Games/HaloCampaignEvolved" "$link" 2>/dev/null \
-        || ln -sfn "$real" "$link" 2>/dev/null; then
-        output::success "Spiel sichtbar unter $link"
-    else
-        output::warning "Konnte Spiel-Link unter $data nicht anlegen"
+    export GAME_ROOT="$root"
+    # Match recipe.yml app_link_name when RECIPE_YML is not loaded yet.
+    export APP_LINK_NAME="${APP_LINK_NAME:-HaloCampaignEvolved}"
+    if ! type recipe_app_link::ensure >/dev/null 2>&1; then
+        if [ -z "$core" ] || [ ! -f "$core/recipe-app-link.sh" ]; then
+            core="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        fi
+        # shellcheck source=/dev/null
+        source "$core/recipe-app-link.sh" 2>/dev/null || true
+    fi
+    if type recipe_app_link::ensure >/dev/null 2>&1; then
+        recipe_app_link::ensure || true
     fi
     return 0
 }

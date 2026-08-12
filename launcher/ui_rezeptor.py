@@ -152,34 +152,53 @@ class LimitedComboBox(QComboBox):
         super().hidePopup()
 
 
-SEGMENT_TAB_STYLES = f"""
+def segment_tab_styles(theme: str | None = None) -> str:
+    """Segment tabs follow active theme (accent + fg/muted)."""
+    try:
+        from themes import normalize_theme, theme_tokens
+
+        tok = theme_tokens(normalize_theme(theme))
+    except Exception:
+        tok = {
+            "fg": COLOR_PARCHMENT,
+            "muted": MUTED,
+            "accent": ACCENT_COPPER,
+            "accent_soft": "rgba(184,115,51,0.18)",
+        }
+    fg, muted, accent = tok["fg"], tok["muted"], tok["accent"]
+    soft = tok.get("accent_soft") or "rgba(184,115,51,0.18)"
+    light = str(theme or "").lower() in ("alucard", "light")
+    bar_bg = "rgba(0,0,0,0.04)" if light else "rgba(255,255,255,0.03)"
+    hover_bg = "rgba(0,0,0,0.06)" if light else "rgba(255,255,255,0.06)"
+    hover_bd = "rgba(0,0,0,0.1)" if light else "rgba(255,255,255,0.1)"
+    return f"""
 QFrame#segmentTabBar {{
-    background-color: rgba(255, 255, 255, 0.03);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: {bar_bg};
+    border-bottom: 1px solid {tok.get("border", "rgba(255,255,255,0.08)")};
 }}
 QPushButton#segmentTab {{
     background-color: transparent;
     border: 1px solid transparent;
     border-radius: 6px;
-    color: {MUTED};
+    color: {muted};
     font-size: 13px;
     font-weight: 500;
     padding: 6px 16px;
     min-height: 28px;
 }}
 QPushButton#segmentTab:hover {{
-    background-color: rgba(255, 255, 255, 0.06);
-    color: {COLOR_PARCHMENT};
-    border-color: rgba(255, 255, 255, 0.1);
+    background-color: {hover_bg};
+    color: {fg};
+    border-color: {hover_bd};
 }}
 QPushButton#segmentTab:checked {{
-    background-color: rgba(184, 115, 51, 0.18);
-    border-color: {ACCENT_COPPER};
-    color: {COLOR_PARCHMENT};
+    background-color: {soft};
+    border-color: {accent};
+    color: {fg};
     font-weight: 600;
 }}
 QLabel#sidebarCategory {{
-    color: {MUTED};
+    color: {muted};
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.08em;
@@ -187,6 +206,10 @@ QLabel#sidebarCategory {{
     background-color: transparent;
 }}
 """
+
+
+# Backward-compatible default (standard brand)
+SEGMENT_TAB_STYLES = segment_tab_styles("standard")
 
 
 class SegmentTabBar(QFrame):
@@ -233,8 +256,7 @@ class SegmentTabBar(QFrame):
                 btn.setText(label)
 
     def apply_theme(self, theme: str = "dark") -> None:
-        _ = theme
-        self.setStyleSheet(SEGMENT_TAB_STYLES)
+        self.setStyleSheet(segment_tab_styles(theme))
 
 
 class StatusPill(QLabel):
@@ -242,15 +264,70 @@ class StatusPill(QLabel):
 
     clicked = pyqtSignal()
 
+    # Callers often pass brand/module hexes; map to semantic roles → live tokens.
+    _NEUTRAL_HEX = frozenset(
+        {
+            "#9d9da6",
+            "#a1a1aa",
+            "#6b6b6b",
+            "#6b7280",
+            "#71717a",
+            "#888888",
+            "#c4c4cc",
+            "#d4d4d8",
+            "#d4cdc3",
+            "#ede6d6",
+            "#a9a296",
+            "#c9d1d9",
+            "#6272a4",
+            "#6c664b",
+            "#9ca4c4",
+            "#9ca3af",
+        }
+    )
+    _TESTED_HEX = frozenset(
+        {"#639922", "#7fb144", "#3ddc84", "#50fa7b", "#14710a"}
+    )
+    _EXPERIMENTAL_HEX = frozenset(
+        {"#d9a441", "#e0af52", "#f1fa8c", "#ffb86c", "#846e15"}
+    )
+    _DANGER_HEX = frozenset(
+        {"#e07070", "#f85149", "#ff5555", "#cb3a2a"}
+    )
+    _ACCENT_HEX = frozenset(
+        {"#b87333", "#bd93f9", "#644ac9"}
+    )
+
     def __init__(self, text: str, color: str, parent: QWidget | None = None) -> None:
         super().__init__(text, parent)
         self._color = color
+        self._role = self._infer_role(color)
+        self._theme_id = "standard"
         self.setVisible(bool(text.strip()))
-        self.apply_theme("dark")
+        self.apply_theme("standard")
+
+    @classmethod
+    def _infer_role(cls, color: str) -> str:
+        low = (color or "").strip().lower()
+        if not low:
+            return "muted"
+        if low in cls._TESTED_HEX or low == COLOR_TESTED.lower():
+            return "tested"
+        if low in cls._EXPERIMENTAL_HEX or low == COLOR_EXPERIMENTAL.lower():
+            return "experimental"
+        if low in cls._DANGER_HEX:
+            return "danger"
+        if low in cls._ACCENT_HEX or low == ACCENT_COPPER.lower():
+            return "accent"
+        if low in cls._NEUTRAL_HEX or low in (MUTED.lower(), COLOR_PARCHMENT.lower()):
+            return "muted"
+        # Unknown custom hex (e.g. STATE_DOT running): keep as-is via "custom".
+        return "custom"
 
     def set_content(self, text: str, color: str | None = None) -> None:
         if color is not None:
             self._color = color
+            self._role = self._infer_role(color)
         full = text or ""
         display = full.strip()
         if len(display) > 22:
@@ -258,7 +335,7 @@ class StatusPill(QLabel):
             self.setToolTip(full)
         self.setText(display)
         self.setVisible(bool(full.strip()))
-        self.apply_theme("dark")
+        self.apply_theme(self._theme_id)
 
     def mouseReleaseEvent(self, event) -> None:  # noqa: ANN001
         if (
@@ -269,18 +346,27 @@ class StatusPill(QLabel):
             self.clicked.emit()
         super().mouseReleaseEvent(event)
 
-    def apply_theme(self, theme: str = "dark") -> None:
-        _ = theme
-        # Fluent-ähnliche Surface: 6% Weiß-Overlay; Text Brand/Status
-        color = (self._color or "").strip() or MUTED
-        low = color.lower()
-        if low in ("#9d9da6", "#a1a1aa", "#6b6b6b", "#6b7280", "#71717a", "#888888", "#c4c4cc", "#d4d4d8"):
-            color = MUTED
+    def apply_theme(self, theme: str = "standard") -> None:
+        from themes import normalize_theme, theme_is_dark, theme_tokens
+
+        tid = normalize_theme(theme)
+        self._theme_id = tid
+        tok = theme_tokens(tid)
+        role = getattr(self, "_role", None) or self._infer_role(self._color or "")
+        if role == "custom":
+            color = (self._color or "").strip() or tok["muted"]
+        else:
+            color = tok.get(role, tok["muted"])
+        bg = (
+            "rgba(0, 0, 0, 0.08)"
+            if not theme_is_dark(tid)
+            else "rgba(255, 255, 255, 0.08)"
+        )
         self.setStyleSheet(
             f"""
             QLabel {{
                 color: {color};
-                background-color: rgba(255, 255, 255, 0.0605);
+                background-color: {bg};
                 padding: 4px 10px;
                 border-radius: 6px;
                 font-size: 12px;
@@ -428,8 +514,8 @@ class RecipeSidebarCard(QFrame):
             return w
 
         if FLUENT_AVAILABLE and icon is not None and not icon.isNull():
-            iw = _pass_mouse(IconWidget(rounded_icon(icon, 20, 4), self))
-            iw.setFixedSize(20, 20)
+            iw = _pass_mouse(IconWidget(rounded_icon(icon, 22, 3), self))
+            iw.setFixedSize(22, 22)
             layout.addWidget(iw, 0, Qt.AlignmentFlag.AlignVCenter)
         else:
             dot = _pass_mouse(QLabel("●", self))
@@ -443,9 +529,6 @@ class RecipeSidebarCard(QFrame):
         # Plain ElidedLabel — Fluent StrongBodyLabel ignores shrink/elide in the list.
         title = _pass_mouse(ElidedLabel(name, self))
         title.setObjectName("sidebarCardTitle")
-        title.setStyleSheet(
-            "background: transparent; color: #EDE6D6; font-weight: 600;"
-        )
         self._title = title
         text_col.addWidget(title)
 
@@ -455,9 +538,6 @@ class RecipeSidebarCard(QFrame):
         mono.setStyleHint(QFont.StyleHint.TypeWriter)
         mono.setPointSize(8)
         self._sub.setFont(mono)
-        self._sub.setStyleSheet(
-            "background: transparent; color: #D4CDC3; font-size: 8pt;"
-        )
         self._sub.setVisible(bool(self._subtitle))
         text_col.addWidget(self._sub)
         layout.addLayout(text_col, stretch=1)
@@ -497,9 +577,31 @@ class RecipeSidebarCard(QFrame):
         )
         self._busy_bar.setVisible(False)
         outer.addWidget(self._busy_bar)
-        self._theme: str = "dark"
+        self._theme: str = "standard"
+        self._apply_text_colors()
         self._apply_border()
         self._apply_busy_bar_style()
+
+    def _theme_tokens(self) -> dict[str, str]:
+        try:
+            from themes import normalize_theme, theme_tokens
+
+            return theme_tokens(normalize_theme(self._theme))
+        except Exception:
+            return {
+                "fg": "#EDE6D6",
+                "muted": "#D4CDC3",
+                "accent": ACCENT_COPPER,
+            }
+
+    def _apply_text_colors(self) -> None:
+        tok = self._theme_tokens()
+        self._title.setStyleSheet(
+            f"background: transparent; color: {tok['fg']}; font-weight: 600;"
+        )
+        self._sub.setStyleSheet(
+            f"background: transparent; color: {tok['muted']}; font-size: 8pt;"
+        )
 
     def _set_a11y(self, name: str, state: str) -> None:
         tip = _state_tip(state)
@@ -722,6 +824,7 @@ class RecipeSidebarCard(QFrame):
 
     def apply_theme(self, theme: str = "dark") -> None:
         self._theme = theme
+        self._apply_text_colors()
         self._apply_border()
 
     def sizeHint(self) -> QSize:  # noqa: N802
@@ -736,30 +839,52 @@ class RecipeSidebarCard(QFrame):
     def _apply_border(self) -> None:
         insert = str(self.property("dropInsert") or "")
         dragging = bool(self.property("dragging"))
+        tok = self._theme_tokens()
+        accent = tok.get("accent", ACCENT_COPPER)
+        soft = tok.get("accent_soft") or "rgba(184,115,51,0.14)"
+        surface = tok.get("surface2", "#292926")
+        border = tok.get("border", "#3A3A36")
+        light = str(self._theme).lower() in ("alucard", "light")
+        if light:
+            idle_bg = surface
+            sel_bg = soft
+            idle_bd = border
+            dash = "rgba(0,0,0,0.35)"
+        else:
+            idle_bg = surface
+            sel_bg = soft
+            idle_bd = border
+            dash = "rgba(255,255,255,0.35)"
         if insert == "before":
             self.setStyleSheet(
-                f"#RecipeSidebarCard {{ background: rgba(255,255,255,0.06);"
-                f" border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;"
-                f" border-top: 3px solid {ACCENT_COPPER}; }}"
+                f"#RecipeSidebarCard {{ background: {sel_bg};"
+                f" border: 1px solid {idle_bd}; border-radius: 6px;"
+                f" border-top: 3px solid {accent}; }}"
             )
         elif insert == "after":
             self.setStyleSheet(
-                f"#RecipeSidebarCard {{ background: rgba(255,255,255,0.06);"
-                f" border: 1px solid rgba(255,255,255,0.08); border-radius: 6px;"
-                f" border-bottom: 3px solid {ACCENT_COPPER}; }}"
+                f"#RecipeSidebarCard {{ background: {sel_bg};"
+                f" border: 1px solid {idle_bd}; border-radius: 6px;"
+                f" border-bottom: 3px solid {accent}; }}"
             )
         elif dragging:
             self.setStyleSheet(
-                "#RecipeSidebarCard { background: rgba(255,255,255,0.02);"
-                " border: 1px dashed rgba(255,255,255,0.35); border-radius: 6px; }"
+                f"#RecipeSidebarCard {{ background: {idle_bg};"
+                f" border: 1px dashed {dash}; border-radius: 6px; }}"
             )
         elif self._selected:
+            # Same language as QPushButton#homeSidebarBtn[homeActive="true"]
             self.setStyleSheet(
-                f"#RecipeSidebarCard {{ background: rgba(255,255,255,0.06);"
-                f" border: 2px solid {ACCENT_COPPER}; border-radius: 6px; }}"
+                f"#RecipeSidebarCard {{ background-color: {sel_bg};"
+                f" border: 1px solid {accent}; border-radius: 6px; }}"
             )
         else:
             self.setStyleSheet(
-                "#RecipeSidebarCard { background: rgba(255,255,255,0.04);"
-                " border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; }"
+                f"#RecipeSidebarCard {{ background-color: {idle_bg};"
+                f" border: 1px solid {idle_bd}; border-radius: 6px; }}"
             )
+        sty = self.style()
+        if sty is not None:
+            sty.unpolish(self)
+            sty.polish(self)
+        self.update()

@@ -33,7 +33,8 @@ class RezeptorSettings:
     # Beim Start validate.sh für alle Rezepte (mit Hinweisdialog)
     validate_on_startup: bool = True
     locale: str = ""
-    theme: str = "dark"  # nur dark — Light war unbrauchbar, kein Parallel-Theme
+    # UI theme: standard (brand) | dracula | alucard — legacy \"dark\" → standard
+    theme: str = "standard"
     last_recipe_id: str = ""
     developer_mode: bool = False
     hidden_recipe_ids: list[str] = field(default_factory=list)
@@ -351,10 +352,9 @@ def load_settings() -> RezeptorSettings:
         return RezeptorSettings(locale=_default_locale())
 
     locale = str(data.get("locale", "")).strip() or _default_locale()
-    # Früher system/light → immer Standard (dark)
-    theme = str(data.get("theme", "dark")).strip().lower()
-    if theme != "dark":
-        theme = "dark"
+    from themes import normalize_theme
+
+    theme = normalize_theme(str(data.get("theme", "standard") or "standard"))
     tab = str(data.get("content_tab", "overview") or "overview").strip()
     if tab not in ("overview", "progress", "logs"):
         tab = "overview"

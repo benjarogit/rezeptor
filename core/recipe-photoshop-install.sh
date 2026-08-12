@@ -615,6 +615,15 @@ recipe_photoshop::install() {
 
     # Desktop/Menü: nach Install in der GUI abgefragt (recipe_desktop::install)
 
+    # App folder symlink under DATA_ROOT
+    exe_path="$(photoshop::find_exe "$WINEPREFIX" 2>/dev/null || true)"
+    if [ -n "$exe_path" ] && [ -f "$exe_path" ]; then
+        recipe_hooks::state_set WORK_ROOT "$(cd "$(dirname "$exe_path")" && pwd)"
+    fi
+    if type recipe_app_link::ensure >/dev/null 2>&1; then
+        recipe_app_link::ensure || true
+    fi
+
     output::progress 99 "Validieren"
     if ! bash "${RECIPE_DIR}/validate.sh" >>"${LOG_FILE:-/dev/null}" 2>&1; then
         _err=1

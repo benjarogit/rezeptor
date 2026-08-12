@@ -1,0 +1,5 @@
+Vendored site favicons for home-link cards (offline UI).
+
+linuxchooser.svg  https://themorpheus407.github.io/LinuxChooser/favicon.svg
+cachyos.svg       https://cachyos.org/favicon.svg
+linuxguides.png   https://forum.linuxguides.de/core/images/style-16/favicon-48x48.png

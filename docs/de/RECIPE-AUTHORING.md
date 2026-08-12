@@ -28,11 +28,35 @@ Immer `recipe_hooks::load minimal` und **`recipe_hooks::purge_recipe_data`** (De
 Nicht nur `prefix/` oder `recipe.env` löschen — sonst bleibt die GUI bei „installiert“.  
 Kein `load kill` in uninstall (Proton/Hang). Portable/Spielordner außerhalb von `DATA_ROOT` bleiben.
 
+### App-/Spielordner-Verknüpfung (`DATA_ROOT`)
+
+Nach Install/Repair legt Core unter `DATA_ROOT` einen **absoluten Symlink** an, der direkt in den echten Programm-/Spielordner zeigt (ohne durch `prefix/drive_c/...` zu klicken). Der Ordner-Button in der GUI öffnet weiterhin `DATA_ROOT`; die Verknüpfung liegt darin.
+
+| State / Quelle (Priorität) | Typische Rezepte |
+|----------------------------|------------------|
+| `GAME_ROOT` → `GAME_DIR` | Halo, Steam-Templates |
+| `WISO_PORTABLE_ROOT` (`portable.env`) | WISO |
+| `WORK_ROOT` (Ordner) | Photoshop, Premiere, Portable, MSI |
+
+Optional in `recipe.yml`: `app_link_name: MeinOrdner` (Default: Rezept-`id`). Core: `recipe_app_link::ensure` / `::validate` (Validate = OK/WARN, überschreibt keine echte User-Datei). Purge entfernt nur den Link in `DATA_ROOT`, nicht den Ordner außerhalb.
+
 ### install.sh (immer dünn)
+
+`PROJECT_ROOT` kommt vom Launcher (`setup.sh` / GUI). Overlay-Rezepte unter
+`~/.local/share/rezeptor/recipes/` haben **kein** `../../core` — deshalb zuerst
+`$PROJECT_ROOT/core`, Fallback nur fürs Repo-Checkout.
 
 ```bash
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+# shellcheck source=/dev/null
+if [ -f "${PROJECT_ROOT:-}/core/recipe-hooks.sh" ]; then
+    source "$PROJECT_ROOT/core/recipe-hooks.sh"
+elif [ -f "$RECIPE_DIR/../../core/recipe-hooks.sh" ]; then
+    source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+else
+    echo "ERROR: core/recipe-hooks.sh not found (set PROJECT_ROOT)" >&2
+    exit 1
+fi
 recipe_hooks::load install
 recipe_install_steps::run
 ```

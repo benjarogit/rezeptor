@@ -22,6 +22,7 @@ try:
         QObject,
         QProcess,
         QProcessEnvironment,
+        QRectF,
         QSize,
         QThread,
         QTimer,
@@ -30,13 +31,18 @@ try:
     )
     from PyQt6.QtGui import (
         QAction,
+        QBrush,
         QColor,
         QCursor,
         QDesktopServices,
         QFont,
         QIcon,
         QKeySequence,
+        QLinearGradient,
+        QPainter,
+        QPainterPath,
         QPalette,
+        QPixmap,
         QShortcut,
     )
     from PyQt6.QtWidgets import (
@@ -86,6 +92,7 @@ if str(_LAUNCHER_DIR) not in sys.path:
 from app_support import (
     GITHUB_REPO,
     build_diagnose_zip,
+    cachyos_url,
     collect_report_bundle,
     community_reddit_url,
     describe_runtime_for_report,
@@ -99,6 +106,8 @@ from app_support import (
     parse_validate_version_fields,
     effective_proton_ge_tag,
     format_tested_on_display,
+    linuxchooser_url,
+    linuxguides_url,
     proton_ge_badge_label,
     prune_old_logs,
     public_docs_url,
@@ -108,6 +117,7 @@ from app_support import (
     update_auto_supported,
     version_compare,
 )
+from themes import next_theme, normalize_theme, theme_tokens
 from ui_fluent import (
     ACCENT_COPPER,
     COLOR_EXPERIMENTAL,
@@ -122,13 +132,13 @@ from ui_fluent import (
 )
 from ui_rezeptor import (
     REZEPTOR_ICON,
-    SEGMENT_TAB_STYLES,
     LimitedComboBox,
     RecipeSidebarCard,
     SegmentTabBar,
     SidebarCategoryHeader,
     StatusPill,
     STATE_DOT,
+    segment_tab_styles,
 )
 from host_deps import (
     has_gaps,
@@ -213,7 +223,6 @@ from ui_styles import COLOR_PARCHMENT, MUTED, palette
 from ui_icons import (
     ensure_fa_brands_font,
     ensure_fa_font,
-    fa_color,
     fa_icon,
     rounded_pixmap,
 )
@@ -579,6 +588,42 @@ def data_root_browsable(dr: Path) -> bool:
     return False
 
 
+def app_link_in_data_root(meta: dict[str, str], dr: Path) -> tuple[str, Path] | None:
+    """Return (link_name, resolved_target) if DATA_ROOT has a working app/game symlink."""
+    if not dr.is_dir():
+        return None
+    rid = (meta.get("id") or "").strip()
+    names: list[str] = []
+    custom = (meta.get("app_link_name") or "").strip()
+    if custom:
+        names.append(custom)
+    if rid and rid not in names:
+        names.append(rid)
+    for name in names:
+        link = dr / name
+        if not link.is_symlink():
+            continue
+        try:
+            target = link.resolve(strict=True)
+        except OSError:
+            continue
+        if target.is_dir():
+            return name, target
+    return None
+
+
+def open_data_root_tooltip(meta: dict[str, str] | None, dr: Path | None) -> str:
+    """Tooltip for the install-data folder button (mentions app link when present)."""
+    base = t("tooltip.open_data_root")
+    if meta is None or dr is None:
+        return base
+    hit = app_link_in_data_root(meta, dr)
+    if hit is None:
+        return base
+    name, _target = hit
+    return t("tooltip.open_data_root_with_link", name=name)
+
+
 def recipe_wine_prefix(meta: dict[str, str], rid: str) -> Path:
     dr = resolve_data_root(meta, rid)
     raw = meta.get("prefix", "{data_root}/prefix")
@@ -762,6 +807,77 @@ def recipe_process_running(rid: str, meta: dict[str, str] | None = None) -> bool
         if any(h and h in cmd_l for h in path_hints):
             return True
     return False
+
+
+# Matches QFrame#headerCard border-radius in ui_styles.host_stylesheet.
+_HEADER_CARD_RADIUS = 8
+
+
+def faded_header_watermark(
+    src: QPixmap,
+    target: QSize,
+    *,
+    radius: int = _HEADER_CARD_RADIUS,
+) -> QPixmap:
+    """Header backdrop: icon on the right, L→R fade, clipped to card radius.
+
+    Watermark fills the full header rect so top/bottom-right corners follow the
+    same 8px radius as headerCard (no square bleed past rounded chrome).
+    """
+    tw = max(48, target.width())
+    th = max(40, target.height())
+    out = QPixmap(tw, th)
+    out.fill(Qt.GlobalColor.transparent)
+    if src.isNull():
+        return out
+
+    # Draw icon in the right ~44% band, flush to the right edge.
+    band_w = max(140, int(tw * 0.44))
+    scaled = src.scaled(
+        band_w,
+        th,
+        Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+        Qt.TransformationMode.SmoothTransformation,
+    )
+    x = tw - scaled.width()
+    y = (th - scaled.height()) // 2
+
+    painter = QPainter(out)
+    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    painter.drawPixmap(x, y, scaled)
+
+    # Soft L→R alpha (transparent left → soft right).
+    fade = QPixmap(tw, th)
+    fade.fill(Qt.GlobalColor.transparent)
+    fp = QPainter(fade)
+    grad = QLinearGradient(tw - band_w, 0, tw, 0)
+    grad.setColorAt(0.0, QColor(255, 255, 255, 0))
+    grad.setColorAt(0.22, QColor(255, 255, 255, 18))
+    grad.setColorAt(0.55, QColor(255, 255, 255, 95))
+    grad.setColorAt(1.0, QColor(255, 255, 255, 155))
+    fp.fillRect(0, 0, tw, th, QBrush(grad))
+    fp.end()
+    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationIn)
+    painter.drawPixmap(0, 0, fade)
+
+    # Clip to header rounded rect so corners match the card.
+    r = max(0, min(radius, tw // 2, th // 2))
+    if r > 0:
+        clip = QPixmap(tw, th)
+        clip.fill(Qt.GlobalColor.transparent)
+        cp = QPainter(clip)
+        cp.setRenderHint(QPainter.RenderHint.Antialiasing)
+        cp.setPen(Qt.PenStyle.NoPen)
+        cp.setBrush(QColor(255, 255, 255, 255))
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(0, 0, tw, th), float(r), float(r))
+        cp.drawPath(path)
+        cp.end()
+        painter.drawPixmap(0, 0, clip)
+
+    painter.end()
+    return out
 
 
 def recipe_icon(meta: dict[str, str]) -> QIcon:
@@ -1086,6 +1202,7 @@ class AboutDialog(QDialog):
                 repo=GITHUB_REPO,
                 runtime=describe_runtime_for_report(),
             )
+            + t("dialog.about_dracula_html")
         )
         layout.addWidget(body)
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
@@ -1171,8 +1288,8 @@ class RezeptorWindow(QMainWindow):
         self.setWindowTitle(t("app.title", version=read_version()))
         if REZEPTOR_ICON.is_file():
             self.setWindowIcon(QIcon(str(REZEPTOR_ICON)))
-        self.resize(1080, 680)
-        self.setMinimumSize(880, 520)
+        self.resize(1000, 560)
+        self.setMinimumSize(880, 480)
         self._recipe_view_dlg: RecipeViewDialog | None = None
         self._docs_dlg: DeveloperDocsDialog | None = None
         self._ui_restored = False
@@ -1325,9 +1442,14 @@ class RezeptorWindow(QMainWindow):
         self._menu_bar_built = True
 
     def _ensure_lang_toggle(self) -> None:
-        """Flag icon top-right (no button chrome): click toggles DE ↔ EN."""
-        if not hasattr(self, "_lang_btn") or self._lang_btn is None:
-            self._lang_btn = QToolButton(self)
+        """Menubar corner: language | theme — same compact hit target."""
+        if not hasattr(self, "_corner_host") or self._corner_host is None:
+            self._corner_host = QWidget(self)
+            row = QHBoxLayout(self._corner_host)
+            row.setContentsMargins(0, 0, 4, 0)
+            row.setSpacing(0)
+
+            self._lang_btn = QToolButton(self._corner_host)
             self._lang_btn.setObjectName("langToggle")
             self._lang_btn.setAutoRaise(True)
             self._lang_btn.setToolButtonStyle(
@@ -1335,13 +1457,32 @@ class RezeptorWindow(QMainWindow):
             )
             self._lang_btn.setCursor(Qt.CursorShape.PointingHandCursor)
             self._lang_btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            self._lang_btn.setFixedSize(36, 28)
             font = self._lang_btn.font()
-            font.setPointSize(20)
+            font.setPointSize(16)
             self._lang_btn.setFont(font)
             self._lang_btn.clicked.connect(self._toggle_ui_locale)
+            row.addWidget(self._lang_btn)
+
+            self._theme_btn = QToolButton(self._corner_host)
+            self._theme_btn.setObjectName("themeToggle")
+            self._theme_btn.setAutoRaise(True)
+            self._theme_btn.setToolButtonStyle(
+                Qt.ToolButtonStyle.ToolButtonTextOnly
+            )
+            self._theme_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            self._theme_btn.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+            self._theme_btn.setFixedSize(28, 28)
+            tfont = self._theme_btn.font()
+            tfont.setPointSize(14)
+            self._theme_btn.setFont(tfont)
+            self._theme_btn.clicked.connect(self._cycle_ui_theme)
+            row.addWidget(self._theme_btn)
+
         self._sync_lang_toggle()
+        self._sync_theme_toggle()
         self.menuBar().setCornerWidget(
-            self._lang_btn, Qt.Corner.TopRightCorner
+            self._corner_host, Qt.Corner.TopRightCorner
         )
 
     def _sync_lang_toggle(self) -> None:
@@ -1353,13 +1494,36 @@ class RezeptorWindow(QMainWindow):
         self._lang_btn.setAccessibleName(t("menu.language_toggle"))
         self._lang_btn.setStatusTip(t("menu.language_toggle_tip"))
 
+    def _sync_theme_toggle(self) -> None:
+        if not hasattr(self, "_theme_btn") or self._theme_btn is None:
+            return
+        tid = normalize_theme(getattr(self._settings, "theme", None))
+        # Text only — FA icon made a huge circular hit target in the menubar.
+        self._theme_btn.setIcon(QIcon())
+        self._theme_btn.setText("◐")
+        label = t(f"theme.{tid}")
+        self._theme_btn.setToolTip(t("menu.theme_toggle_tip", theme=label))
+        self._theme_btn.setAccessibleName(t("menu.theme_toggle"))
+        self._theme_btn.setStatusTip(t("menu.theme_toggle_tip", theme=label))
+
+    def _cycle_ui_theme(self) -> None:
+        cur = normalize_theme(getattr(self._settings, "theme", None))
+        self._settings.theme = next_theme(cur)
+        save_settings(self._settings)
+        self._apply_theme()
+        self._sync_theme_toggle()
+        # Status flash only — do not flood Schritte with theme-switch noise.
+        self._flash_status(
+            t("menu.theme_switched", theme=t(f"theme.{self._settings.theme}"))
+        )
+
     def _toggle_ui_locale(self) -> None:
         new = "en" if (get_locale() or "en").startswith("de") else "de"
         self._settings.locale = new
         save_settings(self._settings)
         set_locale(new)
         self.retranslate_ui()
-        self._activity("info", t("menu.language_switched", lang=new.upper()))
+        self._flash_status(t("menu.language_switched", lang=new.upper()))
 
     def _view_recipe_label(self) -> str:
         if recipe_edit_allowed(self._settings):
@@ -1424,6 +1588,8 @@ class RezeptorWindow(QMainWindow):
         sidebar.setObjectName("sidebar")
         sidebar.setAccessibleName("Sidebar")
         sidebar.setFixedWidth(268)
+        self._sidebar = sidebar
+        sidebar.installEventFilter(self)
         sl = QVBoxLayout(sidebar)
         sl.setContentsMargins(12, 14, 12, 12)
         sl.setSpacing(10)
@@ -1455,12 +1621,12 @@ class RezeptorWindow(QMainWindow):
         self.recipe_cards_host.setAutoFillBackground(False)
         self.recipe_cards_layout = QVBoxLayout(self.recipe_cards_host)
         self.recipe_cards_layout.setContentsMargins(0, 0, 4, 0)
-        # Tight list — 8px + ScrollArea-Viewport wirkte wie lose „Karten-Stapel“.
         self.recipe_cards_layout.setSpacing(4)
         self.recipe_cards_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.recipe_cards_scroll = QScrollArea()
         self.recipe_cards_scroll.setObjectName("recipeCardsScroll")
-        self.recipe_cards_scroll.setWidgetResizable(True)
+        # False: host height = content; scroll viewport height synced in _sync_sidebar_scroll_gap.
+        self.recipe_cards_scroll.setWidgetResizable(False)
         self.recipe_cards_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.recipe_cards_scroll.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
@@ -1468,14 +1634,18 @@ class RezeptorWindow(QMainWindow):
         self.recipe_cards_scroll.setVerticalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAsNeeded
         )
+        self.recipe_cards_scroll.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.recipe_cards_scroll.setAutoFillBackground(False)
         self.recipe_cards_scroll.viewport().setAutoFillBackground(False)
+        self.recipe_cards_scroll.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+        )
         self.recipe_cards_scroll.setWidget(self.recipe_cards_host)
         self.recipe_cards_scroll.setAccessibleName(t("app.sidebar_title"))
-        # Rechter Abstand: Scrollbar einrechnen, wenn sie sichtbar/nötig ist.
-        sb = self.recipe_cards_scroll.verticalScrollBar()
-        sb.rangeChanged.connect(lambda *_: self._sync_sidebar_scroll_gap())
-        sl.addWidget(self.recipe_cards_scroll, 1)
+        self.recipe_cards_scroll.viewport().installEventFilter(self)
+        # stretch 0: height follows recipe count; leftover is plain sidebar below.
+        sl.addWidget(self.recipe_cards_scroll, 0)
+        sl.addStretch(1)
         root.addWidget(sidebar)
         QTimer.singleShot(0, self._sync_sidebar_scroll_gap)
 
@@ -1495,24 +1665,38 @@ class RezeptorWindow(QMainWindow):
         header.setObjectName("headerCard")
         header.setAccessibleName("HEADER")
         header.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
         )
         self._header = header
+        self._header_watermark_src: QPixmap | None = None
+        self._header_watermark = QLabel(header)
+        self._header_watermark.setObjectName("headerWatermark")
+        self._header_watermark.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
+        )
+        self._header_watermark.setAlignment(
+            Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter
+        )
+        self._header_watermark.setStyleSheet(
+            "background: transparent; border: none;"
+        )
+        self._header_watermark.lower()
+
         hl = QHBoxLayout(header)
-        hl.setContentsMargins(16, 14, 16, 14)
-        hl.setSpacing(14)
+        hl.setContentsMargins(12, 10, 12, 10)
+        hl.setSpacing(10)
 
         self.icon_label = QLabel()
-        self.icon_label.setFixedSize(64, 64)
+        self.icon_label.setFixedSize(48, 48)
         self.icon_label.setScaledContents(True)
         if REZEPTOR_ICON.is_file():
             self.icon_label.setPixmap(
-                rounded_pixmap(QIcon(str(REZEPTOR_ICON)).pixmap(64, 64), 12)
+                rounded_pixmap(QIcon(str(REZEPTOR_ICON)).pixmap(48, 48), 10)
             )
         hl.addWidget(self.icon_label, alignment=Qt.AlignmentFlag.AlignTop)
 
         hc = QVBoxLayout()
-        hc.setSpacing(4)
+        hc.setSpacing(2)
         hc.setContentsMargins(0, 0, 0, 0)
         self.name_label = (
             TitleLabel(t("app.choose_recipe"))
@@ -1653,20 +1837,24 @@ class RezeptorWindow(QMainWindow):
         hc.addLayout(pills_row)
         hc.addLayout(path_row)
         hc.addWidget(self.status_detail_label)
+        self.status_detail_label.setVisible(False)
         hl.addLayout(hc, stretch=1)
         ml.addWidget(header)
         header.installEventFilter(self)
+        if REZEPTOR_ICON.is_file():
+            self._set_header_watermark(QIcon(str(REZEPTOR_ICON)))
+        QTimer.singleShot(0, self._layout_header_watermark)
 
-        # Detail: Startseite | Rezept (CTA + Tabs)
+        # —— Navigation —— always visible (home CTA + recipe CTA)
+        self._build_action_bar(ml)
+
+        # Detail: Startseite | Rezept (Tabs)
         self._home_page = self._create_home_page()
         recipe_pane = QWidget()
         recipe_pane.setObjectName("recipePane")
         rp = QVBoxLayout(recipe_pane)
         rp.setContentsMargins(0, 0, 0, 0)
-        rp.setSpacing(12)
-
-        # —— Navigation —— Starten / Reparieren / Prüfen / Beenden / Mehr
-        self._build_action_bar(rp)
+        rp.setSpacing(8)
 
         overview = self._create_overview_tab()
         progress = self._create_progress_tab()
@@ -1702,6 +1890,9 @@ class RezeptorWindow(QMainWindow):
         rp.addWidget(content_shell, stretch=1)
 
         self._detail_stack = QStackedWidget()
+        self._detail_stack.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding
+        )
         self._detail_stack.addWidget(self._home_page)
         self._detail_stack.addWidget(recipe_pane)
         ml.addWidget(self._detail_stack, stretch=1)
@@ -2344,11 +2535,17 @@ class RezeptorWindow(QMainWindow):
 
     def _create_home_page(self) -> QWidget:
         """Startseite: Intro + Kennzahlen (Header bleibt darüber)."""
-        page = CardWidget() if FLUENT_AVAILABLE else QFrame()
-        page.setObjectName("contentShell")
+        # Plain widget (not contentShell Card) so unused height is not a hollow card.
+        page = QWidget()
+        page.setObjectName("homePage")
+        page.setAutoFillBackground(False)
+        page.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+        )
         lay = QVBoxLayout(page)
-        lay.setContentsMargins(20, 18, 20, 18)
-        lay.setSpacing(16)
+        lay.setContentsMargins(4, 2, 4, 4)
+        lay.setSpacing(6)
+        lay.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         intro = QLabel(t("app.home_intro"))
         intro.setObjectName("homeIntro")
@@ -2358,15 +2555,15 @@ class RezeptorWindow(QMainWindow):
         lay.addWidget(intro)
 
         stats_row = QHBoxLayout()
-        stats_row.setSpacing(10)
+        stats_row.setSpacing(6)
         self._home_stat_labels: dict[str, QLabel] = {}
         for key in ("recipes", "installed", "attention", "hidden"):
             card = QFrame()
             card.setObjectName("homeStatCard")
-            card.setMinimumWidth(110)
+            card.setMinimumWidth(90)
             cl = QVBoxLayout(card)
-            cl.setContentsMargins(12, 12, 12, 12)
-            cl.setSpacing(4)
+            cl.setContentsMargins(6, 4, 6, 4)
+            cl.setSpacing(0)
             val = QLabel("0")
             val.setObjectName("homeStatValue")
             val.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -2395,7 +2592,9 @@ class RezeptorWindow(QMainWindow):
         self._home_activity_list = QListWidget()
         self._home_activity_list.setObjectName("homeActivityList")
         self._home_activity_list.setFrameShape(QFrame.Shape.StyledPanel)
-        self._home_activity_list.setMaximumHeight(196)
+        self._home_activity_list.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+        )
         self._home_activity_list.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
@@ -2413,7 +2612,8 @@ class RezeptorWindow(QMainWindow):
         lay.addWidget(links_hint)
 
         links_grid = QGridLayout()
-        links_grid.setSpacing(10)
+        links_grid.setSpacing(6)
+        links_grid.setContentsMargins(0, 0, 0, 0)
         self._home_github_btn, self._home_github_title, self._home_github_sub = (
             self._make_home_link_card(
                 icon_kind="github",
@@ -2444,8 +2644,38 @@ class RezeptorWindow(QMainWindow):
         links_grid.addWidget(self._home_github_btn, 0, 0)
         links_grid.addWidget(self._home_wiki_btn, 0, 1)
         links_grid.addWidget(self._home_reddit_btn, 0, 2)
+        self._home_linuxchooser_btn, self._home_linuxchooser_title, self._home_linuxchooser_sub = (
+            self._make_home_link_card(
+                icon_kind="linuxchooser",
+                title_key="app.home_link_linuxchooser",
+                subtitle_key="app.home_link_linuxchooser_sub",
+                tip_key="app.home_link_linuxchooser_tip",
+                on_click=self._open_home_linuxchooser,
+            )
+        )
+        self._home_cachyos_btn, self._home_cachyos_title, self._home_cachyos_sub = (
+            self._make_home_link_card(
+                icon_kind="cachyos",
+                title_key="app.home_link_cachyos",
+                subtitle_key="app.home_link_cachyos_sub",
+                tip_key="app.home_link_cachyos_tip",
+                on_click=self._open_home_cachyos,
+            )
+        )
+        self._home_linuxguides_btn, self._home_linuxguides_title, self._home_linuxguides_sub = (
+            self._make_home_link_card(
+                icon_kind="linuxguides",
+                title_key="app.home_link_linuxguides",
+                subtitle_key="app.home_link_linuxguides_sub",
+                tip_key="app.home_link_linuxguides_tip",
+                on_click=self._open_home_linuxguides,
+            )
+        )
+        links_grid.addWidget(self._home_linuxchooser_btn, 1, 0)
+        links_grid.addWidget(self._home_cachyos_btn, 1, 1)
+        links_grid.addWidget(self._home_linuxguides_btn, 1, 2)
         lay.addLayout(links_grid)
-        lay.addStretch(1)
+        # No bottom stretch: page height = content; leftover is mainColumn bg.
         return page
 
     def _make_home_link_card(
@@ -2456,44 +2686,99 @@ class RezeptorWindow(QMainWindow):
         subtitle_key: str,
         tip_key: str,
         on_click,
-    ) -> tuple[QPushButton, QLabel, QLabel]:
-        """Secondary home action: icon + title + short subtitle (stat-card weight)."""
-        btn = QPushButton()
-        btn.setObjectName("homeLinkCard")
-        btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        btn.setToolTip(t(tip_key))
-        btn.setMinimumHeight(88)
-        btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        btn.setAccessibleName(t(title_key))
-        btn.clicked.connect(on_click)
+    ) -> tuple[QFrame, QLabel, QLabel]:
+        """Compact link row: 16px icon | title + subtitle (no stacked/overlap)."""
+        card = QFrame()
+        card.setObjectName("homeLinkCard")
+        card.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        card.setToolTip(t(tip_key))
+        card.setFixedHeight(48)
+        card.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        card.setAccessibleName(t(title_key))
+        card.setProperty("homeIconKind", icon_kind)
+        card.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        cl = QVBoxLayout(btn)
-        cl.setContentsMargins(14, 14, 14, 12)
-        cl.setSpacing(4)
+        card.mouseReleaseEvent = (  # type: ignore[method-assign]
+            lambda event, cb=on_click: (
+                cb()
+                if event.button() == Qt.MouseButton.LeftButton
+                else None
+            )
+        )
+        card.keyPressEvent = (  # type: ignore[method-assign]
+            lambda event, cb=on_click: (
+                cb()
+                if event.key()
+                in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space)
+                else QFrame.keyPressEvent(card, event)
+            )
+        )
+
+        row = QHBoxLayout(card)
+        row.setContentsMargins(10, 6, 10, 6)
+        row.setSpacing(8)
 
         icon_lbl = QLabel()
         icon_lbl.setObjectName("homeLinkIcon")
+        icon_lbl.setFixedSize(18, 18)
         icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         icon_lbl.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-        ic = fa_icon(icon_kind, 28, color=ACCENT_COPPER)
-        if ic is not None:
-            icon_lbl.setPixmap(ic.pixmap(28, 28))
+        card._home_icon_lbl = icon_lbl  # type: ignore[attr-defined]
+        self._paint_home_link_icon(card, icon_kind)
 
+        texts = QVBoxLayout()
+        texts.setContentsMargins(0, 0, 0, 0)
+        texts.setSpacing(0)
         title = QLabel(t(title_key))
         title.setObjectName("homeLinkTitle")
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
-
         sub = QLabel(t(subtitle_key))
         sub.setObjectName("homeLinkSub")
-        sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sub.setWordWrap(True)
         sub.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        texts.addWidget(title)
+        texts.addWidget(sub)
 
-        cl.addWidget(icon_lbl)
-        cl.addWidget(title)
-        cl.addWidget(sub)
-        return btn, title, sub
+        row.addWidget(icon_lbl, 0, Qt.AlignmentFlag.AlignVCenter)
+        row.addLayout(texts, 1)
+        return card, title, sub
+
+    def _paint_home_link_icon(self, card: QFrame, icon_kind: str | None = None) -> None:
+        kind = icon_kind or str(card.property("homeIconKind") or "")
+        lbl = getattr(card, "_home_icon_lbl", None)
+        if not kind or lbl is None:
+            return
+        # Site favicons (vendored) for community links; FA for GitHub/Reddit/Wiki.
+        fav_dir = _LAUNCHER_DIR / "assets" / "home-favicons"
+        for ext in (".svg", ".png", ".ico"):
+            fav = fav_dir / f"{kind}{ext}"
+            if fav.is_file():
+                pix = QIcon(str(fav)).pixmap(18, 18)
+                if not pix.isNull():
+                    lbl.setPixmap(pix)
+                    return
+        fa_kind = {
+            "linuxchooser": "compass",
+            "cachyos": "linux",
+            "linuxguides": "globe",
+        }.get(kind, kind)
+        accent = theme_tokens(normalize_theme(self._settings.theme))["accent"]
+        ic = fa_icon(fa_kind, 14, color=accent)
+        if ic is None:
+            return
+        lbl.setPixmap(ic.pixmap(18, 18))
+
+    def _refresh_home_link_icons(self) -> None:
+        for prefix in (
+            "github",
+            "wiki",
+            "reddit",
+            "linuxchooser",
+            "cachyos",
+            "linuxguides",
+        ):
+            btn = getattr(self, f"_home_{prefix}_btn", None)
+            if btn is not None:
+                self._paint_home_link_icon(btn)
 
     def _open_home_github(self) -> None:
         QDesktopServices.openUrl(QUrl(github_repo_url()))
@@ -2503,6 +2788,15 @@ class RezeptorWindow(QMainWindow):
 
     def _open_home_reddit(self) -> None:
         QDesktopServices.openUrl(QUrl(community_reddit_url()))
+
+    def _open_home_linuxchooser(self) -> None:
+        QDesktopServices.openUrl(QUrl(linuxchooser_url()))
+
+    def _open_home_cachyos(self) -> None:
+        QDesktopServices.openUrl(QUrl(cachyos_url()))
+
+    def _open_home_linuxguides(self) -> None:
+        QDesktopServices.openUrl(QUrl(linuxguides_url()))
 
     def _recipe_stats(self) -> dict[str, int]:
         hidden = set(self._settings.hidden_recipe_ids or [])
@@ -2549,7 +2843,10 @@ class RezeptorWindow(QMainWindow):
         if REZEPTOR_ICON.is_file():
             ic = QIcon(str(REZEPTOR_ICON))
             self.setWindowIcon(ic)
-            self.icon_label.setPixmap(rounded_pixmap(ic.pixmap(64, 64), 12))
+            self.icon_label.setPixmap(rounded_pixmap(ic.pixmap(48, 48), 10))
+            self._set_header_watermark(ic)
+        else:
+            self._set_header_watermark(None)
         self.name_label.setText(t("app.home_title"))
         self.version_info_btn.setVisible(False)
         self.status_pill.setVisible(False)
@@ -2565,11 +2862,13 @@ class RezeptorWindow(QMainWindow):
         self.tested_on_pill.set_content("", MUTED)
         self.author_pill.set_content("", MUTED)
 
-        self.path_label.setText(t("app.home_tagline"))
-        self._current_data_root = None
+        # Home: no path/folder row (tagline lives in intro) — kills header dead space.
+        self.path_label.clear()
+        self.path_label.setVisible(False)
+        self.open_path_btn.setVisible(False)
         self.open_path_btn.setEnabled(False)
-        self.open_path_btn.setToolTip(t("tooltip.open_data_root"))
-        self.status_detail_label.setText("")
+        self.status_detail_label.clear()
+        self.status_detail_label.setVisible(False)
 
         self._cta_mode = "docs"
         self.primary_btn.setText(t("app.home_cta_docs"))
@@ -2588,6 +2887,7 @@ class RezeptorWindow(QMainWindow):
         if hasattr(self, "_detail_stack"):
             self._detail_stack.setCurrentIndex(0)
         self._rebuild_more_menu()
+        QTimer.singleShot(0, lambda: self._apply_content_window_height(allow_grow=False))
 
     def _refresh_home_activity(self) -> None:
         """Newest completed recipe ops on the home page (cap DISPLAY_CAP)."""
@@ -2601,20 +2901,38 @@ class RezeptorWindow(QMainWindow):
         if lst is None:
             return
         lst.clear()
+        tok = theme_tokens(normalize_theme(getattr(self._settings, "theme", None)))
         entries = load_activity_history()[:DISPLAY_CAP]
         if not entries:
             item = QListWidgetItem(t("home.activity_empty"))
             item.setFlags(Qt.ItemFlag.NoItemFlags)
-            item.setForeground(QColor(MUTED))
+            item.setForeground(QColor(tok["muted"]))
             lst.addItem(item)
+            self._fit_home_activity_list()
             return
+        fail_fg = QColor(tok.get("danger") or "#e07070")
+        ok_fg = QColor(tok["fg"])
         for entry in entries:
             item = QListWidgetItem(format_activity_line(entry))
             item.setData(Qt.ItemDataRole.UserRole, entry.rid)
             item.setToolTip(item.text())
-            if not entry.ok:
-                item.setForeground(QColor("#ffb86c"))
+            item.setForeground(fail_fg if not entry.ok else ok_fg)
             lst.addItem(item)
+        self._fit_home_activity_list()
+
+    def _fit_home_activity_list(self) -> None:
+        """Keep Zuletzt as tall as its rows — no empty box."""
+        lst = getattr(self, "_home_activity_list", None)
+        if lst is None:
+            return
+        n = max(1, lst.count())
+        row = lst.sizeHintForRow(0)
+        if row <= 0:
+            row = 22
+        # Cap ~5 rows; grow with content up to that (tight padding).
+        h = min(5, n) * row + 6
+        lst.setFixedHeight(h)
+        lst.setMaximumHeight(h)
 
     def _on_home_activity_clicked(self, item: QListWidgetItem) -> None:
         rid = str(item.data(Qt.ItemDataRole.UserRole) or "").strip()
@@ -2628,8 +2946,8 @@ class RezeptorWindow(QMainWindow):
     def _create_progress_tab(self) -> QWidget:
         tab = QWidget()
         lay = QVBoxLayout(tab)
-        lay.setContentsMargins(12, 10, 12, 12)
-        lay.setSpacing(8)
+        lay.setContentsMargins(10, 8, 10, 8)
+        lay.setSpacing(6)
 
         status_row = QHBoxLayout()
         status_row.setSpacing(10)
@@ -2686,7 +3004,10 @@ class RezeptorWindow(QMainWindow):
         self.activity_list.setHorizontalScrollBarPolicy(
             Qt.ScrollBarPolicy.ScrollBarAlwaysOff
         )
-        lay.addWidget(self.activity_list, stretch=2)
+        self.activity_list.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+        )
+        lay.addWidget(self.activity_list, stretch=0)
         self._show_activity_empty_hint()
 
         log_label = QLabel(t("progress.live"))
@@ -2694,13 +3015,37 @@ class RezeptorWindow(QMainWindow):
         self._progress_live_label = log_label
         lay.addWidget(log_label)
         self.raw_log = QTextEdit()
+        self.raw_log.setObjectName("rawLog")
         self.raw_log.setReadOnly(True)
         self.raw_log.setFont(QFont("monospace", 9))
         self.raw_log.setPlaceholderText(t("progress.live_placeholder"))
-        self.raw_log.setMinimumHeight(100)
-        self.raw_log.setMaximumHeight(160)
-        lay.addWidget(self.raw_log, stretch=1)
+        self.raw_log.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
+        )
+        lay.addWidget(self.raw_log, stretch=0)
+        lay.addStretch(1)
+        self._fit_progress_panels()
         return tab
+
+    def _fit_progress_panels(self) -> None:
+        """Idle: compact Schritte/Live boxes. Busy: taller, still content-capped."""
+        if not hasattr(self, "activity_list") or not hasattr(self, "raw_log"):
+            return
+        lst = self.activity_list
+        n = max(1, lst.count())
+        row = lst.sizeHintForRow(0)
+        if row <= 0:
+            row = 22
+        busy = bool(getattr(self, "_busy", False))
+        cap = 12 if busy else min(n, 3)
+        h = min(cap, n) * row + 8
+        lst.setFixedHeight(max(h, 40 if not busy else 72))
+
+        has_log = bool(getattr(self, "_raw_log_buffer", None))
+        if busy or has_log:
+            self.raw_log.setFixedHeight(140)
+        else:
+            self.raw_log.setFixedHeight(56)
 
     def _create_logs_tab(self) -> QWidget:
         tab = QWidget()
@@ -3441,6 +3786,9 @@ class RezeptorWindow(QMainWindow):
 
     def _base_env(self) -> dict[str, str]:
         env = os.environ.copy()
+        # Drop stale hook paths from parent shells/tests — scripts recompute them.
+        for stale in ("CORE_DIR", "RECIPE_DIR", "RECIPE_YML", "RECIPE_HOOK_PROFILE"):
+            env.pop(stale, None)
         env["PROJECT_ROOT"] = str(ROOT)
         env["LAUNCHER_GUI"] = "1"
         env["LAUNCHER_SESSION_ID"] = self.session_id
@@ -3511,6 +3859,7 @@ class RezeptorWindow(QMainWindow):
 
         order = list(self._settings.recipe_order or [])
         custom_cat_order = list(self._settings.custom_category_order or [])
+        selected_rid = self._selected.rid if self._selected else None
         for cat in sort_categories(list(grouped.keys()), custom_cat_order):
             header = SidebarCategoryHeader(cat, label=category_label(cat))
             self.recipe_cards_layout.addWidget(header)
@@ -3541,6 +3890,7 @@ class RezeptorWindow(QMainWindow):
                 )
                 card.setToolTip(" · ".join(tip_bits))
                 card.apply_theme(getattr(self, "_theme", "dark"))
+                card.set_selected(selected_rid is not None and info.rid == selected_rid)
                 card.clicked.connect(
                     lambda idx=i: self._select_recipe_index(idx, user_initiated=True)
                 )
@@ -3553,8 +3903,12 @@ class RezeptorWindow(QMainWindow):
                     card, 0, Qt.AlignmentFlag.AlignTop
                 )
                 self._recipe_cards.append((card, info))
-        self.recipe_cards_layout.addStretch(1)
+        # No addStretch — list height is content-sized in _sync_sidebar_scroll_gap.
         QTimer.singleShot(0, self._sync_sidebar_scroll_gap)
+        if self._selected is None:
+            QTimer.singleShot(
+                0, lambda: self._apply_content_window_height(allow_grow=False)
+            )
 
     def _select_recipe_index(self, row: int, *, user_initiated: bool = False) -> None:
         if row < 0 or row >= len(self.recipes):
@@ -3566,6 +3920,7 @@ class RezeptorWindow(QMainWindow):
         for i, (card, info) in enumerate(self._recipe_cards):
             card.set_selected(info.rid == self.recipes[row].rid)
         self._on_select(row)
+        QTimer.singleShot(0, lambda: self._apply_content_window_height(allow_grow=True))
         if user_initiated:
             QTimer.singleShot(0, self._maybe_steam_medicine_prompt)
 
@@ -3717,6 +4072,7 @@ class RezeptorWindow(QMainWindow):
         pix = icon.pixmap(64, 64)
         if not pix.isNull():
             self.icon_label.setPixmap(rounded_pixmap(pix, 12))
+        self._set_header_watermark(icon)
         self.name_label.setText(meta.get("name", info.rid))
         self._update_status_pills(info)
         self._update_version_header(info)
@@ -4070,8 +4426,11 @@ class RezeptorWindow(QMainWindow):
     def _set_path_row(self, dr: Path, info: RecipeInfo | None = None) -> None:
         """HEADER: Daten + Quelle/Ziel (installiert) or pending Quelle/Ziel."""
         self._current_data_root = dr
+        self.path_label.setVisible(True)
+        self.open_path_btn.setVisible(True)
         usable = data_root_browsable(dr)
-        path_color = MUTED
+        tok = theme_tokens(getattr(self, "_theme", None))
+        path_color = tok["muted"]
         if info is not None and (
             usable
             or info.state in (RecipeState.INSTALLED, RecipeState.PARTIAL)
@@ -4085,15 +4444,19 @@ class RezeptorWindow(QMainWindow):
                 self.path_label.setText(
                     pending_paths_text(info.meta, pending or {}, dr)
                 )
-                path_color = COLOR_TESTED
+                path_color = tok["tested"]
             else:
                 self.path_label.setText("")
         else:
             self.path_label.setText(str(dr) if usable else "")
         self._style_secondary_label(self.path_label, path_color, size_px=11)
+        has_path = bool((self.path_label.text() or "").strip())
+        self.path_label.setVisible(has_path)
+        self.open_path_btn.setVisible(has_path or usable)
         self.open_path_btn.setEnabled(usable)
+        meta = info.meta if usable else None
         self.open_path_btn.setToolTip(
-            t("tooltip.open_data_root")
+            open_data_root_tooltip(meta, dr)
             if usable
             else t("tooltip.open_data_root_missing")
         )
@@ -4247,6 +4610,62 @@ class RezeptorWindow(QMainWindow):
             )
         menu.exec(self.path_label.mapToGlobal(pos))
 
+    def _set_header_watermark(self, icon: QIcon | None) -> None:
+        """Store recipe/home icon for the right-side faded header backdrop."""
+        if icon is None or icon.isNull():
+            self._header_watermark_src = None
+            wm = getattr(self, "_header_watermark", None)
+            if wm is not None:
+                wm.clear()
+                wm.setVisible(False)
+            return
+        # High-res source; scaled/faded on layout.
+        pix = icon.pixmap(256, 256)
+        if pix.isNull():
+            pix = icon.pixmap(128, 128)
+        self._header_watermark_src = pix if not pix.isNull() else None
+        self._layout_header_watermark()
+
+    def _layout_header_watermark(self) -> None:
+        wm = getattr(self, "_header_watermark", None)
+        header = getattr(self, "_header", None)
+        if wm is None or header is None:
+            return
+        hr = header.rect()
+        if hr.width() < 80 or hr.height() < 24:
+            return
+        # Full header bounds — radius clip is baked into the pixmap.
+        wm.setGeometry(hr)
+        src = getattr(self, "_header_watermark_src", None)
+        if src is None or src.isNull():
+            wm.clear()
+            wm.setVisible(False)
+            return
+        wm.setPixmap(
+            faded_header_watermark(
+                src, hr.size(), radius=_HEADER_CARD_RADIUS
+            )
+        )
+        wm.setVisible(True)
+        wm.lower()
+        # Keep interactive chrome above the backdrop.
+        for w in (
+            getattr(self, "icon_label", None),
+            getattr(self, "name_label", None),
+            getattr(self, "version_info_btn", None),
+            getattr(self, "open_path_btn", None),
+            getattr(self, "status_pill", None),
+            getattr(self, "version_pill", None),
+            getattr(self, "tested_pill", None),
+            getattr(self, "proton_pill", None),
+            getattr(self, "tested_on_pill", None),
+            getattr(self, "author_pill", None),
+            getattr(self, "path_label", None),
+            getattr(self, "status_detail_label", None),
+        ):
+            if w is not None:
+                w.raise_()
+
     def _schedule_header_refit(self) -> None:
         """Word-wrap QLabels need a deferred height pass after layout width is known."""
         QTimer.singleShot(0, self._refit_header_labels)
@@ -4267,13 +4686,14 @@ class RezeptorWindow(QMainWindow):
                 w = max(header.width() - 110, 200)
             h = lab.heightForWidth(w)
             if h > 0:
-                # Floor ~2 lines so CTA/header don't jump when detail shrinks
-                floor = lab.fontMetrics().height() * 2 + 6
-                lab.setMinimumHeight(max(h, floor))
+                lab.setMinimumHeight(h)
+            else:
+                lab.setMinimumHeight(0)
         header.updateGeometry()
         parent = header.parentWidget()
         if parent is not None:
             parent.updateGeometry()
+        self._layout_header_watermark()
 
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:  # noqa: N802
         if (
@@ -4281,6 +4701,21 @@ class RezeptorWindow(QMainWindow):
             and event.type() == QEvent.Type.Resize
         ):
             self._refit_header_labels()
+            self._layout_header_watermark()
+        scroll = getattr(self, "recipe_cards_scroll", None)
+        if (
+            scroll is not None
+            and obj is scroll.viewport()
+            and event.type() == QEvent.Type.Resize
+            and not getattr(self, "_sidebar_syncing", False)
+        ):
+            self._sync_sidebar_scroll_gap()
+        if (
+            obj is getattr(self, "_sidebar", None)
+            and event.type() == QEvent.Type.Resize
+            and not getattr(self, "_sidebar_syncing", False)
+        ):
+            self._sync_sidebar_scroll_gap()
         return super().eventFilter(obj, event)
 
     def _action_hint_for(self, info: RecipeInfo) -> str:
@@ -4540,6 +4975,7 @@ class RezeptorWindow(QMainWindow):
             del buf[: len(buf) - _RAW_LOG_MAX_LINES + 1]
         buf.append(line)
         self.raw_log.append(line)
+        self._fit_progress_panels()
 
     def _flash_status(self, text: str, ms: int = 4000) -> None:
         """Visible on every tab (status bar). Activity list is Vorgang-only."""
@@ -4550,19 +4986,51 @@ class RezeptorWindow(QMainWindow):
         if sb is not None:
             sb.showMessage(text, ms)
 
+    def _activity_fg(self, kind: str) -> str:
+        """Foreground for Schritte rows — always from active theme tokens."""
+        tok = theme_tokens(getattr(self, "_theme", None))
+        return {
+            "ok": tok["tested"],
+            "error": tok["danger"],
+            "warn": tok["experimental"],
+            "step": tok["accent"],
+            "info": tok["muted"],
+            "log": tok["muted"],
+        }.get(kind, tok["fg"])
+
+    def _restyle_activity_list(self) -> None:
+        """Re-tint existing Schritte rows after a theme switch."""
+        if not hasattr(self, "activity_list"):
+            return
+        for i in range(self.activity_list.count()):
+            item = self.activity_list.item(i)
+            if item is None:
+                continue
+            kind = item.data(Qt.ItemDataRole.UserRole)
+            if not isinstance(kind, str) or not kind:
+                kind = "info"
+            fg = self._activity_fg(kind)
+            item.setForeground(QColor(fg))
+            icon = fa_icon(kind, color=fg)
+            if icon is not None and item.flags() != Qt.ItemFlag.NoItemFlags:
+                item.setIcon(icon)
+
     def _show_activity_empty_hint(self) -> None:
         """Friendly placeholder when the Schritte list has no real events yet."""
         self.activity_list.clear()
         item = QListWidgetItem(t("progress.empty_hint"))
         item.setFlags(Qt.ItemFlag.NoItemFlags)
-        item.setForeground(QColor(MUTED))
+        item.setData(Qt.ItemDataRole.UserRole, "info")
+        item.setForeground(QColor(self._activity_fg("info")))
         self.activity_list.addItem(item)
         self._activity_empty_shown = True
+        self._fit_progress_panels()
 
     def _clear_activity_list(self) -> None:
         """Clear Schritte for a new run (no empty hint until idle again)."""
         self.activity_list.clear()
         self._activity_empty_shown = False
+        self._fit_progress_panels()
 
     def _activity(self, kind: str, text: str) -> None:
         text = (text or "").strip()
@@ -4577,9 +5045,11 @@ class RezeptorWindow(QMainWindow):
             return
         if kind in ("step", "ok", "warn", "error"):
             self._last_activity_key = key
+        fg = self._activity_fg(kind)
         item = QListWidgetItem(text)
         item.setToolTip(text)
-        icon = fa_icon(kind)
+        item.setData(Qt.ItemDataRole.UserRole, kind)
+        icon = fa_icon(kind, color=fg)
         if icon is not None:
             item.setIcon(icon)
         else:
@@ -4592,15 +5062,12 @@ class RezeptorWindow(QMainWindow):
                 "log": "·",
             }.get(kind, "·")
             item.setText(f"{prefix} {text}")
-        item.setForeground(QColor(fa_color(kind)))
+        item.setForeground(QColor(fg))
         self.activity_list.addItem(item)
         self.activity_list.scrollToBottom()
+        self._fit_progress_panels()
         if kind in ("step", "ok", "warn", "error"):
-            style = {
-                "ok": "color: #50fa7b; font-weight: 600;",
-                "error": "color: #ff5555; font-weight: 600;",
-                "warn": "color: #ffb86c; font-weight: 600;",
-            }.get(kind)
+            style = f"color: {fg}; font-weight: 600;"
             self._set_step_text(text, style=style)
         if kind == "info":
             self._flash_status(text)
@@ -5243,8 +5710,8 @@ class RezeptorWindow(QMainWindow):
             if (s.window_geometry or "").strip():
                 s.window_geometry = ""
                 save_settings(s)
-            self.resize(1080, 680)
-        clamp_restored_geometry(self, min_w=880, min_h=520)
+            self.resize(1000, 560)
+        clamp_restored_geometry(self, min_w=880, min_h=480)
         ensure_on_screen(self)
         if s.window_maximized:
             self.showMaximized()
@@ -5253,6 +5720,10 @@ class RezeptorWindow(QMainWindow):
             self._set_content_tab(s.content_tab or "overview")
         finally:
             self._suppress_tab_persist = False
+        if self._selected is None and not s.window_maximized:
+            QTimer.singleShot(
+                0, lambda: self._apply_content_window_height(allow_grow=False)
+            )
 
     def showEvent(self, event) -> None:  # type: ignore[no-untyped-def]
         super().showEvent(event)
@@ -5263,23 +5734,148 @@ class RezeptorWindow(QMainWindow):
             QTimer.singleShot(0, self._restore_ui_layout)
             QTimer.singleShot(200, self._startup_prompts)
 
+    def _sidebar_scroll_max_height(self) -> int:
+        """Space left in the sidebar for the recipe list (below home/search)."""
+        scroll = getattr(self, "recipe_cards_scroll", None)
+        sidebar = getattr(self, "_sidebar", None)
+        if scroll is None or sidebar is None:
+            return 480
+        lay = sidebar.layout()
+        if lay is None:
+            return max(80, sidebar.height() - 120)
+        margins = lay.contentsMargins()
+        used = margins.top() + margins.bottom()
+        spacing = lay.spacing()
+        for i in range(lay.count()):
+            item = lay.itemAt(i)
+            if item is None:
+                continue
+            w = item.widget()
+            if w is None or w is scroll or not w.isVisible():
+                continue
+            used += w.sizeHint().height() + spacing
+        return max(80, sidebar.height() - used)
+
     def _sync_sidebar_scroll_gap(self) -> None:
-        """Rechter Karten-Abstand: Scrollbar-Breite einrechnen, wenn sie nötig ist."""
+        """List height = content until it hits the sidebar budget, then scroll."""
         scroll = getattr(self, "recipe_cards_scroll", None)
         host = getattr(self, "recipe_cards_host", None)
         lay = getattr(self, "recipe_cards_layout", None)
         if scroll is None or host is None or lay is None:
             return
-        sb = scroll.verticalScrollBar()
-        need = sb.maximum() > sb.minimum()
-        # Basis 4px; mit Scrollbar: Breite + Luft, damit Karten nicht am Balken kleben.
-        right = (sb.sizeHint().width() + 6) if need else 4
-        lay.setContentsMargins(0, 0, right, 0)
-        vw = scroll.viewport().width()
-        if vw > 0:
-            host.setMaximumWidth(vw)
+        if getattr(self, "_sidebar_syncing", False):
+            return
+        self._sidebar_syncing = True
+        try:
+            max_h = self._sidebar_scroll_max_height()
+            # Width pass: prefer viewport, else sidebar inner width.
+            vw = scroll.viewport().width()
+            if vw <= 0:
+                side = getattr(self, "_sidebar", None)
+                if side is not None:
+                    sm = side.layout().contentsMargins() if side.layout() else None
+                    vw = side.width() - (
+                        (sm.left() + sm.right()) if sm is not None else 24
+                    )
+            vw = max(int(vw), 200)
+            host.setFixedWidth(vw)
+            host.adjustSize()
+            content_h = max(host.sizeHint().height(), 1)
+
+            need_scroll = content_h > max_h
+            right = (
+                (scroll.verticalScrollBar().sizeHint().width() + 6)
+                if need_scroll
+                else 4
+            )
+            lay.setContentsMargins(0, 0, right, 0)
+            vw2 = scroll.viewport().width()
+            if vw2 > 0:
+                host.setFixedWidth(vw2)
+                host.adjustSize()
+                content_h = max(host.sizeHint().height(), 1)
+
+            target = min(content_h, max_h)
+            if abs(scroll.height() - target) > 1:
+                scroll.setFixedHeight(target)
+            host.resize(host.width(), content_h)
+            scroll.setVerticalScrollBarPolicy(
+                Qt.ScrollBarPolicy.ScrollBarAsNeeded
+                if content_h > target
+                else Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+            )
+        finally:
+            self._sidebar_syncing = False
+
+    def _preferred_window_height(self) -> int:
+        """Height that fits chrome + sidebar list + home/recipe body (no dead void)."""
+        mb = self.menuBar().sizeHint().height() if self.menuBar() else 0
+        stb = self.statusBar().sizeHint().height() if self.statusBar() else 0
+        frame = self.frameGeometry().height() - self.geometry().height()
+        if frame < 0 or frame > 100:
+            frame = 36
+
+        header_h = 0
+        if hasattr(self, "_header") and self._header is not None:
+            header_h = max(self._header.sizeHint().height(), self._header.height(), 72)
+
+        bar_h = 0
+        bar = getattr(self, "primary_btn", None)
+        if bar is not None:
+            parent = bar.parentWidget()
+            if parent is not None and parent.isVisible():
+                bar_h = max(parent.sizeHint().height(), 36)
+
+        if self._selected is None:
+            page = getattr(self, "_home_page", None)
+            if page is not None:
+                page.adjustSize()
+                body_h = max(page.sizeHint().height(), 200)
+            else:
+                body_h = 280
         else:
-            host.setMaximumWidth(16777215)
+            body_h = 440
+
+        main_chrome = 14 + 12 + 16 + 12  # margins + spacings in main column
+        main_need = header_h + bar_h + body_h + main_chrome
+
+        side_need = 160
+        side = getattr(self, "_sidebar", None)
+        scroll = getattr(self, "recipe_cards_scroll", None)
+        if side is not None and side.layout() is not None:
+            lay = side.layout()
+            m = lay.contentsMargins()
+            side_need = m.top() + m.bottom()
+            for i in range(lay.count()):
+                item = lay.itemAt(i)
+                if item is None:
+                    continue
+                w = item.widget()
+                if w is None or not w.isVisible():
+                    continue
+                if w is scroll:
+                    side_need += max(w.height(), 48)
+                else:
+                    side_need += w.sizeHint().height()
+                side_need += lay.spacing()
+
+        return mb + stb + frame + max(main_need, side_need)
+
+    def _apply_content_window_height(self, *, allow_grow: bool = False) -> None:
+        """Shrink (or grow) the window to content — kills empty Startseite/Sidebar voids."""
+        if self.isMaximized() or self.isFullScreen():
+            return
+        self._sync_sidebar_scroll_gap()
+        prefer = self._preferred_window_height()
+        prefer = max(prefer, self.minimumHeight())
+        scr = self.screen()
+        if scr is not None:
+            prefer = min(prefer, scr.availableGeometry().height() - 24)
+        cur = self.height()
+        if prefer < cur - 20:
+            self.resize(self.width(), prefer)
+        elif allow_grow and prefer > cur + 20:
+            self.resize(self.width(), prefer)
 
     def _startup_prompts(self) -> None:
         self._maybe_host_deps_first_run()
@@ -5501,23 +6097,28 @@ class RezeptorWindow(QMainWindow):
         label.setPalette(pal)
 
     def _apply_theme(self) -> None:
-        # Fluent Dark + Brand — System-Theme irrelevant
-        host = apply_rezeptor_theme()
-        self._theme = "dark"
+        tid = normalize_theme(getattr(self._settings, "theme", None))
+        self._settings.theme = tid
+        host = apply_rezeptor_theme(tid)
+        self._theme = tid
+        tok = theme_tokens(tid)
+        tabs_qss = segment_tab_styles(tid)
         app = QApplication.instance()
         if app is not None:
-            app.setStyleSheet((host or "") + SEGMENT_TAB_STYLES)
+            app.setStyleSheet((host or "") + tabs_qss)
         if hasattr(self, "segment_tabs"):
-            self.segment_tabs.setStyleSheet(SEGMENT_TAB_STYLES)
+            self.segment_tabs.apply_theme(tid)
         if hasattr(self, "name_label"):
             self.name_label.setStyleSheet(
-                f"font-size: 20px; font-weight: 600; color: {COLOR_PARCHMENT}; "
+                f"font-size: 20px; font-weight: 600; color: {tok['fg']}; "
                 "background: transparent;"
             )
         if hasattr(self, "path_label"):
-            self._style_secondary_label(self.path_label, MUTED, size_px=11)
+            self._style_secondary_label(self.path_label, tok["muted"], size_px=11)
         if hasattr(self, "status_detail_label"):
-            self._style_secondary_label(self.status_detail_label, MUTED, size_px=12)
+            self._style_secondary_label(
+                self.status_detail_label, tok["muted"], size_px=12
+            )
         for pill in (
             getattr(self, "status_pill", None),
             getattr(self, "version_pill", None),
@@ -5527,10 +6128,34 @@ class RezeptorWindow(QMainWindow):
             getattr(self, "author_pill", None),
         ):
             if pill is not None and hasattr(pill, "apply_theme"):
-                pill.apply_theme("dark")
+                pill.apply_theme(tid)
+        # Header chrome icons follow theme fg (not fixed parchment).
+        chrome_fg = tok["fg"]
+        for btn, kind in (
+            (getattr(self, "version_info_btn", None), "info"),
+            (getattr(self, "open_path_btn", None), "folder"),
+        ):
+            if btn is None:
+                continue
+            ic = fa_icon(kind, 14, color=chrome_fg)
+            if ic is not None:
+                btn.setIcon(ic)
+        self._restyle_activity_list()
+        for card, _info in getattr(self, "_recipe_cards", []) or []:
+            if hasattr(card, "apply_theme"):
+                card.apply_theme(tid)
+        self._sync_theme_toggle()
+        self._refresh_home_link_icons()
+        self._refresh_home_activity()
         self._refresh_status_footer(self._update_available or "")
         if self._selected is not None:
             self._render_info_markdown()
+        # Watermark alpha depends on theme contrast — rebuild if present.
+        if getattr(self, "_header_watermark_src", None) is not None:
+            self._layout_header_watermark()
+        wm = getattr(self, "_header_watermark", None)
+        if wm is not None:
+            wm.lower()
 
     def retranslate_ui(self) -> None:
         self._build_menus()
@@ -5578,6 +6203,18 @@ class RezeptorWindow(QMainWindow):
             self._home_reddit_title.setText(t("app.home_link_reddit"))
         if hasattr(self, "_home_reddit_sub"):
             self._home_reddit_sub.setText(t("app.home_link_reddit_sub"))
+        for prefix in ("linuxchooser", "cachyos", "linuxguides"):
+            btn = getattr(self, f"_home_{prefix}_btn", None)
+            title = getattr(self, f"_home_{prefix}_title", None)
+            sub = getattr(self, f"_home_{prefix}_sub", None)
+            if btn is not None:
+                btn.setToolTip(t(f"app.home_link_{prefix}_tip"))
+                btn.setAccessibleName(t(f"app.home_link_{prefix}"))
+            if title is not None:
+                title.setText(t(f"app.home_link_{prefix}"))
+            if sub is not None:
+                sub.setText(t(f"app.home_link_{prefix}_sub"))
+        self._sync_theme_toggle()
         for key in ("recipes", "installed", "attention", "hidden"):
             cap = getattr(self, f"_home_stat_caption_{key}", None)
             if cap is not None:
@@ -5770,9 +6407,9 @@ def main() -> int:
     ensure_fa_brands_font()
     # Fusion für Host-Widgets (Combo/Listen) — sonst KDE-Blau statt Kupfer
     app.setStyle("Fusion")
-    # Fluent Dark + Brand — egal ob System Light oder Dark
-    host = apply_rezeptor_theme()
-    app.setStyleSheet((host or "") + SEGMENT_TAB_STYLES)
+    boot_settings = load_settings()
+    host = apply_rezeptor_theme(boot_settings.theme)
+    app.setStyleSheet((host or "") + segment_tab_styles(boot_settings.theme))
     try:
         w = RezeptorWindow()
         install_application_close_guard(w)

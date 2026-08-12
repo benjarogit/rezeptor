@@ -6,7 +6,14 @@ set -eu
 
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
-source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+if [ -f "${PROJECT_ROOT:-}/core/recipe-hooks.sh" ]; then
+    source "$PROJECT_ROOT/core/recipe-hooks.sh"
+elif [ -f "$RECIPE_DIR/../../core/recipe-hooks.sh" ]; then
+    source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+else
+    echo "ERROR: core/recipe-hooks.sh not found (set PROJECT_ROOT)" >&2
+    exit 1
+fi
 recipe_hooks::load install
 recipe_hooks::log_setup "SteamGame_Install"
 
@@ -173,6 +180,9 @@ recipe_hooks::state_set STEAM_APPID "$REAL_APPID"
 recipe_hooks::state_set FAKE_STEAM_APPID "$FAKE_APPID"
 [ -n "$compat" ] && recipe_hooks::state_set COMPATDATA "$compat"
 [ -n "$proton" ] && recipe_hooks::state_set PROTON "$proton"
+if type recipe_app_link::ensure >/dev/null 2>&1; then
+    recipe_app_link::ensure || true
+fi
 
 output::progress 100 "Einrichtung fertig"
 [ -n "$compat" ] || output::warning "compatdata fehlt — Spiel einmal mit Proton starten, dann Reparieren"

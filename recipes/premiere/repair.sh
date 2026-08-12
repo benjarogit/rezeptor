@@ -6,7 +6,14 @@ set -eu
 
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
-source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+if [ -f "${PROJECT_ROOT:-}/core/recipe-hooks.sh" ]; then
+    source "$PROJECT_ROOT/core/recipe-hooks.sh"
+elif [ -f "$RECIPE_DIR/../../core/recipe-hooks.sh" ]; then
+    source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+else
+    echo "ERROR: core/recipe-hooks.sh not found (set PROJECT_ROOT)" >&2
+    exit 1
+fi
 recipe_hooks::load repair
 recipe_hooks::_source sharedFuncs.sh
 recipe_hooks::_source recipe-fonts.sh
@@ -46,12 +53,16 @@ fi
 
 output::progress_tick "Grafik-DLLs"
 output::step "Proton-GE Grafik-DLLs (DXVK) + Registry"
+adobe_setup::kill_all_wineservers
 if wine_runtime::deploy_proton_graphics_dlls; then
     adobe_setup::apply_graphics_registry >> "$LOG_FILE" 2>&1 || {
         output::error "apply_graphics_registry fehlgeschlagen — $LOG_FILE"
         exit 1
     }
     output::success "Grafik-DLLs & Registry"
+elif recipe_validate::graphics_dlls_present "$WINEPREFIX"; then
+    output::warning "Grafik-DLL-Deploy fehlgeschlagen — vorhandene DLLs bleiben (Prefix OK)"
+    adobe_setup::apply_graphics_registry >> "$LOG_FILE" 2>&1 || true
 else
     output::error "deploy_proton_graphics_dlls fehlgeschlagen"
     exit 1
@@ -134,6 +145,14 @@ if ! recipe_validate::native_pe "$WINEPREFIX/drive_c/windows/syswow64/gdiplus.dl
         output::error "gdiplus fehlgeschlagen — siehe $LOG_DIR"
         exit 1
     fi
+fi
+
+_pr_exe="$(premiere::find_exe "$WINEPREFIX" 2>/dev/null || true)"
+if [ -n "$_pr_exe" ] && [ -f "$_pr_exe" ]; then
+    recipe_hooks::state_set WORK_ROOT "$(cd "$(dirname "$_pr_exe")" && pwd)"
+fi
+if type recipe_app_link::ensure >/dev/null 2>&1; then
+    recipe_app_link::ensure || true
 fi
 
 output::progress_tick "Erneut prüfen"

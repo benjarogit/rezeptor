@@ -88,12 +88,16 @@ except ImportError:
         return
 
 
-def apply_rezeptor_theme() -> str:
-    """Ein Look: Fluent Dark + Kupfer. System Light/Dark egal.
+def apply_rezeptor_theme(theme: str | None = None) -> str:
+    """Apply palette + Fluent theme for standard / dracula / alucard.
 
     Returns:
-        Stylesheet für die App (Host-Chrome + später Segment-Tabs).
+        Host stylesheet for the app chrome.
     """
+    from themes import normalize_theme, set_active_theme, theme_is_dark, theme_tokens
+
+    tid = set_active_theme(theme)
+    tok = theme_tokens(tid)
     try:
         from PyQt6.QtCore import Qt
         from PyQt6.QtGui import QColor, QGuiApplication, QPalette
@@ -103,15 +107,20 @@ def apply_rezeptor_theme() -> str:
         if app is not None:
             hints = QGuiApplication.styleHints()
             if hasattr(hints, "setColorScheme"):
-                hints.setColorScheme(Qt.ColorScheme.Dark)
+                scheme = (
+                    Qt.ColorScheme.Dark
+                    if theme_is_dark(tid)
+                    else Qt.ColorScheme.Light
+                )
+                hints.setColorScheme(scheme)
 
-            # Dunkle Palette — sonst System-Light → helles Chrome + Fluent-Weißschrift
-            bg = QColor("#1C1C1A")
-            fg = QColor(COLOR_PARCHMENT)
-            muted = QColor(MUTED)
-            panel = QColor("#252526")
-            base = QColor("#2B2B2B")
-            accent = QColor(ACCENT_COPPER)
+            bg = QColor(tok["bg"])
+            fg = QColor(tok["fg"])
+            muted = QColor(tok["muted"])
+            panel = QColor(tok["surface1"])
+            base = QColor(tok["surface2"])
+            accent = QColor(tok["accent"])
+            hi_text = QColor("#1C1C1A" if theme_is_dark(tid) else "#FFFBEB")
             pal = QPalette()
             for group in (
                 QPalette.ColorGroup.Active,
@@ -130,9 +139,8 @@ def apply_rezeptor_theme() -> str:
                 pal.setColor(group, QPalette.ColorRole.PlaceholderText, muted)
                 pal.setColor(group, QPalette.ColorRole.BrightText, fg)
                 pal.setColor(group, QPalette.ColorRole.Highlight, accent)
-                pal.setColor(group, QPalette.ColorRole.HighlightedText, QColor("#1C1C1A"))
+                pal.setColor(group, QPalette.ColorRole.HighlightedText, hi_text)
                 pal.setColor(group, QPalette.ColorRole.Link, accent)
-            # Disabled etwas gedämpft, aber noch lesbar
             pal.setColor(
                 QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, muted
             )
@@ -147,7 +155,6 @@ def apply_rezeptor_theme() -> str:
     if FLUENT_AVAILABLE and Theme is not None and _setTheme is not None:
         # AppImage/FUSE mounts are read-only. qfluentwidgets defaults to
         # writing ./config next to cwd — that crashes startup (Errno 30).
-        # Force Dark in-memory only; optional config lives under XDG.
         try:
             if _qconfig is not None:
                 xdg = Path(
@@ -160,17 +167,23 @@ def apply_rezeptor_theme() -> str:
                     _qconfig.file = cfg
                 except Exception:
                     pass
-            # save=False: never mkdir relative "config/" on the AppImage mount
-            _setTheme(Theme.DARK, save=False)
+            fluent_theme = Theme.DARK if theme_is_dark(tid) else Theme.LIGHT
+            _setTheme(fluent_theme, save=False)
             if _setThemeColor is not None:
-                _setThemeColor(ACCENT_COPPER, save=False)
+                # Always re-apply accent so Standard/Alucard never keep Dracula purple.
+                _setThemeColor(str(tok["accent"]), save=False)
             if _qconfig is not None:
                 try:
-                    _qconfig.theme = Theme.DARK
+                    _qconfig.theme = fluent_theme
+                except Exception:
+                    pass
+                try:
+                    # Drop cached purple from a previous session if present.
+                    if hasattr(_qconfig, "set"):
+                        _qconfig.set(_qconfig.themeColor, tok["accent"], save=False)
                 except Exception:
                     pass
         except OSError as exc:
-            # Theme persistence must never block launch on immutable media.
             print(f"rezeptor: fluent theme skipped ({exc})", file=sys.stderr)
 
-    return get_host_stylesheet()
+    return get_host_stylesheet(tid)

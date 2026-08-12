@@ -107,6 +107,8 @@ class RecipeProcessOps:
             self._w.action_refresh.setEnabled(False)
             self._sync_cancel_install_btn()
             self._w._sync_sidebar_busy_progress()
+            if hasattr(self._w, "_fit_progress_panels"):
+                self._w._fit_progress_panels()
             return
         self._w._busy_rid = ""
         self._w._progress_stall_timer.stop()
@@ -126,6 +128,8 @@ class RecipeProcessOps:
         self._w._sync_medizin_button()
         self._sync_cancel_install_btn()
         self._w._sync_sidebar_busy_progress()
+        if hasattr(self._w, "_fit_progress_panels"):
+            self._w._fit_progress_panels()
         if self._w._selected:
             self._w._select_recipe_index(self._w._selected_index)
 

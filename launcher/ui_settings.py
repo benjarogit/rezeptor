@@ -346,7 +346,10 @@ class SettingsDialog(QDialog):
         lid = self.lang_combo.currentData()
         if lid:
             self._settings.locale = str(lid)
-        self._settings.theme = "dark"
+        # Theme is toggled from the menubar corner; keep stored value.
+        from themes import normalize_theme
+
+        self._settings.theme = normalize_theme(self._settings.theme)
         save_settings(self._settings)
         self._dirty = False
         return True

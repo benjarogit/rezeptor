@@ -4,7 +4,14 @@ set -eu
 
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
-source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+if [ -f "${PROJECT_ROOT:-}/core/recipe-hooks.sh" ]; then
+    source "$PROJECT_ROOT/core/recipe-hooks.sh"
+elif [ -f "$RECIPE_DIR/../../core/recipe-hooks.sh" ]; then
+    source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+else
+    echo "ERROR: core/recipe-hooks.sh not found (set PROJECT_ROOT)" >&2
+    exit 1
+fi
 recipe_hooks::load validate
 
 _guaranteed="$(recipe_get "$RECIPE_YML" version_guaranteed 2>/dev/null || true)"
@@ -29,6 +36,8 @@ else
     recipe_validate::fail "Keine EXE im Arbeitsordner"
     failures=$((failures + 1))
 fi
+
+recipe_validate::app_link
 
 if [ "$failures" -eq 0 ]; then
     output::progress_done "Prüfung OK"

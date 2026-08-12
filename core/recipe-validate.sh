@@ -199,3 +199,12 @@ recipe_validate::winetricks_done() {
     local prefix="$1" pkg="$2"
     [ -f "$prefix/winetricks.log" ] && grep -q "$pkg" "$prefix/winetricks.log"
 }
+
+# Symlink DATA_ROOT/<app_link_name> → program/game folder (WARN only).
+recipe_validate::app_link() {
+    if type recipe_app_link::validate >/dev/null 2>&1; then
+        recipe_app_link::validate
+        return 0
+    fi
+    return 0
+}

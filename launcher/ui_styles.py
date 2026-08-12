@@ -42,13 +42,31 @@ DARK = {
 
 
 def palette(theme: str | None = None) -> dict[str, str]:
-    _ = theme
-    return DARK
+    """Active theme color map (standard / dracula / alucard)."""
+    from themes import theme_tokens
+
+    return theme_tokens(theme)
+
+
+def _hex_rgba(hex_color: str, alpha: float) -> str:
+    h = hex_color.lstrip("#")
+    if len(h) != 6:
+        return f"rgba(184, 115, 51, {alpha})"
+    r, g, b = int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    return f"rgba({r}, {g}, {b}, {alpha})"
 
 
 def style_status_label(label, kind: str = "info", *, size_px: int = 12) -> None:
     """Brand status colors for feedback lines (Gespeichert / Warnung / Fehler)."""
-    color = STATUS_FG.get(kind, MUTED)
+    from themes import theme_tokens
+
+    tok = theme_tokens()
+    color = {
+        "ok": tok["tested"],
+        "warn": tok["experimental"],
+        "error": tok["danger"],
+        "info": tok["muted"],
+    }.get(kind, tok["muted"])
     weight = "600" if kind in ("ok", "warn", "error") else "500"
     label.setStyleSheet(
         f"color: {color}; font-size: {size_px}px; font-weight: {weight}; "
@@ -56,8 +74,25 @@ def style_status_label(label, kind: str = "info", *, size_px: int = 12) -> None:
     )
 
 
-def host_stylesheet() -> str:
+def host_stylesheet(theme: str | None = None) -> str:
     """Host-Chrome QSS — Combo/Spin brauchen echte Arrow-Images (sonst leere Kästen)."""
+    tok = palette(theme)
+    COLOR_ANTHRACITE = tok["bg"]
+    COLOR_PARCHMENT = tok["fg"]
+    MUTED = tok["muted"]
+    ACCENT_COPPER = tok["accent"]
+    BORDER = tok["border"]
+    SURFACE_1 = tok["surface1"]
+    SURFACE_2 = tok["surface2"]
+    SURFACE_3 = tok["surface3"]
+    ACCENT_16 = _hex_rgba(ACCENT_COPPER, 0.16)
+    ACCENT_18 = _hex_rgba(ACCENT_COPPER, 0.18)
+    ACCENT_22 = _hex_rgba(ACCENT_COPPER, 0.22)
+    ACCENT_28 = _hex_rgba(ACCENT_COPPER, 0.28)
+    ACCENT_35 = _hex_rgba(ACCENT_COPPER, 0.35)
+    ACCENT_45 = _hex_rgba(ACCENT_COPPER, 0.45)
+    ACCENT_55 = _hex_rgba(ACCENT_COPPER, 0.55)
+    SCROLL_HOVER = _hex_rgba(COLOR_PARCHMENT, 0.35)
     arrow_down = ensure_chevron_png("down", COLOR_PARCHMENT).as_posix()
     arrow_up = ensure_chevron_png("up", COLOR_PARCHMENT).as_posix()
     return f"""
@@ -82,7 +117,7 @@ QMenu {{
     border: 1px solid {BORDER};
     color: {COLOR_PARCHMENT};
 }}
-QMenu::item:selected {{ background-color: rgba(184, 115, 51, 0.28); }}
+QMenu::item:selected {{ background-color: {ACCENT_28}; }}
 QStatusBar {{
     background-color: {SURFACE_1};
     border-top: 1px solid {BORDER};
@@ -164,83 +199,81 @@ QPushButton#homeSidebarBtn:hover {{
 }}
 QPushButton#homeSidebarBtn[homeActive="true"] {{
     border-color: {ACCENT_COPPER};
-    background-color: rgba(184, 115, 51, 0.16);
+    background-color: {ACCENT_16};
 }}
 QFrame#homeStatCard {{
-    background-color: {COLOR_ANTHRACITE};
+    background-color: {SURFACE_2};
     border: 1px solid {BORDER};
-    border-radius: 8px;
+    border-radius: 6px;
 }}
 QLabel#homeStatValue {{
     color: {ACCENT_COPPER};
-    font-size: 22px;
+    font-size: 16px;
     font-weight: 700;
     background: transparent;
 }}
 QLabel#homeStatLabel {{
     color: {MUTED};
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     background: transparent;
 }}
 QLabel#homeIntro {{
     color: {COLOR_PARCHMENT};
-    font-size: 13px;
+    font-size: 12px;
     background: transparent;
 }}
 QLabel#homeLinksHint {{
     color: {MUTED};
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.04em;
     background: transparent;
 }}
 QLabel#homeActivityTitle {{
     color: {MUTED};
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.04em;
     background: transparent;
 }}
 QListWidget#homeActivityList {{
-    background-color: {COLOR_ANTHRACITE};
+    background-color: {SURFACE_2};
     border: 1px solid {BORDER};
     border-radius: 6px;
     color: {COLOR_PARCHMENT};
     font-size: 12px;
 }}
-QListWidget#homeActivityList::item {{ padding: 4px 8px; border: none; }}
-QPushButton#homeLinkCard {{
-    background-color: {COLOR_ANTHRACITE};
-    border: 1px solid {BORDER};
-    border-radius: 8px;
-    padding: 0px;
-    text-align: center;
-    min-height: 88px;
+QListWidget#homeActivityList::item {{ padding: 2px 6px; border: none; }}
+/* Home community links — read as buttons (fill + accent edge), not flat cards */
+QFrame#homeLinkCard {{
+    background-color: {SURFACE_2};
+    border: 1px solid {ACCENT_COPPER};
+    border-radius: 6px;
 }}
-QPushButton#homeLinkCard:hover {{
-    background-color: rgba(184, 115, 51, 0.16);
+QFrame#homeLinkCard:hover {{
+    background-color: {ACCENT_22};
     border-color: {ACCENT_COPPER};
 }}
-QPushButton#homeLinkCard:focus {{
-    border-color: {ACCENT_COPPER};
-}}
-QPushButton#homeLinkCard:pressed {{
-    background-color: rgba(184, 115, 51, 0.22);
-    border-color: {ACCENT_COPPER};
+QFrame#homeLinkCard:focus {{
+    background-color: {ACCENT_18};
+    border: 2px solid {ACCENT_COPPER};
 }}
 QLabel#homeLinkIcon {{
     background: transparent;
+    border: none;
+    padding: 0px;
+    margin: 0px;
 }}
 QLabel#homeLinkTitle {{
     color: {COLOR_PARCHMENT};
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     background: transparent;
 }}
 QLabel#homeLinkSub {{
     color: {MUTED};
-    font-size: 11px;
+    font-size: 10px;
     background: transparent;
 }}
 QLabel#appTitle {{
@@ -264,7 +297,7 @@ QLabel#muted, QLabel#statusDetail {{
     background: transparent;
 }}
 QListWidget#activityList {{
-    background-color: {COLOR_ANTHRACITE};
+    background-color: {SURFACE_2};
     border: 1px solid {BORDER};
     border-radius: 6px;
     color: {COLOR_PARCHMENT};
@@ -272,6 +305,13 @@ QListWidget#activityList {{
     font-size: 12px;
 }}
 QListWidget#activityList::item {{ padding: 4px 8px; border: none; }}
+QTextEdit#rawLog {{
+    background-color: {SURFACE_2};
+    border: 1px solid {BORDER};
+    border-radius: 6px;
+    color: {COLOR_PARCHMENT};
+    padding: 6px 8px;
+}}
 QTextBrowser#infoBrowser {{
     background-color: transparent;
     border: none;
@@ -319,7 +359,7 @@ QSpinBox::down-arrow {{
     width: 10px;
     height: 10px;
 }}
-/* Dropdowns: ein Design mit Kupfer — kein System-Blau */
+/* Dropdowns: ein Design mit Akzent — kein System-Blau */
 QComboBox {{
     background-color: rgba(255, 255, 255, 0.06);
     border: 1px solid {BORDER};
@@ -332,7 +372,7 @@ QComboBox {{
     selection-color: #1a1a1a;
 }}
 QComboBox:hover {{
-    border-color: rgba(184, 115, 51, 0.55);
+    border-color: {ACCENT_55};
 }}
 QComboBox:focus, QComboBox:on {{
     border-color: {ACCENT_COPPER};
@@ -354,7 +394,7 @@ QComboBox QAbstractItemView {{
     color: {COLOR_PARCHMENT};
     outline: none;
     padding: 4px;
-    selection-background-color: rgba(184, 115, 51, 0.35);
+    selection-background-color: {ACCENT_35};
     selection-color: {COLOR_PARCHMENT};
 }}
 QComboBox QAbstractItemView::item {{
@@ -365,15 +405,15 @@ QComboBox QAbstractItemView::item {{
     color: {COLOR_PARCHMENT};
 }}
 QComboBox QAbstractItemView::item:hover {{
-    background-color: rgba(184, 115, 51, 0.22);
+    background-color: {ACCENT_22};
     color: {COLOR_PARCHMENT};
 }}
 QComboBox QAbstractItemView::item:selected {{
-    background-color: rgba(184, 115, 51, 0.35);
+    background-color: {ACCENT_35};
     color: {COLOR_PARCHMENT};
 }}
 QListWidget::item:selected {{
-    background-color: rgba(184, 115, 51, 0.35);
+    background-color: {ACCENT_35};
     color: {COLOR_PARCHMENT};
 }}
 QListWidget::item:hover:!selected {{
@@ -401,10 +441,10 @@ QPushButton {{
 }}
 QPushButton:hover {{
     background-color: rgba(255, 255, 255, 0.09);
-    border-color: rgba(184, 115, 51, 0.45);
+    border-color: {ACCENT_45};
 }}
 QPushButton:pressed {{
-    background-color: rgba(184, 115, 51, 0.22);
+    background-color: {ACCENT_22};
 }}
 QPushButton:disabled {{
     color: {MUTED};
@@ -417,7 +457,7 @@ QPushButton#ghostBtn {{
     color: {COLOR_PARCHMENT};
 }}
 QPushButton#ghostBtn:hover {{
-    background-color: rgba(184, 115, 51, 0.18);
+    background-color: {ACCENT_18};
     border-color: {ACCENT_COPPER};
 }}
 QToolButton {{
@@ -429,7 +469,7 @@ QToolButton {{
 }}
 QToolButton:hover {{
     background-color: rgba(255, 255, 255, 0.09);
-    border-color: rgba(184, 115, 51, 0.45);
+    border-color: {ACCENT_45};
 }}
 /* Kompakte Header-Chips — globales ToolButton-Padding würgt 22px-Icons sonst leer */
 QToolButton#versionInfoBtn,
@@ -444,20 +484,25 @@ QToolButton#healthChip {{
     max-height: 28px;
     background-color: rgba(255, 255, 255, 0.08);
 }}
-/* Sprach-Flagge: nur Icon, kein Button-Chrome */
-QToolButton#langToggle {{
+/* Menubar corner: flag + theme — compact, no chrome */
+QToolButton#langToggle,
+QToolButton#themeToggle {{
     background: transparent;
     border: none;
-    padding: 0 10px;
+    padding: 0;
     margin: 0;
-    min-width: 40px;
-    min-height: 30px;
-    font-size: 22px;
+    min-width: 0;
+    max-width: 36px;
+    min-height: 28px;
+    max-height: 28px;
     color: {COLOR_PARCHMENT};
 }}
 QToolButton#langToggle:hover,
 QToolButton#langToggle:pressed,
-QToolButton#langToggle:focus {{
+QToolButton#langToggle:focus,
+QToolButton#themeToggle:hover,
+QToolButton#themeToggle:pressed,
+QToolButton#themeToggle:focus {{
     background: transparent;
     border: none;
 }}
@@ -474,7 +519,7 @@ QScrollBar::handle:vertical {{
     min-height: 24px;
 }}
 QScrollBar::handle:vertical:hover {{
-    background: rgba(237, 230, 214, 0.35);
+    background: {SCROLL_HOVER};
 }}
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
     height: 0;
@@ -493,7 +538,7 @@ QScrollBar::handle:horizontal {{
     min-width: 24px;
 }}
 QScrollBar::handle:horizontal:hover {{
-    background: rgba(237, 230, 214, 0.35);
+    background: {SCROLL_HOVER};
 }}
 QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
     width: 0;
@@ -503,13 +548,18 @@ QSplitter::handle {{ background-color: {BORDER}; width: 1px; }}
 
 
 _HOST_CACHE: str | None = None
+_HOST_CACHE_THEME: str | None = None
 
 
-def get_host_stylesheet() -> str:
+def get_host_stylesheet(theme: str | None = None) -> str:
     """Cached Host-QSS (erst nach QApplication sicher für QPainter-Arrows)."""
-    global _HOST_CACHE
-    if _HOST_CACHE is None:
-        _HOST_CACHE = host_stylesheet()
+    global _HOST_CACHE, _HOST_CACHE_THEME
+    from themes import normalize_theme
+
+    tid = normalize_theme(theme)
+    if _HOST_CACHE is None or _HOST_CACHE_THEME != tid:
+        _HOST_CACHE = host_stylesheet(tid)
+        _HOST_CACHE_THEME = tid
     return _HOST_CACHE
 
 

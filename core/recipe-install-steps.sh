@@ -325,6 +325,9 @@ recipe_install_steps::run() {
         trap - EXIT
         return 11
     fi
+    if type recipe_app_link::ensure >/dev/null 2>&1; then
+        recipe_app_link::ensure || true
+    fi
     output::success "${RECIPE_NAME:-Rezept} installiert"
     output::progress 100 "Fertig"
     recipe_hooks::emit_log_paths
