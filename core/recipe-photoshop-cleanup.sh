@@ -79,28 +79,152 @@ recipe_photoshop::wait_photoshop_gone() {
 
 # Close Photoshop windows via the host WM (same path as clicking the window ✕).
 # IMPORTANT: never wmctrl -c by title substring — that closes browser tabs titled
-# "…Photoshop…" (issue #10 follow-up). Match WM_CLASS only (StartupWMClass=Photoshop.exe).
+# "…Photoshop…" (issue #10 follow-up). Prefer _NET_WM_PID related to Photoshop.exe
+# in this prefix; WM_CLASS is a fallback (Proton/Wine class strings vary).
 recipe_photoshop::_wm_class_is_photoshop() {
     local wclass="${1,,}"
     case "$wclass" in
         *photoshop.exe*|photoshop.exe|photoshop.exe.*) return 0 ;;
+        # Some Wine/Proton builds omit ".exe" or use instance.Class pairs.
+        photoshop.photoshop|*.photoshop|photoshop|photoshop.*) return 0 ;;
     esac
     return 1
 }
 
+# PIDs of real Photoshop.exe in this recipe prefix (one per line).
+recipe_photoshop::_photoshop_pids() {
+    local prefix pid cmd argv0 base
+    prefix="$(recipe_photoshop::_prefix)"
+    [ -n "$prefix" ] || return 0
+    for pid in $(pgrep -f '[Pp]hotoshop\.exe' 2>/dev/null || true); do
+        [ -d "/proc/$pid" ] || continue
+        recipe_photoshop::_pid_in_prefix "$pid" "$prefix" || continue
+        cmd="$(tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null || true)"
+        case "${cmd,,}" in
+            *adobeipcbroker*) continue ;;
+        esac
+        argv0="$(tr '\0' '\n' <"/proc/$pid/cmdline" 2>/dev/null | head -1 || true)"
+        base="${argv0##*/}"
+        base="${base,,}"
+        if [ "$base" = "photoshop.exe" ]; then
+            printf '%s\n' "$pid"
+            continue
+        fi
+        case "$cmd" in
+            *[/\\]Photoshop.exe*|*[/\\]photoshop.exe*) printf '%s\n' "$pid" ;;
+        esac
+    done
+}
+
+# Wine often sets _NET_WM_PID to a parent/child of Photoshop.exe, not the .exe PID.
+recipe_photoshop::_related_pids() {
+    local pid ppid child
+    while IFS= read -r pid; do
+        [ -n "$pid" ] || continue
+        printf '%s\n' "$pid"
+        if [ -r "/proc/${pid}/stat" ]; then
+            # /proc/pid/stat: pid (comm) state ppid …
+            ppid="$(awk '{print $4}' "/proc/${pid}/stat" 2>/dev/null || true)"
+            case "$ppid" in
+                ''|0|1) ;;
+                *) printf '%s\n' "$ppid" ;;
+            esac
+        fi
+        for child in $(pgrep -P "$pid" 2>/dev/null || true); do
+            printf '%s\n' "$child"
+        done
+    done
+}
+
+recipe_photoshop::_wm_window_pid() {
+    local id="${1:?}"
+    local raw
+    command -v xprop >/dev/null 2>&1 || return 1
+    raw="$(xprop -id "$id" _NET_WM_PID 2>/dev/null | awk -F'= *' '{print $2}' | tr -d '[:space:]')"
+    case "$raw" in
+        ''|*[!0-9]*) return 1 ;;
+    esac
+    printf '%s\n' "$raw"
+}
+
+recipe_photoshop::_pid_list_has() {
+    local needle="${1:?}"
+    local list="${2:-}"
+    local p
+    [ -n "$list" ] || return 1
+    while IFS= read -r p; do
+        [ "$p" = "$needle" ] && return 0
+    done <<EOF
+$list
+EOF
+    return 1
+}
+
 recipe_photoshop::_wm_close_photoshop() {
+    local id desk wclass wpid pids pid prefix
+    prefix="$(recipe_photoshop::_prefix)"
+    pids="$(recipe_photoshop::_photoshop_pids | recipe_photoshop::_related_pids | sort -u)"
+
+    # Best: close by process id (never touches browser tabs with "Photoshop" in title).
+    if [ -n "$pids" ] && command -v xdotool >/dev/null 2>&1; then
+        while IFS= read -r pid; do
+            [ -n "$pid" ] || continue
+            # shellcheck disable=SC2046
+            for id in $(xdotool search --pid "$pid" 2>/dev/null || true); do
+                [ -n "$id" ] || continue
+                xdotool windowclose "$id" 2>/dev/null || true
+            done
+        done <<EOF
+$pids
+EOF
+    fi
+
     command -v wmctrl >/dev/null 2>&1 || return 0
-    local id desk wclass
     # wmctrl -lx columns: id desktop WM_CLASS host title…
     # Do not use IFS= here — we need default whitespace field splitting.
     while read -r id desk wclass _; do
         [ -n "$id" ] || continue
+        wpid="$(recipe_photoshop::_wm_window_pid "$id" 2>/dev/null || true)"
+        if [ -n "$wpid" ] && [ -n "$pids" ]; then
+            if recipe_photoshop::_pid_list_has "$wpid" "$pids"; then
+                wmctrl -ic "$id" 2>/dev/null || true
+                continue
+            fi
+            # Same Wine prefix + Photoshop class: PID may be another wine helper.
+            if [ -n "$prefix" ] \
+                && recipe_photoshop::_pid_in_prefix "$wpid" "$prefix" \
+                && recipe_photoshop::_wm_class_is_photoshop "$wclass"; then
+                wmctrl -ic "$id" 2>/dev/null || true
+            fi
+            continue
+        fi
+        # No usable PID list / _NET_WM_PID: class fallback (still never by title).
         recipe_photoshop::_wm_class_is_photoshop "$wclass" || continue
         wmctrl -ic "$id" 2>/dev/null || true
     done < <(wmctrl -lx 2>/dev/null || true)
+    return 0
 }
 
-# Windows taskkill without /F sends WM_CLOSE (prefs/recents can flush). /F is hard kill.
+# Soft keyboard quit on Photoshop windows belonging to our prefix PIDs.
+recipe_photoshop::_wm_alt_f4_photoshop() {
+    local pid id pids
+    command -v xdotool >/dev/null 2>&1 || return 0
+    pids="$(recipe_photoshop::_photoshop_pids | recipe_photoshop::_related_pids | sort -u)"
+    while IFS= read -r pid; do
+        [ -n "$pid" ] || continue
+        # shellcheck disable=SC2046
+        for id in $(xdotool search --pid "$pid" 2>/dev/null || true); do
+            [ -n "$id" ] || continue
+            xdotool windowactivate --sync "$id" 2>/dev/null || true
+            xdotool key --window "$id" --clearmodifiers alt+F4 2>/dev/null || true
+        done
+    done <<EOF
+$pids
+EOF
+}
+
+# Windows taskkill /F is hard kill. Soft taskkill without /F often leaves Wine
+# showing "Not responding" while the UI still paints (issue #10 video) — avoid it.
 recipe_photoshop::_wine_taskkill() {
     local force="${1:-0}"
     local prefix
@@ -108,31 +232,37 @@ recipe_photoshop::_wine_taskkill() {
     [ -n "$prefix" ] && [ -d "$prefix" ] || return 1
     export WINEPREFIX="$prefix"
     type wine_runtime::wine >/dev/null 2>&1 || return 1
+    # Only hard kill is used from request_photoshop_exit.
     if [ "$force" = "1" ]; then
         wine_runtime::wine taskkill.exe /F /IM Photoshop.exe >/dev/null 2>&1 || true
         wine_runtime::wine taskkill.exe /F /IM photoshop.exe >/dev/null 2>&1 || true
-    else
-        wine_runtime::wine taskkill.exe /IM Photoshop.exe >/dev/null 2>&1 || true
-        wine_runtime::wine taskkill.exe /IM photoshop.exe >/dev/null 2>&1 || true
     fi
     return 0
 }
 
 # Ask Photoshop to exit like File→Exit / window close; escalate only if needed.
 # Do NOT SIGTERM first — that causes prefs/recents "amnesia" (issue #10).
+# Do NOT soft-taskkill — that triggers Wine "Not responding" with a live UI.
 recipe_photoshop::request_photoshop_exit() {
+    local attempt
     if ! recipe_photoshop::photoshop_running; then
         return 0
     fi
     type output::step >/dev/null 2>&1 && output::step "$(msg::t ps.exit.soft)" || true
 
-    recipe_photoshop::_wm_close_photoshop
-    if recipe_photoshop::wait_photoshop_gone 8; then
-        return 0
-    fi
+    # Host WM close retries (same mechanism as clicking the window ✕).
+    for attempt in 1 2 3; do
+        recipe_photoshop::_wm_close_photoshop
+        if recipe_photoshop::wait_photoshop_gone 4; then
+            return 0
+        fi
+        type output::progress_tick >/dev/null 2>&1 \
+            && output::progress_tick "$(msg::t ps.exit.soft)" \
+            || true
+    done
 
-    recipe_photoshop::_wine_taskkill 0
-    if recipe_photoshop::wait_photoshop_gone 20; then
+    recipe_photoshop::_wm_alt_f4_photoshop
+    if recipe_photoshop::wait_photoshop_gone 6; then
         return 0
     fi
 

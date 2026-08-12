@@ -18,6 +18,7 @@ from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox
 from activity_history import append_activity, is_tracked_op
 from diagnostics import log_call_site, log_line
 from i18n import t
+from ui_dialogs import ask_yes_no
 from log_context import E_LAUNCH_NO_PROCESS, E_SCRIPT_FAILED, LogEvent
 from recipe_discovery import RecipeState
 from settings import (
@@ -871,12 +872,11 @@ class RecipeProcessOps:
             QMessageBox.warning(self._w, t("dialog.missing"), t("dialog.no_kill"))
             return
         name = self._w._selected.meta.get("name", self._w._selected.rid)
-        if QMessageBox.question(
+        if not ask_yes_no(
             self._w,
             t("dialog.kill_title"),
             t("dialog.kill_body", name=name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        ) != QMessageBox.StandardButton.Yes:
+        ):
             return
         # kill.sh already cleans orphans — do not schedule cleanup-orphans.sh on stop.
         self._w._skip_exit_cleanup.add(self._w._selected.rid)
@@ -893,13 +893,12 @@ class RecipeProcessOps:
             return
         rid = self._w._selected.rid
         name = self._w._selected.meta.get("name", rid)
-        if QMessageBox.question(
+        if not ask_yes_no(
             self._w,
             t("dialog.uninstall_title"),
             self._uninstall_confirm_message(rid, name),
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            QMessageBox.StandardButton.No,
-        ) != QMessageBox.StandardButton.Yes:
+            default_yes=False,
+        ):
             return
         extra = {"PHOTOSHOP_UNINSTALL_YES": "1", "UNINSTALL_YES": "1"}
         recipe_dir = rd

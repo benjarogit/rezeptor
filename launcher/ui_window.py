@@ -12,6 +12,7 @@ from PyQt6.QtWidgets import QApplication, QDialog, QMessageBox, QWidget
 
 from diagnostics import log_call_site
 from i18n import t
+from ui_dialogs import apply_fa_message_icon
 
 UnsavedChoice = Literal["save", "discard", "cancel"]
 
@@ -24,7 +25,7 @@ def confirm_unsaved_changes(
 ) -> UnsavedChoice:
     """Speichern / Schließen ohne Speichern / Abbrechen."""
     box = QMessageBox(parent)
-    box.setIcon(QMessageBox.Icon.Warning)
+    apply_fa_message_icon(box, "warn")
     box.setWindowTitle(title or t("dialog.unsaved_title"))
     box.setText(body or t("dialog.unsaved_body"))
     save_btn = box.addButton(

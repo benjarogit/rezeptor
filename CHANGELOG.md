@@ -5,6 +5,13 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.40] - 2026-08-12
+
+### Fixed
+- Photoshop Quit: host window-close via process id (and related Wine PIDs), retries, and Alt+F4; drop soft `taskkill` that left Wine “Not responding” while the UI still painted ([#10](https://github.com/benjarogit/rezeptor/issues/10))
+- Mehr menu: no trailing empty separator when the last group (e.g. Uninstall) is omitted
+- Message dialogs use Font Awesome icons instead of Qt stock glyphs
+
 ## [1.1.39] - 2026-08-11
 
 ### Added

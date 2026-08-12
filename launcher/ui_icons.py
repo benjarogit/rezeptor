@@ -27,6 +27,7 @@ FA_XMARK = "\uf00d"
 FA_ARROW_RIGHT = "\uf061"
 FA_TRIANGLE_EXCLAMATION = "\uf071"
 FA_CIRCLE_INFO = "\uf05a"
+FA_CIRCLE_QUESTION = "\uf059"
 FA_CIRCLE = "\uf111"
 FA_SPINNER = "\uf110"
 FA_PLAY = "\uf04b"
@@ -48,6 +49,7 @@ _KIND_GLYPH = {
     "warn": FA_TRIANGLE_EXCLAMATION,
     "step": FA_ARROW_RIGHT,
     "info": FA_CIRCLE_INFO,
+    "question": FA_CIRCLE_QUESTION,
     "log": FA_CIRCLE,
     "progress": FA_SPINNER,
     "launch": FA_PLAY,
@@ -74,6 +76,7 @@ _KIND_COLOR = {
     "warn": "#e6a700",
     "step": "#58a6ff",
     "info": "#a1a1aa",
+    "question": "#58a6ff",
     "log": "#c9d1d9",
     "progress": "#58a6ff",
     "launch": "#e4e4e7",
