@@ -212,6 +212,7 @@ from ui_icons import (
     fa_icon,
     rounded_pixmap,
 )
+from ui_dialogs import apply_fa_message_icon
 from ui_medizin import MedizinDialog
 from ui_progress import WaitingSpinner
 from ui_window import (
@@ -1961,44 +1962,52 @@ class RezeptorWindow(QMainWindow):
             tip=t("menu.relocate_tip"),
         )
 
-        _sep()
-        if needs_source_dialog(info.meta):
-            _add(
-                source_configure_label(info.meta),
-                self.run_source_configure,
-                show=ops_ok,
-                tip=t("menu.source_tip"),
-            )
-        # Installationsdaten: nur am Pfad-Icon neben dem Pfad (klarer als im Mehr-Menü)
-        _add(
-            t("menu.shortcuts"),
-            self.run_desktop_shortcuts,
-            show=ops_ok and installed_ish,
-        )
+        # Separator only when the next group has at least one visible row.
+        will_source = bool(needs_source_dialog(info.meta) and ops_ok)
+        will_shortcuts = bool(ops_ok and installed_ish)
         genp_script = Path(info.meta["_dir"]) / "genp.sh"
-        if genp_script.is_file():
+        will_genp = bool(genp_script.is_file() and ops_ok and installed_ish)
+        if will_source or will_shortcuts or will_genp:
+            _sep()
+            if will_source:
+                _add(
+                    source_configure_label(info.meta),
+                    self.run_source_configure,
+                    show=True,
+                    tip=t("menu.source_tip"),
+                )
+            # Installationsdaten: nur am Pfad-Icon neben dem Pfad (klarer als im Mehr-Menü)
             _add(
-                t("menu.genp_from_pack"),
-                self.run_genp_from_pack,
-                show=ops_ok and installed_ish,
-                tip=t("menu.genp_from_pack_tip"),
+                t("menu.shortcuts"),
+                self.run_desktop_shortcuts,
+                show=will_shortcuts,
+            )
+            if will_genp:
+                _add(
+                    t("menu.genp_from_pack"),
+                    self.run_genp_from_pack,
+                    show=True,
+                    tip=t("menu.genp_from_pack_tip"),
+                )
+
+        # Only open a new separator group when the next item will actually show —
+        # otherwise RoundMenu keeps an empty separator row (translucent “hole”).
+        if not busy:
+            _sep()
+            _add(
+                self._view_recipe_label(),
+                self.show_recipe_view,
+                show=True,
+                tip=self._view_recipe_tip(),
             )
 
-        _sep()
-        # Recipe view stays available while untrusted (read-only inspection).
-        _add(
-            self._view_recipe_label(),
-            self.show_recipe_view,
-            show=not busy,
-            tip=self._view_recipe_tip(),
-        )
-
-        _sep()
-        _add(
-            t("menu.uninstall"),
-            self.run_uninstall,
-            show=ops_ok and installed_ish,
-        )
+        if ops_ok and installed_ish:
+            _sep()
+            _add(
+                t("menu.uninstall"),
+                self.run_uninstall,
+                show=True,
+            )
 
     def _on_primary_cta(self) -> None:
         w = QApplication.focusWidget()
@@ -2301,7 +2310,7 @@ class RezeptorWindow(QMainWindow):
         body = "\n".join(f"• {f}" for f in fails) if fails else t("app.health_empty")
         box = QMessageBox(self)
         box.setWindowTitle(t("app.health_title"))
-        box.setIcon(QMessageBox.Icon.Warning)
+        apply_fa_message_icon(box, "warn")
         box.setText(body)
         repair = box.addButton(t("app.health_repair"), QMessageBox.ButtonRole.AcceptRole)
         box.addButton("OK", QMessageBox.ButtonRole.RejectRole)
@@ -2813,7 +2822,7 @@ class RezeptorWindow(QMainWindow):
 
         summary = format_plan_summary(plan)
         box = QMessageBox(self)
-        box.setIcon(QMessageBox.Icon.Information)
+        apply_fa_message_icon(box, "info")
         box.setWindowTitle(t("recipe_sync.available_title"))
         box.setText(
             t(
@@ -2861,7 +2870,7 @@ class RezeptorWindow(QMainWindow):
         channel_label = t(f"update.channel_{channel}")
         if latest and version_compare(cur, latest):
             box = QMessageBox(self)
-            box.setIcon(QMessageBox.Icon.Information)
+            apply_fa_message_icon(box, "info")
             box.setWindowTitle(t("update.available_title"))
             if channel == "flatpak":
                 box.setText(
@@ -3296,7 +3305,7 @@ class RezeptorWindow(QMainWindow):
             )
         )
         box = QMessageBox(self)
-        box.setIcon(QMessageBox.Icon.Information)
+        apply_fa_message_icon(box, "info")
         box.setWindowTitle(t("dialog.report_opened_title"))
         box.setText(
             t(
@@ -3357,7 +3366,7 @@ class RezeptorWindow(QMainWindow):
             return
         zip_path, count = built
         box = QMessageBox(self)
-        box.setIcon(QMessageBox.Icon.Information)
+        apply_fa_message_icon(box, "info")
         box.setWindowTitle(t("dialog.diagnose_done_title"))
         box.setText(
             t(
@@ -3390,7 +3399,7 @@ class RezeptorWindow(QMainWindow):
 
     def _show_failure(self, done_label: str, code: int) -> None:
         box = QMessageBox(self)
-        box.setIcon(QMessageBox.Icon.Critical)
+        apply_fa_message_icon(box, "error")
         box.setWindowTitle(t("dialog.error"))
         box.setText(t("error.E_SCRIPT_FAILED", label=done_label, code=code))
         info = t("dialog.failure_info")
@@ -4339,7 +4348,7 @@ class RezeptorWindow(QMainWindow):
         if not p.is_dir():
             return
         box = QMessageBox(self)
-        box.setIcon(QMessageBox.Icon.Information)
+        apply_fa_message_icon(box, "info")
         box.setWindowTitle(t("status.post_config_title"))
         box.setText(t("status.post_config_body"))
         open_btn = box.addButton(
@@ -5346,7 +5355,7 @@ class RezeptorWindow(QMainWindow):
         """Stay-on-top — sonst hinter modalem Quellen-Dialog / Wine unsichtbar."""
         self._bring_app_to_front()
         box = QMessageBox(self)
-        box.setIcon(QMessageBox.Icon.Question)
+        apply_fa_message_icon(box, "question")
         box.setWindowTitle(t("dialog.quit_title"))
         box.setText(body)
         box.setStandardButtons(
