@@ -163,6 +163,13 @@ recipe_wiso::deploy_portable_launcher() {
     [ -n "$_wiso_ver" ] && env_file_set "$DATA_ROOT/portable.env" WISO_PORTABLE_VERSION "$_wiso_ver"
     cp -f "$DATA_ROOT/bin/wiso-launch.sh" "$portable_root/wiso-mit-wine.sh" 2>/dev/null || true
     chmod +x "$portable_root/wiso-mit-wine.sh" 2>/dev/null || true
+    export WISO_PORTABLE_ROOT="$portable_root"
+    if type recipe_hooks::state_set >/dev/null 2>&1; then
+        recipe_hooks::state_set WORK_ROOT "$portable_root"
+    fi
+    if type recipe_app_link::ensure >/dev/null 2>&1; then
+        recipe_app_link::ensure || true
+    fi
     output::success "Launcher-Skript bereit"
     return 0
 }

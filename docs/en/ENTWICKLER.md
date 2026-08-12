@@ -64,16 +64,24 @@ manifest.json       → SHA256 trust in the launcher
 
 **Rule of thumb:** `recipe.yml` = contract. Hooks = lifecycle. Core = execution. Lint/CI = rules. Manifest = integrity.
 
-Every hook script starts the same way:
+Every hook script starts the same way (GUI sets `PROJECT_ROOT`; fallback is repo-only):
 
 ```bash
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+if [ -f "${PROJECT_ROOT:-}/core/recipe-hooks.sh" ]; then
+    source "$PROJECT_ROOT/core/recipe-hooks.sh"
+elif [ -f "$RECIPE_DIR/../../core/recipe-hooks.sh" ]; then
+    source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+else
+    echo "ERROR: core/recipe-hooks.sh not found (set PROJECT_ROOT)" >&2
+    exit 1
+fi
 recipe_hooks::load install   # launch | validate | repair | kill | minimal
 recipe_install_steps::run    # install.sh only
 ```
 
-User data lives under `~/.local/share/wine-software/<id>/` (prefix, `recipe.env`, …) — separate from **source** (files you bring) and often from **target** (portable/game folder).
+User data lives under `~/.local/share/wine-software/<id>/` (prefix, `recipe.env`, …) — separate from **source** (files you bring) and often from **target** (portable/game folder).  
+After install/repair, Core adds an **app/game folder symlink** there (`recipe_app_link`, optional `app_link_name` in `recipe.yml`) — see [RECIPE-AUTHORING.md](RECIPE-AUTHORING.md).
 
 ---
 

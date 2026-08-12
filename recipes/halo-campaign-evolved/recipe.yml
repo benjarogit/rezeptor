@@ -5,6 +5,7 @@ schema_version: 1
 maintainer_only: false
 icon: "{repo}/images/halo-campaign-evolved-icon.png"
 name: "Halo Campaign Evolved"
+app_link_name: HaloCampaignEvolved
 author: "benjarogit"
 category: "Spiele"
 version_guaranteed: "Halo.Campaign.Evolved.Premium.Edition.MULTi13-ElAmigos"

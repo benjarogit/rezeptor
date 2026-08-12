@@ -4,7 +4,14 @@ set -eu
 
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
-source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+if [ -f "${PROJECT_ROOT:-}/core/recipe-hooks.sh" ]; then
+    source "$PROJECT_ROOT/core/recipe-hooks.sh"
+elif [ -f "$RECIPE_DIR/../../core/recipe-hooks.sh" ]; then
+    source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+else
+    echo "ERROR: core/recipe-hooks.sh not found (set PROJECT_ROOT)" >&2
+    exit 1
+fi
 recipe_hooks::load validate
 recipe_hooks::_source sharedFuncs.sh
 recipe_hooks::_source recipe-adobe-setup.sh
@@ -127,6 +134,14 @@ elif recipe_nvidia_libs::host_has_nvidia; then
 else
     recipe_validate::ok "GPU: kein NVIDIA — AMD/Intel ohne CUDA (erwartet)"
 fi
+
+if [ -z "$(recipe_hooks::state_get WORK_ROOT 2>/dev/null || true)" ]; then
+    _pr_exe="$(premiere::find_exe "$WINEPREFIX" 2>/dev/null || true)"
+    if [ -n "$_pr_exe" ] && [ -f "$_pr_exe" ]; then
+        recipe_hooks::state_set WORK_ROOT "$(cd "$(dirname "$_pr_exe")" && pwd)"
+    fi
+fi
+recipe_validate::app_link
 
 if [ "$failures" -eq 0 ]; then
     output::progress_done "Prüfung OK"

@@ -65,6 +65,11 @@
     },
     "author": { "type": "string" },
     "notify_title": { "type": "string" },
+    "app_link_name": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Optional symlink name under DATA_ROOT pointing at the real app/game folder (default: recipe id)."
+    },
     "steam_appid": { "type": "string" },
     "steam_target_folder": { "type": "string" },
     "data_root": { "type": "string", "minLength": 1 },

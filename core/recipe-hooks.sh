@@ -23,15 +23,24 @@ recipe_hooks::paths_expand_tokens() {
 }
 
 recipe_hooks::_source() {
+    local f="${CORE_DIR:-}/$1"
+    [ -n "${CORE_DIR:-}" ] && [ -f "$f" ] || recipe_hooks::die "Modul fehlt: $1 (CORE_DIR=${CORE_DIR:-unset})"
     # shellcheck source=/dev/null
-    source "$CORE_DIR/$1"
+    source "$f"
+}
+
+# Source only if the module exists (optional helpers must not abort load).
+recipe_hooks::_source_if_present() {
+    local name="${1:-}"
+    [ -n "$name" ] && [ -f "$CORE_DIR/$name" ] || return 0
+    recipe_hooks::_source "$name"
 }
 
 recipe_hooks::init_dirs() {
     [ -n "${RECIPE_DIR:-}" ] || recipe_hooks::die "RECIPE_DIR setzen vor recipe_hooks::load"
     # PROJECT_ROOT: Env, sonst nach oben wandern bis core/ existiert
     # (recipes/<id> und recipes/community/<id>).
-    if [ -z "${PROJECT_ROOT:-}" ]; then
+    if [ -z "${PROJECT_ROOT:-}" ] || [ ! -f "${PROJECT_ROOT}/core/recipe-hooks.sh" ]; then
         local _walk="$RECIPE_DIR"
         PROJECT_ROOT=""
         while [ "$_walk" != "/" ]; do
@@ -43,11 +52,15 @@ recipe_hooks::init_dirs() {
         done
         [ -n "$PROJECT_ROOT" ] || PROJECT_ROOT="$(cd "$RECIPE_DIR/../.." && pwd)"
     fi
-    CORE_DIR="${CORE_DIR:-$PROJECT_ROOT/core}"
+    # Ignore stale CORE_DIR from parent env (e.g. empty test dir) — must contain hooks.
+    if [ -z "${CORE_DIR:-}" ] || [ ! -f "${CORE_DIR}/recipe-hooks.sh" ]; then
+        CORE_DIR="$PROJECT_ROOT/core"
+    fi
     # Immer dieses Rezept — kein vererbtes RECIPE_YML von einem anderen Rezept.
     RECIPE_YML="$RECIPE_DIR/recipe.yml"
     export PROJECT_ROOT RECIPE_DIR CORE_DIR RECIPE_YML
     [ -f "$RECIPE_YML" ] || recipe_hooks::die "recipe.yml fehlt: $RECIPE_YML"
+    [ -f "$CORE_DIR/recipe-hooks.sh" ] || recipe_hooks::die "CORE_DIR ungültig: $CORE_DIR"
 }
 
 recipe_hooks::load() {
@@ -85,6 +98,7 @@ recipe_hooks::load() {
             recipe_hooks::_source recipe-vcrun.sh
             recipe_hooks::_source recipe-dotnet.sh
             recipe_hooks::_source recipe-wine-silent.sh
+            recipe_hooks::_source_if_present recipe-app-link.sh
             recipe_hooks::wine_wrappers
             recipe_hooks::force_prefix
             export WINEARCH="${WINEARCH:-win64}"
@@ -115,6 +129,7 @@ recipe_hooks::load() {
         validate)
             recipe_hooks::_source env-file.sh
             recipe_hooks::_source recipe-validate.sh
+            recipe_hooks::_source_if_present recipe-app-link.sh
             ;;
         repair)
             recipe_hooks::_source env-file.sh
@@ -126,6 +141,7 @@ recipe_hooks::load() {
             recipe_hooks::_source recipe-vcrun.sh
             recipe_hooks::_source recipe-dotnet.sh
             recipe_hooks::_source recipe-wine-silent.sh
+            recipe_hooks::_source_if_present recipe-app-link.sh
             recipe_hooks::wine_wrappers
             recipe_hooks::force_prefix
             ;;

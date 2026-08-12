@@ -329,6 +329,15 @@ recipe_relocate::move() {
         recipe_desktop::refresh_if_present || true
     fi
 
+    # App/game symlink in DATA_ROOT must use the new absolute path
+    if type recipe_app_link::ensure >/dev/null 2>&1; then
+        recipe_app_link::ensure || true
+    elif [ -f "${CORE_DIR:-${RECIPE_DIR}/../../core}/recipe-app-link.sh" ]; then
+        # shellcheck source=/dev/null
+        source "${CORE_DIR:-${RECIPE_DIR}/../../core}/recipe-app-link.sh"
+        recipe_app_link::ensure || true
+    fi
+
     echo "@progress:100"
     recipe_relocate::_ok "Ziel verschoben nach $dest"
     echo "@step:relocate_done"

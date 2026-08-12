@@ -5,7 +5,14 @@ set -eu
 
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
-source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+if [ -f "${PROJECT_ROOT:-}/core/recipe-hooks.sh" ]; then
+    source "$PROJECT_ROOT/core/recipe-hooks.sh"
+elif [ -f "$RECIPE_DIR/../../core/recipe-hooks.sh" ]; then
+    source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+else
+    echo "ERROR: core/recipe-hooks.sh not found (set PROJECT_ROOT)" >&2
+    exit 1
+fi
 recipe_hooks::load validate
 
 # shellcheck source=/dev/null
@@ -100,6 +107,8 @@ recipe_hooks::_source recipe-updates.sh 2>/dev/null || true
 if type recipe_updates::status >/dev/null 2>&1; then
     recipe_updates::status
 fi
+
+recipe_validate::app_link
 
 if [ "$failures" -eq 0 ]; then
     output::progress_done "Prüfung OK"

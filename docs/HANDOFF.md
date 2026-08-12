@@ -36,6 +36,12 @@ cd /home/benny/Dokumente/rezeptor
 ## Open work
 
 - Latest released: see `VERSION` / GitHub Releases.
+- **Local WIP:** Themes Standard / Dracula / Alucard (official Dracula hex; Alucard = light + purple accent).
+  Pills/path/activity use `theme_tokens` (no fixed dark `MUTED`). Theme switch = status flash only.
+  Home-Links: Favicons + button-like Accent-Rand/Hover. Sidebar-Liste wächst mit Rezepten, Scroll erst wenn Budget voll.
+  Fensterhöhe folgt Inhalt (Startseite kompakt); Action-Bar wieder über Home+Rezept. Kein Fixed-Height-Hack am Detail-Stack.
+  Beta-Toggle aus der GUI entfernt.
+- App-/Spielordner-Symlink in `DATA_ROOT` via `core/recipe-app-link.sh` (done locally).
 - Product backlog (when scheduled): Proton-GE management UI, exception→diagnose zip CTA, Snapshot/Restore as own point.
 
 ## Halo recipe assets (public)

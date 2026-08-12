@@ -5,7 +5,14 @@ set -eu
 
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
-source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+if [ -f "${PROJECT_ROOT:-}/core/recipe-hooks.sh" ]; then
+    source "$PROJECT_ROOT/core/recipe-hooks.sh"
+elif [ -f "$RECIPE_DIR/../../core/recipe-hooks.sh" ]; then
+    source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+else
+    echo "ERROR: core/recipe-hooks.sh not found (set PROJECT_ROOT)" >&2
+    exit 1
+fi
 recipe_hooks::load repair
 
 GAME_EXE="$(recipe_get "$RECIPE_YML" exe_glob 2>/dev/null || echo Game.exe)"
@@ -83,6 +90,9 @@ EOF
     recipe_hooks::state_set FAKE_STEAM_APPID "$FAKE_APPID"
     [ -n "$compat" ] && recipe_hooks::state_set COMPATDATA "$compat"
     [ -n "$proton" ] && recipe_hooks::state_set PROTON "$proton"
+    if type recipe_app_link::ensure >/dev/null 2>&1; then
+        recipe_app_link::ensure || true
+    fi
 }
 
 output::progress_begin 3 "Reparatur"

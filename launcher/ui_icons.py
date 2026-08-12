@@ -42,6 +42,11 @@ FA_BOOK_OPEN = "\uf518"
 FA_GITHUB = "\uf09b"  # Font Awesome Brands
 FA_REDDIT = "\uf281"  # Font Awesome Brands
 FA_KIT_MEDICAL = "\uf0fa"  # suitcase-medical / classic medkit (Free)
+FA_PALETTE = "\uf53f"
+FA_FLASK = "\uf0c3"
+FA_GLOBE = "\uf0ac"
+FA_LINUX = "\uf17c"  # Font Awesome Brands
+FA_COMPASS = "\uf14e"
 
 _KIND_GLYPH = {
     "ok": FA_CHECK,
@@ -65,9 +70,14 @@ _KIND_GLYPH = {
     "reddit": FA_REDDIT,
     "kit-medical": FA_KIT_MEDICAL,
     "medizin": FA_KIT_MEDICAL,
+    "palette": FA_PALETTE,
+    "flask": FA_FLASK,
+    "globe": FA_GLOBE,
+    "linux": FA_LINUX,
+    "compass": FA_COMPASS,
 }
 
-_BRAND_KINDS = frozenset({"github", "reddit"})
+_BRAND_KINDS = frozenset({"github", "reddit", "linux"})
 
 # Farben wie vor Dracula (Kupfer / Grün / Amber)
 _KIND_COLOR = {
@@ -152,9 +162,14 @@ def fa_icon(kind: str, pixel: int = 16, *, color: str | None = None) -> QIcon | 
     glyph = fa_glyph(kind)
     paint = QColor(color or fa_color(kind))
     size = max(12, pixel)
-    pix = QPixmap(size + 4, size + 4)
+    # Extra canvas so FA brands (octocat/reddit) are not clipped at the edges.
+    pad = max(4, size // 5)
+    canvas = size + pad * 2
+    pix = QPixmap(canvas, canvas)
     pix.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pix)
+    painter.setRenderHint(QPainter.RenderHint.TextAntialiasing)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
     f = QFont(font)
     f.setPixelSize(size)
     painter.setFont(f)
@@ -183,7 +198,26 @@ def rounded_pixmap(pix: QPixmap, radius: int) -> QPixmap:
 def rounded_icon(icon: QIcon, size: int, radius: int) -> QIcon:
     if icon is None or icon.isNull():
         return QIcon()
-    return QIcon(rounded_pixmap(icon.pixmap(size, size), radius))
+    # Scale into a padded canvas so letterboxed art (e.g. Halo) is not clipped.
+    src = icon.pixmap(size, size)
+    if src.isNull():
+        return QIcon()
+    canvas = QPixmap(size, size)
+    canvas.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(canvas)
+    painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    scaled = src.scaled(
+        size,
+        size,
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation,
+    )
+    x = (size - scaled.width()) // 2
+    y = (size - scaled.height()) // 2
+    painter.drawPixmap(x, y, scaled)
+    painter.end()
+    return QIcon(rounded_pixmap(canvas, max(2, radius)))
 
 
 def _ui_asset_dir() -> Path:

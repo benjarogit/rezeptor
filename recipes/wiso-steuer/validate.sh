@@ -4,7 +4,14 @@ set -eu
 
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
-source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+if [ -f "${PROJECT_ROOT:-}/core/recipe-hooks.sh" ]; then
+    source "$PROJECT_ROOT/core/recipe-hooks.sh"
+elif [ -f "$RECIPE_DIR/../../core/recipe-hooks.sh" ]; then
+    source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+else
+    echo "ERROR: core/recipe-hooks.sh not found (set PROJECT_ROOT)" >&2
+    exit 1
+fi
 recipe_hooks::load validate
 recipe_hooks::_source recipe-dotnet.sh
 
@@ -131,6 +138,8 @@ if find "$WINEPREFIX/drive_c/windows/Fonts" -maxdepth 1 -iname 'calibri*.ttf' 2>
 else
     recipe_validate::warn "Calibri fehlt — Segoe fällt auf Tahoma zurück"
 fi
+
+recipe_validate::app_link
 
 if [ "$failures" -eq 0 ]; then
     output::progress_done "Prüfung OK"

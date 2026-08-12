@@ -126,6 +126,10 @@ recipe_master_pdf_editor::finalize() {
     type output::success >/dev/null 2>&1 && output::success "Installiert: $(basename "$exe")"
     type output::info >/dev/null 2>&1 && output::info "Pfad: $dir"
 
+    if type recipe_app_link::ensure >/dev/null 2>&1; then
+        recipe_app_link::ensure || true
+    fi
+
     type output::progress >/dev/null 2>&1 && output::progress 95 "BYOS-Fix aus Pack"
     recipe_master_pdf_editor::apply_fix "$exe" || true
     return 0

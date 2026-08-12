@@ -92,6 +92,20 @@ def community_reddit_url() -> str:
     return COMMUNITY_REDDIT_URL
 
 
+def linuxchooser_url() -> str:
+    """Distro picker helper (community link on home)."""
+    return "https://themorpheus407.github.io/LinuxChooser/"
+
+
+def cachyos_url() -> str:
+    """CachyOS project site (community link on home)."""
+    return "https://cachyos.org/"
+
+
+def linuxguides_url() -> str:
+    """LinuxGuides forum (community link on home)."""
+    return "https://forum.linuxguides.de/"
+
 def github_doc_url(rel_path: str, branch: str = "main") -> str:
     """GitHub-URL für eine Datei unter docs/."""
     return f"https://github.com/{GITHUB_REPO}/blob/{branch}/docs/{rel_path}"

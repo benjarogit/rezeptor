@@ -6,12 +6,24 @@ set -eu
 
 RECIPE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=/dev/null
-source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+if [ -f "${PROJECT_ROOT:-}/core/recipe-hooks.sh" ]; then
+    source "$PROJECT_ROOT/core/recipe-hooks.sh"
+elif [ -f "$RECIPE_DIR/../../core/recipe-hooks.sh" ]; then
+    source "$RECIPE_DIR/../../core/recipe-hooks.sh"
+else
+    echo "ERROR: core/recipe-hooks.sh not found (set PROJECT_ROOT)" >&2
+    exit 1
+fi
+# Log as early as possible so GUI Exit≠0 always has a file (load can fail on stale env).
+recipe_hooks::init_dirs
+recipe_hooks::_source paths.sh
+recipe_hooks::_source recipe.sh
+recipe_export_env "$RECIPE_YML"
+recipe_hooks::log_setup "Photoshop_Repair"
 recipe_hooks::load repair
 recipe_hooks::_source sharedFuncs.sh
 recipe_hooks::_source recipe-fonts.sh
-
-recipe_hooks::log_setup "Photoshop_Repair"
+recipe_hooks::_source recipe-adobe-setup.sh
 
 export WINE_PREFIX="${WINE_PREFIX:-$DATA_ROOT/prefix}"
 export WINEPREFIX="$WINE_PREFIX"
@@ -47,6 +59,8 @@ fi
 
 output::progress_tick "Grafik-DLLs"
 output::step "Proton-GE Grafik-DLLs (DXVK) + Registry"
+# Stale system-wine wineserver breaks Proton wine reg / can block DLL replace.
+adobe_setup::kill_all_wineservers
 if wine_runtime::deploy_proton_graphics_dlls; then
     recipe_photoshop::apply_ge11_wined3d_if_needed >> "$LOG_FILE" 2>&1 || true
     recipe_photoshop::_apply_graphics_registry >> "$LOG_FILE" 2>&1 || {
@@ -54,6 +68,10 @@ if wine_runtime::deploy_proton_graphics_dlls; then
         exit 1
     }
     output::success "Grafik-DLLs & Registry"
+elif recipe_validate::graphics_dlls_present "$WINEPREFIX"; then
+    output::warning "Grafik-DLL-Deploy fehlgeschlagen — vorhandene DLLs bleiben (Prefix OK)"
+    recipe_photoshop::apply_ge11_wined3d_if_needed >> "$LOG_FILE" 2>&1 || true
+    recipe_photoshop::_apply_graphics_registry >> "$LOG_FILE" 2>&1 || true
 else
     output::error "deploy_proton_graphics_dlls fehlgeschlagen"
     exit 1
@@ -75,6 +93,15 @@ export SCR_PATH="$DATA_ROOT"
 export WINE_PREFIX="$WINEPREFIX"
 recipe_hooks::_source recipe-desktop.sh
 recipe_desktop::refresh_if_present >> "$LOG_FILE" 2>&1 || true
+
+# App folder symlink under DATA_ROOT (sync + fix paths)
+_ps_exe="$(photoshop::find_exe "$WINEPREFIX" 2>/dev/null || true)"
+if [ -n "$_ps_exe" ] && [ -f "$_ps_exe" ]; then
+    recipe_hooks::state_set WORK_ROOT "$(cd "$(dirname "$_ps_exe")" && pwd)"
+fi
+if type recipe_app_link::ensure >/dev/null 2>&1; then
+    recipe_app_link::ensure || true
+fi
 
 if [ "$_validate_ok" -eq 1 ]; then
     output::progress_tick "Erneut prüfen"
