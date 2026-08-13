@@ -42,6 +42,7 @@ FA_BOOK_OPEN = "\uf518"
 FA_GITHUB = "\uf09b"  # Font Awesome Brands
 FA_REDDIT = "\uf281"  # Font Awesome Brands
 FA_KIT_MEDICAL = "\uf0fa"  # suitcase-medical / classic medkit (Free)
+FA_GAMEPAD = "\uf11b"
 FA_PALETTE = "\uf53f"
 FA_FLASK = "\uf0c3"
 FA_GLOBE = "\uf0ac"
@@ -70,6 +71,8 @@ _KIND_GLYPH = {
     "reddit": FA_REDDIT,
     "kit-medical": FA_KIT_MEDICAL,
     "medizin": FA_KIT_MEDICAL,
+    "gamepad": FA_GAMEPAD,
+    "trainer": FA_GAMEPAD,
     "palette": FA_PALETTE,
     "flask": FA_FLASK,
     "globe": FA_GLOBE,
@@ -101,12 +104,41 @@ _KIND_COLOR = {
 }
 
 
+def _font_search_dirs() -> list[Path]:
+    here = Path(__file__).resolve().parent
+    dirs = [
+        here / "assets" / "fonts",
+        here.parent / "launcher" / "assets" / "fonts",
+        Path("/app/share/rezeptor/launcher/assets/fonts"),
+    ]
+    xdg = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local/share")
+    dirs.append(Path(xdg) / "rezeptor" / "fonts")
+    out: list[Path] = []
+    seen: set[str] = set()
+    for d in dirs:
+        key = str(d)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(d)
+    return out
+
+
+def _first_font_file(*names: str) -> Path:
+    for d in _font_search_dirs():
+        for name in names:
+            p = d / name
+            if p.is_file():
+                return p
+    return Path(__file__).resolve().parent / "assets" / "fonts" / names[0]
+
+
 def _font_path() -> Path:
-    return Path(__file__).resolve().parent / "assets" / "fonts" / "fa-solid-900.otf"
+    return _first_font_file("fa-solid-900.otf", "fa-solid-900.ttf")
 
 
 def _brands_font_path() -> Path:
-    return Path(__file__).resolve().parent / "assets" / "fonts" / "fa-brands-400.ttf"
+    return _first_font_file("fa-brands-400.ttf", "fa-brands-400.otf")
 
 
 def _load_fa_font(path: Path) -> QFont | None:

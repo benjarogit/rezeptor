@@ -387,11 +387,9 @@ def _proton_ge_tag_from_options_env(data_root: Path | None) -> str:
     stored = _parse_options_env_map(data_root)
     if not stored:
         return ""
-    # Photoshop issue #8 A/B: dedicated bool (default off = lock 10-28).
+    # Legacy Medizin bool — Photoshop is now always GE-11-3; ignore leftover 0/1.
     if "PHOTOSHOP_PROTON_GE_11" in stored:
-        if _env_truthy(stored.get("PHOTOSHOP_PROTON_GE_11", "")):
-            return "GE-Proton11-3"
-        return ""
+        return "GE-Proton11-3"
     tag = (stored.get("PROTON_GE_TAG") or "").strip()
     return tag if tag.startswith("GE-Proton") else ""
 

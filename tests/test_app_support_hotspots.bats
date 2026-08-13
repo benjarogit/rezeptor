@@ -44,20 +44,18 @@ print('ok')
     [[ "$output" == *ok* ]]
 }
 
-@test "effective_proton_ge_tag prefers Photoshop Medizin bool" {
+@test "effective_proton_ge_tag treats leftover Photoshop GE-11 bool as 11-3" {
     run python3 -c "
 import sys
 from pathlib import Path
 sys.path.insert(0, '$PROJECT_ROOT/launcher')
-from app_support import effective_proton_ge_tag, read_proton_ge_tag
+from app_support import effective_proton_ge_tag
 dr = Path('$BATS_TEST_TMPDIR/data')
 dr.mkdir()
 (dr / 'options.env').write_text('PHOTOSHOP_PROTON_GE_11=1\n', encoding='utf-8')
 assert effective_proton_ge_tag(data_root=dr) == 'GE-Proton11-3'
 (dr / 'options.env').write_text('PHOTOSHOP_PROTON_GE_11=0\n', encoding='utf-8')
-# false → fall through to lock
-lock = read_proton_ge_tag()
-assert effective_proton_ge_tag(data_root=dr) == lock
+assert effective_proton_ge_tag(data_root=dr) == 'GE-Proton11-3'
 (dr / 'options.env').write_text('PROTON_GE_TAG=GE-Proton10-20\n', encoding='utf-8')
 assert effective_proton_ge_tag(data_root=dr) == 'GE-Proton10-20'
 assert effective_proton_ge_tag(recipe_tag='GE-Proton10-28') == 'GE-Proton10-28'

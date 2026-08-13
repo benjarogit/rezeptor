@@ -205,6 +205,55 @@ EOF
     return 0
 }
 
+# True while a Photoshop window for this prefix is still mapped.
+recipe_photoshop::_photoshop_windows_open() {
+    local id desk wclass wpid pids prefix
+    prefix="$(recipe_photoshop::_prefix)"
+    pids="$(recipe_photoshop::_photoshop_pids | recipe_photoshop::_related_pids | sort -u)"
+
+    if [ -n "$pids" ] && command -v xdotool >/dev/null 2>&1; then
+        while IFS= read -r pid; do
+            [ -n "$pid" ] || continue
+            if [ -n "$(xdotool search --pid "$pid" 2>/dev/null || true)" ]; then
+                return 0
+            fi
+        done <<EOF
+$pids
+EOF
+    fi
+
+    command -v wmctrl >/dev/null 2>&1 || return 1
+    while read -r id desk wclass _; do
+        [ -n "$id" ] || continue
+        wpid="$(recipe_photoshop::_wm_window_pid "$id" 2>/dev/null || true)"
+        if [ -n "$wpid" ] && [ -n "$pids" ] && recipe_photoshop::_pid_list_has "$wpid" "$pids"; then
+            return 0
+        fi
+        if [ -n "$wpid" ] && [ -n "$prefix" ] \
+            && recipe_photoshop::_pid_in_prefix "$wpid" "$prefix" \
+            && recipe_photoshop::_wm_class_is_photoshop "$wclass"; then
+            return 0
+        fi
+        if [ -z "$wpid" ] || [ -z "$pids" ]; then
+            recipe_photoshop::_wm_class_is_photoshop "$wclass" && return 0
+        fi
+    done < <(wmctrl -lx 2>/dev/null || true)
+    return 1
+}
+
+recipe_photoshop::_wait_windows_gone() {
+    local max_s="${1:-8}"
+    local i=0
+    while recipe_photoshop::_photoshop_windows_open; do
+        i=$((i + 1))
+        if [ "$i" -ge "$max_s" ]; then
+            return 1
+        fi
+        sleep 1
+    done
+    return 0
+}
+
 # Soft keyboard quit on Photoshop windows belonging to our prefix PIDs.
 recipe_photoshop::_wm_alt_f4_photoshop() {
     local pid id pids
@@ -243,6 +292,7 @@ recipe_photoshop::_wine_taskkill() {
 # Ask Photoshop to exit like File→Exit / window close; escalate only if needed.
 # Do NOT SIGTERM first — that causes prefs/recents "amnesia" (issue #10).
 # Do NOT soft-taskkill — that triggers Wine "Not responding" with a live UI.
+# Once the window is gone, wait for Photoshop.exe — never force-kill (amnesia).
 recipe_photoshop::request_photoshop_exit() {
     local attempt
     if ! recipe_photoshop::photoshop_running; then
@@ -253,7 +303,14 @@ recipe_photoshop::request_photoshop_exit() {
     # Host WM close retries (same mechanism as clicking the window ✕).
     for attempt in 1 2 3; do
         recipe_photoshop::_wm_close_photoshop
-        if recipe_photoshop::wait_photoshop_gone 4; then
+        if recipe_photoshop::_wait_windows_gone 6; then
+            export PHOTOSHOP_EXIT_GRACEFUL=1
+            type output::info >/dev/null 2>&1 && output::info "$(msg::t ps.exit.window_closed)" || true
+            recipe_photoshop::wait_photoshop_gone 60 || true
+            return 0
+        fi
+        if recipe_photoshop::wait_photoshop_gone 2; then
+            export PHOTOSHOP_EXIT_GRACEFUL=1
             return 0
         fi
         type output::progress_tick >/dev/null 2>&1 \
@@ -262,17 +319,24 @@ recipe_photoshop::request_photoshop_exit() {
     done
 
     recipe_photoshop::_wm_alt_f4_photoshop
-    if recipe_photoshop::wait_photoshop_gone 6; then
+    if recipe_photoshop::_wait_windows_gone 10; then
+        export PHOTOSHOP_EXIT_GRACEFUL=1
+        type output::info >/dev/null 2>&1 && output::info "$(msg::t ps.exit.window_closed)" || true
+        recipe_photoshop::wait_photoshop_gone 60 || true
+        return 0
+    fi
+    if recipe_photoshop::wait_photoshop_gone 8; then
+        export PHOTOSHOP_EXIT_GRACEFUL=1
         return 0
     fi
 
+    # Window still mapped after WM close + Alt+F4 — last resort only.
     type output::info >/dev/null 2>&1 && output::info "$(msg::t ps.exit.force)" || true
     recipe_photoshop::_wine_taskkill 1
     if recipe_photoshop::wait_photoshop_gone 8; then
         return 0
     fi
 
-    # Last resort: Unix signals (may skip prefs flush — only if still stuck).
     recipe_photoshop::_pkill_pat '[\\/]Photoshop\.exe|[\\/]photoshop\.exe' TERM
     if recipe_photoshop::wait_photoshop_gone 5; then
         return 0
@@ -319,6 +383,13 @@ recipe_photoshop::cleanup_orphans() {
             || true
         return 0
     fi
+    # Graceful window-close: wineserver -k mid-flush = Recents/prefs amnesia (#10).
+    if [ "${PHOTOSHOP_EXIT_GRACEFUL:-0}" = "1" ]; then
+        type output::info >/dev/null 2>&1 \
+            && output::info "$(msg::t ps.cleanup.skip_wineserver)" \
+            || true
+        return 0
+    fi
     export WINEPREFIX="$prefix"
     type output::step >/dev/null 2>&1 && output::step "$(msg::t ps.cleanup.wineserver)" || true
     # Scoped: Wine only signals the server for this WINEPREFIX.
@@ -339,6 +410,6 @@ recipe_photoshop::cleanup_orphans() {
 recipe_photoshop::graceful_shutdown() {
     recipe_photoshop::request_photoshop_exit
     # Extra beat after process exit so prefs/recents finish flushing to disk.
-    sleep "${PHOTOSHOP_EXIT_FLUSH_S:-3}"
+    sleep "${PHOTOSHOP_EXIT_FLUSH_S:-8}"
     recipe_photoshop::cleanup_orphans
 }

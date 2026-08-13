@@ -137,13 +137,14 @@ proton_ge_tag: GE-Proton11-3          # sonst core/runtime.lock (Default)
 # proton_ge_sha256: <64 hex>
 ```
 
-Medizin-Alternative: Bool-Test-Schalter (siehe Photoshop `PHOTOSHOP_PROTON_GE_11`) oder generisches `PROTON_GE_TAG`. Details: [ENTWICKLER.md](ENTWICKLER.md#proton-ge-pro-rezept).
+Medizin-Alternative nur als generisches `PROTON_GE_TAG` (Choice), nicht als Photoshop-Bool. Details: [ENTWICKLER.md](ENTWICKLER.md#proton-ge-pro-rezept).
 
 ### Empfohlen
 
 | Feld | Rolle |
 |------|--------|
 | `schema_version` | Format-Version (aktuell `1`; fehlend = 1) |
+| `category` | Sidebar-Gruppe. Offiziell: `Finanzen & Steuer`, `Grafik & Design`, `Video & Schnitt`, `Dokumente & PDF`, `Spiele` (sonst Freitext / `Sonstige`) |
 | `author` | Anzeige in der Übersicht |
 | `notify_title` | Desktop-Notify `-a` / Titel; sonst `name` |
 | `version_label` / `version_guaranteed` | Getestete Version (Anzeige + Heilung in der GUI; YAML-Key unverändert) |

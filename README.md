@@ -13,6 +13,7 @@
   <a href="https://github.com/benjarogit/rezeptor/releases"><img src="https://img.shields.io/github/v/release/benjarogit/rezeptor?include_prereleases&label=release&color=B87333&logo=github&logoColor=white" alt="Release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--2.0-2B6CB0?logo=gnu&logoColor=white" alt="License"></a>
   <a href="https://benjarogit.github.io/rezeptor/"><img src="https://img.shields.io/badge/docs-Rezeptor%20Docs-3D7A8C?logo=gitbook&logoColor=white" alt="Docs"></a>
+  <img src="https://img.shields.io/badge/status-experimental-C45C26" alt="Experimental">
   <img src="https://img.shields.io/badge/AI-assisted-5C5C58?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI%2BPHBhdGggZmlsbD0iI2ZmZiIgZD0iTTEyIDJsMS4yIDMuNkwxNyA3bC0zLjggMS40TDEyIDEybC0xLjItMy42TDcgN2wzLjgtMS40TDEyIDJ6bTAgMTBsLjkgMi43TDE2IDE2bC0zLjEgMS4xTDEyIDIwbC0uOS0yLjlMOCAxNmwzLjEtMS4zTDEyIDEyek00IDlsLjcgMi4xTDcgMTJsLTIuMy44TDQgMTVsLS43LTIuMkwxIDEybDIuMy0uOUw0IDl6bTE2IDBsLjcgMi4xTDIzIDEybC0yLjMuOEwyMCAxNWwtLjctMi4yTDE3IDEybDIuMy0uOUwyMCA5eiIvPjwvc3ZnPg%3D%3D" alt="AI-assisted">
   <a href="https://www.reddit.com/r/photoshop/comments/1vau4wh/fyi_photoshop_cc_2021_on_ubuntu_finally/"><img src="https://img.shields.io/badge/reddit-User%20report-FF4500?logo=reddit&logoColor=white" alt="Reddit user report"></a>
 </p>
@@ -26,6 +27,8 @@
 
 Photoshop, tax software (WISO), Steam games with online fixes, trainers, and more: each recipe knows how to install, repair, validate, launch, and uninstall cleanly.
 
+> **Experimental.** Rezeptor is under active development. A lot is changing under the hood, so a fix can creep back in after a refactor. That will happen again. Issues help. I am doing my best.
+
 > **This is the successor project.**  
 > Development continues here only. The older repositories
 > [photoshopCClinux](https://github.com/benjarogit/photoshopCClinux),
@@ -38,7 +41,7 @@ Support stays on [GitHub Issues](https://github.com/benjarogit/rezeptor/issues) 
 ## What you get
 
 - **GUI launcher** — pick a recipe, install, start, repair, or remove
-- **Proton-GE only** — no system Wine fallback in recipes; default pin in `core/runtime.lock`, optional per-recipe `proton_ge_tag` (Halo uses GE 11; Photoshop defaults to GE 10)
+- **Proton-GE only** — no system Wine fallback in recipes; default pin in `core/runtime.lock`, optional per-recipe `proton_ge_tag` (Photoshop and Halo use GE 11)
 - **Status checks** — optional validate on startup; refresh anytime (F5)
 - **Host tools check** — missing packages suggested once
 - **Catalog & sources** — official recipes plus a community path

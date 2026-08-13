@@ -137,13 +137,14 @@ proton_ge_tag: GE-Proton11-3          # else core/runtime.lock (default)
 # proton_ge_sha256: <64 hex>
 ```
 
-Medicine alternative: bool test toggle (see Photoshop `PHOTOSHOP_PROTON_GE_11`) or generic `PROTON_GE_TAG`. Details: [ENTWICKLER.md](ENTWICKLER.md#proton-ge-per-recipe).
+Medicine alternative is a generic `PROTON_GE_TAG` choice only, not a Photoshop bool. Details: [ENTWICKLER.md](ENTWICKLER.md#proton-ge-per-recipe).
 
 ### Recommended
 
 | Field | Role |
 |------|------|
 | `schema_version` | Format version (currently `1`; missing = 1) |
+| `category` | Sidebar group. Official: `Finanzen & Steuer`, `Grafik & Design`, `Video & Schnitt`, `Dokumente & PDF`, `Spiele` (else free text / `Sonstige`) |
 | `author` | Shown in the overview |
 | `notify_title` | Desktop notify `-a` / title; else `name` |
 | `version_label` / `version_guaranteed` | Tested version (display + healing in GUI; YAML key unchanged) |

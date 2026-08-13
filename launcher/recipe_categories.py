@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 # Storage keys (recipe.yml / settings) — German canonical, stable across locales.
+# Sidebar order: Finanzen first (original STANDARD_CATEGORIES), then the rest.
 STANDARD_CATEGORIES = [
     "Finanzen & Steuer",
     "Grafik & Design",
+    "Video & Schnitt",
+    "Dokumente & PDF",
     "Spiele",
     "Sonstige",
 ]
@@ -13,6 +16,8 @@ STANDARD_CATEGORIES = [
 _CATEGORY_I18N = {
     "Finanzen & Steuer": "category.finance",
     "Grafik & Design": "category.design",
+    "Video & Schnitt": "category.video",
+    "Dokumente & PDF": "category.docs",
     "Spiele": "category.games",
     "Sonstige": "category.other",
 }
@@ -52,14 +57,14 @@ def effective_category(rid: str, meta: dict | None, overrides: dict[str, str] | 
 
 
 def sort_categories(categories: list[str], custom_order: list[str]) -> list[str]:
-    """Standard categories first (alphabetical by storage key), then custom (DnD order), then rest."""
+    """Standard categories first (sidebar order), then custom (DnD order), then rest."""
     seen: set[str] = set()
     ordered: list[str] = []
 
-    present_standard = sorted(c for c in categories if is_standard(c))
-    for cat in present_standard:
-        ordered.append(cat)
-        seen.add(cat)
+    for cat in STANDARD_CATEGORIES:
+        if cat in categories:
+            ordered.append(cat)
+            seen.add(cat)
 
     for cat in custom_order:
         if cat in categories and cat not in seen and not is_standard(cat):

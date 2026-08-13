@@ -5,6 +5,19 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.44] - 2026-08-13
+
+### Fixed
+- Photoshop Quit: once the window is gone, wait for a normal exit and do not force-kill or `wineserver -k` (Recents/prefs amnesia, [#10](https://github.com/benjarogit/rezeptor/issues/10))
+- Photoshop launch: do not bounce wineserver on every start (cold start looked like a hang)
+- Header watermark: keep the faded recipe icon above Fluent card chrome (visible in Flatpak)
+
+### Changed
+- Photoshop runtime is Proton-GE 11-3 + DXVK from 10-28 + X11 + `d2d1=n` (Medizin toggle removed)
+- Mehr menu actions use Font Awesome icons; FA fonts resolve from extra Flatpak/AppImage paths
+- Sidebar: Finanzen & Steuer first (WISO); Video & editing and Documents & PDF are standard categories again
+- README marks Rezeptor as experimental (fixes can creep back after refactors)
+
 ## [1.1.43] - 2026-08-12
 
 ### Fixed

@@ -45,18 +45,13 @@ from version_detect import _load_recipe_mapping_minimal
 text = (root / "recipes" / "photoshop" / "recipe.yml").read_text(encoding="utf-8")
 data = _load_recipe_mapping_minimal(text)
 opts = parse_recipe_options(data)
-assert len(opts) == 4, opts
+assert len(opts) == 3, opts
 ids = {o.id for o in opts}
 assert ids == {
-    "proton_ge_11",
     "ui_home_screen",
     "ui_rich_tooltips",
     "ui_modern_new",
 }
-proton = next(o for o in opts if o.id == "proton_ge_11")
-assert proton.env == "PHOTOSHOP_PROTON_GE_11"
-assert proton.default is False
-assert "Proton-GE 11" in proton.label_for("en")
 home = next(o for o in opts if o.id == "ui_home_screen")
 assert home.env == "PHOTOSHOP_UI_HOME_SCREEN"
 assert home.default is False

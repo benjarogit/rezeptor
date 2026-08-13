@@ -104,14 +104,14 @@ Community: `recipes/community/<id>/` (hooks load core via `../../../core/`; not 
 
 ## Proton-GE per recipe
 
-Global default: `core/runtime.lock` (currently **GE-Proton10-28** — Photoshop QA). AppImage/Flatpak bundle only this tag.
+Global default: `core/runtime.lock` (currently **GE-Proton10-28** for recipes without their own pin). AppImage/Flatpak bundle that tag. Photoshop pins **GE-Proton11-3** (DXVK from 10-28, X11, `d2d1=n`) in `recipe.yml` + `apply_proton_pin` — no Medicine toggle.
 
 | Mechanism | When |
 |-----------|------|
 | leave unset | recipe uses lock default |
-| `proton_ge_tag: GE-Proton11-3` in `recipe.yml` | fixed pin (Halo: DXCore) — URL/SHA from `PROTON_GE_ALT_*` in the lock |
+| `proton_ge_tag: GE-Proton11-3` in `recipe.yml` | fixed pin (Photoshop, Halo) — URL/SHA from `PROTON_GE_ALT_*` in the lock |
 | `proton_ge_url` / `proton_ge_sha256` | only if the tag is neither default nor an ALT pin |
-| Medicine `PHOTOSHOP_PROTON_GE_11` (bool, default off) | Photoshop A/B: off = lock 10-28, on = GE-Proton11-3 + DXVK from 10-28 + X11 + `d2d1=n` (Wine 11 d2d1 → white chrome) |
+| Medicine `PROTON_GE_TAG` (choice, e.g. Halo Steam) | only where the recipe offers a runtime pick — not for Photoshop |
 
 Alternate tags download on demand into `~/.local/share/wine-software/runtime/proton-ge/<tag>/`. Do not bump the global lock for one game — every recipe would follow.
 

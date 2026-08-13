@@ -20,8 +20,10 @@ recipe_hooks::_source recipe-photoshop-cleanup.sh
 wine_runtime::init 2>/dev/null || true
 wine_runtime::export_env 2>/dev/null || true
 
-# Let QuitEndFlag / prefs finish writing before wineserver -k.
-sleep "${PHOTOSHOP_EXIT_FLUSH_S:-2}"
+# Natural window close already flushed prefs — do not wineserver -k (#10).
+export PHOTOSHOP_EXIT_GRACEFUL=1
+# Let QuitEndFlag / prefs finish writing before helper cleanup.
+sleep "${PHOTOSHOP_EXIT_FLUSH_S:-8}"
 
 if recipe_photoshop::photoshop_running; then
     # Raced a relaunch; do not tear down a new session.

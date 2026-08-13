@@ -20,6 +20,7 @@ notify_title: "Photoshop CC 2021"
 data_root: "~/.local/share/wine-software/photoshop"
 prefix: "{data_root}/prefix"
 runtime: proton-ge
+proton_ge_tag: GE-Proton11-3
 install_type: installer_offline
 source_kind: folder
 source_label: "Ordner mit Adobe Offline-Installer (Set-up.exe + packages/)"
@@ -31,17 +32,6 @@ launch_process_patterns: [Photoshop.exe]
 # win10 via recipe_win10::ensure; VC++ via recipe_vcrun::ensure (nicht winetricks)
 winetricks: [atmlib, corefonts, "fontsmooth=rgb", gdiplus, msxml3, msxml6, ie8]
 options:
-  - id: proton_ge_11
-    env: PHOTOSHOP_PROTON_GE_11
-    group: runtime
-    type: bool
-    default: false
-    label:
-      de: "Test: Proton-GE 11-3"
-      en: "Test: Proton-GE 11-3"
-    tip:
-      de: "Standard aus = GE-Proton10-28 (Alltag). An = Experiment GE-Proton11-3 mit DXVK 2.7, X11 und d2d1 aus (sonst weißes Hauptfenster unter Wine 11). Bei Problemen sofort aus."
-      en: "Default off = GE-Proton10-28 (daily use). On = experimental GE-Proton11-3 with DXVK 2.7, X11, and d2d1 disabled (Wine 11 otherwise paints a white main window). Turn off if anything breaks."
   - id: ui_home_screen
     env: PHOTOSHOP_UI_HOME_SCREEN
     type: bool

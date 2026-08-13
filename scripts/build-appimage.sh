@@ -205,6 +205,8 @@ for f in \
     "$SHARE/recipes/photoshop/install.sh" \
     "$SHARE/recipes/photoshop/recipe.yml" \
     "$SHARE/launcher/launcher.py" \
+    "$SHARE/launcher/assets/fonts/fa-solid-900.otf" \
+    "$SHARE/launcher/assets/fonts/fa-brands-400.ttf" \
     "$SHARE/launcher/locales/de.json" \
     "$SHARE/images/AdobePhotoshop-icon.png" \
     "$SHARE/images/rezeptor-icon.svg" \

@@ -34,7 +34,7 @@ Lasting per-recipe toggles (`options.env`). After changing options, the primary 
 
 ### Photoshop (CC 2021)
 
-Under Wine some Windows-like UI features are fragile. Rezeptor therefore applies safe prefs by default (no home screen, tooltips off, legacy New dialog). If the Windows-like UI is stable on your system, you can enable them individually:
+Runs on **Proton-GE 11-3** (no Medicine toggle). Under Wine some Windows-like UI features are fragile. Rezeptor therefore applies safe prefs by default (no home screen, tooltips off, legacy New dialog). If the Windows-like UI is stable on your system, you can enable them individually:
 
 | Option | Effect |
 |--------|--------|
