@@ -853,9 +853,9 @@ def faded_header_watermark(
     fp = QPainter(fade)
     grad = QLinearGradient(tw - band_w, 0, tw, 0)
     grad.setColorAt(0.0, QColor(255, 255, 255, 0))
-    grad.setColorAt(0.22, QColor(255, 255, 255, 18))
-    grad.setColorAt(0.55, QColor(255, 255, 255, 95))
-    grad.setColorAt(1.0, QColor(255, 255, 255, 155))
+    grad.setColorAt(0.18, QColor(255, 255, 255, 28))
+    grad.setColorAt(0.50, QColor(255, 255, 255, 120))
+    grad.setColorAt(1.0, QColor(255, 255, 255, 200))
     fp.fillRect(0, 0, tw, th, QBrush(grad))
     fp.end()
     painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationIn)
@@ -1680,7 +1680,6 @@ class RezeptorWindow(QMainWindow):
         self._header_watermark.setStyleSheet(
             "background: transparent; border: none;"
         )
-        self._header_watermark.lower()
 
         hl = QHBoxLayout(header)
         hl.setContentsMargins(12, 10, 12, 10)
@@ -1958,6 +1957,21 @@ class RezeptorWindow(QMainWindow):
             self.medizin_btn.setIconSize(QSize(14, 14))
         self.medizin_btn.setVisible(False)
 
+        # Halo BYOS trainer — next to Start/Beenden when the game is running.
+        if FLUENT_AVAILABLE:
+            self.trainer_btn = PushButton(t("btn.trainer"))
+        else:
+            self.trainer_btn = QPushButton(t("btn.trainer"))
+        self.trainer_btn.setObjectName("trainerBtn")
+        self.trainer_btn.setCursor(hand)
+        self.trainer_btn.setToolTip(t("tooltip.trainer"))
+        self.trainer_btn.clicked.connect(self.run_trainer)
+        tr_ic = fa_icon("gamepad", 14, color=COLOR_PARCHMENT)
+        if tr_ic is not None:
+            self.trainer_btn.setIcon(tr_ic)
+            self.trainer_btn.setIconSize(QSize(14, 14))
+        self.trainer_btn.setVisible(False)
+
         # Versteckt: Alias falls alter Code validate_btn anspricht
         self.validate_btn = QPushButton(t("btn.validate"))
         self.validate_btn.setVisible(False)
@@ -1965,15 +1979,22 @@ class RezeptorWindow(QMainWindow):
         self.logs_btn = None
 
         row.addWidget(self.primary_btn)
+        row.addWidget(self.trainer_btn)
         row.addWidget(self.more_btn)
         row.addWidget(self.medizin_btn)
         row.addStretch(1)
         parent_layout.addWidget(bar)
 
     @staticmethod
-    def _add_menu_action(menu: object, text: str, slot) -> QAction:
+    def _add_menu_action(
+        menu: object, text: str, slot, *, icon_kind: str | None = None
+    ) -> QAction:
         """QAction for both QMenu and Fluent RoundMenu (no addAction(str, callable))."""
         action = QAction(text, menu)  # type: ignore[arg-type]
+        if icon_kind:
+            ic = fa_icon(icon_kind, 14, color=COLOR_PARCHMENT)
+            if ic is not None:
+                action.setIcon(ic)
         action.triggered.connect(slot)
         menu.addAction(action)  # type: ignore[attr-defined]
         return action
@@ -2089,9 +2110,15 @@ class RezeptorWindow(QMainWindow):
         busy = bool(getattr(self, "_busy", False))
         mode = getattr(self, "_cta_mode", "none")
         if info is None:
-            self._add_menu_action(menu, t("app.home_cta_docs"), self.show_developer_docs)
-            self._add_menu_action(menu, t("menu.settings"), self.show_settings)
-            self._add_menu_action(menu, t("menu.refresh"), self.refresh_statuses)
+            self._add_menu_action(
+                menu, t("app.home_cta_docs"), self.show_developer_docs, icon_kind="book"
+            )
+            self._add_menu_action(
+                menu, t("menu.settings"), self.show_settings, icon_kind="palette"
+            )
+            self._add_menu_action(
+                menu, t("menu.refresh"), self.refresh_statuses, icon_kind="repair"
+            )
             return
 
         dr = resolve_data_root(info.meta, info.rid)
@@ -2117,11 +2144,12 @@ class RezeptorWindow(QMainWindow):
             *,
             show: bool,
             tip: str = "",
+            icon_kind: str | None = None,
         ) -> None:
             nonlocal since_sep
             if not show:
                 return
-            act = self._add_menu_action(menu, label, slot)
+            act = self._add_menu_action(menu, label, slot, icon_kind=icon_kind)
             if tip:
                 act.setToolTip(tip)
             since_sep += 1
@@ -2133,22 +2161,25 @@ class RezeptorWindow(QMainWindow):
             menu.addSeparator()
             since_sep = 0
 
-        _add(t("menu.validate"), self.run_validate, show=ops_ok)
+        _add(t("menu.validate"), self.run_validate, show=ops_ok, icon_kind="validate")
         _add(
             t("menu.repair"),
             self.run_repair,
             show=ops_ok and repair_ok and mode != "repair",
+            icon_kind="repair",
         )
         _add(
             t("menu.launch"),
             self.run_launch,
             # Freigabe/Medizin: kein Start-Umweg, solange Repair aussteht
             show=ops_ok and can_launch and mode != "launch" and not pending_repair,
+            icon_kind="launch",
         )
         _add(
             t("menu.kill"),
             self.run_kill,
             show=ops_ok and kill_ok and running and mode != "kill",
+            icon_kind="kill",
         )
         update_ok = recipe_supports_update(info.meta) and installed_ish
         _add(t("menu.update"), self.run_update, show=ops_ok and update_ok)
@@ -2355,7 +2386,61 @@ class RezeptorWindow(QMainWindow):
             btn.setToolTip("")
             btn.setIcon(QIcon())
 
+        self._sync_trainer_button(info, running=running, busy=busy)
+
         # Mehr-Menü: neu gebaut in _popup_more_menu (omit inapplicable actions).
+
+    def _trainer_script_for(self, info: RecipeInfo | None) -> Path | None:
+        """trainer.sh from overlay recipe dir, else bundled repo recipes/."""
+        if info is None:
+            return None
+        rid = info.rid
+        candidates = [
+            Path(info.meta.get("_dir") or "") / "trainer.sh",
+            ROOT / "recipes" / rid / "trainer.sh",
+        ]
+        for p in candidates:
+            if p.is_file():
+                return p
+        return None
+
+    def _trainer_ready(self, info: RecipeInfo | None) -> bool:
+        if info is None or self._trainer_script_for(info) is None:
+            return False
+        try:
+            from trainer_deploy import installed_trainer_exe
+        except ImportError:
+            return False
+        dr = resolve_data_root(info.meta, info.rid)
+        return installed_trainer_exe(dr) is not None
+
+    def _sync_trainer_button(
+        self,
+        info: RecipeInfo | None,
+        *,
+        running: bool,
+        busy: bool,
+    ) -> None:
+        """Show „Trainer starten“ next to Beenden when Halo (and trainer EXE) are ready."""
+        btn = getattr(self, "trainer_btn", None)
+        if btn is None:
+            return
+        show = bool(
+            info is not None
+            and running
+            and self._trainer_ready(info)
+            and not _recipe_is_untrusted(info)
+            and not _recipe_is_checking(info)
+        )
+        btn.setVisible(show)
+        btn.setEnabled(show and not busy)
+        if show:
+            btn.setText(t("btn.trainer"))
+            btn.setToolTip(t("tooltip.trainer"))
+            tr_ic = fa_icon("gamepad", 14, color=COLOR_PARCHMENT)
+            if tr_ic is not None:
+                btn.setIcon(tr_ic)
+                btn.setIconSize(QSize(14, 14))
 
     def _on_sidebar_search(self, _text: str = "") -> None:
         self._populate_list()
@@ -4647,7 +4732,8 @@ class RezeptorWindow(QMainWindow):
             )
         )
         wm.setVisible(True)
-        wm.lower()
+        # Raise above Fluent CardWidget chrome (lower() hid the mark on Flatpak).
+        wm.raise_()
         # Keep interactive chrome above the backdrop.
         for w in (
             getattr(self, "icon_label", None),
@@ -6167,9 +6253,6 @@ class RezeptorWindow(QMainWindow):
         # Watermark alpha depends on theme contrast — rebuild if present.
         if getattr(self, "_header_watermark_src", None) is not None:
             self._layout_header_watermark()
-        wm = getattr(self, "_header_watermark", None)
-        if wm is not None:
-            wm.lower()
 
     def retranslate_ui(self) -> None:
         self._build_menus()
@@ -6262,6 +6345,20 @@ class RezeptorWindow(QMainWindow):
             self.medizin_btn.setText(t("btn.medizin"))
             self.medizin_btn.setToolTip(t("tooltip.medizin"))
             self._sync_medizin_button()
+        if hasattr(self, "trainer_btn"):
+            self.trainer_btn.setText(t("btn.trainer"))
+            self.trainer_btn.setToolTip(t("tooltip.trainer"))
+            if self._selected is not None:
+                running = recipe_process_running(
+                    self._selected.rid, self._selected.meta
+                )
+                self._sync_trainer_button(
+                    self._selected,
+                    running=running,
+                    busy=bool(getattr(self, "_busy", False)),
+                )
+            else:
+                self.trainer_btn.setVisible(False)
         if hasattr(self, "cancel_install_btn"):
             self.cancel_install_btn.setText(t("btn.cancel_install"))
             self.cancel_install_btn.setToolTip(t("tooltip.cancel_install"))
@@ -6366,6 +6463,9 @@ class RezeptorWindow(QMainWindow):
 
     def run_genp_from_pack(self) -> None:
         return self._ops.run_genp_from_pack()
+
+    def run_trainer(self) -> None:
+        return self._ops.run_trainer()
 
     def _genp_target_wine_path(self) -> str:
         return self._ops._genp_target_wine_path()

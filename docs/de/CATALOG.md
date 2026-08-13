@@ -131,7 +131,7 @@ Portable Ordner oder Steam-Spiele **außerhalb** von `data_root` bleiben bei Dei
 
 ## Runtime: Proton-GE
 
-Alle Rezepte setzen **Proton-GE** voraus. Default-Pin: `core/runtime.lock`. Einzelne Rezepte können per `proton_ge_tag` abweichen (z. B. Halo → GE 11). Kein System-Wine-Fallback in Rezept-Skripten.
+Alle Rezepte setzen **Proton-GE** voraus. Default-Pin: `core/runtime.lock`. Einzelne Rezepte können per `proton_ge_tag` abweichen (Photoshop und Halo → GE 11). Kein System-Wine-Fallback in Rezept-Skripten.
 Grafik-DLLs kommen über `wine_runtime::deploy_proton_graphics_dlls()` — kein winetricks-dxvk.
 
 Weitere Details: [ENTWICKLER.md](ENTWICKLER.md) · [TRUST.md](TRUST.md) · [UNINSTALL.md](UNINSTALL.md)

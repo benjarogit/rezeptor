@@ -101,6 +101,7 @@ class RecipeProcessOps:
                 self._w.primary_btn,
                 self._w.more_btn,
                 getattr(self._w, "medizin_btn", None),
+                getattr(self._w, "trainer_btn", None),
             ):
                 if b is not None:
                     b.setEnabled(False)
@@ -530,6 +531,48 @@ class RecipeProcessOps:
             None,
             t("status.genp_done"),
             op="genp",
+            recipe_dir=rd,
+        )
+
+    def run_trainer(self) -> None:
+        """Action bar → Trainer starten (BYOS, same Wine prefix as the game)."""
+        rd = self._w._require_trusted_recipe()
+        if rd is None or not self._w._selected:
+            return
+        script = self._w._trainer_script_for(self._w._selected)
+        if script is None or not script.is_file():
+            QMessageBox.warning(
+                self._w,
+                t("dialog.missing"),
+                t("dialog.trainer_missing"),
+            )
+            return
+        if self._w._selected.state == RecipeState.NOT_INSTALLED:
+            QMessageBox.warning(
+                self._w, t("dialog.not_installed_title"), t("dialog.install_first")
+            )
+            return
+        if not self._w._trainer_ready(self._w._selected):
+            QMessageBox.warning(
+                self._w,
+                t("dialog.trainer_title"),
+                t("dialog.trainer_no_exe"),
+            )
+            return
+        if not self._L.recipe_process_running(
+            self._w._selected.rid, self._w._selected.meta
+        ):
+            QMessageBox.warning(
+                self._w,
+                t("dialog.trainer_title"),
+                t("dialog.trainer_need_game"),
+            )
+            return
+        self._run_async(
+            script,
+            None,
+            t("status.trainer_started"),
+            op="trainer",
             recipe_dir=rd,
         )
 

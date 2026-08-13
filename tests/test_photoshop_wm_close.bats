@@ -156,3 +156,16 @@ EOF
     PATH="$FAKEBIN:$PATH" recipe_photoshop::_wm_close_photoshop
     grep -q 'CLOSE:0x1000002' "$WMCTRL_LOG"
 }
+
+@test "request_photoshop_exit does not force-kill after window is gone" {
+    recipe_photoshop::photoshop_running() { return 0; }
+    recipe_photoshop::_wm_close_photoshop() { :; }
+    recipe_photoshop::_photoshop_windows_open() { return 1; }
+    recipe_photoshop::wait_photoshop_gone() { return 0; }
+    recipe_photoshop::_wine_taskkill() { echo "TASKKILL:$1" >>"$TMP/force.log"; }
+    recipe_photoshop::_wm_alt_f4_photoshop() { echo ALT >>"$TMP/force.log"; }
+    : >"$TMP/force.log"
+    recipe_photoshop::request_photoshop_exit
+    [ "${PHOTOSHOP_EXIT_GRACEFUL:-}" = "1" ]
+    [ ! -s "$TMP/force.log" ]
+}

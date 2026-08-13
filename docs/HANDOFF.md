@@ -35,17 +35,19 @@ cd /home/benny/Dokumente/rezeptor
 
 ## Open work
 
-- Latest released: **v1.1.42**.
-- **Local WIP (unreleased):**
+- Latest released: **v1.1.44** (Photoshop Quit #10, Proton 11 default, experimental README).
+- **Local (not in 1.1.44):**
   - Halo: `data_root.path` → `/mnt/ssd2/Games/Halo Evolved` (echte Installation).
     Leerer Prefix unter `~/.local/share/wine-software/halo-campaign-evolved` war die
     Ursache für „Halo-EXE fehlt“ / Steam-Stack-FAIL.
   - Halo: `winetricks: []` — `vcrun2019` (14.29) hat bei jedem Repair die CRT
     downgraded; CRT kommt über `ensure_modern_crt` (14.40+).
+  - Halo trainer: wartet auf `HaloCampaignEvolved.exe`, dann gleiches Proton-Wine
+    (`proton-cachyos-slr` `files/bin/wine` + echter Prefix). GUI: `trainer.sh`.
+    Log: `/tmp/rezeptor-halo-trainer.log`. System-`wine` sieht die Steam-Session nicht.
+  - Halo Steam Launch Options: `gamemoderun`, `KWIN_DRM_ALLOW_TEARING=1`, NVIDIA
+    Shader-Cache. Rewrite nur wenn Steam einmal zu ist (sonst pending).
   - `deploy_proton_graphics_dlls` kopiert vkd3d-proton d3d12/d3d12core.
-  - Vorgang-UI: keine Fixed-Heights mehr (Schritte/Live stretch); OK/FAIL auch in Schritte.
-  - Fenster-Icon: opakes Anthrazit-PNG.
-  - Beta-GUI untracked.
 - Product backlog: Proton-GE management UI, exception→diagnose zip CTA, Snapshot/Restore.
 
 ## Halo recipe assets (public)

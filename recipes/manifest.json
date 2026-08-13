@@ -49,14 +49,14 @@
         "assets/gpu-profiles/stable/PSUserConfig.txt": "sha256:7f9e20eb8c4e5f2ffc5e968311f4873a53b29298f69847b131dce50ec2e420e5",
         "assets/gpu-profiles/stable/UIPrefs.psp": "sha256:294da81d32902cfbff0f8d46e0d6dba604bc7f81cfa4bd3056177518075b22b8",
         "assets/gpu-profiles/stable/machine.prefs": "sha256:429dd0aba09f31c81c3ff6b95c813171031e014a6e134bf1a4f862a35967eb68",
-        "cleanup-orphans.sh": "sha256:7bdb4f437c80bc98cc8f711d9fe974d5145da9d2b1c9f661820fa24d7474f6c6",
+        "cleanup-orphans.sh": "sha256:1256de879f70e1bbaffac91f143d5d80353ee2d6a3e21b0826f412983d87b0e4",
         "info.de.txt": "sha256:e7158162efe0568466b758f595603223bea3f9242a8247d6f203f923a38eab34",
         "info.en.txt": "sha256:07062b28cb4633fda455d4d8773b265a05b8a222567a50e56d4d8c2997cb6799",
         "install.sh": "sha256:214758619f738824f9e5a6c4a4f39d493e493491069928acc6428f3d41262fae",
         "kill.sh": "sha256:be7c48aa0805d4b8bf2320588cc099bbbf1cae43d184cd81d5a01583a6a867e9",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
         "optional/cameraRawInstaller.sh": "sha256:9097568694ea8deac6e925fd5f098d6ec60298b0325a3140fce68bb7ff011b93",
-        "recipe.yml": "sha256:40e2963f5c1b4f8c74b5edf58b3d0affe58e2bee0e5b20eafe982e906e241e75",
+        "recipe.yml": "sha256:62c06775f524e53c0b255541666e11f4e1f5d48c37a8e25960230694a0f4376a",
         "repair.sh": "sha256:d732609fb10ef495d73be7d0812bfce162304c0937dc02e9df8efd1fb308da3d",
         "uninstall.sh": "sha256:6769d563631545c6a339e88bd257ba25e040d70f78f11b4d31d42201c1b4a9be",
         "validate.sh": "sha256:978406b53365b2f173d800d5bc21ccf93e60fbab10d70cac3438539e803da80c"
@@ -64,14 +64,14 @@
     },
     "photoshop-m0nkrus": {
       "files": {
-        "cleanup-orphans.sh": "sha256:63d90bb61f842ea2c6926649f9191e3528ed5dcf11ccdcd9162d81e9c56031e0",
+        "cleanup-orphans.sh": "sha256:cefd1eb851af2dc98dc37d71575cc70fb98f8a9d789ac9669bab6a6178ede916",
         "genp.sh": "sha256:3d56bd063b91321b7623fb9ace3552d420990a44851f047e8cc2abb4a09550e3",
         "info.de.txt": "sha256:100ddcf7d620dad44307303c25fd8fa77026b9697ea0eba480155ef43d92141c",
         "info.en.txt": "sha256:8d279200e994fef23610c970ace5403aa551de0f38445a58d59d3bd42fe1ccf6",
         "install.sh": "sha256:214758619f738824f9e5a6c4a4f39d493e493491069928acc6428f3d41262fae",
         "kill.sh": "sha256:be7c48aa0805d4b8bf2320588cc099bbbf1cae43d184cd81d5a01583a6a867e9",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
-        "recipe.yml": "sha256:e0f9814006b49b636befa287b3f89e2ce8077bf83657a7302f949eda74f92dc1",
+        "recipe.yml": "sha256:142f15d372ac3cc6715a15753cfe8ccecdd6ec3352656c850cd55e87c44848cf",
         "repair.sh": "sha256:c33563f29a539e5b8b42e3783cfd6c1f26c594a7df7892f790739773ae39a4dc",
         "uninstall.sh": "sha256:c62f9cd2e9ace3f05f159405ac184ced7c1e0e4fa84d287b25b7499ca2988c37",
         "validate.sh": "sha256:15e9e7c2594067efaca57292283b97b5f11cf2c727dc9d212c8db46742b7307b"

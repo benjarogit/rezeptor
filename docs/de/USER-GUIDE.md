@@ -34,7 +34,7 @@ Dauerhafte Schalter pro Rezept (`options.env`). Nach dem Umschalten erscheint of
 
 ### Photoshop (CC 2021)
 
-Unter Wine sind manche Windows-UI-Features fragil. Rezeptor setzt deshalb standardmäßig sichere Prefs (kein Startbildschirm, Tooltips aus, Legacy-Neu-Dialog). Wenn es bei dir unter Windows-Feeling stabil läuft, kannst du einzeln freigeben:
+Läuft fest auf **Proton-GE 11-3** (kein Medizin-Schalter mehr). Unter Wine sind manche Windows-UI-Features fragil. Rezeptor setzt deshalb standardmäßig sichere Prefs (kein Startbildschirm, Tooltips aus, Legacy-Neu-Dialog). Wenn es bei dir unter Windows-Feeling stabil läuft, kannst du einzeln freigeben:
 
 | Option | Wirkung |
 |--------|---------|

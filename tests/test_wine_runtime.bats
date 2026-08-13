@@ -188,24 +188,18 @@ setup() {
     [ "$(cat "$prefix/drive_c/windows/syswow64/d3d12core.dll")" = "VKD3D_NATIVE_CORE32" ]
 }
 
-@test "recipe_photoshop apply_proton_pin sets GE-11 DXVK overlay and X11 flags" {
+@test "recipe_photoshop apply_proton_pin always sets GE-11 DXVK overlay and X11 flags" {
     # shellcheck source=/dev/null
     source "$ROOT/core/recipe-photoshop-install.sh"
     unset PROTON_GE_TAG PROTON_GE_URL PROTON_GE_SHA256 PROTON_GE_DXVK_TAG
     unset PHOTOSHOP_GE11_WINED3D PHOTOSHOP_GE11_FORCE_X11 WAYLAND_DISPLAY
     export WAYLAND_DISPLAY=wayland-0
-    export PHOTOSHOP_PROTON_GE_11=1
     recipe_photoshop::apply_proton_pin
     [ "$PROTON_GE_TAG" = "GE-Proton11-3" ]
     [ "$PROTON_GE_DXVK_TAG" = "GE-Proton10-28" ]
     [ "$PHOTOSHOP_GE11_FORCE_X11" = "1" ]
     [ "${PROTON_ENABLE_WAYLAND:-}" = "0" ]
     [ -z "${WAYLAND_DISPLAY:-}" ]
-    export PHOTOSHOP_PROTON_GE_11=0
-    recipe_photoshop::apply_proton_pin
-    [ -z "${PROTON_GE_DXVK_TAG:-}" ]
-    [ -z "${PHOTOSHOP_GE11_FORCE_X11:-}" ]
-    [ -z "${PROTON_GE_TAG:-}" ]
 }
 
 @test "recipe_photoshop GE-11 launch overrides disable d2d1" {
@@ -213,13 +207,8 @@ setup() {
     source "$ROOT/core/recipe-photoshop-install.sh"
     # shellcheck source=/dev/null
     source "$ROOT/core/recipe-photoshop-launch.sh"
-    export PHOTOSHOP_PROTON_GE_11=1
     unset WINEDLLOVERRIDES
     recipe_photoshop::_export_launch_env
     [[ "$WINEDLLOVERRIDES" == *"d2d1=n"* ]]
     [[ "$WINEDLLOVERRIDES" != *"d2d1=builtin"* ]]
-    export PHOTOSHOP_PROTON_GE_11=0
-    unset WINEDLLOVERRIDES
-    recipe_photoshop::_export_launch_env
-    [[ "$WINEDLLOVERRIDES" == *"d2d1=builtin"* ]]
 }

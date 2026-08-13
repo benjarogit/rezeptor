@@ -180,16 +180,12 @@ recipe_photoshop::_export_launch_env() {
     # DXVK für Start/UI (albakhtari). GPU in Prefs bleibt aus — sonst Neu/Text-Tool kaputt.
     # Kein „desktop=n“ in WINEDLLOVERRIDES — unter Proton-GE kann das explorer /desktop
     # (weißes Vollbild) triggern; VD wird nur über Registry abgeschaltet.
-    # GE-11 Medizin: DXVK 2.7 overlay + X11 + d2d1=n (Wine 11 d2d1 → white chrome, issue #8).
+    # GE-11 stack: DXVK overlay + X11 + d2d1=n (Wine 11 d2d1 → white chrome, issue #8).
     if type recipe_photoshop::apply_ge11_x11_env >/dev/null 2>&1; then
         recipe_photoshop::apply_ge11_x11_env
     fi
-    if recipe_photoshop::_env_bool_on "${PHOTOSHOP_PROTON_GE_11:-${PHOTOSHOP_GE11_FORCE_X11:-0}}"; then
-        # Force (not :-): stale WINEDLLOVERRIDES must not keep d2d1=builtin.
-        export WINEDLLOVERRIDES="winewayland.drv=d;winemenubuilder.exe=d;d3d11=native,builtin;d3d10core=native,builtin;dxgi=native,builtin;d2d1=n;gdiplus=native;mshtml=native,builtin;jscript=native,builtin;vbscript=native,builtin;urlmon=native,builtin;wininet=native,builtin;shdocvw=native,builtin;ieframe=native,builtin;actxprxy=native,builtin;browseui=native,builtin;dxtrans=native,builtin;msimtf=native,builtin;shlwapi=native,builtin;shell32=native,builtin;iertutil=native,builtin;jsproxy=native,builtin"
-    else
-        export WINEDLLOVERRIDES="${WINEDLLOVERRIDES:-winemenubuilder.exe=d;d3d11=native,builtin;d2d1=builtin;gdiplus=native;mshtml=native,builtin;jscript=native,builtin;vbscript=native,builtin;urlmon=native,builtin;wininet=native,builtin;shdocvw=native,builtin;ieframe=native,builtin;actxprxy=native,builtin;browseui=native,builtin;dxtrans=native,builtin;msimtf=native,builtin;shlwapi=native,builtin;shell32=native,builtin;iertutil=native,builtin;jsproxy=native,builtin}"
-    fi
+    # Force (not :-): stale WINEDLLOVERRIDES must not keep d2d1=builtin.
+    export WINEDLLOVERRIDES="winewayland.drv=d;winemenubuilder.exe=d;d3d11=native,builtin;d3d10core=native,builtin;dxgi=native,builtin;d2d1=n;gdiplus=native;mshtml=native,builtin;jscript=native,builtin;vbscript=native,builtin;urlmon=native,builtin;wininet=native,builtin;shdocvw=native,builtin;ieframe=native,builtin;actxprxy=native,builtin;browseui=native,builtin;dxtrans=native,builtin;msimtf=native,builtin;shlwapi=native,builtin;shell32=native,builtin;iertutil=native,builtin;jsproxy=native,builtin"
     # Experimental Hand-tool stub (#9). Default off — caused minimize/window regressions.
     case "${PHOTOSHOP_OPENGL_STUB:-0}" in
         1|true|yes|on|TRUE|YES|ON)
@@ -265,8 +261,10 @@ recipe_photoshop::_prepare_prefix() {
     fi
     # VD-Registry vor jedem Start (sonst explorer /desktop = weißes Vollbild).
     photoshop_setup::disable_virtual_desktop
-    # Registry-Änderung greift erst mit frischem wineserver — sonst bleibt weißer Desktop.
-    if type wine_runtime::wineserver >/dev/null 2>&1; then
+    # Only bounce wineserver when a leftover VD shell is present — a kill on
+    # every launch is a cold start (1–2 min) and looks like “won’t start”.
+    if pgrep -f 'explorer\.exe.*/desktop' >/dev/null 2>&1 \
+        && type wine_runtime::wineserver >/dev/null 2>&1; then
         wine_runtime::wineserver -k 2>/dev/null || true
         sleep 0.3
     fi
@@ -292,9 +290,7 @@ recipe_photoshop::_prepare_prefix() {
 
     wine_runtime::deploy_proton_graphics_dlls \
         || recipe_photoshop::_runtime_log "FEHLER: Proton-Grafik-DLLs nicht deploybar — Reparieren"
-    if recipe_photoshop::_env_bool_on "${PHOTOSHOP_PROTON_GE_11:-0}"; then
-        recipe_photoshop::_runtime_log "GE-11 Medizin: DXVK from ${PROTON_GE_DXVK_TAG:-?} + X11 + d2d1=n"
-    fi
+    recipe_photoshop::_runtime_log "GE-11: DXVK from ${PROTON_GE_DXVK_TAG:-?} + X11 + d2d1=n"
     # Drop leftover opengl32 stub (or deploy if PHOTOSHOP_OPENGL_STUB=1).
     if type recipe_photoshop::deploy_opengl_stub >/dev/null 2>&1; then
         recipe_photoshop::deploy_opengl_stub || \

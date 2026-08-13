@@ -20,7 +20,8 @@ recipe_hooks::_source recipe-photoshop-cleanup.sh
 wine_runtime::init 2>/dev/null || true
 wine_runtime::export_env 2>/dev/null || true
 
-sleep "${PHOTOSHOP_EXIT_FLUSH_S:-2}"
+export PHOTOSHOP_EXIT_GRACEFUL=1
+sleep "${PHOTOSHOP_EXIT_FLUSH_S:-8}"
 
 if recipe_photoshop::photoshop_running; then
     exit 0
