@@ -20,6 +20,19 @@
         "validate.sh": "sha256:16159ad9d9c52e3e00b1356e8e301b57924b784979c601a96c4b2f4b5998f0b3"
       }
     },
+    "lightroom-classic": {
+      "files": {
+        "info.de.txt": "sha256:5d69c0b655802b05d0c5e355937534dab8eb8ea3a128f70fc554c6c21413b117",
+        "info.en.txt": "sha256:b627a8dfe8c0f620c7bc095ba3281015ce9ebfb13f88f1a4536ad7c05b8ce115",
+        "install.sh": "sha256:214758619f738824f9e5a6c4a4f39d493e493491069928acc6428f3d41262fae",
+        "kill.sh": "sha256:de0334ce93bd7d15de9c6452a3c3b74d7c1a08eb60e7cb094b52f357aa305542",
+        "launch.sh": "sha256:b07c4c3ff39b0577fed16169f3ea19479bb62e3c71b04f129d64fb7beb137e96",
+        "recipe.yml": "sha256:cf34f1a272607c37b3bb0a5bf7f5e6e366943f5c7916d021129ec56dd92ff830",
+        "repair.sh": "sha256:62f25d4b3e2b869c92b55911ce2bb49309fffeade612489377e64bfb2d9e6b85",
+        "uninstall.sh": "sha256:31fbdc12617519d87c643d0c3c6e8b1155eae1c830f473e03ee4ab501c36c8d5",
+        "validate.sh": "sha256:97e72a7fc5129dcd51b64533ceae19783a4427c893aa1979b0461d3014c99149"
+      }
+    },
     "master-pdf-editor": {
       "files": {
         "info.de.txt": "sha256:1c458a2f2273d002291188bb115c17686b426dbe1db8af1f0d45451f5ec3c345",

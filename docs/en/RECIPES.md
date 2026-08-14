@@ -6,7 +6,7 @@ Full list **by category** (Graphics, Video, Finance, Documents, Games):
 
 → **[Recipe catalog](CATALOG.md#official-recipes-bundled)**
 
-Short: 6 official IDs — `photoshop`, `photoshop-m0nkrus`, `premiere`, `wiso-steuer`, `master-pdf-editor`, `halo-campaign-evolved`.
+Short: 7 official IDs — `photoshop`, `photoshop-m0nkrus`, `lightroom-classic`, `premiere`, `wiso-steuer`, `master-pdf-editor`, `halo-campaign-evolved`.
 
 ## For authors
 

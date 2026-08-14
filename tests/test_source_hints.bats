@@ -182,6 +182,46 @@ echo OK
     [[ "$output" == *OK* ]]
 }
 
+@test "lightroom-classic loads recipe_lightroom::install via wrapper" {
+    ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+    run bash -c "
+set -euo pipefail
+export PROJECT_ROOT='$ROOT'
+export RECIPE_DIR='$ROOT/recipes/lightroom-classic'
+export RECIPE_ID=lightroom-classic
+export RECIPE_YML=\"\$RECIPE_DIR/recipe.yml\"
+export DATA_ROOT=/tmp/rezeptor-lrc-test-\$\$
+export CORE_DIR=\"\$PROJECT_ROOT/core\"
+mkdir -p \"\$DATA_ROOT\"
+# shellcheck source=/dev/null
+source \"\$CORE_DIR/recipe-hooks.sh\"
+recipe_hooks::load install
+recipe_install_steps::_ensure_module recipe_lightroom::install
+type recipe_lightroom::install >/dev/null
+type lr_stubs::ensure_patched_d2d1 >/dev/null
+echo OK
+"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *OK* ]]
+}
+
+@test "lightroom find_exe accepts versioned Adobe folder names" {
+    ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+    prefix="$BATS_TEST_TMPDIR/pfx-lrc"
+    app="$prefix/drive_c/Program Files/Adobe/Adobe Lightroom Classic 15.4"
+    mkdir -p "$app"
+    printf 'MZ' > "$app/Lightroom.exe"
+    run bash -c "
+set -euo pipefail
+export PROJECT_ROOT='$ROOT'
+# shellcheck source=/dev/null
+source '$ROOT/core/sharedFuncs.sh'
+lightroom::find_exe '$prefix'
+"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"Adobe Lightroom Classic 15.4/Lightroom.exe"* ]]
+}
+
 @test "ISO-only pack heuristic still distinguishes extras-less packs" {
     _require_pyqt6
 

@@ -1,0 +1,48 @@
+# Adobe Lightroom Classic
+
+Author: benjarogit
+Version: 15.4.1 (Adobe offline installer, product LTRM)
+
+## Overview
+Adobe Lightroom Classic — the variant with a local catalog, **not** Lightroom CC / "Lightroom Desktop". Runs on Proton-GE with DXVK and real D3D12 (vkd3d-proton), so the Develop module is GPU accelerated.
+
+## What works
+• Library, import, Develop with all manual sliders and masks
+• GPU acceleration (Preferences → Performance detects the graphics card)
+• AI masking: select subject / sky / objects (inference runs on the CPU — a few seconds per mask)
+• Filled histogram and thumbnail grid
+• Export and "Copy settings" without empty dialogs
+
+## What does not work
+• **HDR editing** — needs native Wayland plus compositor HDR, which crashes Lightroom
+• **AI Denoise** is untested (different Adobe code path than masking)
+
+## Requirements
+• Proton-GE (downloaded and pinned automatically)
+• Adobe offline installer: a folder with Set-up.exe, products/LTRM and packages/ — or an Adobe *.iso
+• A valid Lightroom Classic license and an Adobe account to sign in during setup
+• About 15 GB of free disk space (installer ~3 GB, the prefix grows)
+• Internet during install: the fixes (patched d2d1, stubs) are fetched with pinned checksums
+
+## Installation
+1. Choose "Install"
+2. Pick the folder containing Set-up.exe (with products/LTRM inside) or point to the ISO
+3. Check the data folder (Wine prefix; default: ~/.local/share/wine-software/lightroom-classic)
+
+## Usage
+• "Launch" from the launcher or via the desktop entry
+• The first start can take one to two minutes
+• Keep the catalog and images outside the prefix — both then survive a reinstall
+
+## Tweaks (persistent settings)
+• **AI masking** — on: WinRT stub plus RAM cap for Adobe's ONNX models. Off: masking does nothing.
+• **Filled histogram (GPU)** — turn off if a UI element flickers or stays blank
+• **UI scale** — pick a fixed DPI if Lightroom's controls are too small or too large
+
+## Notes
+• If Lightroom hangs or refuses to start: use "Stop", then "Launch" — Adobe leaves background processes holding locks
+• After a Proton change, "Launch" reapplies the fixes automatically; use "Repair" if problems persist
+• Logs: ~/.local/share/wine-software/logs/ and <data folder>/lightroom-runtime.log
+
+## Credits
+The groundwork for Lightroom Classic on Linux comes from **6im0n/lightroom-classic-on-linux** (MIT), which builds on **sander110419/Lightroom-cc-on-linux**: the patched d2d1 (ColorManagement + stencil PushLayer), the patched mfplat, the hnetcfg stub, the WinRT streams for AI masking and the dialog proxy. This recipe uses exactly those building blocks — just ported to Rezeptor's Proton-GE chain. Thank you!

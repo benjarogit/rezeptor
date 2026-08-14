@@ -851,11 +851,15 @@ class RecipeProcessOps:
             self._w._launch_alive_reported = True
             self._w._running_prev[rid] = True
             return
-        # Photoshop/Premiere: Launch macht Prefs/Fonts vor wine — erster Start oft >20s.
+        # Photoshop/Premiere/Lightroom: Launch macht Prefs/Fonts vor wine — erster Start oft >20s.
         # Halo via Steam Non-Steam: wait for client + proton/shaders (log line marks wait).
         if rid == "halo-campaign-evolved" and "warte auf Halo unter Steam" in log_tail:
             max_attempts = 100  # ~4 min @ 2.5s
-        elif rid.startswith("photoshop") or rid == "premiere" or rid == "halo-campaign-evolved":
+        elif rid.startswith("photoshop") or rid in (
+            "premiere",
+            "lightroom-classic",
+            "halo-campaign-evolved",
+        ):
             max_attempts = 35
         else:
             max_attempts = 7

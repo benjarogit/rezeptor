@@ -83,12 +83,13 @@ Or download a **[release](https://github.com/benjarogit/rezeptor/releases)** (`t
 ## Recipes
 
 <details>
-<summary><strong>Bundled official recipes</strong> (6 — click to expand)</summary>
+<summary><strong>Bundled official recipes</strong> (7 — click to expand)</summary>
 
 | ID | Name | Category | Notes |
 |----|------|----------|--------|
 | `photoshop` | Adobe Photoshop CC 2021 | Graphics & Design | Standard offline installer (22.0.0.35) |
 | `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Graphics & Design | Full pack + Neural / missing_libs / GenP (optional) |
+| `lightroom-classic` | Adobe Lightroom Classic | Graphics & Design | Offline 15.4.1 — GPU develop, AI masking, no HDR |
 | `premiere` | Adobe Premiere Pro 2024 | Video | NVIDIA: CUDA via nvidia-libs |
 | `wiso-steuer` | WISO Steuer (Portable) | Finance | Portable under Proton-GE |
 | `master-pdf-editor` | Master PDF Editor | Documents & PDF | BYOS MSI 5.9 under Proton-GE (optional fix/ in pack) |

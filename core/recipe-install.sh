@@ -117,7 +117,7 @@ recipe_install::_expect_installer() {
 recipe_install::_use_iso_mount() {
     local install_type="$1"
     case "${RECIPE_ID:-}" in
-        photoshop|photoshop-m0nkrus|premiere) return 1 ;;
+        photoshop|photoshop-m0nkrus|premiere|lightroom-classic) return 1 ;;
     esac
     case "$install_type" in
         adobe_offline) return 1 ;;

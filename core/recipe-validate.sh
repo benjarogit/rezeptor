@@ -138,6 +138,28 @@ recipe_validate::photoshop_app_version() {
     return 1
 }
 
+# Lightroom Classic: „version“ aus den Installer-Metadaten (15.4.1); ProductVersion
+# trägt zusätzlich den Build-Zeitstempel, taugt daher nicht für den Soll-Vergleich.
+recipe_validate::lightroom_app_version() {
+    local exe="$1" dir prefix json ver
+    [ -f "$exe" ] || return 1
+    dir="$(dirname "$exe")"
+    prefix="${WINEPREFIX:-${WINE_PREFIX:-}}"
+    for json in \
+        "${prefix}/drive_c/AdobeSetup/products/LTRM/application.json" \
+        "${prefix}/drive_c/AdobeSetup/products/LTRM/Application.json" \
+        "${dir}/application.json"; do
+        [ -f "$json" ] || continue
+        ver="$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[^"]+"' "$json" 2>/dev/null \
+            | head -1 | sed -E 's/.*"version"[[:space:]]*:[[:space:]]*"([^"]+)".*/\1/' || true)"
+        if [ -n "$ver" ]; then
+            echo "$ver"
+            return 0
+        fi
+    done
+    recipe_validate::pe_file_version "$exe"
+}
+
 recipe_validate::premiere_app_version() {
     local exe="$1" dir base
     [ -f "$exe" ] || return 1

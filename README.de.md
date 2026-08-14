@@ -83,12 +83,13 @@ Oder ein **[Release](https://github.com/benjarogit/rezeptor/releases)** (`tar.gz
 ## Rezepte
 
 <details>
-<summary><strong>Mitgelieferte offizielle Rezepte</strong> (6 — zum Aufklappen)</summary>
+<summary><strong>Mitgelieferte offizielle Rezepte</strong> (7 — zum Aufklappen)</summary>
 
 | ID | Name | Kategorie | Hinweis |
 |----|------|-----------|---------|
 | `photoshop` | Adobe Photoshop CC 2021 | Grafik & Design | Standard-Offline-Installer (22.0.0.35) |
 | `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Grafik & Design | Vollpack + Neural / missing_libs / GenP (optional) |
+| `lightroom-classic` | Adobe Lightroom Classic | Grafik & Design | Offline 15.4.1 — GPU-Entwickeln, KI-Masken, kein HDR |
 | `premiere` | Adobe Premiere Pro 2024 | Video & Schnitt | NVIDIA: CUDA via nvidia-libs |
 | `wiso-steuer` | WISO Steuer (Portable) | Finanzen & Steuer | Portable unter Proton-GE |
 | `master-pdf-editor` | Master PDF Editor | Dokumente & PDF | BYOS MSI 5.9 unter Proton-GE (optional fix/ im Pack) |
