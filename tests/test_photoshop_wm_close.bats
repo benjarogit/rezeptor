@@ -279,9 +279,13 @@ EOF
     recipe_photoshop::_pkill_pat() { echo "PKILL:${2:-TERM}" >>"$TMP/force.log"; }
     recipe_photoshop::_wine_taskkill() { echo "TASKKILL:$1" >>"$TMP/force.log"; }
     : >"$TMP/force.log"
-    PHOTOSHOP_EXIT_WAIT_S=1 recipe_photoshop::request_photoshop_exit
+    PHOTOSHOP_EXIT_WAIT_S=1 PHOTOSHOP_EXIT_SOFT_S=1 \
+        recipe_photoshop::request_photoshop_exit
     grep -q 'TASKKILL:1' "$TMP/force.log"
     grep -q 'PKILL:9' "$TMP/force.log"
+    # A stalled Photoshop gets WM_CLOSE (soft) before anything is forced, so it
+    # still has a chance to write prefs — seen stalling live once in four runs.
+    [ "$(head -1 "$TMP/force.log")" = "TASKKILL:0" ]
 }
 
 @test "cleanup_orphans kills CCLibrary and ends the prefix wineserver" {

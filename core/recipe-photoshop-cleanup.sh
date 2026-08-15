@@ -301,6 +301,13 @@ recipe_photoshop::_await_exit_or_force() {
     if recipe_photoshop::wait_photoshop_gone "${PHOTOSHOP_EXIT_WAIT_S:-45}"; then
         return 0
     fi
+    # Seen live: Photoshop occasionally stalls after the window is gone and has
+    # not written prefs yet. No window is left to ask, so send WM_CLOSE to the
+    # process itself — that still lets it save, unlike the force below.
+    recipe_photoshop::_wine_taskkill 0
+    if recipe_photoshop::wait_photoshop_gone "${PHOTOSHOP_EXIT_SOFT_S:-20}"; then
+        return 0
+    fi
     recipe_photoshop::_force_photoshop_exit
 }
 
@@ -414,7 +421,9 @@ recipe_photoshop::cleanup_orphans() {
 # Full Quit from Rezeptor: soft PS exit → orphans → wineserver.
 recipe_photoshop::graceful_shutdown() {
     recipe_photoshop::request_photoshop_exit
-    # Extra beat after process exit so prefs/recents finish flushing to disk.
-    sleep "${PHOTOSHOP_EXIT_FLUSH_S:-8}"
+    # Short beat only: Photoshop writes prefs/recents before its process exits,
+    # and request_photoshop_exit already waited for that. The long pause here
+    # dates back to killing Photoshop mid-save and just made Quit feel stuck.
+    sleep "${PHOTOSHOP_EXIT_FLUSH_S:-2}"
     recipe_photoshop::cleanup_orphans
 }

@@ -20,8 +20,8 @@ recipe_hooks::_source recipe-photoshop-cleanup.sh
 wine_runtime::init 2>/dev/null || true
 wine_runtime::export_env 2>/dev/null || true
 
-# Let QuitEndFlag / prefs finish writing before helper cleanup.
-sleep "${PHOTOSHOP_EXIT_FLUSH_S:-8}"
+# Short beat: Photoshop has already exited, so prefs are written by now.
+sleep "${PHOTOSHOP_EXIT_FLUSH_S:-2}"
 
 if recipe_photoshop::photoshop_running; then
     # Raced a relaunch; do not tear down a new session.
