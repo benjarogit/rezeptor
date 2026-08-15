@@ -20,6 +20,19 @@
         "validate.sh": "sha256:16159ad9d9c52e3e00b1356e8e301b57924b784979c601a96c4b2f4b5998f0b3"
       }
     },
+    "lightroom-classic": {
+      "files": {
+        "info.de.txt": "sha256:5d69c0b655802b05d0c5e355937534dab8eb8ea3a128f70fc554c6c21413b117",
+        "info.en.txt": "sha256:b627a8dfe8c0f620c7bc095ba3281015ce9ebfb13f88f1a4536ad7c05b8ce115",
+        "install.sh": "sha256:214758619f738824f9e5a6c4a4f39d493e493491069928acc6428f3d41262fae",
+        "kill.sh": "sha256:de0334ce93bd7d15de9c6452a3c3b74d7c1a08eb60e7cb094b52f357aa305542",
+        "launch.sh": "sha256:b07c4c3ff39b0577fed16169f3ea19479bb62e3c71b04f129d64fb7beb137e96",
+        "recipe.yml": "sha256:cf34f1a272607c37b3bb0a5bf7f5e6e366943f5c7916d021129ec56dd92ff830",
+        "repair.sh": "sha256:62f25d4b3e2b869c92b55911ce2bb49309fffeade612489377e64bfb2d9e6b85",
+        "uninstall.sh": "sha256:31fbdc12617519d87c643d0c3c6e8b1155eae1c830f473e03ee4ab501c36c8d5",
+        "validate.sh": "sha256:97e72a7fc5129dcd51b64533ceae19783a4427c893aa1979b0461d3014c99149"
+      }
+    },
     "master-pdf-editor": {
       "files": {
         "info.de.txt": "sha256:1c458a2f2273d002291188bb115c17686b426dbe1db8af1f0d45451f5ec3c345",
@@ -49,7 +62,7 @@
         "assets/gpu-profiles/stable/PSUserConfig.txt": "sha256:7f9e20eb8c4e5f2ffc5e968311f4873a53b29298f69847b131dce50ec2e420e5",
         "assets/gpu-profiles/stable/UIPrefs.psp": "sha256:294da81d32902cfbff0f8d46e0d6dba604bc7f81cfa4bd3056177518075b22b8",
         "assets/gpu-profiles/stable/machine.prefs": "sha256:429dd0aba09f31c81c3ff6b95c813171031e014a6e134bf1a4f862a35967eb68",
-        "cleanup-orphans.sh": "sha256:1256de879f70e1bbaffac91f143d5d80353ee2d6a3e21b0826f412983d87b0e4",
+        "cleanup-orphans.sh": "sha256:9071719a950cf248f0778b0987e75f84080617fc814a4516125fe473506d7210",
         "info.de.txt": "sha256:e7158162efe0568466b758f595603223bea3f9242a8247d6f203f923a38eab34",
         "info.en.txt": "sha256:07062b28cb4633fda455d4d8773b265a05b8a222567a50e56d4d8c2997cb6799",
         "install.sh": "sha256:214758619f738824f9e5a6c4a4f39d493e493491069928acc6428f3d41262fae",
@@ -64,7 +77,7 @@
     },
     "photoshop-m0nkrus": {
       "files": {
-        "cleanup-orphans.sh": "sha256:cefd1eb851af2dc98dc37d71575cc70fb98f8a9d789ac9669bab6a6178ede916",
+        "cleanup-orphans.sh": "sha256:2914d7692ae8167a7f8b7be4e85f669671e027f5b17f4780b4aeb0990d25d1f0",
         "genp.sh": "sha256:3d56bd063b91321b7623fb9ace3552d420990a44851f047e8cc2abb4a09550e3",
         "info.de.txt": "sha256:100ddcf7d620dad44307303c25fd8fa77026b9697ea0eba480155ef43d92141c",
         "info.en.txt": "sha256:8d279200e994fef23610c970ace5403aa551de0f38445a58d59d3bd42fe1ccf6",

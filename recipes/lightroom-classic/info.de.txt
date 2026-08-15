@@ -1,0 +1,48 @@
+# Adobe Lightroom Classic
+
+Autor: benjarogit
+Version: 15.4.1 (Adobe Offline-Installer, Produkt LTRM)
+
+## Kurzbeschreibung
+Adobe Lightroom Classic — die Variante mit lokalem Katalog, **nicht** Lightroom CC / „Lightroom Desktop“. Läuft unter Proton-GE mit DXVK und echtem D3D12 (vkd3d-proton), sodass Entwickeln GPU-beschleunigt arbeitet.
+
+## Was funktioniert
+• Bibliothek, Importieren, Entwickeln mit allen manuellen Reglern und Masken
+• GPU-Beschleunigung (Voreinstellungen → Leistung erkennt die Grafikkarte)
+• KI-Masken: Motiv / Himmel / Objekte auswählen (Inferenz auf der CPU — einige Sekunden pro Maske)
+• Gefülltes Histogramm und Miniaturraster
+• Exportieren und „Einstellungen kopieren“ ohne leere Dialoge
+
+## Was nicht funktioniert
+• **HDR-Bearbeitung** — braucht natives Wayland plus Compositor-HDR, das bringt Lightroom zum Absturz
+• **KI-Entrauschen** ist ungeprüft (anderer Adobe-Codepfad als die Masken)
+
+## Voraussetzungen
+• Proton-GE (wird automatisch geladen und gepinnt)
+• Adobe Offline-Installer: Ordner mit Set-up.exe, products/LTRM und packages/ — oder Adobe-*.iso
+• Gültige Lightroom-Classic-Lizenz und ein Adobe-Konto für die Anmeldung im Installer
+• Etwa 15 GB freier Speicherplatz (Installer ~3 GB, Prefix wächst)
+• Internet beim Installieren: die Fixes (gepatchtes d2d1, Stubs) werden mit fester Prüfsumme geladen
+
+## Installation
+1. „Installieren“ wählen
+2. Ordner mit Set-up.exe wählen (darin products/LTRM) oder ISO-Pfad setzen
+3. Datenordner prüfen (Wine-Prefix; Standard: ~/.local/share/wine-software/lightroom-classic)
+
+## Nutzung
+• „Starten“ im Launcher oder über die Desktop-Verknüpfung
+• Der erste Start kann 1–2 Minuten dauern
+• Katalog und Bilder am besten außerhalb des Prefix ablegen — dann übersteht beides ein Neuaufsetzen
+
+## Medizin (dauerhafte Einstellungen)
+• **KI-Masken** — an: WinRT-Stub und RAM-Deckel für Adobes ONNX-Modelle. Aus: Maskieren bleibt wirkungslos.
+• **Gefülltes Histogramm (GPU)** — aus, falls ein Bedienelement flackert oder leer bleibt
+• **UI-Skalierung** — fester DPI-Wert, wenn Lightrooms Bedienelemente zu klein oder zu groß sind
+
+## Hinweise
+• Hängt Lightroom oder startet nicht mehr: erst „Beenden“, dann „Starten“ — Adobe lässt Hintergrundprozesse mit offenen Sperren zurück
+• Nach einem Proton-Wechsel setzt „Starten“ die Fixes automatisch neu; bei Problemen „Reparieren“
+• Logs: ~/.local/share/wine-software/logs/ und <Datenordner>/lightroom-runtime.log
+
+## Danksagung
+Die Vorarbeit für Lightroom Classic unter Linux stammt von **6im0n/lightroom-classic-on-linux** (MIT) und baut auf **sander110419/Lightroom-cc-on-linux** auf: das gepatchte d2d1 (ColorManagement + Stencil-PushLayer), das gepatchte mfplat, der hnetcfg-Stub, die WinRT-Streams für die KI-Masken und der Dialog-Proxy. Dieses Rezept nutzt genau diese Bausteine — nur auf Rezeptors Proton-GE-Kette umgestellt. Danke dafür!

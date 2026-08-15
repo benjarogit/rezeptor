@@ -24,6 +24,18 @@
       }
     },
     {
+      "id": "lightroom-classic",
+      "name": "Adobe Lightroom Classic",
+      "category": "Grafik & Design",
+      "trust": "official",
+      "path": "lightroom-classic",
+      "min_app_version": "1.1.44",
+      "summary": {
+        "de": "Lightroom Classic 15.4.1 unter Proton-GE — GPU-Entwickeln, KI-Masken; kein HDR. Dank an 6im0n/lightroom-classic-on-linux.",
+        "en": "Lightroom Classic 15.4.1 on Proton-GE — GPU develop, AI masking; no HDR. Thanks to 6im0n/lightroom-classic-on-linux."
+      }
+    },
+    {
       "id": "premiere",
       "name": "Adobe Premiere Pro 2024",
       "category": "Video & Schnitt",

@@ -5,6 +5,16 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.45] - 2026-08-15
+
+### Added
+- Lightroom Classic recipe (15.4.1 offline installer on Proton-GE)
+
+### Fixed
+- Photoshop Quit: ask the window manager to close Photoshop instead of destroying its window. Destroying it left Photoshop running with no window, so it never ran its quit path and never wrote Recents/prefs ([#10](https://github.com/benjarogit/rezeptor/issues/10))
+- Photoshop Quit no longer stalls on “Window closed”: if Photoshop stays up it is ended after a timeout instead of leaving a half-dead session behind ([#10](https://github.com/benjarogit/rezeptor/issues/10))
+- Photoshop cleanup: stop `CCLibrary` / `AdobeNotificationClient` too and end the prefix `wineserver` once `Photoshop.exe` is really gone, so leftover helpers cannot crash the next launch ([#10](https://github.com/benjarogit/rezeptor/issues/10))
+
 ## [1.1.44] - 2026-08-13
 
 ### Fixed

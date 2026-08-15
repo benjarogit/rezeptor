@@ -145,6 +145,7 @@ def is_adobe_offline_recipe(rid: str) -> bool:
         "photoshop",
         "photoshop-m0nkrus",
         "premiere",
+        "lightroom-classic",
     )
 
 

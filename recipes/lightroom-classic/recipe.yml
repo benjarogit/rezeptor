@@ -1,0 +1,101 @@
+id: lightroom-classic
+schema_version: 1
+icon: "{repo}/images/AdobeLightroom-icon.png"
+name: "Adobe Lightroom Classic"
+author: "benjarogit"
+category: "Grafik & Design"
+version_guaranteed: "15.4.1"
+version_label: "Adobe Lightroom Classic 15.4.1 (Offline-Installer)"
+version_detect:
+  - kind: json_key
+    glob: "products/LTRM/application.json"
+    key: version
+  - kind: json_key
+    glob: "products/LTRM/Application.json"
+    key: version
+  - kind: json_key
+    glob: "**/LTRM/application.json"
+    key: version
+sidebar_label: "Lightroom Classic"
+source_hints:
+  - "Adobe Lightroom Classic"
+  - "LTRM 15.4"
+notify_title: "Lightroom Classic"
+data_root: "~/.local/share/wine-software/lightroom-classic"
+prefix: "{data_root}/prefix"
+runtime: proton-ge
+proton_ge_tag: GE-Proton11-3
+install_type: installer_offline
+source_kind: folder
+source_formats: "iso,zip,7z"
+source_label: "Ordner mit Adobe Offline-Installer (Set-up.exe + products/LTRM + packages/)"
+target_default: "~/.local/share/wine-software/lightroom-classic"
+target_label: "Datenordner (Wine-Prefix wird hier angelegt)"
+fix_kind: none
+exe_glob: "**/Lightroom.exe"
+launch_process_patterns: [Lightroom.exe]
+# win11 via recipe_win10::ensure (Adobe-OS-Prüfung); VC++ via recipe_vcrun::ensure
+# DXVK + vkd3d-proton D3D12: wine_runtime::deploy_proton_graphics_dlls — kein winetricks dxvk
+winetricks: [atmlib, corefonts, "fontsmooth=rgb", gdiplus, msxml3, msxml6, ie8]
+options:
+  - id: ai_masking
+    env: LIGHTROOM_AI_MASKING
+    type: bool
+    default: true
+    label:
+      de: "KI-Masken (Motiv / Himmel / Objekte)"
+      en: "AI masking (subject / sky / objects)"
+    tip:
+      de: "An (Standard): WinRT-Stub + RAM-Deckel für Adobes ONNX-Modelle. Aus: Maskieren tut nichts, dafür kein LD_PRELOAD im Start."
+      en: "On (default): WinRT stub + RAM cap for Adobe's ONNX models. Off: masking does nothing, but no LD_PRELOAD at launch."
+  - id: histogram_fix
+    env: LIGHTROOM_HISTOGRAM_FIX
+    type: bool
+    default: true
+    label:
+      de: "Gefülltes Histogramm (GPU)"
+      en: "Filled histogram (GPU)"
+    tip:
+      de: "An (Standard): Stencil-Pfad im gepatchten d2d1 — Histogramm und Miniaturraster werden gefüllt. Aus, wenn ein UI-Element flackert oder leer bleibt."
+      en: "On (default): stencil path in the patched d2d1 — histogram and thumbnail grid render filled. Turn off if a UI element flickers or stays blank."
+  - id: ui_scale
+    env: LIGHTROOM_UI_SCALE
+    type: choice
+    default: auto
+    label:
+      de: "UI-Skalierung"
+      en: "UI scale"
+    tip:
+      de: "Standard „Automatisch“ übernimmt die Bildschirm-DPI. Fester Wert, wenn Lightrooms Bedienelemente zu klein oder zu groß sind."
+      en: "Default \"automatic\" follows the screen DPI. Pick a fixed value if Lightroom's controls are too small or too large."
+    choices:
+      - id: auto
+        label:
+          de: "Automatisch (Bildschirm-DPI)"
+          en: "Automatic (screen DPI)"
+      - id: "96"
+        label:
+          de: "100 % (96 dpi)"
+          en: "100% (96 dpi)"
+      - id: "120"
+        label:
+          de: "125 % (120 dpi)"
+          en: "125% (120 dpi)"
+      - id: "144"
+        label:
+          de: "150 % (144 dpi)"
+          en: "150% (144 dpi)"
+      - id: "192"
+        label:
+          de: "200 % (192 dpi)"
+          en: "200% (192 dpi)"
+env:
+  WINEDEBUG: "-all,+err"
+validate: validate.sh
+launch: launch.sh
+install: install.sh
+repair: repair.sh
+kill: kill.sh
+uninstall: uninstall.sh
+install_steps:
+  - module: recipe_lightroom::install

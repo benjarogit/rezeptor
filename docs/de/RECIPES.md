@@ -6,7 +6,7 @@ Vollständige Liste **nach Kategorien** (Grafik, Video, Finanzen, Dokumente, Spi
 
 → **[Rezept-Katalog](CATALOG.md#offizielle-rezepte-mitgeliefert)**
 
-Kurz: 6 offizielle IDs — `photoshop`, `photoshop-m0nkrus`, `premiere`, `wiso-steuer`, `master-pdf-editor`, `halo-campaign-evolved`.
+Kurz: 7 offizielle IDs — `photoshop`, `photoshop-m0nkrus`, `lightroom-classic`, `premiere`, `wiso-steuer`, `master-pdf-editor`, `halo-campaign-evolved`.
 
 ## Für Autoren
 

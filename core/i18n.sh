@@ -68,8 +68,6 @@ msg::_lookup() {
         en:ps.exit.force) echo "Photoshop not responding, forcing quit" ;;
         de:ps.exit.window_closed) echo "Fenster geschlossen — warte auf Speichern" ;;
         en:ps.exit.window_closed) echo "Window closed — waiting for prefs to save" ;;
-        de:ps.cleanup.skip_wineserver) echo "wineserver bleibt (Prefs speichern)" ;;
-        en:ps.cleanup.skip_wineserver) echo "leaving wineserver up (prefs flush)" ;;
         de:ps.cleanup.helpers) echo "Adobe-Helfer / Orphans" ;;
         en:ps.cleanup.helpers) echo "Adobe helpers / orphans" ;;
         de:ps.cleanup.wineserver) echo "wineserver" ;;

@@ -8,7 +8,7 @@ nicht jede Quelle ist gleichwertig.
 Im Repository unter `recipes/<id>/` gebündelt, indexiert in `recipes/catalog.json` (`trust: official`).
 CI sichert sie ab (`recipe-lint`, Manifest-Check).
 
-Aktuell **6** offizielle Produktrezepte in **5** Kategorien.
+Aktuell **7** offizielle Produktrezepte in **5** Kategorien.
 
 ### Grafik & Design
 
@@ -16,6 +16,7 @@ Aktuell **6** offizielle Produktrezepte in **5** Kategorien.
 |----|------|--------------|
 | `photoshop` | Adobe Photoshop CC 2021 | Standard-Offline-Installer (22.0.0.35) unter Proton-GE |
 | `photoshop-m0nkrus` | Adobe Photoshop CC 2021 (m0nkrus 22.1.1.138) | Vollpack inkl. Neural Filters / missing_libs / GenP (optional) |
+| `lightroom-classic` | Adobe Lightroom Classic | Offline-Installer 15.4.1 unter Proton-GE — GPU-Entwickeln (vkd3d D3D12), KI-Masken; **kein HDR**. Vorarbeit: [6im0n/lightroom-classic-on-linux](https://github.com/6im0n/lightroom-classic-on-linux) |
 
 ### Video & Schnitt
 

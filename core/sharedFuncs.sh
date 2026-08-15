@@ -1236,6 +1236,7 @@ adobe::resolve_installer_dir() {
     for env_dir in \
         "${PHOTOSHOP_INSTALLER_DIR:-}" \
         "${PREMIERE_INSTALLER_DIR:-}" \
+        "${LIGHTROOM_INSTALLER_DIR:-}" \
         "${ADOBE_INSTALLER_DIR_HOST:-}"; do
         [ -n "$env_dir" ] || continue
         if [ -f "$env_dir" ]; then
@@ -1309,6 +1310,42 @@ premiere::find_exe() {
 
 premiere::resolve_installer_dir() {
     adobe::resolve_installer_dir "${1:-${PROJECT_ROOT:-}}" "premiere"
+}
+
+lightroom::possible_exe_paths() {
+    local prefix="${1:-${WINE_PREFIX:-${WINEPREFIX:-}}}"
+    if [ -z "$prefix" ]; then
+        return 0
+    fi
+    printf '%s\n' \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Lightroom Classic/Lightroom.exe" \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Lightroom Classic CC/Lightroom.exe" \
+        "$prefix/drive_c/Program Files/Adobe/Adobe Lightroom Classic (Prerelease)/Lightroom.exe"
+}
+
+lightroom::find_exe() {
+    local prefix="${1:-${WINE_PREFIX:-${WINEPREFIX:-}}}"
+    local path="" found=""
+    while IFS= read -r path; do
+        if [ -f "$path" ]; then
+            echo "$path"
+            return 0
+        fi
+    done < <(lightroom::possible_exe_paths "$prefix")
+    shopt -s nullglob 2>/dev/null || true
+    for found in "$prefix/drive_c/Program Files/Adobe"/Adobe\ Lightroom\ */Lightroom.exe; do
+        if [ -f "$found" ]; then
+            echo "$found"
+            shopt -u nullglob 2>/dev/null || true
+            return 0
+        fi
+    done
+    shopt -u nullglob 2>/dev/null || true
+    return 1
+}
+
+lightroom::resolve_installer_dir() {
+    adobe::resolve_installer_dir "${1:-${PROJECT_ROOT:-}}" "lightroom"
 }
 
 # ============================================================================

@@ -160,26 +160,15 @@ EOF
     return 1
 }
 
-recipe_photoshop::_wm_close_photoshop() {
-    local id desk wclass wpid pids pid prefix
+# WM-managed Photoshop windows of this prefix (window ids, one per line).
+# Only the window manager list is used: xdotool search --pid also returns Wine's
+# hidden message windows, which makes "window still open" unreliable.
+recipe_photoshop::_photoshop_window_ids() {
+    local id desk wclass wpid pids prefix
+    command -v wmctrl >/dev/null 2>&1 || return 0
     prefix="$(recipe_photoshop::_prefix)"
     pids="$(recipe_photoshop::_photoshop_pids | recipe_photoshop::_related_pids | sort -u)"
 
-    # Best: close by process id (never touches browser tabs with "Photoshop" in title).
-    if [ -n "$pids" ] && command -v xdotool >/dev/null 2>&1; then
-        while IFS= read -r pid; do
-            [ -n "$pid" ] || continue
-            # shellcheck disable=SC2046
-            for id in $(xdotool search --pid "$pid" 2>/dev/null || true); do
-                [ -n "$id" ] || continue
-                xdotool windowclose "$id" 2>/dev/null || true
-            done
-        done <<EOF
-$pids
-EOF
-    fi
-
-    command -v wmctrl >/dev/null 2>&1 || return 0
     # wmctrl -lx columns: id desktop WM_CLASS host title…
     # Do not use IFS= here — we need default whitespace field splitting.
     while read -r id desk wclass _; do
@@ -187,58 +176,44 @@ EOF
         wpid="$(recipe_photoshop::_wm_window_pid "$id" 2>/dev/null || true)"
         if [ -n "$wpid" ] && [ -n "$pids" ]; then
             if recipe_photoshop::_pid_list_has "$wpid" "$pids"; then
-                wmctrl -ic "$id" 2>/dev/null || true
+                printf '%s\n' "$id"
                 continue
             fi
             # Same Wine prefix + Photoshop class: PID may be another wine helper.
             if [ -n "$prefix" ] \
                 && recipe_photoshop::_pid_in_prefix "$wpid" "$prefix" \
                 && recipe_photoshop::_wm_class_is_photoshop "$wclass"; then
-                wmctrl -ic "$id" 2>/dev/null || true
+                printf '%s\n' "$id"
             fi
             continue
         fi
         # No usable PID list / _NET_WM_PID: class fallback (still never by title).
-        recipe_photoshop::_wm_class_is_photoshop "$wclass" || continue
-        wmctrl -ic "$id" 2>/dev/null || true
+        if recipe_photoshop::_wm_class_is_photoshop "$wclass"; then
+            printf '%s\n' "$id"
+        fi
     done < <(wmctrl -lx 2>/dev/null || true)
+    return 0
+}
+
+# Ask the WM to close Photoshop windows: _NET_CLOSE_WINDOW is what clicking ✕
+# does, so Photoshop runs its own quit path and writes prefs/recents.
+# Never `xdotool windowclose`: that destroys the X window without telling
+# Photoshop, which then keeps running windowless and never saves (#10).
+recipe_photoshop::_wm_close_photoshop() {
+    local id
+    command -v wmctrl >/dev/null 2>&1 || return 0
+    while IFS= read -r id; do
+        [ -n "$id" ] || continue
+        wmctrl -ic "$id" 2>/dev/null || true
+    done <<EOF
+$(recipe_photoshop::_photoshop_window_ids)
+EOF
     return 0
 }
 
 # True while a Photoshop window for this prefix is still mapped.
 recipe_photoshop::_photoshop_windows_open() {
-    local id desk wclass wpid pids prefix
-    prefix="$(recipe_photoshop::_prefix)"
-    pids="$(recipe_photoshop::_photoshop_pids | recipe_photoshop::_related_pids | sort -u)"
-
-    if [ -n "$pids" ] && command -v xdotool >/dev/null 2>&1; then
-        while IFS= read -r pid; do
-            [ -n "$pid" ] || continue
-            if [ -n "$(xdotool search --pid "$pid" 2>/dev/null || true)" ]; then
-                return 0
-            fi
-        done <<EOF
-$pids
-EOF
-    fi
-
-    command -v wmctrl >/dev/null 2>&1 || return 1
-    while read -r id desk wclass _; do
-        [ -n "$id" ] || continue
-        wpid="$(recipe_photoshop::_wm_window_pid "$id" 2>/dev/null || true)"
-        if [ -n "$wpid" ] && [ -n "$pids" ] && recipe_photoshop::_pid_list_has "$wpid" "$pids"; then
-            return 0
-        fi
-        if [ -n "$wpid" ] && [ -n "$prefix" ] \
-            && recipe_photoshop::_pid_in_prefix "$wpid" "$prefix" \
-            && recipe_photoshop::_wm_class_is_photoshop "$wclass"; then
-            return 0
-        fi
-        if [ -z "$wpid" ] || [ -z "$pids" ]; then
-            recipe_photoshop::_wm_class_is_photoshop "$wclass" && return 0
-        fi
-    done < <(wmctrl -lx 2>/dev/null || true)
-    return 1
+    [ -n "$(recipe_photoshop::_photoshop_window_ids)" ]
 }
 
 recipe_photoshop::_wait_windows_gone() {
@@ -254,22 +229,18 @@ recipe_photoshop::_wait_windows_gone() {
     return 0
 }
 
-# Soft keyboard quit on Photoshop windows belonging to our prefix PIDs.
+# Soft keyboard quit on Photoshop windows belonging to our prefix.
 recipe_photoshop::_wm_alt_f4_photoshop() {
-    local pid id pids
+    local id
     command -v xdotool >/dev/null 2>&1 || return 0
-    pids="$(recipe_photoshop::_photoshop_pids | recipe_photoshop::_related_pids | sort -u)"
-    while IFS= read -r pid; do
-        [ -n "$pid" ] || continue
-        # shellcheck disable=SC2046
-        for id in $(xdotool search --pid "$pid" 2>/dev/null || true); do
-            [ -n "$id" ] || continue
-            xdotool windowactivate --sync "$id" 2>/dev/null || true
-            xdotool key --window "$id" --clearmodifiers alt+F4 2>/dev/null || true
-        done
+    while IFS= read -r id; do
+        [ -n "$id" ] || continue
+        xdotool windowactivate --sync "$id" 2>/dev/null || true
+        xdotool key --window "$id" --clearmodifiers alt+F4 2>/dev/null || true
     done <<EOF
-$pids
+$(recipe_photoshop::_photoshop_window_ids)
 EOF
+    return 0
 }
 
 # Windows taskkill /F is hard kill. Soft taskkill without /F often leaves Wine
@@ -289,10 +260,35 @@ recipe_photoshop::_wine_taskkill() {
     return 0
 }
 
+recipe_photoshop::_force_photoshop_exit() {
+    type output::info >/dev/null 2>&1 && output::info "$(msg::t ps.exit.force)" || true
+    recipe_photoshop::_wine_taskkill 1
+    if recipe_photoshop::wait_photoshop_gone 8; then
+        return 0
+    fi
+    recipe_photoshop::_pkill_pat '[\\/]Photoshop\.exe|[\\/]photoshop\.exe' TERM
+    if recipe_photoshop::wait_photoshop_gone 5; then
+        return 0
+    fi
+    recipe_photoshop::_pkill_pat '[\\/]Photoshop\.exe|[\\/]photoshop\.exe' 9
+    recipe_photoshop::wait_photoshop_gone 5 || true
+    return 0
+}
+
+# Window is gone: Photoshop writes prefs/recents while it shuts down, so give it
+# time. But never wait forever — a stuck Photoshop.exe blocks the whole teardown,
+# helpers stay in RAM and the next launch crashes during init (issue #10).
+recipe_photoshop::_await_exit_or_force() {
+    type output::info >/dev/null 2>&1 && output::info "$(msg::t ps.exit.window_closed)" || true
+    if recipe_photoshop::wait_photoshop_gone "${PHOTOSHOP_EXIT_WAIT_S:-45}"; then
+        return 0
+    fi
+    recipe_photoshop::_force_photoshop_exit
+}
+
 # Ask Photoshop to exit like File→Exit / window close; escalate only if needed.
 # Do NOT SIGTERM first — that causes prefs/recents "amnesia" (issue #10).
 # Do NOT soft-taskkill — that triggers Wine "Not responding" with a live UI.
-# Once the window is gone, wait for Photoshop.exe — never force-kill (amnesia).
 recipe_photoshop::request_photoshop_exit() {
     local attempt
     if ! recipe_photoshop::photoshop_running; then
@@ -304,13 +300,10 @@ recipe_photoshop::request_photoshop_exit() {
     for attempt in 1 2 3; do
         recipe_photoshop::_wm_close_photoshop
         if recipe_photoshop::_wait_windows_gone 6; then
-            export PHOTOSHOP_EXIT_GRACEFUL=1
-            type output::info >/dev/null 2>&1 && output::info "$(msg::t ps.exit.window_closed)" || true
-            recipe_photoshop::wait_photoshop_gone 60 || true
+            recipe_photoshop::_await_exit_or_force
             return 0
         fi
         if recipe_photoshop::wait_photoshop_gone 2; then
-            export PHOTOSHOP_EXIT_GRACEFUL=1
             return 0
         fi
         type output::progress_tick >/dev/null 2>&1 \
@@ -320,35 +313,36 @@ recipe_photoshop::request_photoshop_exit() {
 
     recipe_photoshop::_wm_alt_f4_photoshop
     if recipe_photoshop::_wait_windows_gone 10; then
-        export PHOTOSHOP_EXIT_GRACEFUL=1
-        type output::info >/dev/null 2>&1 && output::info "$(msg::t ps.exit.window_closed)" || true
-        recipe_photoshop::wait_photoshop_gone 60 || true
+        recipe_photoshop::_await_exit_or_force
         return 0
     fi
     if recipe_photoshop::wait_photoshop_gone 8; then
-        export PHOTOSHOP_EXIT_GRACEFUL=1
         return 0
     fi
 
     # Window still mapped after WM close + Alt+F4 — last resort only.
-    type output::info >/dev/null 2>&1 && output::info "$(msg::t ps.exit.force)" || true
-    recipe_photoshop::_wine_taskkill 1
-    if recipe_photoshop::wait_photoshop_gone 8; then
-        return 0
-    fi
-
-    recipe_photoshop::_pkill_pat '[\\/]Photoshop\.exe|[\\/]photoshop\.exe' TERM
-    if recipe_photoshop::wait_photoshop_gone 5; then
-        return 0
-    fi
-    recipe_photoshop::_pkill_pat '[\\/]Photoshop\.exe|[\\/]photoshop\.exe' 9
-    recipe_photoshop::wait_photoshop_gone 5 || true
+    recipe_photoshop::_force_photoshop_exit
     return 0
 }
 
+# Adobe helpers that outlive Photoshop.exe (pgrep -f patterns, prefix-scoped).
+RECIPE_PHOTOSHOP_HELPERS=(
+    'Adobe Spaces Helper'
+    'CEPHtmlEngine'
+    '[Aa]dobe[Ii][Pp][Cc][Bb]roker'
+    'CCLibrary'
+    'CCXProcess'
+    'Adobe Crash Processor'
+    'Adobe Desktop Service'
+    'AdobeNotificationClient'
+    'CoreSync'
+    'wmain26\.dll'
+    'explorer\.exe.*/desktop'
+)
+
 # Kill leftover Adobe/Wine helpers in THIS prefix only. Ends with wineserver -k for that prefix.
 recipe_photoshop::cleanup_orphans() {
-    local prefix
+    local prefix pat
     prefix="$(recipe_photoshop::_prefix)"
     type output::step >/dev/null 2>&1 && output::step "$(msg::t ps.cleanup.helpers)" || true
 
@@ -358,24 +352,14 @@ recipe_photoshop::cleanup_orphans() {
     fi
 
     # Soft first
-    recipe_photoshop::_pkill_pat 'Adobe Spaces Helper'
-    recipe_photoshop::_pkill_pat 'CEPHtmlEngine'
-    recipe_photoshop::_pkill_pat '[Aa]dobe[Ii][Pp][Cc][Bb]roker'
-    recipe_photoshop::_pkill_pat 'CCXProcess'
-    recipe_photoshop::_pkill_pat 'Adobe Crash Processor'
-    recipe_photoshop::_pkill_pat 'Adobe Desktop Service'
-    recipe_photoshop::_pkill_pat 'CoreSync'
-    recipe_photoshop::_pkill_pat 'wmain26\.dll'
-    recipe_photoshop::_pkill_pat 'explorer\.exe.*/desktop'
+    for pat in "${RECIPE_PHOTOSHOP_HELPERS[@]}"; do
+        recipe_photoshop::_pkill_pat "$pat"
+    done
     sleep 0.8
     # Hard leftover
-    recipe_photoshop::_pkill_pat 'Adobe Spaces Helper' 9
-    recipe_photoshop::_pkill_pat 'CEPHtmlEngine' 9
-    recipe_photoshop::_pkill_pat '[Aa]dobe[Ii][Pp][Cc][Bb]roker' 9
-    recipe_photoshop::_pkill_pat 'CCXProcess' 9
-    recipe_photoshop::_pkill_pat 'Adobe Crash Processor' 9
-    recipe_photoshop::_pkill_pat 'wmain26\.dll' 9
-    recipe_photoshop::_pkill_pat 'explorer\.exe.*/desktop' 9
+    for pat in "${RECIPE_PHOTOSHOP_HELPERS[@]}"; do
+        recipe_photoshop::_pkill_pat "$pat" 9
+    done
     # Only if Photoshop in this prefix is really gone.
     if recipe_photoshop::photoshop_running; then
         type output::warn >/dev/null 2>&1 \
@@ -383,13 +367,9 @@ recipe_photoshop::cleanup_orphans() {
             || true
         return 0
     fi
-    # Graceful window-close: wineserver -k mid-flush = Recents/prefs amnesia (#10).
-    if [ "${PHOTOSHOP_EXIT_GRACEFUL:-0}" = "1" ]; then
-        type output::info >/dev/null 2>&1 \
-            && output::info "$(msg::t ps.cleanup.skip_wineserver)" \
-            || true
-        return 0
-    fi
+    # Photoshop.exe has exited and prefs are flushed by now, so ending the
+    # session server is safe and is the only reliable way to clear helpers that
+    # are not in the list above (CCLibrary & co left PS crashing on next start).
     export WINEPREFIX="$prefix"
     type output::step >/dev/null 2>&1 && output::step "$(msg::t ps.cleanup.wineserver)" || true
     # Scoped: Wine only signals the server for this WINEPREFIX.

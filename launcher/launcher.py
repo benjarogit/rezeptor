@@ -4719,8 +4719,14 @@ class RezeptorWindow(QMainWindow):
         hr = header.rect()
         if hr.width() < 80 or hr.height() < 24:
             return
-        # Full header bounds — radius clip is baked into the pixmap.
-        wm.setGeometry(hr)
+        # Inside the card border so the chrome stays crisp; radius clip is baked
+        # into the pixmap. Fluent CardWidget paints its own radius (5) — reading it
+        # keeps the mark flush with the real corner instead of the QSS value.
+        inner = hr.adjusted(1, 1, -1, -1)
+        card_radius = getattr(header, "borderRadius", _HEADER_CARD_RADIUS)
+        if not isinstance(card_radius, int) or card_radius < 0:
+            card_radius = _HEADER_CARD_RADIUS
+        wm.setGeometry(inner)
         src = getattr(self, "_header_watermark_src", None)
         if src is None or src.isNull():
             wm.clear()
@@ -4728,7 +4734,7 @@ class RezeptorWindow(QMainWindow):
             return
         wm.setPixmap(
             faded_header_watermark(
-                src, hr.size(), radius=_HEADER_CARD_RADIUS
+                src, inner.size(), radius=max(0, card_radius - 1)
             )
         )
         wm.setVisible(True)
