@@ -123,6 +123,51 @@ EOF
     ! grep -q 'CLOSE:0x1000003' "$WMCTRL_LOG"
 }
 
+@test "wm_close_photoshop leaves a second Photoshop prefix alone" {
+    # Two Photoshop instances (e.g. the photoshop and photoshop-2026 recipes):
+    # ours is traceable via _NET_WM_PID, the other one is not. Quitting ours
+    # must never send a close to the other user window.
+    cat >"$FAKEBIN/wmctrl" <<'EOF'
+#!/bin/sh
+log="${WMCTRL_LOG:?}"
+printf '%s\n' "$*" >>"$log"
+case "$1" in
+    -lx)
+        cat <<'LIST'
+0x1000002  0  photoshop.exe.Photoshop  host  Adobe Photoshop 2021
+0x1000009  0  photoshop.exe.Photoshop  host  Adobe Photoshop 2026
+LIST
+        ;;
+    -ic)
+        echo "CLOSE:$2" >>"$log"
+        ;;
+esac
+EOF
+    chmod +x "$FAKEBIN/wmctrl"
+    cat >"$FAKEBIN/xprop" <<'EOF'
+#!/bin/sh
+id=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        -id) id="$2"; shift 2 ;;
+        *) shift ;;
+    esac
+done
+# Only our window reports a pid; the foreign one stays untraceable.
+case "$id" in
+    0x1000002) echo '_NET_WM_PID(CARDINAL) = 222' ;;
+esac
+EOF
+    chmod +x "$FAKEBIN/xprop"
+    export WMCTRL_LOG="$TMP/wmctrl.log"
+    : >"$WMCTRL_LOG"
+    recipe_photoshop::_photoshop_pids() { printf '%s\n' 222; }
+    recipe_photoshop::_related_pids() { cat; }
+    PATH="$FAKEBIN:$PATH" recipe_photoshop::_wm_close_photoshop
+    grep -q 'CLOSE:0x1000002' "$WMCTRL_LOG"
+    ! grep -q 'CLOSE:0x1000009' "$WMCTRL_LOG"
+}
+
 @test "wm_close_photoshop closes parent-PID window of Photoshop.exe" {
     cat >"$FAKEBIN/wmctrl" <<'EOF'
 #!/bin/sh
