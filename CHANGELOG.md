@@ -5,6 +5,14 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.48] - 2026-08-15
+
+### Changed
+- Photoshop quit is noticeably quicker: the fixed pause after Photoshop has exited is 2s instead of 8s (measured 5s instead of 12.5s for a full Quit)
+
+### Fixed
+- Photoshop quit: if Photoshop stalls after its window is gone, ask it to close through Wine before forcing — a forced quit skips prefs and brings the "amnesia" back
+
 ## [1.1.47] - 2026-08-15
 
 ### Fixed

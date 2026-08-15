@@ -35,7 +35,11 @@ cd /home/benny/Dokumente/rezeptor
 
 ## Open work
 
-- Latest released: **v1.1.47** (Photoshop Quit #10 exit ladder, Lightroom Classic recipe).
+- Latest released: **v1.1.48** (Photoshop Quit #10 exit ladder, Lightroom Classic recipe).
+- **Photoshop stalls on exit now and then** (once in four live runs): window gone,
+  `Photoshop.exe` alive, prefs never written. The ladder therefore sends a soft
+  Wine `taskkill` (WM_CLOSE) before forcing. Cause unknown — if the reporter
+  still sees amnesia, this is the thread to pull.
 - **Photoshop Quit verified live 2026-08-15** on the relocated prefix
   `/mnt/ssd2/Software/Photoshop 20.0.0.35` (Wayland session): `kill.sh` ran 11s,
   Photoshop exited on its own without force, `Adobe Photoshop 2021 Prefs.psp`
@@ -45,7 +49,8 @@ cd /home/benny/Dokumente/rezeptor
 - **Photoshop Quit (#10), the rule to keep:** close windows via `wmctrl -ic`
   (`_NET_CLOSE_WINDOW`), never `xdotool windowclose`. windowclose destroys the X
   window, so Photoshop keeps running with no window and never writes prefs.
-  After the window is gone: wait `PHOTOSHOP_EXIT_WAIT_S` (45s), then force.
+  After the window is gone: wait `PHOTOSHOP_EXIT_WAIT_S` (45s), then soft
+  `taskkill` for `PHOTOSHOP_EXIT_SOFT_S` (20s), only then force.
   No window found at all (user already closed it): wait, then soft
   `taskkill` (WM_CLOSE), only then force — otherwise Quit kills mid-save.
   `wineserver -k` runs once `Photoshop.exe` is gone, otherwise helpers such as

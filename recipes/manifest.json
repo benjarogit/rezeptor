@@ -62,7 +62,7 @@
         "assets/gpu-profiles/stable/PSUserConfig.txt": "sha256:7f9e20eb8c4e5f2ffc5e968311f4873a53b29298f69847b131dce50ec2e420e5",
         "assets/gpu-profiles/stable/UIPrefs.psp": "sha256:294da81d32902cfbff0f8d46e0d6dba604bc7f81cfa4bd3056177518075b22b8",
         "assets/gpu-profiles/stable/machine.prefs": "sha256:429dd0aba09f31c81c3ff6b95c813171031e014a6e134bf1a4f862a35967eb68",
-        "cleanup-orphans.sh": "sha256:9071719a950cf248f0778b0987e75f84080617fc814a4516125fe473506d7210",
+        "cleanup-orphans.sh": "sha256:1d6a2634b58436878cb5629dfae865067da7e41d40daeb5b3fd76a01fddb6904",
         "info.de.txt": "sha256:e7158162efe0568466b758f595603223bea3f9242a8247d6f203f923a38eab34",
         "info.en.txt": "sha256:07062b28cb4633fda455d4d8773b265a05b8a222567a50e56d4d8c2997cb6799",
         "install.sh": "sha256:214758619f738824f9e5a6c4a4f39d493e493491069928acc6428f3d41262fae",
@@ -77,7 +77,7 @@
     },
     "photoshop-m0nkrus": {
       "files": {
-        "cleanup-orphans.sh": "sha256:2914d7692ae8167a7f8b7be4e85f669671e027f5b17f4780b4aeb0990d25d1f0",
+        "cleanup-orphans.sh": "sha256:ec19cf0574d4086e41a749e82fd437ac9dec888ef61ceb7f4835ef47fc4387ae",
         "genp.sh": "sha256:3d56bd063b91321b7623fb9ace3552d420990a44851f047e8cc2abb4a09550e3",
         "info.de.txt": "sha256:100ddcf7d620dad44307303c25fd8fa77026b9697ea0eba480155ef43d92141c",
         "info.en.txt": "sha256:8d279200e994fef23610c970ace5403aa551de0f38445a58d59d3bd42fe1ccf6",
