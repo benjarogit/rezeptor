@@ -123,10 +123,11 @@ recipe_photoshop::_related_pids() {
         [ -n "$pid" ] || continue
         printf '%s\n' "$pid"
         if [ -r "/proc/${pid}/stat" ]; then
-            # /proc/pid/stat: pid (comm) state ppid …
-            ppid="$(awk '{print $4}' "/proc/${pid}/stat" 2>/dev/null || true)"
+            # /proc/pid/stat: pid (comm) state ppid … — comm can hold spaces
+            # ("Adobe Spaces He"), so read the fields after the last ')'.
+            ppid="$(sed 's/.*) //' "/proc/${pid}/stat" 2>/dev/null | awk '{print $2}' || true)"
             case "$ppid" in
-                ''|0|1) ;;
+                ''|0|1|*[!0-9]*) ;;
                 *) printf '%s\n' "$ppid" ;;
             esac
         fi
