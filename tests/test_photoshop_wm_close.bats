@@ -157,6 +157,15 @@ EOF
     grep -q 'CLOSE:0x1000002' "$WMCTRL_LOG"
 }
 
+@test "related_pids reads the parent pid even when comm holds spaces" {
+    # Wine comms like "Adobe Spaces He" break naive field splitting on
+    # /proc/pid/stat, which dropped the parent window owner.
+    mkdir -p "$TMP/proc/4242"
+    printf '4242 (Adobe Spaces He) S 4200 4242 4242 0 -1 0\n' >"$TMP/proc/4242/stat"
+    ppid="$(sed 's/.*) //' "$TMP/proc/4242/stat" | awk '{print $2}')"
+    [ "$ppid" = "4200" ]
+}
+
 @test "wm_close asks the WM to close, never destroys the window" {
     # xdotool windowclose destroys the X window without telling Photoshop: it
     # keeps running windowless and never writes prefs (issue #10 regression).

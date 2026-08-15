@@ -5,6 +5,9 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+### Fixed
+- Photoshop quit: read the parent pid of a Wine process correctly when its `comm` holds spaces, so windows owned by a helper process are found again
+
 ## [1.1.46] - 2026-08-15
 
 ### Fixed
