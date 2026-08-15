@@ -157,7 +157,38 @@ EOF
     grep -q 'CLOSE:0x1000002' "$WMCTRL_LOG"
 }
 
-@test "request_photoshop_exit does not force-kill after window is gone" {
+@test "wm_close asks the WM to close, never destroys the window" {
+    # xdotool windowclose destroys the X window without telling Photoshop: it
+    # keeps running windowless and never writes prefs (issue #10 regression).
+    cat >"$FAKEBIN/wmctrl" <<'EOF'
+#!/bin/sh
+log="${WMCTRL_LOG:?}"
+case "$1" in
+    -lx) echo '0x1000002  0  photoshop.exe.Photoshop  host  Adobe Photoshop 2021' ;;
+    -ic) echo "CLOSE:$2" >>"$log" ;;
+esac
+EOF
+    chmod +x "$FAKEBIN/wmctrl"
+    cat >"$FAKEBIN/xprop" <<'EOF'
+#!/bin/sh
+exit 1
+EOF
+    chmod +x "$FAKEBIN/xprop"
+    cat >"$FAKEBIN/xdotool" <<'EOF'
+#!/bin/sh
+echo "XDOTOOL:$*" >>"${WMCTRL_LOG:?}"
+EOF
+    chmod +x "$FAKEBIN/xdotool"
+    export WMCTRL_LOG="$TMP/wmctrl.log"
+    : >"$WMCTRL_LOG"
+    recipe_photoshop::_photoshop_pids() { return 0; }
+    PATH="$FAKEBIN:$PATH" recipe_photoshop::_wm_close_photoshop
+    grep -q 'CLOSE:0x1000002' "$WMCTRL_LOG"
+    ! grep -q 'windowclose' "$WMCTRL_LOG"
+    ! grep -q 'windowkill' "$WMCTRL_LOG"
+}
+
+@test "request_photoshop_exit waits instead of force-killing when Photoshop exits" {
     recipe_photoshop::photoshop_running() { return 0; }
     recipe_photoshop::_wm_close_photoshop() { :; }
     recipe_photoshop::_photoshop_windows_open() { return 1; }
@@ -166,6 +197,31 @@ EOF
     recipe_photoshop::_wm_alt_f4_photoshop() { echo ALT >>"$TMP/force.log"; }
     : >"$TMP/force.log"
     recipe_photoshop::request_photoshop_exit
-    [ "${PHOTOSHOP_EXIT_GRACEFUL:-}" = "1" ]
     [ ! -s "$TMP/force.log" ]
+}
+
+@test "request_photoshop_exit forces when Photoshop hangs after the window is gone" {
+    # Otherwise Quit waits forever, helpers stay in RAM and the next launch crashes.
+    recipe_photoshop::photoshop_running() { return 0; }
+    recipe_photoshop::_wm_close_photoshop() { :; }
+    recipe_photoshop::_photoshop_windows_open() { return 1; }
+    recipe_photoshop::wait_photoshop_gone() { return 1; }
+    recipe_photoshop::_pkill_pat() { echo "PKILL:${2:-TERM}" >>"$TMP/force.log"; }
+    recipe_photoshop::_wine_taskkill() { echo "TASKKILL:$1" >>"$TMP/force.log"; }
+    : >"$TMP/force.log"
+    PHOTOSHOP_EXIT_WAIT_S=1 recipe_photoshop::request_photoshop_exit
+    grep -q 'TASKKILL:1' "$TMP/force.log"
+    grep -q 'PKILL:9' "$TMP/force.log"
+}
+
+@test "cleanup_orphans kills CCLibrary and ends the prefix wineserver" {
+    recipe_photoshop::_prefix() { printf '%s' "$TMP"; }
+    recipe_photoshop::photoshop_running() { return 1; }
+    recipe_photoshop::_pkill_pat() { echo "PKILL:$1" >>"$TMP/clean.log"; }
+    wine_runtime::wineserver() { echo "WINESERVER:$*" >>"$TMP/clean.log"; }
+    : >"$TMP/clean.log"
+    recipe_photoshop::cleanup_orphans
+    grep -q 'PKILL:CCLibrary' "$TMP/clean.log"
+    grep -q 'PKILL:Adobe Spaces Helper' "$TMP/clean.log"
+    grep -q 'WINESERVER:-k' "$TMP/clean.log"
 }

@@ -35,7 +35,13 @@ cd /home/benny/Dokumente/rezeptor
 
 ## Open work
 
-- Latest released: **v1.1.44** (Photoshop Quit #10, Proton 11 default, experimental README).
+- Latest released: **v1.1.45** (Photoshop Quit #10 window-manager close, Lightroom Classic recipe).
+- **Photoshop Quit (#10), the rule to keep:** close windows via `wmctrl -ic`
+  (`_NET_CLOSE_WINDOW`), never `xdotool windowclose`. windowclose destroys the X
+  window, so Photoshop keeps running with no window and never writes prefs.
+  After the window is gone: wait `PHOTOSHOP_EXIT_WAIT_S` (45s), then force.
+  `wineserver -k` runs once `Photoshop.exe` is gone, otherwise helpers such as
+  `CCLibrary` survive and the next launch crashes during init.
 - **Datenverlust 2026-08-14 11:58:** Arbeitsbaum wurde auf HEAD zurückgesetzt und
   unversionierte Dateien entfernt (`git reflog`: `reset: moving to HEAD` +
   `checkout: moving from main to main`). Wiederhergestellt aus dem Chat-Transkript:
@@ -43,18 +49,13 @@ cd /home/benny/Dokumente/rezeptor
   (`core/recipe-photoshop-2026-*.sh`, `core/ps2026-*proxy*`) und die Halo-Steam-Arbeit
   (`trainer.sh`, `ensure_steam_nonsteam.py`-Änderungen, Launcher-Anpassungen).
   Lehre: neue Rezepte früh committen (`git add`), unversioniert = ungeschützt.
-- **Local (not in 1.1.44):**
-  - Recipe `lightroom-classic` (15.4.1, LTRM). Quelle:
-    `/home/benny/Downloads/extracted/Adobe Lightroom Classic v15.4.1`.
-    Adaptiert von [6im0n/lightroom-classic-on-linux](https://github.com/6im0n/lightroom-classic-on-linux)
-    (MIT, Danksagung in `info.*.txt`): gepatchte d2d1/mfplat, hnetcfg-Stub,
-    `winrt_inmemstream` für KI-Masken, `fakeram.so`-RAM-Deckel, version-Proxy,
-    dxvk Dummy-Composition-Swapchain, dunamis-Lock, tote Codecs aus.
-    Module: `core/recipe-lightroom-{stubs,install,launch}.sh`, Hooks unter
-    `recipes/lightroom-classic/`. Medizin: KI-Masken, Histogramm-Fix, UI-Skalierung.
-    **Nie** winewayland (LrC crasht) — Launch erzwingt X11.
-    Bekannte Lücken: HDR upstream nicht unterstützt, KI-Entrauschen ungeprüft.
-    Noch nicht end-to-end installiert — echter Testlauf fehlt.
+- Recipe `lightroom-classic` (15.4.1, LTRM) ist **ausgeliefert**, aber noch **nicht
+  end-to-end installiert** — echter Testlauf fehlt. Adaptiert von
+  [6im0n/lightroom-classic-on-linux](https://github.com/6im0n/lightroom-classic-on-linux)
+  (MIT, Danksagung in `info.*.txt`). Module: `core/recipe-lightroom-{stubs,install,launch}.sh`.
+  **Nie** winewayland (LrC crasht) — Launch erzwingt X11.
+  Bekannte Lücken: HDR upstream nicht unterstützt, KI-Entrauschen ungeprüft.
+- **Local (not released):**
   - Halo: `data_root.path` → `/mnt/ssd2/Games/Halo Evolved` (echte Installation).
     Leerer Prefix unter `~/.local/share/wine-software/halo-campaign-evolved` war die
     Ursache für „Halo-EXE fehlt“ / Steam-Stack-FAIL.
