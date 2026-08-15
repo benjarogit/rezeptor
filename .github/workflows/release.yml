@@ -227,7 +227,8 @@ jobs:
           # Auto-generated commit lists hide removals / multi-topic releases.
           notes=""
           if [ -f CHANGELOG.md ]; then
-            notes="$(python3 scripts/changelog-release-notes.py "$VER" 2>/dev/null || true)"
+            notes="$(RELEASE_REPO="$REPO" RELEASE_TAG="$TAG" RELEASE_PREV_TAG="$prev" \
+              python3 scripts/changelog-release-notes.py "$VER" 2>/dev/null || true)"
           fi
 
           if [ -z "${notes}" ] || [ "${#notes}" -lt 80 ]; then

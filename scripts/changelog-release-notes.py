@@ -2,9 +2,22 @@
 """Extract CHANGELOG.md section for GitHub Release notes (English bullets)."""
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
+
+
+def full_changelog_link(ver: str) -> str:
+    """Compare link for the release footer (falls back to the tagged CHANGELOG)."""
+    repo = os.environ.get("RELEASE_REPO", "").strip()
+    tag = os.environ.get("RELEASE_TAG", "").strip() or f"v{ver}"
+    prev = os.environ.get("RELEASE_PREV_TAG", "").strip()
+    if not repo:
+        return f"see `CHANGELOG.md` ({ver})"
+    if prev:
+        return f"https://github.com/{repo}/compare/{prev}...{tag}"
+    return f"https://github.com/{repo}/blob/{tag}/CHANGELOG.md"
 
 
 def main() -> int:
@@ -26,7 +39,7 @@ def main() -> int:
     print("## What's Changed / Änderungen\n")
     print(body)
     print()
-    print(f"**Full Changelog / Vollständiger Changelog**: see `CHANGELOG.md` ({ver})")
+    print(f"**Full Changelog / Vollständiger Changelog**: {full_changelog_link(ver)}")
     return 0
 
 

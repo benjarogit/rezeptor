@@ -5,6 +5,12 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.46] - 2026-08-15
+
+### Fixed
+- Photoshop Quit when no window is left (after ✕, Alt+F4 or File → Exit): Rezeptor now waits briefly and asks Wine to close Photoshop normally before it forces the quit, so prefs/Recents still get written ([#10](https://github.com/benjarogit/rezeptor/issues/10))
+- Release notes link to the real compare view again instead of pointing at `CHANGELOG.md`
+
 ## [1.1.45] - 2026-08-15
 
 ### Added

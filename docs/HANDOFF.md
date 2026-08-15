@@ -35,11 +35,13 @@ cd /home/benny/Dokumente/rezeptor
 
 ## Open work
 
-- Latest released: **v1.1.45** (Photoshop Quit #10 window-manager close, Lightroom Classic recipe).
+- Latest released: **v1.1.46** (Photoshop Quit #10 exit ladder, Lightroom Classic recipe).
 - **Photoshop Quit (#10), the rule to keep:** close windows via `wmctrl -ic`
   (`_NET_CLOSE_WINDOW`), never `xdotool windowclose`. windowclose destroys the X
   window, so Photoshop keeps running with no window and never writes prefs.
   After the window is gone: wait `PHOTOSHOP_EXIT_WAIT_S` (45s), then force.
+  No window found at all (user already closed it): wait, then soft
+  `taskkill` (WM_CLOSE), only then force — otherwise Quit kills mid-save.
   `wineserver -k` runs once `Photoshop.exe` is gone, otherwise helpers such as
   `CCLibrary` survive and the next launch crashes during init.
 - **Datenverlust 2026-08-14 11:58:** Arbeitsbaum wurde auf HEAD zurückgesetzt und
