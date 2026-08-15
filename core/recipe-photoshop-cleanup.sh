@@ -199,16 +199,19 @@ recipe_photoshop::_photoshop_window_ids() {
 # does, so Photoshop runs its own quit path and writes prefs/recents.
 # Never `xdotool windowclose`: that destroys the X window without telling
 # Photoshop, which then keeps running windowless and never saves (#10).
+# Returns non-zero when there was no window to close — the caller must not read
+# that as "Photoshop closed its window".
 recipe_photoshop::_wm_close_photoshop() {
-    local id
-    command -v wmctrl >/dev/null 2>&1 || return 0
+    local id closed=1
+    command -v wmctrl >/dev/null 2>&1 || return 1
     while IFS= read -r id; do
         [ -n "$id" ] || continue
         wmctrl -ic "$id" 2>/dev/null || true
+        closed=0
     done <<EOF
 $(recipe_photoshop::_photoshop_window_ids)
 EOF
-    return 0
+    return "$closed"
 }
 
 # True while a Photoshop window for this prefix is still mapped.
@@ -243,8 +246,9 @@ EOF
     return 0
 }
 
-# Windows taskkill /F is hard kill. Soft taskkill without /F often leaves Wine
-# showing "Not responding" while the UI still paints (issue #10 video) — avoid it.
+# Windows taskkill /F is a hard kill. Soft taskkill sends WM_CLOSE, but while a
+# window is up it can leave Wine painting "Not responding" (issue #10 video), so
+# it is only used when no window can be reached.
 recipe_photoshop::_wine_taskkill() {
     local force="${1:-0}"
     local prefix
@@ -252,10 +256,12 @@ recipe_photoshop::_wine_taskkill() {
     [ -n "$prefix" ] && [ -d "$prefix" ] || return 1
     export WINEPREFIX="$prefix"
     type wine_runtime::wine >/dev/null 2>&1 || return 1
-    # Only hard kill is used from request_photoshop_exit.
     if [ "$force" = "1" ]; then
         wine_runtime::wine taskkill.exe /F /IM Photoshop.exe >/dev/null 2>&1 || true
         wine_runtime::wine taskkill.exe /F /IM photoshop.exe >/dev/null 2>&1 || true
+    else
+        wine_runtime::wine taskkill.exe /IM Photoshop.exe >/dev/null 2>&1 || true
+        wine_runtime::wine taskkill.exe /IM photoshop.exe >/dev/null 2>&1 || true
     fi
     return 0
 }
@@ -288,7 +294,6 @@ recipe_photoshop::_await_exit_or_force() {
 
 # Ask Photoshop to exit like File→Exit / window close; escalate only if needed.
 # Do NOT SIGTERM first — that causes prefs/recents "amnesia" (issue #10).
-# Do NOT soft-taskkill — that triggers Wine "Not responding" with a live UI.
 recipe_photoshop::request_photoshop_exit() {
     local attempt
     if ! recipe_photoshop::photoshop_running; then
@@ -296,9 +301,11 @@ recipe_photoshop::request_photoshop_exit() {
     fi
     type output::step >/dev/null 2>&1 && output::step "$(msg::t ps.exit.soft)" || true
 
-    # Host WM close retries (same mechanism as clicking the window ✕).
+    # Window is up: ask the WM to close it (same as clicking ✕), then Alt+F4.
     for attempt in 1 2 3; do
-        recipe_photoshop::_wm_close_photoshop
+        if ! recipe_photoshop::_wm_close_photoshop; then
+            break
+        fi
         if recipe_photoshop::_wait_windows_gone 6; then
             recipe_photoshop::_await_exit_or_force
             return 0
@@ -306,21 +313,27 @@ recipe_photoshop::request_photoshop_exit() {
         if recipe_photoshop::wait_photoshop_gone 2; then
             return 0
         fi
+        recipe_photoshop::_wm_alt_f4_photoshop
+        if recipe_photoshop::_wait_windows_gone 4; then
+            recipe_photoshop::_await_exit_or_force
+            return 0
+        fi
         type output::progress_tick >/dev/null 2>&1 \
             && output::progress_tick "$(msg::t ps.exit.soft)" \
             || true
     done
 
-    recipe_photoshop::_wm_alt_f4_photoshop
-    if recipe_photoshop::_wait_windows_gone 10; then
-        recipe_photoshop::_await_exit_or_force
+    # No window to close: Photoshop may already be shutting down after ✕ /
+    # Alt+F4 / File→Exit, so give it time before asking Wine to deliver the
+    # close request itself.
+    if recipe_photoshop::wait_photoshop_gone 10; then
         return 0
     fi
-    if recipe_photoshop::wait_photoshop_gone 8; then
+    recipe_photoshop::_wine_taskkill 0
+    if recipe_photoshop::wait_photoshop_gone 20; then
         return 0
     fi
 
-    # Window still mapped after WM close + Alt+F4 — last resort only.
     recipe_photoshop::_force_photoshop_exit
     return 0
 }

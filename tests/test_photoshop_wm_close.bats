@@ -190,7 +190,7 @@ EOF
 
 @test "request_photoshop_exit waits instead of force-killing when Photoshop exits" {
     recipe_photoshop::photoshop_running() { return 0; }
-    recipe_photoshop::_wm_close_photoshop() { :; }
+    recipe_photoshop::_wm_close_photoshop() { return 0; }
     recipe_photoshop::_photoshop_windows_open() { return 1; }
     recipe_photoshop::wait_photoshop_gone() { return 0; }
     recipe_photoshop::_wine_taskkill() { echo "TASKKILL:$1" >>"$TMP/force.log"; }
@@ -200,10 +200,26 @@ EOF
     [ ! -s "$TMP/force.log" ]
 }
 
+@test "quit without a reachable window asks Wine to close before forcing" {
+    # User already closed the window (✕ / Alt+F4 / File→Exit) but Photoshop.exe
+    # hangs around: Quit must still try a normal close first (#10).
+    recipe_photoshop::photoshop_running() { return 0; }
+    recipe_photoshop::_photoshop_window_ids() { return 0; }
+    recipe_photoshop::_photoshop_windows_open() { return 1; }
+    recipe_photoshop::wait_photoshop_gone() { return 1; }
+    recipe_photoshop::_pkill_pat() { echo "PKILL:${2:-TERM}" >>"$TMP/force.log"; }
+    recipe_photoshop::_wine_taskkill() { echo "TASKKILL:$1" >>"$TMP/force.log"; }
+    : >"$TMP/force.log"
+    PATH="$FAKEBIN:$PATH" recipe_photoshop::request_photoshop_exit
+    # Soft close request comes before the hard kill.
+    head -1 "$TMP/force.log" | grep -q 'TASKKILL:0'
+    grep -q 'TASKKILL:1' "$TMP/force.log"
+}
+
 @test "request_photoshop_exit forces when Photoshop hangs after the window is gone" {
     # Otherwise Quit waits forever, helpers stay in RAM and the next launch crashes.
     recipe_photoshop::photoshop_running() { return 0; }
-    recipe_photoshop::_wm_close_photoshop() { :; }
+    recipe_photoshop::_wm_close_photoshop() { return 0; }
     recipe_photoshop::_photoshop_windows_open() { return 1; }
     recipe_photoshop::wait_photoshop_gone() { return 1; }
     recipe_photoshop::_pkill_pat() { echo "PKILL:${2:-TERM}" >>"$TMP/force.log"; }
