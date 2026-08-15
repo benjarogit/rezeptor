@@ -35,7 +35,13 @@ cd /home/benny/Dokumente/rezeptor
 
 ## Open work
 
-- Latest released: **v1.1.46** (Photoshop Quit #10 exit ladder, Lightroom Classic recipe).
+- Latest released: **v1.1.47** (Photoshop Quit #10 exit ladder, Lightroom Classic recipe).
+- **Photoshop Quit verified live 2026-08-15** on the relocated prefix
+  `/mnt/ssd2/Software/Photoshop 20.0.0.35` (Wayland session): `kill.sh` ran 11s,
+  Photoshop exited on its own without force, `Adobe Photoshop 2021 Prefs.psp`
+  was rewritten at exit, no Adobe helper survived, Steam stayed open. Note the
+  window class there is `steam_proton`, not Photoshop — matching works through
+  `_NET_WM_PID`, so never rely on the class alone.
 - **Photoshop Quit (#10), the rule to keep:** close windows via `wmctrl -ic`
   (`_NET_CLOSE_WINDOW`), never `xdotool windowclose`. windowclose destroys the X
   window, so Photoshop keeps running with no window and never writes prefs.

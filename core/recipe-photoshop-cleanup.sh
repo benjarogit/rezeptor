@@ -165,7 +165,7 @@ EOF
 # Only the window manager list is used: xdotool search --pid also returns Wine's
 # hidden message windows, which makes "window still open" unreliable.
 recipe_photoshop::_photoshop_window_ids() {
-    local id desk wclass wpid pids prefix
+    local id desk wclass wpid pids prefix owned="" guessed=""
     command -v wmctrl >/dev/null 2>&1 || return 0
     prefix="$(recipe_photoshop::_prefix)"
     pids="$(recipe_photoshop::_photoshop_pids | recipe_photoshop::_related_pids | sort -u)"
@@ -177,22 +177,33 @@ recipe_photoshop::_photoshop_window_ids() {
         wpid="$(recipe_photoshop::_wm_window_pid "$id" 2>/dev/null || true)"
         if [ -n "$wpid" ] && [ -n "$pids" ]; then
             if recipe_photoshop::_pid_list_has "$wpid" "$pids"; then
-                printf '%s\n' "$id"
+                owned="${owned}${id}"$'\n'
                 continue
             fi
             # Same Wine prefix + Photoshop class: PID may be another wine helper.
             if [ -n "$prefix" ] \
                 && recipe_photoshop::_pid_in_prefix "$wpid" "$prefix" \
                 && recipe_photoshop::_wm_class_is_photoshop "$wclass"; then
-                printf '%s\n' "$id"
+                owned="${owned}${id}"$'\n'
             fi
             continue
         fi
-        # No usable PID list / _NET_WM_PID: class fallback (still never by title).
+        # No usable _NET_WM_PID: remember the class match (never a title match),
+        # but a window we cannot trace to this prefix may well belong to another
+        # Photoshop recipe — so it is only a last resort, see below.
         if recipe_photoshop::_wm_class_is_photoshop "$wclass"; then
-            printf '%s\n' "$id"
+            guessed="${guessed}${id}"$'\n'
         fi
     done < <(wmctrl -lx 2>/dev/null || true)
+
+    # Prefer windows proven to be ours. Untraceable ones are used only when
+    # nothing could be traced at all (no xprop / no _NET_WM_PID anywhere),
+    # so a second Photoshop prefix never gets closed alongside this one.
+    if [ -n "$owned" ]; then
+        printf '%s' "$owned"
+    else
+        printf '%s' "$guessed"
+    fi
     return 0
 }
 

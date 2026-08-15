@@ -5,8 +5,11 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.47] - 2026-08-15
+
 ### Fixed
 - Photoshop quit: read the parent pid of a Wine process correctly when its `comm` holds spaces, so windows owned by a helper process are found again
+- Photoshop quit: only close windows that can be traced to this recipe's Wine prefix — a second Photoshop installation running next to it is left untouched
 
 ## [1.1.46] - 2026-08-15
 
