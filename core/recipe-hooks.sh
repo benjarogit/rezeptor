@@ -371,9 +371,16 @@ recipe_hooks::installer_wine_dir() {
         printf '%s\n' "$wine_dir"
         return 0
     fi
-    if [ -n "${RECIPE_ID:-}" ]; then
-        printf 'C:\\Games\\%s\n' "$RECIPE_ID"
-    fi
+    case "${RECIPE_ID:-}" in
+        halo-campaign-evolved)
+            echo 'C:\Games\HaloCampaignEvolved'
+            ;;
+        *)
+            if [ -n "${RECIPE_ID:-}" ]; then
+                printf 'C:\\Games\\%s\n' "$RECIPE_ID"
+            fi
+            ;;
+    esac
 }
 
 # Offline-EXE: genau ein Aufruf je Familie — kein ||-Stapel (sonst mehrere GUIs bei Abbruch).

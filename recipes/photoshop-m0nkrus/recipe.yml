@@ -27,6 +27,7 @@ prefix: "{data_root}/prefix"
 runtime: proton-ge
 proton_ge_tag: GE-Proton11-3
 install_type: installer_offline
+installer_engine: adobe
 source_kind: folder
 # Empfohlen: kompletter Pack-Ordner (ISO + Neural Filters + missing_libs). Nur-ISO geht, Extras fehlen dann.
 source_label: "Pack-Ordner empfehlen (ISO + Neural Filters + missing_libs) — oder ISO / Set-up.exe + packages/"

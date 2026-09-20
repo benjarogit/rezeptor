@@ -26,6 +26,7 @@ prefix: "{data_root}/prefix"
 runtime: proton-ge
 proton_ge_tag: GE-Proton11-3
 install_type: installer_offline
+installer_engine: adobe
 source_kind: folder
 source_formats: "iso,zip,7z"
 source_label: "Ordner mit Adobe Offline-Installer (Set-up.exe + products/LTRM + packages/)"
