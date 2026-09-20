@@ -37,6 +37,8 @@ git add recipes/manifest.json recipes/my-app/
 
 GUI alternative: **Rezeptor → New recipe…** (dev mode)
 
+**Add-only:** a new recipe only adds `recipes/<id>/` (optional `core/recipe-<id>-*.sh`, icon, tests). It must not edit other recipes or ID lists in shared core. Put behaviour in `recipe.yml` (`installer_engine`, `launch_wait`, `kill_patterns`, …). `git add` immediately — untracked is unprotected.
+
 ---
 
 ## Get involved
@@ -92,7 +94,7 @@ In the GUI always **Source** and optionally **Target** — same labels for every
 | Type | Shipped | Source | Target | Reference |
 |------|---------|--------|--------|-----------|
 | **Offline installer** | `photoshop`, `photoshop-m0nkrus`, `premiere`, `master-pdf-editor` | Pack folder / setup / `.iso` / `.msi` | Data folder (prefix) | [INSTALLER.md](INSTALLER.md) |
-| **Portable** (folder/archive) | `wiso-steuer` | Folder or zip/7z/… | Install folder | [WISO.md](WISO.md) |
+| **Portable** (folder/archive) | `wiso-steuer`, `prototype` | Folder or zip/7z/… | Install folder | [WISO.md](WISO.md) |
 | **Steam + online fix** | `_template-steam-game` | Fix BYOS; game in Steam | Game folder (`link`) | [STEAM-WRAPPER.md](STEAM-WRAPPER.md) |
 | **Offline game + updates** | `halo-campaign-evolved` | ISO / pack folder | Prefix | [UPDATES.md](UPDATES.md) |
 | **Single EXE / trainer** | (pattern) | one `.exe` | often Steam subfolder | [TRAINER.md](TRAINER.md) |

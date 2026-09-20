@@ -203,7 +203,7 @@ QLabel#sidebarCategory {{
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.08em;
-    padding: 8px 4px 2px 4px;
+    padding: 0;
     background-color: transparent;
 }}
 """
@@ -299,11 +299,19 @@ class StatusPill(QLabel):
         {"#b87333", "#bd93f9", "#644ac9"}
     )
 
-    def __init__(self, text: str, color: str, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        text: str,
+        color: str,
+        parent: QWidget | None = None,
+        *,
+        compact: bool = False,
+    ) -> None:
         super().__init__(text, parent)
         self._color = color
         self._role = self._infer_role(color)
         self._theme_id = "standard"
+        self._compact = compact
         self.setVisible(bool(text.strip()))
         self.apply_theme("standard")
 
@@ -363,15 +371,19 @@ class StatusPill(QLabel):
             if not theme_is_dark(tid)
             else "rgba(255, 255, 255, 0.08)"
         )
+        if getattr(self, "_compact", False):
+            pad, radius, size, weight = "1px 6px", "8px", "10px", "600"
+        else:
+            pad, radius, size, weight = "4px 10px", "6px", "12px", "500"
         self.setStyleSheet(
             f"""
             QLabel {{
                 color: {color};
                 background-color: {bg};
-                padding: 4px 10px;
-                border-radius: 6px;
-                font-size: 12px;
-                font-weight: 500;
+                padding: {pad};
+                border-radius: {radius};
+                font-size: {size};
+                font-weight: {weight};
             }}
             """
         )
@@ -416,8 +428,10 @@ class ElidedLabel(QLabel):
             self.setText(elided)
 
 
-class SidebarCategoryHeader(ElidedLabel):
-    """Category label in the sidebar — drop target for cross-category moves."""
+class SidebarCategoryHeader(QFrame):
+    """Collapsible category row — still a drop target for cross-category moves."""
+
+    toggled = pyqtSignal(str, bool)
 
     def __init__(
         self,
@@ -425,24 +439,111 @@ class SidebarCategoryHeader(ElidedLabel):
         parent: QWidget | None = None,
         *,
         label: str | None = None,
+        expanded: bool = True,
     ) -> None:
+        super().__init__(parent)
         # *category* = storage key; *label* = locale display (defaults to key).
-        display = (label if label is not None else category).upper()
-        super().__init__(display, parent)
         self.category = category
-        self.setObjectName("sidebarCategory")
+        self._display = (label if label is not None else category).upper()
+        self._expanded = bool(expanded)
+        self._theme = "standard"
+        self.setObjectName("sidebarCategoryHeader")
         self.setProperty("dropInsert", "")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self.setSizePolicy(
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
         )
+        row = QHBoxLayout(self)
+        row.setContentsMargins(4, 6, 4, 2)
+        row.setSpacing(6)
+        self._chevron = QLabel(self)
+        self._chevron.setFixedSize(12, 12)
+        self._chevron.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
+        )
+        self._label = ElidedLabel(self._display, self)
+        self._label.setObjectName("sidebarCategory")
+        self._label.setAttribute(
+            Qt.WidgetAttribute.WA_TransparentForMouseEvents, True
+        )
+        row.addWidget(self._chevron, 0, Qt.AlignmentFlag.AlignVCenter)
+        row.addWidget(self._label, 1)
+        self._apply_chevron()
+        self._sync_a11y()
+
+    def is_expanded(self) -> bool:
+        return self._expanded
+
+    def set_label(self, label: str) -> None:
+        self._display = (label or self.category).upper()
+        self._label.set_full_text(self._display)
+        self._sync_a11y()
+
+    def set_expanded(self, expanded: bool, *, emit: bool = False) -> None:
+        on = bool(expanded)
+        if on == self._expanded:
+            if emit:
+                self.toggled.emit(self.category, self._expanded)
+            return
+        self._expanded = on
+        self._apply_chevron()
+        self._sync_a11y()
+        if emit:
+            self.toggled.emit(self.category, self._expanded)
+
+    def _toggle(self) -> None:
+        self.set_expanded(not self._expanded, emit=True)
+
+    def _apply_chevron(self) -> None:
+        kind = "chevron-down" if self._expanded else "chevron-right"
+        try:
+            from themes import theme_tokens
+
+            color = theme_tokens(self._theme).get("muted", MUTED)
+        except Exception:
+            color = MUTED
+        icon = fa_icon(kind, 10, color=color)
+        if icon is not None:
+            self._chevron.setPixmap(icon.pixmap(10, 10))
+            self._chevron.setText("")
+        else:
+            self._chevron.setPixmap(QPixmap())
+            self._chevron.setText("▾" if self._expanded else "▸")
+            self._chevron.setStyleSheet(f"color: {color}; font-size: 10px;")
+
+    def _sync_a11y(self) -> None:
+        key = (
+            "app.category_expanded"
+            if self._expanded
+            else "app.category_collapsed"
+        )
+        self.setAccessibleName(t(key, name=self._display))
+        self.setAccessibleDescription(t("app.category_toggle_hint"))
+
+    def apply_theme(self, theme: str = "standard") -> None:
+        self._theme = theme
+        self._apply_chevron()
+
+    def mouseReleaseEvent(self, event) -> None:  # type: ignore[no-untyped-def]
+        if event.button() == Qt.MouseButton.LeftButton:
+            self._toggle()
+            event.accept()
+            return
+        super().mouseReleaseEvent(event)
+
+    def keyPressEvent(self, event: QKeyEvent) -> None:
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Space):
+            self._toggle()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def set_drop_highlight(self, on: bool) -> None:
         self.setProperty("dropInsert", "header" if on else "")
         if on:
             self.setStyleSheet(
-                f"QLabel#sidebarCategory {{ color: {ACCENT_COPPER};"
-                f" border-bottom: 2px solid {ACCENT_COPPER}; padding-bottom: 2px;"
-                f" background-color: transparent; }}"
+                f"#sidebarCategoryHeader {{ border-bottom: 2px solid {ACCENT_COPPER}; }}"
             )
         else:
             self.setStyleSheet("")
@@ -492,12 +593,14 @@ class RecipeSidebarCard(QFrame):
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMouseTracking(True)
         self._card_name = name
+        self.category = ""
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
         self._set_a11y(name, state)
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(lambda _pos: self.contextMenuRequested.emit())
         self._selected = False
         self._running = False
+        self._attention = False
         self._busy_pct: int | None = None
 
         outer = QVBoxLayout(self)
@@ -543,25 +646,15 @@ class RecipeSidebarCard(QFrame):
         text_col.addWidget(self._sub)
         layout.addLayout(text_col, stretch=1)
 
-        self._run_dot = _pass_mouse(QLabel("●", self))
-        self._run_dot.setFixedWidth(12)
-        self._run_dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._run_dot.setStyleSheet(
-            f"color: {STATE_DOT['running']}; font-size: 10px;"
+        self._state_pill = _pass_mouse(
+            StatusPill("", MUTED, self, compact=True)
         )
-        self._run_dot.setToolTip(t("state.running"))
-        self._run_dot.setVisible(False)
-        layout.addWidget(self._run_dot, 0, Qt.AlignmentFlag.AlignVCenter)
-
-        self._state_dot = _pass_mouse(QLabel("●", self))
-        self._state_dot.setFixedWidth(14)
-        self._state_dot.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._state_dot.setStyleSheet(
-            f"color: {STATE_DOT.get(state, STATE_DOT['unknown'])}; font-size: 10px;"
+        self._state_pill.setSizePolicy(
+            QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed
         )
-        self._state_dot.setToolTip(_state_tip(state))
-        layout.addWidget(self._state_dot, 0, Qt.AlignmentFlag.AlignVCenter)
+        layout.addWidget(self._state_pill, 0, Qt.AlignmentFlag.AlignVCenter)
         self._install_state = state
+        self._theme: str = "standard"
         self._apply_state_indicator(state)
 
         outer.addWidget(row, stretch=1)
@@ -578,7 +671,6 @@ class RecipeSidebarCard(QFrame):
         )
         self._busy_bar.setVisible(False)
         outer.addWidget(self._busy_bar)
-        self._theme: str = "standard"
         self._apply_text_colors()
         self._apply_border()
         self._apply_busy_bar_style()
@@ -593,6 +685,8 @@ class RecipeSidebarCard(QFrame):
                 "fg": "#EDE6D6",
                 "muted": "#D4CDC3",
                 "accent": ACCENT_COPPER,
+                "tested": COLOR_TESTED,
+                "experimental": COLOR_EXPERIMENTAL,
             }
 
     def _apply_text_colors(self) -> None:
@@ -786,47 +880,51 @@ class RecipeSidebarCard(QFrame):
 
     def set_running(self, running: bool) -> None:
         self._running = running
-        self._run_dot.setVisible(running)
-        self._state_dot.setVisible(not running)
+        self._apply_state_indicator(self._install_state, attention=self._attention)
 
     def _apply_state_indicator(self, state: str, *, attention: bool = False) -> None:
-        """Statuspunkt — bei Hinweis/Partial/Untrusted: Warn-Icon."""
+        """Compact status pill — same roles as header pills (no icon badge)."""
+        tok = self._theme_tokens()
         warn = attention or state in ("partial", "untrusted")
-        if warn:
+        if self._running:
+            text = t("state.pill_running")
+            color = tok.get("tested", COLOR_TESTED)
+            tip = t("state.running")
+        elif warn:
+            text = t("state.pill_attention")
+            color = tok.get("experimental", COLOR_EXPERIMENTAL)
             tip = (
                 _state_tip(state)
                 if state in ("partial", "untrusted")
                 else t("state.partial_tip")
             )
-            color = STATE_DOT.get(
-                state if state in ("partial", "untrusted") else "partial",
-                STATE_DOT["partial"],
-            )
-        else:
+        elif state == "installed":
+            text = t("state.pill_installed")
+            color = tok.get("tested", COLOR_TESTED)
             tip = _state_tip(state)
-            color = STATE_DOT.get(state, STATE_DOT["unknown"])
-        self._state_dot.setToolTip(tip)
-        if warn:
-            icon = fa_icon("warn", 14, color=color)
-            if icon is not None:
-                self._state_dot.setText("")
-                self._state_dot.setPixmap(icon.pixmap(14, 14))
-                self._state_dot.setStyleSheet("background: transparent;")
-                return
-        self._state_dot.setPixmap(QPixmap())
-        self._state_dot.setText("●")
-        self._state_dot.setStyleSheet(f"color: {color}; font-size: 10px;")
+        elif state == "checking":
+            text = t("state.pill_checking")
+            color = tok.get("muted", MUTED)
+            tip = _state_tip(state)
+        else:
+            text = t("state.pill_missing")
+            color = tok.get("muted", MUTED)
+            tip = _state_tip(state)
+        self._state_pill.set_content(text, color)
+        self._state_pill.setToolTip(tip)
+        self._state_pill.apply_theme(self._theme)
 
     def set_install_state(self, state: str, *, attention: bool = False) -> None:
         self._install_state = state
+        self._attention = attention
         self._apply_state_indicator(state, attention=attention)
-        self._state_dot.setVisible(not self._running)
         self._set_a11y(self._card_name, state)
 
     def apply_theme(self, theme: str = "dark") -> None:
         self._theme = theme
         self._apply_text_colors()
         self._apply_border()
+        self._apply_state_indicator(self._install_state, attention=self._attention)
 
     def sizeHint(self) -> QSize:  # noqa: N802
         # Don't expand the scroll host to the full unelided title width.

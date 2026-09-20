@@ -5,6 +5,16 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.51] - 2026-09-20
+
+### Fixed
+- Source dialog version hint: Windows PE `ProductVersion` tuples such as `1,0,0,1` display as `1.0.0.1`. Version strings are never locale-formatted as numbers.
+- Medizin no longer turns Primary into Repair after saving options on a recipe that is not installed. The next Install picks the values up.
+- Uninstall now deletes the recipe asset cache (`cache/<id>/` and `cache/<id>-mod-bundle/`) so a reinstall re-fetches remote packs. Shared caches (winetricks, vcredist) and portable folders outside `DATA_ROOT` stay.
+
+### Changed
+- Remote mod packs now stage under `~/.local/share/wine-software/cache/<recipe-id>/` (never `~/Downloads` as the dest). After a successful extract/overlay the archive is deleted; overlay and used loose files stay. A leftover Downloads ZIP may seed once and is not copied as a store. Fail keeps the archive.
+
 ## [1.1.50] - 2026-09-20
 
 ### Added

@@ -108,6 +108,8 @@ from app_support import (
     format_tested_on_display,
     linuxchooser_url,
     linuxguides_url,
+    phials_adobe_installers_url,
+    siximon_lightroom_url,
     proton_ge_badge_label,
     prune_old_logs,
     public_docs_url,
@@ -184,6 +186,7 @@ from recipe_discovery import (
     RecipeInfo,
     RecipeState,
     discover_recipes as _discover_recipes,
+    is_portable_source,
     launch_process_patterns_from_meta,
     parse_recipe_yml,
     sidebar_card_texts,
@@ -219,7 +222,7 @@ from recipe_trust import (
     rezeptor_dev_mode,
     verify_recipe_trust,
 )
-from ui_styles import COLOR_PARCHMENT, MUTED, palette
+from ui_styles import COLOR_PARCHMENT, MUTED, header_secondary_color, palette
 from ui_icons import (
     ensure_fa_brands_font,
     ensure_fa_font,
@@ -406,19 +409,13 @@ def strip_ansi(text: str) -> str:
     return ANSI_RE.sub("", text).strip()
 
 
-# Fallback when recipe.yml has no launch_process_patterns (prefer YAML).
-LAUNCH_PROCESS_PATTERNS: dict[str, list[str]] = {
-    "photoshop": ["Photoshop.exe"],
-    "photoshop-m0nkrus": ["Photoshop.exe"],
-}
-
-
 def launch_process_patterns(rid: str, meta: dict[str, str] | None = None) -> list[str]:
+    """Alive-check patterns come from recipe.yml (launch_process_patterns / exe_glob)."""
     if meta:
         from_meta = launch_process_patterns_from_meta(meta, rid)
         if from_meta:
             return from_meta
-    return list(LAUNCH_PROCESS_PATTERNS.get(rid, []))
+    return []
 
 # Cmdlines, die nur über den Text matchen (Agent, Shell, Editor) — nie „läuft“.
 _RUNNING_NOISE = (
@@ -714,30 +711,93 @@ def _exe_basename(path_or_name: str) -> str:
     return s.rsplit("/", 1)[-1].lower() if s else ""
 
 
-def _pattern_matches_main_exe(cmd: str, pid: str, patterns_l: list[str]) -> bool:
-    """True nur wenn argv0/comm die App-EXE ist — nicht wenn sie nur als Argument vorkommt.
+# Proton/Wine loaders keep argv0 as wine64; the Windows EXE is comm or a later arg.
+_WINE_LOADER_STEMS = frozenset(
+    {
+        "wine",
+        "wine64",
+        "wine-preloader",
+        "wine64-preloader",
+        "wineserver",
+        "pressure-vessel-adverb",
+        "steam-runtime-launch-client",
+    }
+)
 
-    AdobeIPCBroker: ``…\\AdobeIPCBroker.exe …\\Photoshop.exe`` darf nicht als Photoshop gelten.
+
+def _is_wine_loader_name(name: str) -> bool:
+    stem = _exe_basename(name)
+    if stem.endswith(".exe"):
+        stem = stem[:-4]
+    if stem in _WINE_LOADER_STEMS:
+        return True
+    return stem.startswith("wine-preloader") or stem.startswith("proton")
+
+
+def _proc_arg_basenames(pid: str) -> list[str]:
+    try:
+        raw = Path(f"/proc/{pid}/cmdline").read_bytes()
+    except (OSError, ProcessLookupError):
+        return []
+    out: list[str] = []
+    for part in raw.split(b"\0"):
+        if not part:
+            continue
+        out.append(_exe_basename(part.decode("utf-8", "replace")))
+    return out
+
+
+def exe_patterns_match(
+    patterns_l: list[str],
+    *,
+    argv0: str,
+    comm: str,
+    arg_basenames: list[str] | tuple[str, ...] = (),
+) -> bool:
+    """True if this process is the recipe EXE (not a helper that only mentions it).
+
+    AdobeIPCBroker: ``…\\AdobeIPCBroker.exe …\\Photoshop.exe`` is not Photoshop.
+    Wine wrap: argv0 ``wine64`` + arg/comm ``Lightroom.exe`` is Lightroom.
     """
-    del cmd  # cmdline-String mit Spaces zerstört argv0; /proc null-sep nutzen
-    argv0 = _exe_basename(_proc_argv0(pid))
-    argv0_stem = argv0[:-4] if argv0.endswith(".exe") else argv0
-    comm = _proc_comm(pid).lower().rstrip(".\x00 ")
-    comm_stem = comm[:-4] if comm.endswith(".exe") else comm
+    argv0_base = _exe_basename(argv0)
+    argv0_stem = argv0_base[:-4] if argv0_base.endswith(".exe") else argv0_base
+    comm_l = (comm or "").lower().rstrip(".\x00 ")
+    comm_stem = comm_l[:-4] if comm_l.endswith(".exe") else comm_l
+    loader = _is_wine_loader_name(argv0_base) or _is_wine_loader_name(comm_l)
+    arg_stems = [
+        (b[:-4] if b.endswith(".exe") else b)
+        for b in (_exe_basename(x) for x in arg_basenames)
+        if b
+    ]
 
     for pat in patterns_l:
-        stem = pat[:-4] if pat.endswith(".exe") else pat
-        if argv0_stem == stem or argv0 == pat:
-            return True
-        # argv0 ist eine andere EXE → dieses Pattern verwerfen
-        if argv0_stem:
+        pat_l = (pat or "").lower()
+        if not pat_l:
             continue
-        # Fallback: nur comm (Wine), wenn argv0 leer
-        if comm_stem == stem or (
-            len(comm_stem) >= 8 and stem.startswith(comm_stem)
-        ):
+        stem = pat_l[:-4] if pat_l.endswith(".exe") else pat_l
+        if argv0_stem == stem or argv0_base == pat_l:
             return True
+        if comm_stem == stem or comm_l == pat_l:
+            return True
+        if comm_stem and len(comm_stem) >= 8 and stem.startswith(comm_stem):
+            return True
+        if loader and stem in arg_stems:
+            return True
+        # argv0 is another Windows EXE → skip this pattern (broker / helper).
+        if argv0_stem and not loader:
+            continue
     return False
+
+
+def _pattern_matches_main_exe(cmd: str, pid: str, patterns_l: list[str]) -> bool:
+    """True nur wenn argv0/comm die App-EXE ist — nicht wenn sie nur als Argument vorkommt."""
+    del cmd  # joined cmdline breaks argv0; /proc is null-separated
+    return exe_patterns_match(
+        patterns_l,
+        argv0=_proc_argv0(pid),
+        comm=_proc_comm(pid),
+        arg_basenames=_proc_arg_basenames(pid),
+    )
 
 
 def recipe_process_running(rid: str, meta: dict[str, str] | None = None) -> bool:
@@ -813,16 +873,35 @@ def recipe_process_running(rid: str, meta: dict[str, str] | None = None) -> bool
 _HEADER_CARD_RADIUS = 8
 
 
+def _sync_header_card_radius(header: QWidget) -> int:
+    """Keep Fluent CardWidget radius on the QSS 8px of QFrame#headerCard."""
+    r = _HEADER_CARD_RADIUS
+    setter = getattr(header, "setBorderRadius", None)
+    if callable(setter):
+        try:
+            setter(r)
+        except (TypeError, RuntimeError):
+            pass
+    else:
+        try:
+            header.borderRadius = r
+        except (AttributeError, TypeError):
+            pass
+    return r
+
+
 def faded_header_watermark(
     src: QPixmap,
     target: QSize,
     *,
     radius: int = _HEADER_CARD_RADIUS,
 ) -> QPixmap:
-    """Header backdrop: icon on the right, L→R fade, clipped to card radius.
+    """Header backdrop: icon flush right, L→R fade, clipped to card radius.
 
-    Watermark fills the full header rect so top/bottom-right corners follow the
-    same 8px radius as headerCard (no square bleed past rounded chrome).
+    One geometry for home and every recipe. Icons *cover* a right-hand band
+    (KeepAspectRatioByExpanding) so square and wide marks fill the header
+    height. The pixmap fills the header rect and is clipped to the same 8px
+    radius as QFrame#headerCard (no square corner bleed).
     """
     tw = max(48, target.width())
     th = max(40, target.height())
@@ -831,7 +910,7 @@ def faded_header_watermark(
     if src.isNull():
         return out
 
-    # Draw icon in the right ~44% band, flush to the right edge.
+    # Cover the right ~44% of the header (fills height; crop overflow).
     band_w = max(140, int(tw * 0.44))
     scaled = src.scaled(
         band_w,
@@ -841,41 +920,36 @@ def faded_header_watermark(
     )
     x = tw - scaled.width()
     y = (th - scaled.height()) // 2
+    r = max(0, min(int(radius), tw // 2, th // 2))
 
     painter = QPainter(out)
     painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
     painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+    if r > 0:
+        clip = QPainterPath()
+        clip.addRoundedRect(QRectF(0, 0, tw, th), float(r), float(r))
+        painter.setClipPath(clip)
     painter.drawPixmap(x, y, scaled)
 
-    # Soft L→R alpha (transparent left → soft right).
+    # Soft L→R alpha (transparent left → ~13% peak on the right).
     fade = QPixmap(tw, th)
     fade.fill(Qt.GlobalColor.transparent)
     fp = QPainter(fade)
-    grad = QLinearGradient(tw - band_w, 0, tw, 0)
+    fp.setRenderHint(QPainter.RenderHint.Antialiasing)
+    if r > 0:
+        fade_clip = QPainterPath()
+        fade_clip.addRoundedRect(QRectF(0, 0, tw, th), float(r), float(r))
+        fp.setClipPath(fade_clip)
+    fade_start = max(0, tw - band_w)
+    grad = QLinearGradient(fade_start, 0, tw, 0)
     grad.setColorAt(0.0, QColor(255, 255, 255, 0))
-    grad.setColorAt(0.18, QColor(255, 255, 255, 28))
-    grad.setColorAt(0.50, QColor(255, 255, 255, 120))
-    grad.setColorAt(1.0, QColor(255, 255, 255, 200))
+    grad.setColorAt(0.22, QColor(255, 255, 255, 6))
+    grad.setColorAt(0.55, QColor(255, 255, 255, 20))
+    grad.setColorAt(1.0, QColor(255, 255, 255, 34))
     fp.fillRect(0, 0, tw, th, QBrush(grad))
     fp.end()
     painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_DestinationIn)
     painter.drawPixmap(0, 0, fade)
-
-    # Clip to header rounded rect so corners match the card.
-    r = max(0, min(radius, tw // 2, th // 2))
-    if r > 0:
-        clip = QPixmap(tw, th)
-        clip.fill(Qt.GlobalColor.transparent)
-        cp = QPainter(clip)
-        cp.setRenderHint(QPainter.RenderHint.Antialiasing)
-        cp.setPen(Qt.PenStyle.NoPen)
-        cp.setBrush(QColor(255, 255, 255, 255))
-        path = QPainterPath()
-        path.addRoundedRect(QRectF(0, 0, tw, th), float(r), float(r))
-        cp.drawPath(path)
-        cp.end()
-        painter.drawPixmap(0, 0, clip)
-
     painter.end()
     return out
 
@@ -950,6 +1024,7 @@ def format_recipe_info_html(
             parts.append("</ul>")
             in_list = False
 
+    first_block = True
     for line in (raw or "").splitlines():
         stripped = line.strip()
         if not stripped:
@@ -960,19 +1035,24 @@ def format_recipe_info_html(
         if stripped.startswith("# "):
             close_list()
             title = _inline_md_html(_escape_html(stripped[2:].strip()))
+            top = 8 if first_block else 16
+            first_block = False
             parts.append(
-                f"<h2 style='margin:8px 0 4px;font-size:16px;color:{fg}'>{title}</h2>"
+                f"<h2 style='margin:{top}px 0 6px;font-size:16px;color:{fg}'>{title}</h2>"
             )
         elif stripped.startswith("## "):
             close_list()
             title = _inline_md_html(_escape_html(stripped[3:].strip()))
+            top = 10 if first_block else 16
+            first_block = False
             parts.append(
-                f"<h3 style='margin:10px 0 4px;font-size:13px;color:{fg}'>{title}</h3>"
+                f"<h3 style='margin:{top}px 0 4px;font-size:13px;color:{fg}'>{title}</h3>"
             )
         elif stripped.startswith(("• ", "- ", "* ")) or re.match(r"^\d+\.\s", stripped):
             if not in_list:
                 parts.append("<ul style='margin:4px 0 4px 18px;padding:0'>")
                 in_list = True
+                first_block = False
             if re.match(r"^\d+\.\s", stripped):
                 body = _inline_md_html(_escape_html(re.sub(r"^\d+\.\s+", "", stripped)))
             else:
@@ -980,14 +1060,18 @@ def format_recipe_info_html(
             parts.append(f"<li style='margin:2px 0'>{body}</li>")
         elif stripped.startswith(("Autor:", "Author:", "Version:")):
             close_list()
+            first_block = False
             parts.append(
                 f"<p style='margin:2px 0;color:{muted};font-size:12px'>{esc}</p>"
             )
         elif stripped.endswith(":") and len(stripped) < 80 and not stripped.startswith("http"):
             close_list()
-            parts.append(f"<p style='margin:8px 0 2px'><b>{esc}</b></p>")
+            top = 8 if first_block else 16
+            first_block = False
+            parts.append(f"<p style='margin:{top}px 0 4px'><b>{esc}</b></p>")
         else:
             close_list()
+            first_block = False
             parts.append(f"<p style='margin:4px 0'>{esc}</p>")
     close_list()
 
@@ -1065,6 +1149,33 @@ def _recipe_has_install_marker(meta: dict[str, str], rid: str) -> bool:
     if prefix.is_dir() and (prefix / "user.reg").is_file():
         return True
     return (dr / "recipe.env").is_file() or (dr / "portable.env").is_file()
+
+
+def recipe_is_installed_ish(info: RecipeInfo) -> bool:
+    """True if prefix/install markers exist. options.env alone is not an install."""
+    if info.state in (RecipeState.INSTALLED, RecipeState.PARTIAL):
+        return True
+    return _recipe_has_install_marker(info.meta, info.rid)
+
+
+def pending_repair_overrides_cta(
+    *,
+    pending_rid: str | None,
+    recipe_rid: str,
+    has_repair_sh: bool,
+    checking: bool,
+    installed_ish: bool,
+) -> bool:
+    """Pending Freigabe/Medizin repair only when something is installed.
+
+    Uninstalled + options.env must not steal Primary from Installieren.
+    """
+    return bool(
+        pending_rid == recipe_rid
+        and has_repair_sh
+        and not checking
+        and installed_ish
+    )
 
 
 def query_recipe_state_quick(
@@ -1379,65 +1490,119 @@ class RezeptorWindow(QMainWindow):
         self.menuBar().clear()
         # Rezeptor — app shell
         rezeptor_menu = self.menuBar().addMenu(t("menu.rezeptor"))
-        rezeptor_menu.addAction(t("menu.home"), self._show_home)
-        rezeptor_menu.addAction(t("menu.settings"), self.show_settings)
+        self._add_menu_action(
+            rezeptor_menu, t("menu.home"), self._show_home, icon_kind="house"
+        )
+        self._add_menu_action(
+            rezeptor_menu, t("menu.settings"), self.show_settings, icon_kind="gear"
+        )
 
         # Rezepte — catalog / status / sync
         recipes_menu = self.menuBar().addMenu(t("menu.recipes"))
-        self.action_refresh = QAction(t("menu.refresh"), self)
+        self.action_refresh = self._add_menu_action(
+            recipes_menu,
+            t("menu.refresh"),
+            self.refresh_statuses,
+            icon_kind="repair",
+        )
         self.action_refresh.setToolTip(t("menu.refresh_tip"))
         self.action_refresh.setStatusTip(t("menu.refresh_tip"))
-        self.action_refresh.triggered.connect(self.refresh_statuses)
-        recipes_menu.addAction(self.action_refresh)
-        act_sync = QAction(t("menu.check_recipes"), self)
+        act_sync = self._add_menu_action(
+            recipes_menu,
+            t("menu.check_recipes"),
+            self.check_recipe_sync,
+            icon_kind="download",
+        )
         act_sync.setToolTip(t("menu.check_recipes_tip"))
         act_sync.setStatusTip(t("menu.check_recipes_tip"))
-        act_sync.triggered.connect(self.check_recipe_sync)
-        recipes_menu.addAction(act_sync)
         recipes_menu.addSeparator()
-        act_new = QAction(t("menu.new_recipe"), self)
+        act_new = self._add_menu_action(
+            recipes_menu,
+            t("menu.new_recipe"),
+            self.show_recipe_wizard,
+            icon_kind="plus",
+        )
         act_new.setToolTip(t("menu.new_recipe_tip"))
         act_new.setStatusTip(t("menu.new_recipe_tip"))
-        act_new.triggered.connect(self.show_recipe_wizard)
-        recipes_menu.addAction(act_new)
-        act_cat = QAction(t("menu.add_recipe_catalog"), self)
+        act_cat = self._add_menu_action(
+            recipes_menu,
+            t("menu.add_recipe_catalog"),
+            self.show_catalog_dialog,
+            icon_kind="plus",
+        )
         act_cat.setToolTip(t("menu.add_recipe_catalog_tip"))
         act_cat.setStatusTip(t("menu.add_recipe_catalog_tip"))
-        act_cat.triggered.connect(self.show_catalog_dialog)
-        recipes_menu.addAction(act_cat)
-        self.action_view_recipe = QAction(self._view_recipe_label(), self)
+        self.action_view_recipe = self._add_menu_action(
+            recipes_menu,
+            self._view_recipe_label(),
+            self.show_recipe_view,
+            icon_kind="book",
+        )
         self.action_view_recipe.setToolTip(self._view_recipe_tip())
         self.action_view_recipe.setStatusTip(self._view_recipe_tip())
-        self.action_view_recipe.triggered.connect(self.show_recipe_view)
-        recipes_menu.addAction(self.action_view_recipe)
-        recipes_menu.addAction(
-            t("menu.show_hidden_recipes"), self.show_hidden_recipes_dialog
+        self._add_menu_action(
+            recipes_menu,
+            t("menu.show_hidden_recipes"),
+            self.show_hidden_recipes_dialog,
+            icon_kind="eye",
         )
 
         # Werkzeuge — maintenance (not day-to-day recipe ops)
         extras_menu = self.menuBar().addMenu(t("menu.extras"))
-        act_sys = QAction(t("menu.system_check"), self)
+        act_sys = self._add_menu_action(
+            extras_menu,
+            t("menu.system_check"),
+            self.show_host_deps_check,
+            icon_kind="validate",
+        )
         act_sys.setToolTip(t("menu.system_check_tip"))
         act_sys.setStatusTip(t("menu.system_check_tip"))
-        act_sys.triggered.connect(self.show_host_deps_check)
-        extras_menu.addAction(act_sys)
-        extras_menu.addAction(t("menu.cleanup_logs"), self.cleanup_logs_now)
-        extras_menu.addAction(t("menu.rollback"), self.show_rollback_dialog)
+        self._add_menu_action(
+            extras_menu,
+            t("menu.cleanup_logs"),
+            self.cleanup_logs_now,
+            icon_kind="folder",
+        )
+        self._add_menu_action(
+            extras_menu,
+            t("menu.rollback"),
+            self.show_rollback_dialog,
+            icon_kind="repair",
+        )
 
         # Hilfe — docs, app update, support
         help_menu = self.menuBar().addMenu(t("menu.help"))
-        act_docs = QAction(t("menu.docs"), self)
+        act_docs = self._add_menu_action(
+            help_menu, t("menu.docs"), self.show_developer_docs, icon_kind="book"
+        )
         act_docs.setToolTip(t("menu.docs_tip"))
         act_docs.setStatusTip(t("menu.docs_tip"))
-        act_docs.triggered.connect(self.show_developer_docs)
-        help_menu.addAction(act_docs)
         help_menu.addSeparator()
-        help_menu.addAction(t("menu.check_update"), self.check_updates)
+        self._add_menu_action(
+            help_menu,
+            t("menu.check_update"),
+            self.check_updates,
+            icon_kind="download",
+        )
         help_menu.addSeparator()
-        help_menu.addAction(t("menu.report_bug"), self.report_bug)
-        help_menu.addAction(t("menu.diagnose_zip"), self.export_diagnose_zip)
-        help_menu.addAction(t("menu.open_log_folder"), self.open_log_folder)
-        help_menu.addAction(t("menu.about"), self.show_about)
+        self._add_menu_action(
+            help_menu, t("menu.report_bug"), self.report_bug, icon_kind="github"
+        )
+        self._add_menu_action(
+            help_menu,
+            t("menu.diagnose_zip"),
+            self.export_diagnose_zip,
+            icon_kind="archive",
+        )
+        self._add_menu_action(
+            help_menu,
+            t("menu.open_log_folder"),
+            self.open_log_folder,
+            icon_kind="folder",
+        )
+        self._add_menu_action(
+            help_menu, t("menu.about"), self.show_about, icon_kind="info"
+        )
         self._ensure_lang_toggle()
         self._menu_bar_built = True
 
@@ -1599,19 +1764,21 @@ class RezeptorWindow(QMainWindow):
         self._sidebar_title = st
         sl.addWidget(st)
 
+        self.sidebar_search = QLineEdit()
+        self.sidebar_search.setObjectName("sidebarSearch")
+        self.sidebar_search.setPlaceholderText(t("app.sidebar_search"))
+        self.sidebar_search.setClearButtonEnabled(True)
+        self.sidebar_search.setAccessibleName(t("app.shortcut_search"))
+        self.sidebar_search.textChanged.connect(self._on_sidebar_search)
+        sl.addWidget(self.sidebar_search)
+        self._setup_sidebar_search_hint()
+
         self._home_btn = QPushButton(t("app.home_sidebar"))
         self._home_btn.setObjectName("homeSidebarBtn")
         self._home_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self._home_btn.setToolTip(t("menu.home"))
         self._home_btn.clicked.connect(self._show_home)
         sl.addWidget(self._home_btn)
-
-        self.sidebar_search = QLineEdit()
-        self.sidebar_search.setObjectName("sidebarSearch")
-        self.sidebar_search.setPlaceholderText(t("app.sidebar_search"))
-        self.sidebar_search.setClearButtonEnabled(True)
-        self.sidebar_search.textChanged.connect(self._on_sidebar_search)
-        sl.addWidget(self.sidebar_search)
 
         self.recipe_cards_host = QWidget()
         self.recipe_cards_host.setObjectName("recipeCardsHost")
@@ -1668,6 +1835,7 @@ class RezeptorWindow(QMainWindow):
             QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
         )
         self._header = header
+        _sync_header_card_radius(header)
         self._header_watermark_src: QPixmap | None = None
         self._header_watermark = QLabel(header)
         self._header_watermark.setObjectName("headerWatermark")
@@ -1764,19 +1932,8 @@ class RezeptorWindow(QMainWindow):
         pills_row.addWidget(self.proton_pill)
         pills_row.addWidget(self.tested_on_pill)
         pills_row.addWidget(self.author_pill)
-        self.health_chip = QToolButton()
-        self.health_chip.setObjectName("healthChip")
-        self.health_chip.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.health_chip.setAutoRaise(True)
-        self.health_chip.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextOnly)
-        self.health_chip.setSizePolicy(
-            QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Fixed
-        )
-        self.health_chip.setVisible(False)
-        self.health_chip.clicked.connect(self._show_health_dialog)
-        pills_row.addWidget(self.health_chip)
-        # Fortschritt nur unter Tab „Vorgang“ — kein doppeltes „Vorgang %“ im Header
         pills_row.addStretch(1)
+        # Fortschritt nur unter Tab „Vorgang“ — kein doppeltes „Vorgang %“ im Header
 
         self.path_label = QLabel()
         self.path_label.setObjectName("appPath")
@@ -1798,7 +1955,9 @@ class RezeptorWindow(QMainWindow):
         self.path_label.customContextMenuRequested.connect(
             self._show_path_context_menu
         )
-        self._style_secondary_label(self.path_label, MUTED, size_px=11)
+        self._style_secondary_label(
+            self.path_label, header_secondary_color(), size_px=11
+        )
         self.open_path_btn = QToolButton()
         self.open_path_btn.setObjectName("openPathBtn")
         self.open_path_btn.setAutoRaise(True)
@@ -1835,7 +1994,9 @@ class RezeptorWindow(QMainWindow):
         self.status_detail_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
-        self._style_secondary_label(self.status_detail_label, MUTED, size_px=12)
+        self._style_secondary_label(
+            self.status_detail_label, header_secondary_color(), size_px=12
+        )
         hc.addLayout(title_row)
         hc.addLayout(pills_row)
         hc.addLayout(path_row)
@@ -1986,17 +2147,67 @@ class RezeptorWindow(QMainWindow):
         parent_layout.addWidget(bar)
 
     @staticmethod
+    def _search_shortcut_label() -> str:
+        return QKeySequence(QKeySequence.StandardKey.Find).toString(
+            QKeySequence.SequenceFormat.NativeText
+        )
+
+    def _setup_sidebar_search_hint(self) -> None:
+        hint = QLabel(self._search_shortcut_label(), self.sidebar_search)
+        hint.setObjectName("sidebarSearchHint")
+        hint.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        self._search_shortcut_hint = hint
+        self.sidebar_search.installEventFilter(self)
+        self._sync_sidebar_search_hint()
+
+    def _sync_sidebar_search_hint(self) -> None:
+        hint = getattr(self, "_search_shortcut_hint", None)
+        search = getattr(self, "sidebar_search", None)
+        if hint is None or search is None:
+            return
+        key = self._search_shortcut_label()
+        hint.setText(key)
+        hint.adjustSize()
+        search.setToolTip(f"{t('app.shortcut_search')} ({key})")
+        search.setAccessibleDescription(key)
+        hint.setVisible(not bool((search.text() or "").strip()))
+        self._position_search_hint()
+
+    def _position_search_hint(self) -> None:
+        hint = getattr(self, "_search_shortcut_hint", None)
+        search = getattr(self, "sidebar_search", None)
+        if hint is None or search is None or not hint.isVisible():
+            return
+        hint.adjustSize()
+        margin = 10
+        x = max(margin, search.width() - hint.width() - margin)
+        y = max(0, (search.height() - hint.height()) // 2)
+        hint.move(x, y)
+
     def _add_menu_action(
-        menu: object, text: str, slot, *, icon_kind: str | None = None
+        self,
+        menu: object,
+        text: str,
+        slot,
+        *,
+        icon_kind: str | None = None,
+        danger: bool = False,
     ) -> QAction:
         """QAction for both QMenu and Fluent RoundMenu (no addAction(str, callable))."""
         action = QAction(text, menu)  # type: ignore[arg-type]
+        tid = normalize_theme(getattr(self._settings, "theme", None))
+        tok = theme_tokens(tid)
+        color = tok.get("danger", "#E07070") if danger else tok.get("fg", COLOR_PARCHMENT)
         if icon_kind:
-            ic = fa_icon(icon_kind, 14, color=COLOR_PARCHMENT)
+            ic = fa_icon(icon_kind, 16, color=color)
             if ic is not None:
                 action.setIcon(ic)
         action.triggered.connect(slot)
         menu.addAction(action)  # type: ignore[attr-defined]
+        if danger:
+            item = action.property("item")
+            if item is not None:
+                item.setForeground(QColor(color))
         return action
 
     def _visible_recipe_options(self):
@@ -2024,29 +2235,40 @@ class RezeptorWindow(QMainWindow):
         opts = self._visible_recipe_options()
         if not opts or not self._selected:
             return
-        dr = resolve_data_root(self._selected.meta, self._selected.rid)
-        dlg = MedizinDialog(opts, dr, self)
+        info = self._selected
+        dr = resolve_data_root(info.meta, info.rid)
+        installed = recipe_is_installed_ish(info)
+        dlg = MedizinDialog(opts, dr, self, installed=installed)
         # Eigenes Taskleisten-Fenster — sonst blockiert modaler Child „Alles schließen“.
         apply_tool_window(dlg, icon=self.windowIcon(), modal=True, compact=True)
         dlg.exec()
-        if dlg.needs_repair_hint and self._selected is not None:
-            rid = self._selected.rid
+        if self._selected is None:
+            return
+        info = self._selected
+        rid = info.rid
+        dr = resolve_data_root(info.meta, info.rid)
+        if dlg.needs_repair_hint and installed:
             self._pending_repair_rid = rid
-            self._activity("info", t("medizin.apply_repair_hint"))
-            # Stable one-liner + CTA only — full _on_select reflows header (flash/hop).
             hint = t("medizin.apply_repair_hint")
+            self._activity("info", hint)
+            # Stable one-liner + CTA only — full _on_select reflows header (flash/hop).
             self._status_detail_base = hint
             self.status_detail_label.setText(hint)
             self.status_detail_label.setVisible(True)
-            info = self._selected
-            dr = resolve_data_root(info.meta, info.rid)
-            self._apply_primary_cta(
-                info,
-                can_launch=self._can_launch_recipe(info, dr),
-                running=recipe_process_running(info.rid, info.meta),
-                busy=self._busy,
-            )
-            self._sync_medizin_button()
+        elif dlg.needs_install_hint:
+            self._clear_pending_repair(rid)
+            hint = t("medizin.apply_install_hint")
+            self._activity("info", hint)
+            self._status_detail_base = hint
+            self.status_detail_label.setText(hint)
+            self.status_detail_label.setVisible(True)
+        self._apply_primary_cta(
+            info,
+            can_launch=self._can_launch_recipe(info, dr),
+            running=recipe_process_running(info.rid, info.meta),
+            busy=self._busy,
+        )
+        self._sync_medizin_button()
 
     def _maybe_steam_medicine_prompt(self) -> None:
         """When user selects a recipe: recommend Steam medicine if Steam is present."""
@@ -2134,7 +2356,13 @@ class RezeptorWindow(QMainWindow):
             RecipeState.INSTALLED,
             RecipeState.PARTIAL,
         )
-        pending_repair = self._pending_repair_rid == info.rid
+        pending_repair = pending_repair_overrides_cta(
+            pending_rid=self._pending_repair_rid,
+            recipe_rid=info.rid,
+            has_repair_sh=(Path(info.meta["_dir"]) / "repair.sh").is_file(),
+            checking=_recipe_is_checking(info),
+            installed_ish=recipe_is_installed_ish(info),
+        )
         ops_ok = not busy and not untrusted
         since_sep = 0
 
@@ -2145,11 +2373,14 @@ class RezeptorWindow(QMainWindow):
             show: bool,
             tip: str = "",
             icon_kind: str | None = None,
+            danger: bool = False,
         ) -> None:
             nonlocal since_sep
             if not show:
                 return
-            act = self._add_menu_action(menu, label, slot, icon_kind=icon_kind)
+            act = self._add_menu_action(
+                menu, label, slot, icon_kind=icon_kind, danger=danger
+            )
             if tip:
                 act.setToolTip(tip)
             since_sep += 1
@@ -2162,6 +2393,13 @@ class RezeptorWindow(QMainWindow):
             since_sep = 0
 
         _add(t("menu.validate"), self.run_validate, show=ops_ok, icon_kind="validate")
+        health_fails = self._health_fail_lines(info)
+        _add(
+            t("app.health_hints", n=str(len(health_fails))),
+            self._show_health_dialog,
+            show=ops_ok and bool(health_fails),
+            icon_kind="warn",
+        )
         _add(
             t("menu.repair"),
             self.run_repair,
@@ -2182,7 +2420,12 @@ class RezeptorWindow(QMainWindow):
             icon_kind="kill",
         )
         update_ok = recipe_supports_update(info.meta) and installed_ish
-        _add(t("menu.update"), self.run_update, show=ops_ok and update_ok)
+        _add(
+            t("menu.update"),
+            self.run_update,
+            show=ops_ok and update_ok,
+            icon_kind="download",
+        )
         relocate_ok = installed_ish and (
             needs_target_dir(info.meta) or data_root_browsable(dr)
         )
@@ -2191,6 +2434,7 @@ class RezeptorWindow(QMainWindow):
             self.run_relocate,
             show=ops_ok and relocate_ok and not running,
             tip=t("menu.relocate_tip"),
+            icon_kind="folder",
         )
 
         # Separator only when the next group has at least one visible row.
@@ -2206,12 +2450,14 @@ class RezeptorWindow(QMainWindow):
                     self.run_source_configure,
                     show=True,
                     tip=t("menu.source_tip"),
+                    icon_kind="folder",
                 )
             # Installationsdaten: nur am Pfad-Icon neben dem Pfad (klarer als im Mehr-Menü)
             _add(
                 t("menu.shortcuts"),
                 self.run_desktop_shortcuts,
                 show=will_shortcuts,
+                icon_kind="link",
             )
             if will_genp:
                 _add(
@@ -2219,6 +2465,7 @@ class RezeptorWindow(QMainWindow):
                     self.run_genp_from_pack,
                     show=True,
                     tip=t("menu.genp_from_pack_tip"),
+                    icon_kind="flask",
                 )
 
         # Only open a new separator group when the next item will actually show —
@@ -2230,6 +2477,7 @@ class RezeptorWindow(QMainWindow):
                 self.show_recipe_view,
                 show=True,
                 tip=self._view_recipe_tip(),
+                icon_kind="book",
             )
 
         if ops_ok and installed_ish:
@@ -2238,6 +2486,8 @@ class RezeptorWindow(QMainWindow):
                 t("menu.uninstall"),
                 self.run_uninstall,
                 show=True,
+                icon_kind="trash",
+                danger=True,
             )
 
     def _on_primary_cta(self) -> None:
@@ -2303,10 +2553,15 @@ class RezeptorWindow(QMainWindow):
         untrusted = _recipe_is_untrusted(info)
         # After Freigabe, pending must win even when rediscover still reports
         # UNTRUSTED/UNKNOWN (install state is masked until status refresh).
-        # Only require repair.sh — not INSTALLED|PARTIAL — or CTA flashes back
-        # to „Rezept freigeben“ and stays clickable.
-        pending_repair = (
-            self._pending_repair_rid == info.rid and repair_sh and not checking
+        # Use install markers — not only INSTALLED|PARTIAL — so Freigabe of an
+        # installed recipe stays on repair. options.env alone is not enough:
+        # uninstalled + Medizin must keep Primary on Installieren.
+        pending_repair = pending_repair_overrides_cta(
+            pending_rid=self._pending_repair_rid,
+            recipe_rid=info.rid,
+            has_repair_sh=repair_sh,
+            checking=checking,
+            installed_ish=recipe_is_installed_ish(info),
         )
         git_dev = (ROOT / ".git").is_dir()
 
@@ -2443,6 +2698,7 @@ class RezeptorWindow(QMainWindow):
                 btn.setIconSize(QSize(14, 14))
 
     def _on_sidebar_search(self, _text: str = "") -> None:
+        self._sync_sidebar_search_hint()
         self._populate_list()
         self._reselect_current_rid()
 
@@ -2456,6 +2712,9 @@ class RezeptorWindow(QMainWindow):
                 return
 
     def _install_shortcuts(self) -> None:
+        sc_find = QShortcut(QKeySequence(QKeySequence.StandardKey.Find), self)
+        sc_find.setContext(Qt.ShortcutContext.WindowShortcut)
+        sc_find.activated.connect(self._focus_sidebar_search)
         sc_search = QShortcut(QKeySequence("/"), self)
         sc_search.setContext(Qt.ShortcutContext.WindowShortcut)
         sc_search.activated.connect(self._focus_sidebar_search)
@@ -2505,24 +2764,42 @@ class RezeptorWindow(QMainWindow):
         dr = resolve_data_root(info.meta, info.rid)
         can_launch = self._can_launch_recipe(info, dr)
         if running:
-            self._add_menu_action(menu, t("menu.kill"), self.run_kill)
+            self._add_menu_action(
+                menu, t("menu.kill"), self.run_kill, icon_kind="kill"
+            )
         elif info.state == RecipeState.NOT_INSTALLED:
-            self._add_menu_action(menu, t("menu.install"), self.run_install)
+            self._add_menu_action(
+                menu, t("menu.install"), self.run_install, icon_kind="install"
+            )
         elif can_launch:
-            self._add_menu_action(menu, t("menu.launch"), self.run_launch)
+            self._add_menu_action(
+                menu, t("menu.launch"), self.run_launch, icon_kind="launch"
+            )
         if info.state in (RecipeState.INSTALLED, RecipeState.PARTIAL):
-            self._add_menu_action(menu, t("menu.repair"), self.run_repair)
-        self._add_menu_action(menu, t("menu.validate"), self.run_validate)
+            self._add_menu_action(
+                menu, t("menu.repair"), self.run_repair, icon_kind="repair"
+            )
+        self._add_menu_action(
+            menu, t("menu.validate"), self.run_validate, icon_kind="validate"
+        )
         menu.addSeparator()
         if needs_source_dialog(info.meta):
             self._add_menu_action(
-                menu, source_configure_label(info.meta), self.run_source_configure
+                menu,
+                source_configure_label(info.meta),
+                self.run_source_configure,
+                icon_kind="folder",
             )
         act_open = self._add_menu_action(
-            menu, t("menu.open_folder"), self._open_data_root
+            menu, t("menu.open_folder"), self._open_data_root, icon_kind="folder"
         )
         act_open.setEnabled(data_root_browsable(dr))
-        self._add_menu_action(menu, self._view_recipe_label(), self.show_recipe_view)
+        self._add_menu_action(
+            menu,
+            self._view_recipe_label(),
+            self.show_recipe_view,
+            icon_kind="book",
+        )
         menu.addSeparator()
         self._add_menu_action(
             menu, t("menu.move_up"), lambda: self._move_recipe(info.rid, -1)
@@ -2537,7 +2814,10 @@ class RezeptorWindow(QMainWindow):
                 lambda: self.reset_recipe_category(info.rid),
             )
         self._add_menu_action(
-            menu, t("menu.hide_recipe"), lambda: self.hide_recipe(info.rid)
+            menu,
+            t("menu.hide_recipe"),
+            lambda: self.hide_recipe(info.rid),
+            icon_kind="eye-slash",
         )
         if not self._is_official_bundled_recipe(info.rid):
             self._add_menu_action(
@@ -2547,52 +2827,43 @@ class RezeptorWindow(QMainWindow):
             )
         if info.state in (RecipeState.INSTALLED, RecipeState.PARTIAL):
             self._add_menu_action(
-                menu, t("menu.shortcuts"), self.run_desktop_shortcuts
+                menu,
+                t("menu.shortcuts"),
+                self.run_desktop_shortcuts,
+                icon_kind="link",
             )
             menu.addSeparator()
-            self._add_menu_action(menu, t("menu.uninstall"), self.run_uninstall)
+            self._add_menu_action(
+                menu,
+                t("menu.uninstall"),
+                self.run_uninstall,
+                icon_kind="trash",
+                danger=True,
+            )
         menu.exec(self.cursor().pos())
 
     def _update_progress_chip(self) -> None:
         """No-op: progress lives only in the Vorgang tab (not header pills)."""
         return
 
-    def _update_health_chip(self, info: RecipeInfo) -> None:
-        """Hinweise nur für das aktuell gewählte Rezept (Header-Chip)."""
-        chip = getattr(self, "health_chip", None)
-        if chip is None:
-            return
-        if self._selected is None or self._selected.rid != info.rid:
-            chip.setVisible(False)
-            chip.setText("")
-            return
-        fails = list(info.validate_fails or [])
-        if info.state == RecipeState.PARTIAL and not fails and info.status_detail:
-            detail = info.status_detail.strip()
+    def _health_fail_lines(self, info: RecipeInfo | None = None) -> list[str]:
+        """Validate FAIL lines for the selected (or given) recipe."""
+        rec = info if info is not None else self._selected
+        if rec is None:
+            return []
+        fails = list(rec.validate_fails or [])
+        if not fails and rec.status_detail:
+            detail = rec.status_detail.strip()
             if detail.startswith("FAIL:"):
                 detail = detail[5:].strip()
             if detail:
                 fails = [detail]
-        if fails and info.state == RecipeState.PARTIAL:
-            chip.setText(t("app.health_hints", n=str(len(fails))))
-            chip.adjustSize()
-            chip.setVisible(True)
-            chip.setToolTip("\n".join(fails[:8]))
-        else:
-            chip.setVisible(False)
-            chip.setText("")
+        return fails
 
     def _show_health_dialog(self) -> None:
         if self._selected is None:
             return
-        info = self._selected
-        fails = list(info.validate_fails or [])
-        if not fails and info.status_detail:
-            d = info.status_detail.strip()
-            if d.startswith("FAIL:"):
-                d = d[5:].strip()
-            if d:
-                fails = [d]
+        fails = self._health_fail_lines(self._selected)
         body = "\n".join(f"• {f}" for f in fails) if fails else t("app.health_empty")
         box = QMessageBox(self)
         box.setWindowTitle(t("app.health_title"))
@@ -2668,42 +2939,15 @@ class RezeptorWindow(QMainWindow):
             setattr(self, f"_home_stat_caption_{key}", lab)
         lay.addLayout(stats_row)
 
-        tip = QLabel(t("app.home_tip"))
-        tip.setObjectName("muted")
-        tip.setWordWrap(True)
-        self._home_tip = tip
-        lay.addWidget(tip)
+        project_hint = QLabel(t("app.home_links_hint"))
+        project_hint.setObjectName("homeLinksHint")
+        project_hint.setWordWrap(True)
+        self._home_links_hint = project_hint
+        lay.addWidget(project_hint)
 
-        activity_title = QLabel(t("home.activity_title"))
-        activity_title.setObjectName("homeActivityTitle")
-        self._home_activity_title = activity_title
-        lay.addWidget(activity_title)
-
-        self._home_activity_list = QListWidget()
-        self._home_activity_list.setObjectName("homeActivityList")
-        self._home_activity_list.setFrameShape(QFrame.Shape.StyledPanel)
-        self._home_activity_list.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Maximum
-        )
-        self._home_activity_list.setHorizontalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
-        )
-        self._home_activity_list.setVerticalScrollBarPolicy(
-            Qt.ScrollBarPolicy.ScrollBarAsNeeded
-        )
-        self._home_activity_list.itemClicked.connect(self._on_home_activity_clicked)
-        lay.addWidget(self._home_activity_list)
-        self._refresh_home_activity()
-
-        links_hint = QLabel(t("app.home_links_hint"))
-        links_hint.setObjectName("homeLinksHint")
-        links_hint.setWordWrap(True)
-        self._home_links_hint = links_hint
-        lay.addWidget(links_hint)
-
-        links_grid = QGridLayout()
-        links_grid.setSpacing(6)
-        links_grid.setContentsMargins(0, 0, 0, 0)
+        project_grid = QGridLayout()
+        project_grid.setSpacing(6)
+        project_grid.setContentsMargins(0, 0, 0, 0)
         self._home_github_btn, self._home_github_title, self._home_github_sub = (
             self._make_home_link_card(
                 icon_kind="github",
@@ -2731,9 +2975,38 @@ class RezeptorWindow(QMainWindow):
                 on_click=self._open_home_reddit,
             )
         )
-        links_grid.addWidget(self._home_github_btn, 0, 0)
-        links_grid.addWidget(self._home_wiki_btn, 0, 1)
-        links_grid.addWidget(self._home_reddit_btn, 0, 2)
+        project_grid.addWidget(self._home_github_btn, 0, 0)
+        project_grid.addWidget(self._home_wiki_btn, 0, 1)
+        project_grid.addWidget(self._home_reddit_btn, 0, 2)
+        lay.addLayout(project_grid)
+
+        docs_hint = QLabel(t("app.home_links_docs"))
+        docs_hint.setObjectName("homeLinksHint")
+        docs_hint.setWordWrap(True)
+        self._home_links_docs = docs_hint
+        lay.addWidget(docs_hint)
+
+        docs_grid = QGridLayout()
+        docs_grid.setSpacing(6)
+        docs_grid.setContentsMargins(0, 0, 0, 0)
+        self._home_phials_btn, self._home_phials_title, self._home_phials_sub = (
+            self._make_home_link_card(
+                icon_kind="phials",
+                title_key="app.home_link_phials",
+                subtitle_key="app.home_link_phials_sub",
+                tip_key="app.home_link_phials_tip",
+                on_click=self._open_home_phials,
+            )
+        )
+        self._home_siximon_btn, self._home_siximon_title, self._home_siximon_sub = (
+            self._make_home_link_card(
+                icon_kind="siximon",
+                title_key="app.home_link_siximon",
+                subtitle_key="app.home_link_siximon_sub",
+                tip_key="app.home_link_siximon_tip",
+                on_click=self._open_home_siximon,
+            )
+        )
         self._home_linuxchooser_btn, self._home_linuxchooser_title, self._home_linuxchooser_sub = (
             self._make_home_link_card(
                 icon_kind="linuxchooser",
@@ -2761,10 +3034,12 @@ class RezeptorWindow(QMainWindow):
                 on_click=self._open_home_linuxguides,
             )
         )
-        links_grid.addWidget(self._home_linuxchooser_btn, 1, 0)
-        links_grid.addWidget(self._home_cachyos_btn, 1, 1)
-        links_grid.addWidget(self._home_linuxguides_btn, 1, 2)
-        lay.addLayout(links_grid)
+        docs_grid.addWidget(self._home_phials_btn, 0, 0)
+        docs_grid.addWidget(self._home_siximon_btn, 0, 1)
+        docs_grid.addWidget(self._home_linuxchooser_btn, 1, 0)
+        docs_grid.addWidget(self._home_cachyos_btn, 1, 1)
+        docs_grid.addWidget(self._home_linuxguides_btn, 1, 2)
+        lay.addLayout(docs_grid)
         # No bottom stretch: page height = content; leftover is mainColumn bg.
         return page
 
@@ -2850,6 +3125,8 @@ class RezeptorWindow(QMainWindow):
             "linuxchooser": "compass",
             "cachyos": "linux",
             "linuxguides": "globe",
+            "phials": "github",
+            "siximon": "github",
         }.get(kind, kind)
         accent = theme_tokens(normalize_theme(self._settings.theme))["accent"]
         ic = fa_icon(fa_kind, 14, color=accent)
@@ -2862,6 +3139,8 @@ class RezeptorWindow(QMainWindow):
             "github",
             "wiki",
             "reddit",
+            "phials",
+            "siximon",
             "linuxchooser",
             "cachyos",
             "linuxguides",
@@ -2887,6 +3166,12 @@ class RezeptorWindow(QMainWindow):
 
     def _open_home_linuxguides(self) -> None:
         QDesktopServices.openUrl(QUrl(linuxguides_url()))
+
+    def _open_home_phials(self) -> None:
+        QDesktopServices.openUrl(QUrl(phials_adobe_installers_url()))
+
+    def _open_home_siximon(self) -> None:
+        QDesktopServices.openUrl(QUrl(siximon_lightroom_url()))
 
     def _recipe_stats(self) -> dict[str, int]:
         hidden = set(self._settings.hidden_recipe_ids or [])
@@ -2940,7 +3225,6 @@ class RezeptorWindow(QMainWindow):
         self.name_label.setText(t("app.home_title"))
         self.version_info_btn.setVisible(False)
         self.status_pill.setVisible(False)
-        self.health_chip.setVisible(False)
 
         ver = read_version()
         stats = self._recipe_stats()
@@ -2952,13 +3236,16 @@ class RezeptorWindow(QMainWindow):
         self.tested_on_pill.set_content("", MUTED)
         self.author_pill.set_content("", MUTED)
 
-        # Home: no path/folder row (tagline lives in intro) — kills header dead space.
+        # Home: no path/folder row. F5 tip sits in the header status line.
         self.path_label.clear()
         self.path_label.setVisible(False)
         self.open_path_btn.setVisible(False)
         self.open_path_btn.setEnabled(False)
-        self.status_detail_label.clear()
-        self.status_detail_label.setVisible(False)
+        tip = t("app.home_tip")
+        self._status_detail_base = tip
+        self.status_detail_label.setText(tip)
+        self.status_detail_label.setVisible(True)
+        self._schedule_header_refit()
 
         self._cta_mode = "docs"
         self.primary_btn.setText(t("app.home_cta_docs"))
@@ -3536,13 +3823,10 @@ class RezeptorWindow(QMainWindow):
         repair = recipe_dir / "repair.sh"
         # UNTRUSTED masks INSTALLED|PARTIAL — use install markers so Freigabe
         # still hands off to repair / pending „Jetzt aktualisieren“.
-        installed_ish = info.state in (
-            RecipeState.INSTALLED,
-            RecipeState.PARTIAL,
-        ) or _recipe_has_install_marker(info.meta, rid)
-        # Always pin pending when repair exists so CTA cannot fall back to
-        # clickable „Rezept freigeben“ mid-approve or after rediscover.
-        if repair.is_file():
+        installed_ish = recipe_is_installed_ish(info)
+        # Pin pending only when installed: uninstalled Freigabe must stay on
+        # Installieren, not a fake Update CTA.
+        if repair.is_file() and installed_ish:
             self._pending_repair_rid = rid
         self._assert_recipe_trusted(rid)
         self.raw_log.clear()
@@ -3561,12 +3845,12 @@ class RezeptorWindow(QMainWindow):
             approve_recipe_manifest(recipe_dir, _recipe_manifest_path(recipe_dir))
             self._activity("ok", t("trust.regen_ok") + f" ({rid})")
             # Re-assert after rediscover — hash verify can briefly look untrusted.
-            if repair.is_file():
+            if repair.is_file() and installed_ish:
                 self._pending_repair_rid = rid
             self._assert_recipe_trusted(rid)
             self._apply_discover_outcome(discover_recipes())
             self._assert_recipe_trusted(rid)
-            if repair.is_file():
+            if repair.is_file() and installed_ish:
                 self._pending_repair_rid = rid
             self.refresh_statuses()
             idx = next(
@@ -3594,10 +3878,6 @@ class RezeptorWindow(QMainWindow):
                 handoff_repair = True
                 self._run_async(repair, done_label=t("action.repair"), op="repair")
                 return
-
-            if repair.is_file():
-                self._pending_repair_rid = rid
-                self._activity("info", t("trust.force_repair_followup"))
         except OSError as exc:
             self._activity("error", t("trust.regen_fail") + f": {exc}")
             QMessageBox.critical(self, t("dialog.error"), str(exc))
@@ -3610,13 +3890,8 @@ class RezeptorWindow(QMainWindow):
                 pass
             elif self._busy and self._process is None:
                 self._set_busy(False)
-                # After freigeben without auto-repair: show „Jetzt aktualisieren“
-                # immediately (enabled). Re-apply after busy clear so label sticks.
-                if (
-                    self._pending_repair_rid == rid
-                    and self._selected is not None
-                    and self._selected.rid == rid
-                ):
+                # After freigeben: re-apply CTA (repair if installed, else Installieren).
+                if self._selected is not None and self._selected.rid == rid:
                     self._apply_primary_cta(
                         self._selected,
                         can_launch=False,
@@ -3944,9 +4219,16 @@ class RezeptorWindow(QMainWindow):
 
         order = list(self._settings.recipe_order or [])
         custom_cat_order = list(self._settings.custom_category_order or [])
+        collapsed = set(self._settings.sidebar_collapsed_categories or [])
         selected_rid = self._selected.rid if self._selected else None
         for cat in sort_categories(list(grouped.keys()), custom_cat_order):
-            header = SidebarCategoryHeader(cat, label=category_label(cat))
+            header = SidebarCategoryHeader(
+                cat,
+                label=category_label(cat),
+                expanded=cat not in collapsed,
+            )
+            header.apply_theme(getattr(self, "_theme", "standard"))
+            header.toggled.connect(self._on_category_toggled)
             self.recipe_cards_layout.addWidget(header)
             cat_rows = sort_recipes_in_category(grouped[cat], order)
             side_texts = sidebar_card_texts(
@@ -3969,6 +4251,8 @@ class RezeptorWindow(QMainWindow):
                     recipe_id=info.rid,
                     subtitle=subtitle,
                 )
+                card.category = cat
+                card.setVisible(bool(needle) or cat not in collapsed)
                 card.set_install_state(
                     info.state.value,
                     attention=_sidebar_attention(info),
@@ -3989,6 +4273,25 @@ class RezeptorWindow(QMainWindow):
                 )
                 self._recipe_cards.append((card, info))
         # No addStretch — list height is content-sized in _sync_sidebar_scroll_gap.
+        QTimer.singleShot(0, self._sync_sidebar_scroll_gap)
+
+    def _on_category_toggled(self, cat: str, expanded: bool) -> None:
+        collapsed = [
+            c
+            for c in (self._settings.sidebar_collapsed_categories or [])
+            if c != cat
+        ]
+        if not expanded:
+            collapsed.append(cat)
+        self._settings.sidebar_collapsed_categories = collapsed
+        save_settings(self._settings)
+        needle = ""
+        if hasattr(self, "sidebar_search"):
+            needle = (self.sidebar_search.text() or "").strip()
+        for card, _info in self._recipe_cards:
+            if getattr(card, "category", "") != cat:
+                continue
+            card.setVisible(bool(needle) or expanded)
         QTimer.singleShot(0, self._sync_sidebar_scroll_gap)
         if self._selected is None:
             QTimer.singleShot(
@@ -4163,13 +4466,20 @@ class RezeptorWindow(QMainWindow):
         self._update_version_header(info)
         self._set_path_row(dr, info)
         self._update_workspace_chips(info, dr)
-        self._update_health_chip(info)
         self._update_progress_chip()
         self._remember_last_recipe(info.rid)
 
         checking = _recipe_is_checking(info)
         untrusted = _recipe_is_untrusted(info)
-        pending_repair = self._pending_repair_rid == info.rid
+        if self._pending_repair_rid == info.rid and not recipe_is_installed_ish(info):
+            self._clear_pending_repair(info.rid)
+        pending_repair = pending_repair_overrides_cta(
+            pending_rid=self._pending_repair_rid,
+            recipe_rid=info.rid,
+            has_repair_sh=(Path(info.meta["_dir"]) / "repair.sh").is_file(),
+            checking=checking,
+            installed_ish=recipe_is_installed_ish(info),
+        )
         # After Freigabe/Medizin: keep a short stable line — long trust hints
         # + header refit made the primary CTA appear to “hop”.
         if pending_repair and not checking:
@@ -4515,7 +4825,7 @@ class RezeptorWindow(QMainWindow):
         self.open_path_btn.setVisible(True)
         usable = data_root_browsable(dr)
         tok = theme_tokens(getattr(self, "_theme", None))
-        path_color = tok["muted"]
+        path_color = header_secondary_color(getattr(self, "_theme", None))
         if info is not None and (
             usable
             or info.state in (RecipeState.INSTALLED, RecipeState.PARTIAL)
@@ -4719,13 +5029,10 @@ class RezeptorWindow(QMainWindow):
         hr = header.rect()
         if hr.width() < 80 or hr.height() < 24:
             return
-        # Inside the card border so the chrome stays crisp; radius clip is baked
-        # into the pixmap. Fluent CardWidget paints its own radius (5) — reading it
-        # keeps the mark flush with the real corner instead of the QSS value.
+        # 1px inset so the 1px card border stays crisp. Inner corner of an 8px
+        # rounded rect is 7px — same curve as QFrame#headerCard, not Fluent's 5.
         inner = hr.adjusted(1, 1, -1, -1)
-        card_radius = getattr(header, "borderRadius", _HEADER_CARD_RADIUS)
-        if not isinstance(card_radius, int) or card_radius < 0:
-            card_radius = _HEADER_CARD_RADIUS
+        card_radius = _sync_header_card_radius(header)
         wm.setGeometry(inner)
         src = getattr(self, "_header_watermark_src", None)
         if src is None or src.isNull():
@@ -4808,6 +5115,11 @@ class RezeptorWindow(QMainWindow):
             and not getattr(self, "_sidebar_syncing", False)
         ):
             self._sync_sidebar_scroll_gap()
+        if (
+            obj is getattr(self, "sidebar_search", None)
+            and event.type() == QEvent.Type.Resize
+        ):
+            self._position_search_hint()
         return super().eventFilter(obj, event)
 
     def _action_hint_for(self, info: RecipeInfo) -> str:
@@ -4821,8 +5133,9 @@ class RezeptorWindow(QMainWindow):
             if has_recipe_install_source(pending):
                 return t("status.hint_source_ready")
             return t("status.hint_not_installed")
-        if info.state == RecipeState.INSTALLED and info.rid == "wiso-steuer":
-            return t("status.hint_wiso")
+        if info.state == RecipeState.INSTALLED and is_portable_source(info.meta):
+            key = (info.meta.get("hint_key") or "status.hint_portable").strip()
+            return t(key or "status.hint_portable")
         return ""
 
     def _update_version_header(self, info: RecipeInfo) -> None:
@@ -4907,13 +5220,33 @@ class RezeptorWindow(QMainWindow):
         self.step_label.setToolTip(full)
         if style is not None:
             self.step_label.setStyleSheet(style)
+        self._blank_step_label_during_progress()
+
+    def _set_progress_percent_display(self, pct: int) -> None:
+        """Right-hand percent + accessible name (no left-row Progress — N% copy)."""
+        pct = min(100, max(0, int(pct)))
+        if hasattr(self, "progress_pct_label"):
+            self.progress_pct_label.setVisible(True)
+            self.progress_pct_label.setText(f"{pct}%")
+        name = t("status.progress_pct", pct=str(pct))
+        if hasattr(self, "progress"):
+            self.progress.setAccessibleName(name)
+        if hasattr(self, "progress_pct_label"):
+            self.progress_pct_label.setAccessibleName(name)
+
+    def _blank_step_label_during_progress(self) -> None:
+        """Keep left stretch empty while percent + bar are on the right."""
+        if not hasattr(self, "step_label"):
+            return
+        bar = getattr(self, "progress", None)
+        if getattr(self, "_busy", False) and bar is not None and bar.isVisible():
+            self.step_label.setText("")
 
     def _apply_progress_ui(self, pct: int) -> None:
         """Bar/Label/Chip auf pct setzen (ohne Anchor/Zeitstempel zu ändern)."""
         self.progress.setVisible(True)
-        if hasattr(self, "progress_pct_label"):
-            self.progress_pct_label.setVisible(True)
-            self.progress_pct_label.setText(f"{pct}%")
+        self._set_progress_percent_display(pct)
+        self._blank_step_label_during_progress()
         if self._busy and hasattr(self, "progress_busy"):
             self.progress_busy.start()
         self.progress.setRange(0, 100)
@@ -4978,15 +5311,6 @@ class RezeptorWindow(QMainWindow):
             if target > self._progress_pct:
                 self._progress_pct = target
                 self._apply_progress_ui(target)
-                self._set_step_text(
-                    t("status.progress_pct", pct=str(self._progress_pct)),
-                )
-
-        stalled = elapsed >= 2.5
-        if stalled and self._progress_pct < 100:
-            cur = self.step_label.text()
-            if "…" not in cur and "%" in cur:
-                self._set_step_text(f"{cur} …")
 
     def _feed_line(self, raw: str) -> None:
         for part in raw.splitlines():
@@ -5022,9 +5346,6 @@ class RezeptorWindow(QMainWindow):
                     except ValueError:
                         continue
                     self._note_progress(pct)
-                    self._set_step_text(
-                        t("status.progress_pct", pct=str(self._progress_pct)),
-                    )
                     continue
                 if tag == "warn":
                     msg = msg.replace("AKTION:", "").strip()
@@ -5090,22 +5411,50 @@ class RezeptorWindow(QMainWindow):
         if sb is not None:
             sb.showMessage(text, ms)
 
-    def _activity_fg(self, kind: str) -> str:
-        """Foreground for Schritte rows — always from active theme tokens."""
+    def _activity_idle_fg(self) -> str:
+        """Parchment secondary for done/info — not taupe muted (second brown)."""
+        return header_secondary_color(getattr(self, "_theme", None))
+
+    def _activity_fg(self, kind: str, *, active: bool = False) -> str:
+        """Schritte colors: copper only for the active step; danger stays danger."""
         tok = theme_tokens(getattr(self, "_theme", None))
-        return {
-            "ok": tok["tested"],
-            "error": tok["danger"],
-            "warn": tok["experimental"],
-            "step": tok["accent"],
-            "info": tok["muted"],
-            "log": tok["muted"],
-        }.get(kind, tok["fg"])
+        if kind == "error":
+            return tok["danger"]
+        if kind == "warn":
+            return tok["experimental"]
+        if kind == "step" and active:
+            return tok["accent"]
+        return self._activity_idle_fg()
+
+    def _recolor_activity_kind(self, kind: str, *, active: bool) -> None:
+        if not hasattr(self, "activity_list"):
+            return
+        fg = self._activity_fg(kind, active=active)
+        for i in range(self.activity_list.count()):
+            item = self.activity_list.item(i)
+            if item is None:
+                continue
+            if item.data(Qt.ItemDataRole.UserRole) != kind:
+                continue
+            item.setForeground(QColor(fg))
+            icon = fa_icon(kind, color=fg)
+            if icon is not None and item.flags() != Qt.ItemFlag.NoItemFlags:
+                item.setIcon(icon)
 
     def _restyle_activity_list(self) -> None:
         """Re-tint existing Schritte rows after a theme switch."""
         if not hasattr(self, "activity_list"):
             return
+        last_kind = ""
+        key = getattr(self, "_last_activity_key", None)
+        if isinstance(key, tuple) and key:
+            last_kind = str(key[0] or "")
+        last_step_idx = -1
+        if getattr(self, "_busy", False) and last_kind == "step":
+            for i in range(self.activity_list.count()):
+                item = self.activity_list.item(i)
+                if item is not None and item.data(Qt.ItemDataRole.UserRole) == "step":
+                    last_step_idx = i
         for i in range(self.activity_list.count()):
             item = self.activity_list.item(i)
             if item is None:
@@ -5113,10 +5462,10 @@ class RezeptorWindow(QMainWindow):
             kind = item.data(Qt.ItemDataRole.UserRole)
             if not isinstance(kind, str) or not kind:
                 kind = "info"
-            fg = self._activity_fg(kind)
+            fg = self._activity_fg(kind, active=(kind == "step" and i == last_step_idx))
             item.setForeground(QColor(fg))
             icon = fa_icon(kind, color=fg)
-            if icon is not None and item.flags() != Qt.ItemFlag.NoItemFlags:
+            if icon is not None:
                 item.setIcon(icon)
 
     def _show_activity_empty_hint(self) -> None:
@@ -5125,7 +5474,11 @@ class RezeptorWindow(QMainWindow):
         item = QListWidgetItem(t("progress.empty_hint"))
         item.setFlags(Qt.ItemFlag.NoItemFlags)
         item.setData(Qt.ItemDataRole.UserRole, "info")
-        item.setForeground(QColor(self._activity_fg("info")))
+        fg = self._activity_fg("info")
+        item.setForeground(QColor(fg))
+        icon = fa_icon("info", color=fg)
+        if icon is not None:
+            item.setIcon(icon)
         self.activity_list.addItem(item)
         self._activity_empty_shown = True
         self._fit_progress_panels()
@@ -5149,7 +5502,9 @@ class RezeptorWindow(QMainWindow):
             return
         if kind in ("step", "ok", "warn", "error"):
             self._last_activity_key = key
-        fg = self._activity_fg(kind)
+        if kind in ("step", "ok"):
+            self._recolor_activity_kind("step", active=False)
+        fg = self._activity_fg(kind, active=(kind == "step"))
         item = QListWidgetItem(text)
         item.setToolTip(text)
         item.setData(Qt.ItemDataRole.UserRole, kind)
@@ -5173,7 +5528,8 @@ class RezeptorWindow(QMainWindow):
         # Row hints settle after polish — refit once so the last step cannot bleed.
         QTimer.singleShot(0, self._fit_progress_panels)
         if kind in ("step", "ok", "warn", "error"):
-            style = f"color: {fg}; font-weight: 600;"
+            weight = "600" if kind in ("step", "warn", "error") else "500"
+            style = f"color: {fg}; font-weight: {weight};"
             self._set_step_text(text, style=style)
         if kind == "info":
             self._flash_status(text)
@@ -6220,10 +6576,12 @@ class RezeptorWindow(QMainWindow):
                 "background: transparent;"
             )
         if hasattr(self, "path_label"):
-            self._style_secondary_label(self.path_label, tok["muted"], size_px=11)
+            self._style_secondary_label(
+                self.path_label, header_secondary_color(tid), size_px=11
+            )
         if hasattr(self, "status_detail_label"):
             self._style_secondary_label(
-                self.status_detail_label, tok["muted"], size_px=12
+                self.status_detail_label, header_secondary_color(tid), size_px=12
             )
         for pill in (
             getattr(self, "status_pill", None),
@@ -6250,6 +6608,11 @@ class RezeptorWindow(QMainWindow):
         for card, _info in getattr(self, "_recipe_cards", []) or []:
             if hasattr(card, "apply_theme"):
                 card.apply_theme(tid)
+        host = getattr(self, "recipe_cards_host", None)
+        if host is not None:
+            for header in host.findChildren(SidebarCategoryHeader):
+                header.apply_theme(tid)
+        self._sync_sidebar_search_hint()
         self._sync_theme_toggle()
         self._refresh_home_link_icons()
         self._refresh_home_activity()
@@ -6259,6 +6622,8 @@ class RezeptorWindow(QMainWindow):
         # Watermark alpha depends on theme contrast — rebuild if present.
         if getattr(self, "_header_watermark_src", None) is not None:
             self._layout_header_watermark()
+        if getattr(self, "_menu_bar_built", False):
+            self._build_menus()
 
     def retranslate_ui(self) -> None:
         self._build_menus()
@@ -6276,37 +6641,28 @@ class RezeptorWindow(QMainWindow):
             self._home_btn.setToolTip(t("menu.home"))
         if hasattr(self, "sidebar_search"):
             self.sidebar_search.setPlaceholderText(t("app.sidebar_search"))
+            self.sidebar_search.setAccessibleName(t("app.shortcut_search"))
+            self._sync_sidebar_search_hint()
         if hasattr(self, "_home_intro"):
             self._home_intro.setText(t("app.home_intro"))
-        if hasattr(self, "_home_tip"):
-            self._home_tip.setText(t("app.home_tip"))
-        if hasattr(self, "_home_activity_title"):
-            self._home_activity_title.setText(t("home.activity_title"))
-        self._refresh_home_activity()
+        if self._selected is None and hasattr(self, "status_detail_label"):
+            tip = t("app.home_tip")
+            self._status_detail_base = tip
+            self.status_detail_label.setText(tip)
         if hasattr(self, "_home_links_hint"):
             self._home_links_hint.setText(t("app.home_links_hint"))
-        if hasattr(self, "_home_github_btn"):
-            self._home_github_btn.setToolTip(t("app.home_link_github_tip"))
-            self._home_github_btn.setAccessibleName(t("app.home_link_github"))
-        if hasattr(self, "_home_github_title"):
-            self._home_github_title.setText(t("app.home_link_github"))
-        if hasattr(self, "_home_github_sub"):
-            self._home_github_sub.setText(t("app.home_link_github_sub"))
-        if hasattr(self, "_home_wiki_btn"):
-            self._home_wiki_btn.setToolTip(t("app.home_link_wiki_tip"))
-            self._home_wiki_btn.setAccessibleName(t("app.home_link_wiki"))
-        if hasattr(self, "_home_wiki_title"):
-            self._home_wiki_title.setText(t("app.home_link_wiki"))
-        if hasattr(self, "_home_wiki_sub"):
-            self._home_wiki_sub.setText(t("app.home_link_wiki_sub"))
-        if hasattr(self, "_home_reddit_btn"):
-            self._home_reddit_btn.setToolTip(t("app.home_link_reddit_tip"))
-            self._home_reddit_btn.setAccessibleName(t("app.home_link_reddit"))
-        if hasattr(self, "_home_reddit_title"):
-            self._home_reddit_title.setText(t("app.home_link_reddit"))
-        if hasattr(self, "_home_reddit_sub"):
-            self._home_reddit_sub.setText(t("app.home_link_reddit_sub"))
-        for prefix in ("linuxchooser", "cachyos", "linuxguides"):
+        if hasattr(self, "_home_links_docs"):
+            self._home_links_docs.setText(t("app.home_links_docs"))
+        for prefix in (
+            "github",
+            "wiki",
+            "reddit",
+            "phials",
+            "siximon",
+            "linuxchooser",
+            "cachyos",
+            "linuxguides",
+        ):
             btn = getattr(self, f"_home_{prefix}_btn", None)
             title = getattr(self, f"_home_{prefix}_title", None)
             sub = getattr(self, f"_home_{prefix}_sub", None)

@@ -18,6 +18,8 @@ assert version_guarantee_mismatch('22.0.0.35', '22.0.0.35') is False
 assert version_guarantee_mismatch('Halo CE', 'Halo CE (Build 9)') is False
 assert version_guarantee_mismatch('22.0.0.35', '22.1.1.138') is True
 assert version_guarantee_mismatch('22.0', '22.0.0.35') is True
+assert version_guarantee_mismatch('1.0.0.1', '1,0,0,1') is False
+assert version_guarantee_mismatch('1,0,0,1', '1.0.0.1') is False
 print('ok')
 "
     [ "$status" -eq 0 ]

@@ -166,7 +166,9 @@ Still open (not a code hole in this cut):
 
 ## Open work
 
-- Latest released: **v1.1.50**. Prototype MEGA public share is live (`core/recipe-assets.lock` folder + per-file keys); Deutsch-Patch and TexMod packs fetch with SHA-256.
+- Latest released: **v1.1.51** (VERSION bump for Medizin CTA, asset cache purge/ZIP cleanup, PE version hint). Prototype MEGA public share is live (`core/recipe-assets.lock` folder + per-file keys); Deutsch-Patch and TexMod packs fetch with SHA-256.
+- Source dialog: Prototype PE `ProductVersion` is the Windows tuple `1,0,0,1`. Display and compare as `1.0.0.1` (`version_detect.normalize_version_string`). Never locale-format version strings.
+- Live install 2026-09-20 (`~/.local/share/wine-software/prototype/`): prefix + desktop + Mod-Bundle 1.5.0 (de, venom, parkour on). No `ReShade32.dll` / `init.lua`. AnkerGames parent dump untouched; `Prototype/` is the link target and holds the overlay. ZIP cache gone. `deu-overlay` cache missing after uninstall-purge + reinstall (German already on the dump, seed skipped). Newest install/launch logs have no MEGA fetch line.
 - **Photoshop stalls on exit now and then** (once in four live runs): window gone,
   `Photoshop.exe` alive, prefs never written. The ladder therefore sends a soft
   Wine `taskkill` (WM_CLOSE) before forcing. Cause unknown — if the reporter
@@ -227,15 +229,17 @@ Still open (not a code hole in this cut):
   `art/startup_fig.p3d`, nicht dieses Lua.
   **Assets:** kleines Overlay (PrototypeFix, ASI, p3d, Trainer-EXE) liegt
   in Git. Deutsch-Patch-ZIP (~942 MB) und TexMod-`.tpf` nicht in Git —
-  Hashes in `assets/mod-bundle/remote.yml`. MEGA-Basis:
-  `core/recipe-assets.lock` / Settings `mega_assets_base_url`. Der
-  Maintainer-Ordner `https://mega.nz/fm/…` ist File-Manager, **kein**
-  öffentlicher Share. Bis ein `/folder/` oder `/file/` + Key existiert:
-  Download nur aus `~/Downloads` oder Cache. Publish:
-  `make recipe-assets-publish` (mega-cmd Login).
-  Neu: Deutsch-Patch Bollwurf v1.0–1.3 als lose p3d (Cache
+  Hashes in `assets/mod-bundle/remote.yml`. Fetch ist generisch
+  (`recipe_assets::stage_pack`): Ziel `cache/<recipe-id>/`, SHA-256, Archiv
+  nach Erfolg weg (Overlay bleibt). `~/Downloads` nur optionales Einmal-Seed.
+  Uninstall (`purge_recipe_data`) löscht `cache/<id>/` und
+  `cache/<id>-mod-bundle/` (deu-overlay, tpf). Ohne das bleibt Overlay und
+  Repair sagt „nichts zu aktualisieren“. AnkerGames-Dump bleibt.
+  MEGA-Basis: `core/recipe-assets.lock` / Settings `mega_assets_base_url`.
+  `/fm/` ist File-Manager, kein Share. Neu: Deutsch-Patch Bollwurf v1.0–1.3
+  als lose p3d (Cache
   `~/.local/share/wine-software/cache/prototype-mod-bundle/deu-overlay/`,
-  ~1,2 GB, nicht Git; Seed aus `~/Downloads/Prototype_DeuPatchBEP.zip`).
+  ~1,2 GB, nicht Git).
   Default Sprache DE: Bollwurf-Dateien nach `textbible_german.p3d` +
   `fe_textbible` id `german` + `protostart.gfx` „DRUECKEN SIE ENTER“ +
   `FE_Language=68`. Dump hat nur EN/FR/IT/ES in `art.rcf`, Audio nur english.

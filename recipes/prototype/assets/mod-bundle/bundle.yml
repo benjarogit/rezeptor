@@ -140,11 +140,12 @@ optional_payload:
   cache_rel: cache/prototype-mod-bundle
   remote: remote.yml
   note: >
-    Deutsch-Patch overlay (~1.2GB loose p3d) and TexMod .tpf (Allagga, P2 Style,
-    Venom, Anti-Venom) stay in ~/.local/share/wine-software/cache/prototype-mod-bundle/.
-    SHA-256 lives in remote.yml. Seed from ~/Downloads/Prototype_DeuPatchBEP.zip,
-    the cache copy, or a public MEGA share in remote.yml (never /fm/).
-    Default Starten does not inject TexMod.
+    Deutsch-Patch overlay (~1.2GB loose p3d) stays in
+    ~/.local/share/wine-software/cache/prototype-mod-bundle/deu-overlay/.
+    Archives fetch to cache/prototype/ (or a leftover ~/Downloads seed once),
+    SHA-256 checked, then the ZIP is deleted. TexMod .tpf stay as loose cache
+    files. Public MEGA share in remote.yml (never /fm/). Default Starten
+    does not inject TexMod.
 
 critical:
   - prototype_fix.asi

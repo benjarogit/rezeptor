@@ -30,7 +30,7 @@ Thema: Fluent Dark + Kupfer (`#B87333`) — siehe [Marke](BRAND.md).
 
 Button **Medizin** (Verbandskasten-Icon) neben **Mehr** — nicht im Mehr-Menü.
 
-Dauerhafte Schalter pro Rezept (`options.env`). Nach dem Umschalten erscheint oft der Primary-Button **„Jetzt reparieren“** — einmal tippen, sonst bleiben die alten Einstellungen aktiv.
+Dauerhafte Schalter pro Rezept (`options.env`). Nicht installiert: die Wahl gilt beim nächsten Installieren. Installiert und Overlay noch alt: **Reparieren** zum Anwenden.
 
 ### Photoshop (CC 2021)
 
@@ -56,6 +56,19 @@ Standard jeweils **aus**. Details auch in den Tipps im Medizin-Dialog.
 | Trainer / Mods / Intro kürzen | BYOS — siehe Rezept-Infotext. |
 
 Nach Preset-/Grafikwechsel: einmal **Reparieren** oder **Starten**, damit `Engine.ini` / Halo-*UserSettings greifen.
+
+### Prototype
+
+| Option | Wirkung |
+|--------|---------|
+| **Mod-Bundle** | Overlay 1.5.0: PrototypeFix, No-Intro, Desktop-Pin, Sprint-Fix, Parkour (Default an), Deutsch-Patch, Standard-Skin. Ohne ReShade (Pos1 tot). Continue-Lua aus. Trainer liegt unter `rezeptor-trainer/` und `trainer/`, startet nicht mit (Button wenn das Spiel läuft). Allagga/P2/Venom-`.tpf` sind TexMod und werden nicht injiziert. Standard an. |
+| **Spielsprache** | Choice Deutsch (Default: Patch-Dateien + `FE_Language=68`) / Standard / Französisch / Italienisch / Spanisch. Kein In-Game-Settings, nicht die Rezeptor-UI-Sprache. |
+| **Skin** | Choice Standard (Default, Vanilla) / Venom / Anti-Venom. Gleicher Slot, nicht gleichzeitig. Dann Reparieren oder Starten. |
+| **Parkour** | Default an. Nur `art/startup_fig.p3d` (Balanced). Kein Lua — Continue bleibt. |
+| **100%-Spielstand laden** | Default aus. Schreibt Saves nach `Documents/Prototype` im Prefix; Backup vorher. |
+| **PS3-Tasten** | Default aus. Xbox-Prompts → PS3. |
+
+Nach dem Umschalten: **Reparieren**, dann **Starten**. Git-Launcher: `install.sh` / `repair.sh` / `launch.sh` ohne GUI-Neustart; `recipe.yml` / `info.*` brauchen einen Launcher-Neustart.
 
 ## Status & Validierung
 
@@ -85,7 +98,7 @@ Typische Optionen:
 | Aktion | Wirkung |
 |--------|---------|
 | **Ausblenden** | Verschwindet aus der Liste; Daten bleiben |
-| **Deinstallieren** | `uninstall.sh` → `purge_recipe_data` (Desktop + data_root) |
+| **Deinstallieren** | `uninstall.sh` → `purge_recipe_data` (Desktop + data_root + Asset-Cache) |
 
 Details: [Deinstallation](UNINSTALL.md) · [Katalog](CATALOG.md)
 

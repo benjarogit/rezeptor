@@ -20,7 +20,7 @@ from diagnostics import log_call_site, log_line
 from i18n import t
 from ui_dialogs import ask_yes_no
 from log_context import E_LAUNCH_NO_PROCESS, E_SCRIPT_FAILED, LogEvent
-from recipe_discovery import RecipeState
+from recipe_discovery import RecipeState, is_portable_source
 from settings import (
     clear_recipe_install_env,
     has_recipe_install_source,
@@ -40,6 +40,36 @@ from ui_window import apply_tool_window
 
 if TYPE_CHECKING:
     from PyQt6.QtWidgets import QMainWindow
+
+# 2.5s polls. ``launch_wait: long`` covers fonts/stubs before wine + slow splash.
+LAUNCH_ALIVE_INTERVAL_MS = 2500
+LAUNCH_ALIVE_ATTEMPTS_DEFAULT = 7
+LAUNCH_ALIVE_ATTEMPTS_LONG = 100  # ~4 min @ 2.5s (same budget as Steam wait)
+
+
+def launch_alive_max_attempts(
+    meta: dict[str, str] | None, log_tail: str = ""
+) -> int:
+    """How many 2.5s polls before the GUI reports 'not alive'."""
+    wait = ((meta or {}).get("launch_wait") or "").strip().lower()
+    tail = log_tail or ""
+    if "warte auf" in tail and "unter Steam" in tail:
+        return LAUNCH_ALIVE_ATTEMPTS_LONG
+    if wait == "long":
+        return LAUNCH_ALIVE_ATTEMPTS_LONG
+    return LAUNCH_ALIVE_ATTEMPTS_DEFAULT
+
+
+def launch_tips_key_for_meta(meta: dict[str, str] | None) -> str:
+    """Reuse existing tip strings — long wait shares the portable first-start hint."""
+    if meta:
+        custom = (meta.get("launch_tips_key") or "").strip()
+        if custom:
+            return custom
+        wait = (meta.get("launch_wait") or "").strip().lower()
+        if wait == "long" or is_portable_source(meta):
+            return "dialog.launch_tips_portable"
+    return "dialog.launch_tips_default"
 
 
 class RecipeProcessOps:
@@ -80,8 +110,8 @@ class RecipeProcessOps:
             else:
                 self._w._busy_rid = ""
             self._w.progress.setVisible(True)
-            if hasattr(self._w, "progress_pct_label"):
-                self._w.progress_pct_label.setVisible(True)
+            self._w._set_progress_percent_display(self._w._progress_pct)
+            self._w._blank_step_label_during_progress()
             self._w._progress_changed_at = time.monotonic()
             if hasattr(self._w, "progress_busy"):
                 self._w.progress_busy.start()
@@ -117,9 +147,7 @@ class RecipeProcessOps:
             self._w.progress_busy.stop()
         self._w.progress.setRange(0, 100)
         self._w.progress.setValue(100)
-        if hasattr(self._w, "progress_pct_label"):
-            self._w.progress_pct_label.setText("100%")
-            self._w.progress_pct_label.setVisible(True)
+        self._w._set_progress_percent_display(100)
         self._w._update_progress_chip()
         self._w._set_step_text(t("status.done"))
         self._w.action_refresh.setEnabled(True)
@@ -224,10 +252,9 @@ class RecipeProcessOps:
         self._w._progress_changed_at = time.monotonic()
         self._w.progress.setValue(0)
         self._w.progress.setRange(0, 100)
-        self._w.progress_pct_label.setText("0%")
-        self._w.progress_pct_label.setVisible(True)
-        self._w.progress_busy.start()
         self._w.progress.setVisible(True)
+        self._w._set_progress_percent_display(0)
+        self._w.progress_busy.start()
         self._w._switch_to_progress_tab()
         self._w._set_step_text(t("status.op_starting"))
         self._w.status_detail_label.setText(t("status.busy"))
@@ -736,10 +763,29 @@ class RecipeProcessOps:
             on_success=_after_ok,
         )
 
+    def _recipe_meta(self, rid: str) -> dict[str, str]:
+        if self._w._selected and self._w._selected.rid == rid:
+            return self._w._selected.meta
+        for info in getattr(self._w, "recipes", []) or []:
+            if getattr(info, "rid", "") == rid:
+                return getattr(info, "meta", {}) or {}
+        return {}
+
+    def _meta_message_key(self, rid: str, field: str, portable_default: str, fallback: str) -> str:
+        meta = self._recipe_meta(rid)
+        custom = (meta.get(field) or "").strip()
+        if custom:
+            return custom
+        if is_portable_source(meta):
+            return portable_default
+        return fallback
+
     def _repair_message(self, rid: str) -> str:
-        if rid == "wiso-steuer":
-            return t("dialog.repair_wiso")
-        return t("dialog.repair_default")
+        return t(
+            self._meta_message_key(
+                rid, "repair_message_key", "dialog.repair_portable", "dialog.repair_default"
+            )
+        )
 
     def _record_home_activity(self, op: str, rid: str, *, ok: bool) -> None:
         """Persist completed recipe ops for the home-page history (not launch/kill)."""
@@ -765,9 +811,13 @@ class RecipeProcessOps:
 
     def _uninstall_confirm_message(self, rid: str, name: str) -> str:
         base = t("dialog.uninstall_confirm", name=name)
-        if rid == "wiso-steuer":
-            return f"{base}\n\n{t('dialog.uninstall_backup_wiso')}"
-        return f"{base}\n\n{t('dialog.uninstall_backup_hint')}"
+        key = self._meta_message_key(
+            rid,
+            "uninstall_backup_key",
+            "dialog.uninstall_backup_portable",
+            "dialog.uninstall_backup_hint",
+        )
+        return f"{base}\n\n{t(key)}"
 
     def _spawn_detached(self, cmd: list[str], env: dict[str, str]) -> Path:
         rid = env.get("RECIPE_ID", "app")
@@ -851,18 +901,8 @@ class RecipeProcessOps:
             self._w._launch_alive_reported = True
             self._w._running_prev[rid] = True
             return
-        # Photoshop/Premiere/Lightroom: Launch macht Prefs/Fonts vor wine — erster Start oft >20s.
-        # Halo via Steam Non-Steam: wait for client + proton/shaders (log line marks wait).
-        if rid == "halo-campaign-evolved" and "warte auf Halo unter Steam" in log_tail:
-            max_attempts = 100  # ~4 min @ 2.5s
-        elif rid.startswith("photoshop") or rid in (
-            "premiere",
-            "lightroom-classic",
-            "halo-campaign-evolved",
-        ):
-            max_attempts = 35
-        else:
-            max_attempts = 7
+        # Long wait: recipe.yml launch_wait, or Steam client wait (log line).
+        max_attempts = launch_alive_max_attempts(meta, log_tail)
         if (
             "Steam-Client abgestürzt" in log_tail
             or "Steam ist nicht hochgekommen" in log_tail
@@ -871,16 +911,12 @@ class RecipeProcessOps:
             max_attempts = min(max_attempts, attempt)
         if attempt < max_attempts:
             QTimer.singleShot(
-                2500,
+                LAUNCH_ALIVE_INTERVAL_MS,
                 lambda: self._check_launch_alive(rid, log_path, attempt + 1),
             )
             return
         name = self._w._selected.meta.get("name", rid) if self._w._selected else rid
-        tips = (
-            t("dialog.launch_tips_wiso")
-            if rid == "wiso-steuer"
-            else t("dialog.launch_tips_default")
-        )
+        tips = t(launch_tips_key_for_meta(meta))
         QMessageBox.warning(
             self._w,
             t("status.app_not_running"),
@@ -914,9 +950,10 @@ class RecipeProcessOps:
             ) != QMessageBox.StandardButton.Yes:
                 return
         env = self._w._base_env()
-        if self._w._selected and self._w._selected.rid == "wiso-steuer":
-            env.pop("WINE_DISABLE_WOW64", None)
         meta = self._w._selected.meta
+        wow = (meta.get("disable_wow64") or "").strip().lower()
+        if wow in ("false", "0", "no"):
+            env.pop("WINE_DISABLE_WOW64", None)
         launch = rd / "launch.sh"
         if not launch.is_file():
             QMessageBox.warning(self._w, t("dialog.missing"), t("dialog.no_launch"))
@@ -936,7 +973,8 @@ class RecipeProcessOps:
         self._w._activity("info", t("status.window_soon", name=name))
         if self._L.launch_process_patterns(rid, meta):
             QTimer.singleShot(
-                2500, lambda: self._check_launch_alive(rid, log_path, 0)
+                LAUNCH_ALIVE_INTERVAL_MS,
+                lambda: self._check_launch_alive(rid, log_path, 0),
             )
 
     def run_validate(self) -> None:
@@ -989,6 +1027,7 @@ class RecipeProcessOps:
         recipe_dir = rd
 
         def _after_uninstall() -> None:
+            self._w._clear_pending_repair(rid)
             # Purge already removes shortcuts; re-run in GUI env (correct HOME/XDG).
             if self._w._remove_desktop_shortcuts(recipe_dir):
                 self._w._activity("ok", t("dialog.shortcuts_removed"))

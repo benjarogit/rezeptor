@@ -139,13 +139,27 @@ def source_hints_from_meta(meta: dict[str, str]) -> list[str]:
     return [p.strip() for p in raw.replace(";", ",").split(",") if p.strip()]
 
 
-def is_adobe_offline_recipe(rid: str) -> bool:
-    """Recipes that use Adobe Set-up.exe + packages/ (folder or ISO)."""
-    return rid in (
-        "photoshop",
-        "photoshop-m0nkrus",
-        "premiere",
-        "lightroom-classic",
+def is_adobe_offline_recipe(
+    rid: str = "", meta: dict[str, str] | None = None
+) -> bool:
+    """True when recipe.yml sets installer_engine: adobe (or install_type adobe_offline)."""
+    del rid
+    if not meta:
+        return False
+    engine = (meta.get("installer_engine") or "").strip().lower()
+    if engine == "adobe":
+        return True
+    return (meta.get("install_type") or "").strip().lower() == "adobe_offline"
+
+
+def is_portable_source(meta: dict[str, str] | None) -> bool:
+    """User-kept portable tree (repair/uninstall copy hints)."""
+    if not meta:
+        return False
+    return (meta.get("portable_source") or "").strip().lower() in (
+        "true",
+        "1",
+        "yes",
     )
 
 
@@ -167,11 +181,9 @@ def sidebar_label_for_meta(meta: dict[str, str], rid: str) -> str:
 
 
 def _short_product_title(rid: str, meta: dict[str, str]) -> str:
-    rid_l = rid.lower()
-    if "photoshop" in rid_l:
-        return "Photoshop"
-    if "premiere" in rid_l:
-        return "Premiere"
+    custom = (meta.get("sidebar_label") or "").strip()
+    if custom:
+        return custom
     name = (meta.get("name") or rid).strip()
     if len(name) > 22:
         return name[:20].rstrip() + "…"

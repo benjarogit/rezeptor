@@ -22,6 +22,7 @@ prefix: "{data_root}/prefix"
 runtime: proton-ge
 proton_ge_tag: GE-Proton11-3
 install_type: installer_offline
+installer_engine: adobe
 source_kind: folder
 source_label: "Ordner mit Adobe Offline-Installer (Set-up.exe + packages/)"
 target_default: "~/.local/share/wine-software/photoshop"

@@ -40,9 +40,9 @@ from trainer_deploy import (
     deploy_trainer_source,
     installed_trainer_exe,
 )
-from ui_fluent import FLUENT_AVAILABLE, RoundMenu
+from ui_fluent import FLUENT_AVAILABLE, ComboBox as FluentComboBox, RoundMenu
 from ui_icons import fa_icon
-from ui_rezeptor import LimitedComboBox, SegmentTabBar
+from ui_rezeptor import SegmentTabBar
 from ui_source import pick_directory, pick_open_file
 from ui_styles import COLOR_PARCHMENT, MUTED, style_status_label
 from ui_window import mark_force_close, mark_user_dismiss
@@ -69,10 +69,27 @@ _REPAIR_AFTER = frozenset(
         "HALO_MOD_SKULLS_UNLOCKED",
         "HALO_MOD_WEAPON_SLOTS_4",
         "HALO_MOD_THIRD_PERSON",
+        "PROTOTYPE_LANGUAGE",
+        "PROTOTYPE_SKIN",
     }
 )
 
 _GROUP_ORDER = ("runtime", "graphics", "mods")
+
+
+def medizin_save_followup(
+    *, installed: bool, needs_overlay_apply: bool
+) -> tuple[str, str, bool]:
+    """Locale key, status kind, whether Primary should switch to repair.
+
+    Uninstalled: options.env is enough; the next install reads it.
+    Installed + overlay-affecting option: repair applies the new values.
+    """
+    if not needs_overlay_apply:
+        return "medizin.saved_ok", "ok", False
+    if installed:
+        return "medizin.apply_repair_hint", "warn", True
+    return "medizin.apply_install_hint", "ok", False
 
 
 def option_group(opt: RecipeOption) -> str:
@@ -113,6 +130,8 @@ class MedizinDialog(QDialog):
         options: list[RecipeOption],
         data_root: Path,
         parent: QWidget | None = None,
+        *,
+        installed: bool = False,
     ) -> None:
         super().__init__(parent)
         self.setWindowTitle(t("medizin.dialog_title"))
@@ -120,9 +139,11 @@ class MedizinDialog(QDialog):
         self.setMaximumWidth(580)
         self._data_root = data_root
         self._options = options
+        self._installed = installed
         self._needs_repair_hint = False
+        self._needs_install_hint = False
         self._boxes: list[tuple[RecipeOption, QCheckBox]] = []
-        self._combos: list[tuple[RecipeOption, QComboBox]] = []
+        self._combos: list[tuple[RecipeOption, QComboBox | object]] = []
         self._trainer_status: QLabel | None = None
 
         lay = QVBoxLayout(self)
@@ -234,10 +255,12 @@ class MedizinDialog(QDialog):
                 title = QLabel(opt.label_for(locale))
                 title.setWordWrap(True)
                 block.addWidget(title)
-                combo = LimitedComboBox(self, max_visible=8)
+                combo = self._make_choice_combo(opt.label_for(locale))
                 for cid, lab in self._choice_items(opt, locale):
-                    combo.addItem(lab, cid)
-                current = str(values.get(opt.id, opt.default))
+                    self._combo_add_item(combo, lab, cid)
+                current = self._canonical_choice(
+                    opt, str(values.get(opt.id, opt.default))
+                )
                 idx = combo.findData(current)
                 if idx < 0 and combo.count():
                     idx = 0
@@ -313,7 +336,65 @@ class MedizinDialog(QDialog):
             out.append((ch.id, ch.label_for(locale)))
         return out
 
-    def _on_choice(self, opt: RecipeOption, combo: QComboBox) -> None:
+    def _make_choice_combo(self, accessible_name: str) -> QComboBox | object:
+        """Fluent ComboBox when available: dark surface, menu below the field.
+
+        Fallback is a plain QComboBox (not LimitedComboBox) so the native
+        popup does not glue to the closed field. Labels stay short; help
+        lives under the field.
+        """
+        if FLUENT_AVAILABLE and FluentComboBox is not None:
+            combo = FluentComboBox(self)
+            combo.setObjectName("medizinCombo")
+            combo.setMaxVisibleItems(8)
+            combo.setSizePolicy(
+                QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+            )
+            combo.setMinimumWidth(200)
+            combo.setMinimumHeight(32)
+            combo.setAccessibleName(accessible_name or t("medizin.choice_combo"))
+            return combo
+        combo = QComboBox(self)
+        combo.setObjectName("medizinCombo")
+        combo.setMaxVisibleItems(8)
+        combo.setSizeAdjustPolicy(
+            QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
+        combo.setMinimumContentsLength(8)
+        combo.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed
+        )
+        combo.setAccessibleName(accessible_name or t("medizin.choice_combo"))
+        return combo
+
+    @staticmethod
+    def _combo_add_item(combo: QComboBox | object, label: str, value: str) -> None:
+        if isinstance(combo, QComboBox):
+            combo.addItem(label, value)
+            return
+        combo.addItem(label, userData=value)  # type: ignore[union-attr]
+
+    @staticmethod
+    def _canonical_choice(opt: RecipeOption, raw: str) -> str:
+        """Map leftover vanilla aliases onto a ``standard`` choice id."""
+        value = (raw or "").strip()
+        ids = {c.id for c in opt.choices}
+        if value in ids:
+            return value
+        if value.lower() in {
+            "en",
+            "enu",
+            "english",
+            "off",
+            "vanilla",
+            "none",
+            "0",
+            "false",
+        } and "standard" in ids:
+            return "standard"
+        return value
+
+    def _on_choice(self, opt: RecipeOption, combo: QComboBox | object) -> None:
         val = combo.currentData()
         if val is None:
             return
@@ -325,11 +406,7 @@ class MedizinDialog(QDialog):
                 "error",
             )
             return
-        if opt.env in _REPAIR_AFTER:
-            self._needs_repair_hint = True
-            self._set_status(t("medizin.apply_repair_hint"), "warn")
-        else:
-            self._set_status(t("medizin.saved_ok"), "ok")
+        self._apply_save_followup(opt.env in _REPAIR_AFTER)
 
     def _make_pick_button(self, opt: RecipeOption) -> QToolButton:
         btn = QToolButton(self)
@@ -451,15 +528,26 @@ class MedizinDialog(QDialog):
                 "error",
             )
             return
-        if opt.env in _REPAIR_AFTER:
+        self._apply_save_followup(opt.env in _REPAIR_AFTER)
+
+    def _apply_save_followup(self, needs_overlay_apply: bool) -> None:
+        key, kind, pending_repair = medizin_save_followup(
+            installed=self._installed,
+            needs_overlay_apply=needs_overlay_apply,
+        )
+        if pending_repair:
             self._needs_repair_hint = True
-            self._set_status(t("medizin.apply_repair_hint"), "warn")
-        else:
-            self._set_status(t("medizin.saved_ok"), "ok")
+        elif key == "medizin.apply_install_hint":
+            self._needs_install_hint = True
+        self._set_status(t(key), kind)
 
     @property
     def needs_repair_hint(self) -> bool:
         return self._needs_repair_hint
+
+    @property
+    def needs_install_hint(self) -> bool:
+        return self._needs_install_hint
 
     def accept(self) -> None:
         mark_user_dismiss(self)

@@ -48,7 +48,7 @@ Updates go through `scripts/rezeptor-update.sh` (not a second `core/update.sh`).
 | Function | Role |
 |----------|------|
 | `recipe_hooks::load` | Load profile |
-| `recipe_hooks::purge_recipe_data` | Desktop + chosen + canonical `data_root` |
+| `recipe_hooks::purge_recipe_data` | Desktop + chosen + canonical `data_root` + asset cache `cache/<id>/` / `cache/<id>-mod-bundle/` |
 | `recipe_hooks::force_prefix` | `WINEPREFIX` / `WINE_PREFIX` = `$DATA_ROOT/prefix` |
 | `recipe_hooks::wine_wrappers` | Shell functions `wine` / `winetricks` / … → Proton |
 | `recipe_hooks::runtime_init` | `wine_runtime::reset; init; export_env` |
@@ -248,6 +248,7 @@ Short hooks: `output::progress_begin` / `tick` / `done`. See [Log protocol](LOG-
 | File | API (excerpt) |
 |------|----------------|
 | `recipe-vcrun.sh` | `recipe_vcrun::ensure` — MS vc_redist |
+| `recipe-assets.sh` | `stage_pack` / `fetch_pack` / `ensure` — cache `cache/<recipe-id>/`, SHA-256; `discard_consumed_archive` / `discard_yml_archives` after success; `purge_recipe_cache` on uninstall |
 | `recipe-dotnet.sh` | `ensure`, Mono bootstrap |
 | `recipe-fonts.sh` | `registry`, `ensure` |
 | `recipe-kill.sh` | `recipe_kill::run` |

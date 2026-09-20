@@ -31,9 +31,11 @@ from PyQt6.QtWidgets import (
 
 from recipe_discovery import (
     is_adobe_offline_recipe,
+    is_portable_source,
     source_hints_from_meta,
 )
 from app_support import detect_source_version, version_guarantee_mismatch
+from version_detect import normalize_version_string
 from archive_passwords import normalize_password_list_text
 from ui_archive_passwords import ensure_archive_passwords
 from i18n import t
@@ -408,6 +410,27 @@ def is_portable_install(meta: dict[str, str]) -> bool:
     )
 
 
+def _portable_env_value(data_root: Path, key: str) -> str:
+    """Read KEY=value from DATA_ROOT/portable.env (empty if missing)."""
+    key = (key or "").strip()
+    if not key:
+        return ""
+    env_path = data_root / "portable.env"
+    if not env_path.is_file():
+        return ""
+    try:
+        lines = env_path.read_text(encoding="utf-8").splitlines()
+    except OSError:
+        return ""
+    prefix = f"{key}="
+    for line in lines:
+        line = line.strip()
+        if not line.startswith(prefix):
+            continue
+        return line.split("=", 1)[1].strip().strip('"')
+    return ""
+
+
 def default_target_dir(
     meta: dict[str, str], rid: str = "", data_root: Path | None = None
 ) -> str:
@@ -422,16 +445,11 @@ def default_target_dir(
         auto = default_trainer_target(appid, folder)
         if auto:
             return normalize_user_path(auto)
-    if rid == "wiso-steuer" and data_root is not None:
-        env_path = data_root / "portable.env"
-        if env_path.is_file():
-            for line in env_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line.startswith("WISO_PORTABLE_ROOT="):
-                    continue
-                val = line.split("=", 1)[1].strip().strip('"')
-                if val and Path(val).is_dir():
-                    return normalize_user_path(val)
+    if is_portable_source(meta) and data_root is not None:
+        key = (meta.get("source_env") or "").strip()
+        val = _portable_env_value(data_root, key)
+        if val and Path(val).is_dir():
+            return normalize_user_path(val)
     if data_root is not None:
         pointer = data_root / "data_root.path"
         if pointer.is_file():
@@ -531,6 +549,21 @@ def discover_update_units(root: str | Path) -> list[tuple[str, str]]:
     return []
 
 
+def _token_looks_like_version(tok: str) -> bool:
+    bits = tok.split(".")
+    return len(bits) >= 3 and all(b.isdigit() for b in bits)
+
+
+def _name_has_other_version(name: str, ver: str) -> bool:
+    """True when the path name advertises a dotted version that is not ``ver``."""
+    if not ver or ver in name:
+        return False
+    for tok in name.replace("-", " ").replace("_", " ").split():
+        if _token_looks_like_version(tok) and tok != ver:
+            return True
+    return False
+
+
 def _adobe_pack_name_bits(d: Path) -> list[str]:
     try:
         return [c.name.lower() for c in d.iterdir()]
@@ -607,14 +640,18 @@ def _adobe_iso_in_pack_dir(p: Path, version_hint: str = "") -> Path | None:
 
 
 def normalize_folder_source(
-    rid: str, raw: str, *, version_hint: str = ""
+    rid: str,
+    raw: str,
+    *,
+    version_hint: str = "",
+    meta: dict[str, str] | None = None,
 ) -> str:
     p = Path(raw)
     if p.is_file() and p.suffix.lower() == ".iso":
         return str(p.resolve())
     if not p.is_dir():
         return raw
-    if is_adobe_offline_recipe(rid):
+    if is_adobe_offline_recipe(rid, meta):
         if (p / "Set-up.exe").is_file():
             return str(p.resolve())
         try:
@@ -627,7 +664,8 @@ def normalize_folder_source(
         iso = _adobe_iso_in_pack_dir(p, version_hint)
         if iso is not None:
             return str(iso.resolve())
-    if rid == "wiso-steuer" and p.name.startswith("Steuersoftware"):
+    prefix = ((meta or {}).get("source_parent_prefix") or "").strip()
+    if prefix and p.name.startswith(prefix):
         return str(p.parent.resolve())
     return str(p.resolve())
 
@@ -646,15 +684,15 @@ def default_folder_source(
         game = steam_app_install_dir(appid)
         if game is not None and game.is_dir():
             return str(game)
-    if is_adobe_offline_recipe(rid):
-        # Nur das kanonische Drop-Verzeichnis zum Standard-Rezept —
-        # Pack-Varianten (m0nkrus) erben nicht recipes/photoshop/.
-        drop = {"photoshop": "photoshop", "premiere": "premiere"}.get(rid)
+    if is_adobe_offline_recipe(rid, meta):
+        # Repo-side drop folder named like the recipe id, if present.
         candidates: list[Path] = []
         pack_candidates: list[Path] = []
         ver = (meta.get("version_guaranteed") or "").strip()
-        if drop and repo_root is not None:
-            candidates.append(repo_root / drop)
+        if repo_root is not None:
+            drop = repo_root / rid
+            if drop.is_dir():
+                candidates.append(drop)
 
         def _adobe_setup_dir(p: Path) -> Path | None:
             if p.is_file() and p.suffix.lower() == ".iso":
@@ -704,25 +742,20 @@ def default_folder_source(
             if base.is_dir():
                 _shallow_isos_and_setups(base)
 
-        # Empfohlen: kompletter Pack-Ordner (ISO + Neural Filters + missing_libs),
-        # aber nur wenn Versions-Hinweis im Ordnernamen passt (sonst falsches Pack).
-        if rid == "photoshop-m0nkrus" and pack_candidates and ver:
+        # Prefer a pack whose name matches version_guaranteed (avoids the wrong ISO).
+        if pack_candidates and ver:
             matched = [p for p in pack_candidates if ver in p.name]
             if matched:
                 return str(matched[0].resolve())
 
-        # Standard-photoshop: Drop-Dir zuerst; m0nkrus-Packs nicht bevorzugen
-        if rid == "photoshop" and drop and repo_root is not None:
-            drop_path = repo_root / drop
-            setup = _adobe_setup_dir(drop_path)
+        drop_dir = repo_root / rid if repo_root is not None else None
+        if drop_dir is not None and drop_dir.is_dir():
+            setup = _adobe_setup_dir(drop_dir)
             if setup is not None and setup.is_dir() and (setup / "Set-up.exe").is_file():
                 return str(setup.resolve())
 
         for cand in candidates:
-            # Cross-Pack: Standard nicht den 138-Pack / ISO-only-220-Pack nehmen
-            if rid == "photoshop" and "22.1.1.138" in cand.name:
-                continue
-            if rid == "photoshop-m0nkrus" and _matches_m0nkrus_220_pack(cand):
+            if ver and _name_has_other_version(cand.name, ver):
                 continue
             resolved = _adobe_setup_dir(cand) if cand.is_dir() else cand
             if resolved is None:
@@ -732,37 +765,31 @@ def default_folder_source(
             if resolved.is_dir() and (resolved / "Set-up.exe").is_file():
                 return str(resolved.resolve())
         return ""
-    if rid == "wiso-steuer":
-        # WISO_PORTABLE_ROOT in portable.env = installiertes Ziel (Laufzeit), nie Quelle.
-        target = ""
-        env_path = data_root / "portable.env"
-        if env_path.is_file():
-            for line in env_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if line.startswith("WISO_PORTABLE_ROOT="):
-                    target = line.split("=", 1)[1].strip().strip('"')
-                    break
+    if is_portable_source(meta):
+        # source_env in portable.env = installed target (runtime), never the source.
+        target = _portable_env_value(data_root, (meta.get("source_env") or "").strip())
+        needle = (meta.get("source_dir_substr") or "").strip().lower()
+        parent_prefix = (meta.get("source_parent_prefix") or "").strip()
         for base in (Path.home() / "Downloads", Path.home() / "Dokumente"):
             if not base.is_dir():
                 continue
             try:
-                candidates = sorted(
-                    (
-                        p
-                        for p in base.iterdir()
-                        if p.is_dir() and "wiso" in p.name.lower()
-                    ),
-                    key=lambda p: p.stat().st_mtime,
-                    reverse=True,
-                )
+                entries = list(base.iterdir())
             except OSError:
                 continue
-            for cand in candidates:
-                if not (
-                    (cand / "start.exe").is_file() or list(cand.glob("Steuersoftware*"))
-                ):
+            found = [
+                p
+                for p in entries
+                if p.is_dir() and (not needle or needle in p.name.lower())
+            ]
+            found.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            for cand in found:
+                has_exe = (cand / "start.exe").is_file()
+                has_parent = bool(parent_prefix) and bool(
+                    list(cand.glob(f"{parent_prefix}*"))
+                )
+                if not (has_exe or has_parent):
                     continue
-                # Installiertes Ziel nicht als „Quelle“ vorschlagen.
                 try:
                     if target and cand.resolve() == Path(target).resolve():
                         continue
@@ -1363,7 +1390,7 @@ class RecipeSourceDialog(QDialog):
                 box.setWindowTitle(title)
                 box.setText(
                     t("source.adobe_pick_kind")
-                    if is_adobe_offline_recipe(self._rid)
+                    if is_adobe_offline_recipe(self._rid, self._meta)
                     else t("source.game_pick_kind")
                 )
                 iso_btn = box.addButton(
@@ -1378,14 +1405,17 @@ class RecipeSourceDialog(QDialog):
                 if clicked is iso_btn:
                     filt = (
                         t("source.adobe_filter")
-                        if is_adobe_offline_recipe(self._rid)
+                        if is_adobe_offline_recipe(self._rid, self._meta)
                         else t("source.game_filter")
                     )
                     iso = pick_open_file(self, title, start_dir, filt)
                     if iso:
-                        if is_adobe_offline_recipe(self._rid):
+                        if is_adobe_offline_recipe(self._rid, self._meta):
                             normalized = normalize_folder_source(
-                                self._rid, iso, version_hint=self._version_guaranteed
+                                self._rid,
+                                iso,
+                                version_hint=self._version_guaranteed,
+                                meta=self._meta,
                             )
                         else:
                             normalized = normalize_user_path(iso, self._root)
@@ -1395,14 +1425,17 @@ class RecipeSourceDialog(QDialog):
                     d = pick_directory(self, title, start_dir)
                     if d:
                         pd = Path(d)
-                        if is_adobe_offline_recipe(self._rid) and (
+                        if is_adobe_offline_recipe(self._rid, self._meta) and (
                             _looks_like_adobe_pack_root(pd)
                             or _looks_like_adobe_iso_only_pack(pd)
                         ):
                             shown = str(pd.resolve())
-                        elif is_adobe_offline_recipe(self._rid):
+                        elif is_adobe_offline_recipe(self._rid, self._meta):
                             shown = normalize_folder_source(
-                                self._rid, d, version_hint=self._version_guaranteed
+                                self._rid,
+                                d,
+                                version_hint=self._version_guaranteed,
+                                meta=self._meta,
                             )
                         else:
                             shown = normalize_user_path(d, self._root)
@@ -1413,7 +1446,10 @@ class RecipeSourceDialog(QDialog):
             d = pick_directory(self, title, start)
             if d:
                 normalized = normalize_folder_source(
-                    self._rid, d, version_hint=self._version_guaranteed
+                    self._rid,
+                    d,
+                    version_hint=self._version_guaranteed,
+                    meta=self._meta,
                 )
                 self.primary_edit.setText(normalized)
                 self._update_version_hint(normalized)
@@ -1501,7 +1537,7 @@ class RecipeSourceDialog(QDialog):
         if self._source_kind == "folder" and raw and not self._pick_archive:
             path = normalize_user_path(raw, self._root)
             # Pack-Root sichtbar/als Quelle behalten — ISO wird in build_env aufgelöst
-            if is_adobe_offline_recipe(self._rid):
+            if is_adobe_offline_recipe(self._rid, self._meta):
                 pp = Path(path)
                 if _looks_like_adobe_pack_root(pp) or _looks_like_adobe_iso_only_pack(
                     pp
@@ -1511,6 +1547,7 @@ class RecipeSourceDialog(QDialog):
                 self._rid,
                 path,
                 version_hint=self._version_guaranteed,
+                meta=self._meta,
             )
         return normalize_user_path(raw, self._root) if raw else raw
 
@@ -1541,14 +1578,17 @@ class RecipeSourceDialog(QDialog):
         probe = path
         if self._source_kind == "folder" and not self._pick_archive:
             probe = normalize_folder_source(
-                self._rid, path, version_hint=guaranteed
+                self._rid, path, version_hint=guaranteed, meta=self._meta
             )
-        detected = detect_source_version(
-            self._rid,
-            probe,
-            recipe_dir=self._meta.get("_dir"),
-            guaranteed=guaranteed,
+        detected = normalize_version_string(
+            detect_source_version(
+                self._rid,
+                probe,
+                recipe_dir=self._meta.get("_dir"),
+                guaranteed=guaranteed,
+            )
         )
+        guaranteed = normalize_version_string(guaranteed)
         if not detected:
             self.version_hint.setText(
                 t("source.version_unknown", guaranteed=guaranteed)
@@ -1782,8 +1822,9 @@ class RecipeSourceDialog(QDialog):
             tgt = self.target_path()
             extra["RECIPE_TARGET_DIR"] = tgt
             if is_portable_install(self._meta):
-                if self._rid == "wiso-steuer":
-                    extra["WISO_TARGET_DIR"] = tgt
+                target_env = (self._meta.get("target_env") or "").strip()
+                if target_env:
+                    extra[target_env] = tgt
             else:
                 # Installer / native: Ziel = Datenordner (Prefix darunter)
                 extra["RECIPE_DATA_ROOT"] = tgt
@@ -1815,7 +1856,7 @@ class RecipeSourceDialog(QDialog):
                         # Spiel-Pack mit .iso im Ordner → Source-Root (Mount in prepare_source)
                         extra["RECIPE_SOURCE_ROOT"] = root
                         if (
-                            not is_adobe_offline_recipe(self._rid)
+                            not is_adobe_offline_recipe(self._rid, self._meta)
                             and allows_iso_folder_source(self._meta, self._rid)
                         ):
                             iso = None
@@ -1833,8 +1874,9 @@ class RecipeSourceDialog(QDialog):
                             ).is_file() and not (Path(root) / "Setup.exe").is_file():
                                 # Keep SOURCE_ROOT; prepare_source mounts ISO inside
                                 pass
-                    if self._rid == "wiso-steuer":
-                        extra["WISO_PORTABLE_ROOT"] = root
+                    source_env = (self._meta.get("source_env") or "").strip()
+                    if source_env:
+                        extra[source_env] = root
             fix = self.fix_path()
             if fix:
                 extra["RECIPE_FIX_ROOT"] = fix
@@ -1844,8 +1886,9 @@ class RecipeSourceDialog(QDialog):
                     merge = (self._meta.get("fix_merge_path") or "").strip()
                     if merge:
                         extra["RECIPE_FIX_MERGE_PATH"] = merge
-                if self._rid == "wiso-steuer":
-                    extra["WISO_FIX_ROOT"] = fix
+                fix_env = (self._meta.get("fix_env") or "").strip()
+                if fix_env:
+                    extra[fix_env] = fix
             return extra
         if kind == "installer":
             extra["RECIPE_INSTALLER_PATH"] = self.primary_path()
@@ -1862,7 +1905,7 @@ class RecipeSourceDialog(QDialog):
 
 def allows_iso_folder_source(meta: dict[str, str], rid: str = "") -> bool:
     """Folder source may also pick a .iso (Adobe or games with iso in source_formats)."""
-    if is_adobe_offline_recipe(rid or meta.get("id", "")):
+    if is_adobe_offline_recipe(rid or meta.get("id", ""), meta):
         return True
     fmts = (meta.get("source_formats") or "").lower()
     return "iso" in {p.strip() for p in fmts.replace(";", ",").split(",") if p.strip()}

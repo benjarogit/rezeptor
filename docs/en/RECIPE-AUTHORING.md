@@ -30,9 +30,9 @@ recipes/recipe.schema.json  ← contract
 
 ### uninstall.sh (required — complete wipe)
 
-Always `recipe_hooks::load minimal` and **`recipe_hooks::purge_recipe_data`** (desktop + `DATA_ROOT` + canonical `data_root` including `data_root.path`).  
+Always `recipe_hooks::load minimal` and **`recipe_hooks::purge_recipe_data`** (desktop + `DATA_ROOT` + canonical `data_root` including `data_root.path` + asset cache `cache/<id>/` and `cache/<id>-mod-bundle/`).  
 Do not only delete `prefix/` or `recipe.env` — the GUI will still show “installed”.  
-No `load kill` in uninstall (Proton hang). Portable/game folders outside `DATA_ROOT` stay.
+No `load kill` in uninstall (Proton hang). Portable/game folders outside `DATA_ROOT` stay. Shared caches (`winetricks`, `vcredist`) stay.
 
 ### App / game folder link (`DATA_ROOT`)
 
@@ -150,10 +150,18 @@ Medicine alternative is a generic `PROTON_GE_TAG` choice only, not a Photoshop b
 Small overlay files (under the GitHub limit, practically ~100 MB per file) live in the recipe `assets/` tree.  
 Larger packs stay **out of git**: `assets/**/remote.yml` with `file`, `sha256`, and optional `url`.
 
-- Download only through `core/recipe-assets.sh` (`recipe_assets::ensure`) — HTTPS + SHA-256, same pattern as Proton-GE / nvidia-libs.
+- Download only through `core/recipe-assets.sh` (`recipe_assets::stage_pack` / `fetch_pack` / `ensure`) — dest `~/.local/share/wine-software/cache/<recipe-id>/` (never `~/Downloads` as a required source), HTTPS + SHA-256. After a successful extract/overlay, delete the archive (`discard_consumed_archive` / `discard_yml_archives`). Overlay and used loose files stay. Fail: keep the archive. Optional one-shot seed from `~/Downloads`, never copied as a store. Any recipe with `assets/**/remote.yml`, no Prototype hardcode.
 - A MEGA URL must be a **public share** (`https://mega.nz/file/…#Key` or `/folder/…#Key`). File-manager (`/fm/`) is not a download.
-- MEGA base: `core/recipe-assets.lock` (`MEGA_ASSETS_BASE_URL`), override `mega_assets_base_url` in settings or `REZEPTOR_MEGA_ASSETS_URL`.
-- Maintainer: `make recipe-assets-publish` (mega-cmd session) writes hashes and public links. No MEGA passwords in the repo.
+- MEGA base: `core/recipe-assets.lock` (`MEGA_ASSETS_BASE_URL`), override `mega_assets_base_url` in `settings.json` or `REZEPTOR_MEGA_ASSETS_URL`. An empty pack `url` becomes `<base>/<recipe-id>/<file>`.
+- Maintainer (one login, password prompted only, never in the repo):
+
+```bash
+# Official MEGA CMD: https://mega.io/cmd  (Arch: megacmd)
+mega-login YOUR_MEGA_EMAIL
+make recipe-assets-publish
+```
+
+`recipe-assets-publish` uploads local packs, exports public `/file/` and `/folder/` links, and writes hashes. No MEGA passwords in the repo.
 
 ### Recommended
 
@@ -386,7 +394,7 @@ Full API: **[CORE-API.md](CORE-API.md)**. Short:
 | `recipe-install.sh` | prepare_source / apply_fix |
 | `recipe-prefix.sh` / `recipe-winetricks.sh` / `recipe-win10.sh` | Prefix, winetricks (retry 139), Win10 |
 | `recipe-validate.sh` | OK/FAIL/WARN helpers |
-| `recipe-assets.sh` | Large packs: HTTPS/MEGA download + SHA-256 |
+| `recipe-assets.sh` | Large packs: `stage_pack` / `fetch_pack` / `ensure`, cache + SHA-256, delete archive after success |
 | `recipe-<id>.sh` | App logic |
 | `wine-runtime.sh` | Proton-GE + graphics DLLs |
 

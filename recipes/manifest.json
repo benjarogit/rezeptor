@@ -27,7 +27,7 @@
         "install.sh": "sha256:214758619f738824f9e5a6c4a4f39d493e493491069928acc6428f3d41262fae",
         "kill.sh": "sha256:de0334ce93bd7d15de9c6452a3c3b74d7c1a08eb60e7cb094b52f357aa305542",
         "launch.sh": "sha256:b07c4c3ff39b0577fed16169f3ea19479bb62e3c71b04f129d64fb7beb137e96",
-        "recipe.yml": "sha256:cf34f1a272607c37b3bb0a5bf7f5e6e366943f5c7916d021129ec56dd92ff830",
+        "recipe.yml": "sha256:9e7251227f7b610b21e906b050a0029a002dc9ecac484dbfd7bd7dea246e3ac5",
         "repair.sh": "sha256:62f25d4b3e2b869c92b55911ce2bb49309fffeade612489377e64bfb2d9e6b85",
         "uninstall.sh": "sha256:31fbdc12617519d87c643d0c3c6e8b1155eae1c830f473e03ee4ab501c36c8d5",
         "validate.sh": "sha256:97e72a7fc5129dcd51b64533ceae19783a4427c893aa1979b0461d3014c99149"
@@ -69,7 +69,7 @@
         "kill.sh": "sha256:be7c48aa0805d4b8bf2320588cc099bbbf1cae43d184cd81d5a01583a6a867e9",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
         "optional/cameraRawInstaller.sh": "sha256:9097568694ea8deac6e925fd5f098d6ec60298b0325a3140fce68bb7ff011b93",
-        "recipe.yml": "sha256:62c06775f524e53c0b255541666e11f4e1f5d48c37a8e25960230694a0f4376a",
+        "recipe.yml": "sha256:e9724b9429404f2ecc3dcf93bd610bdbd9659a6560d727a8dd5d580c142ce418",
         "repair.sh": "sha256:d732609fb10ef495d73be7d0812bfce162304c0937dc02e9df8efd1fb308da3d",
         "uninstall.sh": "sha256:6769d563631545c6a339e88bd257ba25e040d70f78f11b4d31d42201c1b4a9be",
         "validate.sh": "sha256:978406b53365b2f173d800d5bc21ccf93e60fbab10d70cac3438539e803da80c"
@@ -84,7 +84,7 @@
         "install.sh": "sha256:214758619f738824f9e5a6c4a4f39d493e493491069928acc6428f3d41262fae",
         "kill.sh": "sha256:be7c48aa0805d4b8bf2320588cc099bbbf1cae43d184cd81d5a01583a6a867e9",
         "launch.sh": "sha256:545bc917c9e297bfd0fd9f06499525cdc7d4f9dac54b0e7648fc63c91c74541f",
-        "recipe.yml": "sha256:142f15d372ac3cc6715a15753cfe8ccecdd6ec3352656c850cd55e87c44848cf",
+        "recipe.yml": "sha256:16a71d8320d3823a846031298f1ce174e787429a3527803025cc5a33ba8c630a",
         "repair.sh": "sha256:c33563f29a539e5b8b42e3783cfd6c1f26c594a7df7892f790739773ae39a4dc",
         "uninstall.sh": "sha256:c62f9cd2e9ace3f05f159405ac184ced7c1e0e4fa84d287b25b7499ca2988c37",
         "validate.sh": "sha256:15e9e7c2594067efaca57292283b97b5f11cf2c727dc9d212c8db46742b7307b"
@@ -97,7 +97,7 @@
         "install.sh": "sha256:214758619f738824f9e5a6c4a4f39d493e493491069928acc6428f3d41262fae",
         "kill.sh": "sha256:e7afbb05c02139d0964af8ab7d16631794a6df3a039e6b062e9f5a89253b9565",
         "launch.sh": "sha256:9d18dac21e25f9d791c4174bd5c4b147f4ce0b6c8d490f225504e110ee4f8744",
-        "recipe.yml": "sha256:e5a866ab9001951eb03d0f4caf8e9bd8f247b88d2c30b32decd542b3d57235bc",
+        "recipe.yml": "sha256:6b9ee2b30317374b9c33eece8159bfb9c13417023add5930dbdaf7db379a9bac",
         "repair.sh": "sha256:24e34eca4dfb13c6784836fd312111289ac986b5f30de3234f859e8f1a65fd03",
         "uninstall.sh": "sha256:a4dae3dac6dc62259a5868f2c45c2ff3fbdf7e4cd6ffcd4dec73a04c3fe1f355",
         "validate.sh": "sha256:b457216d34f11fddd7a5f8b8a8323ac6fda2407adb25c630ca5fba9b3dd74b28"
@@ -105,7 +105,7 @@
     },
     "prototype": {
       "files": {
-        "assets/mod-bundle/bundle.yml": "sha256:9246edc83cc69000d65c8288538fbefade193bb404b766ed36121cce29a73bb1",
+        "assets/mod-bundle/bundle.yml": "sha256:a7d90acf77a8a3f3d44b6acbff108ddf32650008e214c93477e293d1869af75a",
         "assets/mod-bundle/overlay/art/alex/alex_fig.p3d.rz": "sha256:6e7a02308caee679ba8805806eca46ea8e27f34706ba0cd1cad2f6b300e64e61",
         "assets/mod-bundle/overlay/art/hud/protolegalscreen.gfx": "sha256:be6a49344cbff927cd4fafefd5ec516edf84a4a15270e0f69738d1d3e888bc2a",
         "assets/mod-bundle/overlay/art/startup_fig.p3d": "sha256:06d0774f81222e95d5153f629de5504ed2413df04b1ef9e07216de1c9fac2e9c",
@@ -143,7 +143,7 @@
         "assets/mod-bundle/packs/skin-venom/art/packages/powers/alex_hammerfist/alex_hammerfist.p3d.rz": "sha256:e8d89d8ee463d102b064181abf1bb1af7bf171f4d631b87f9100eea52577f5c4",
         "assets/mod-bundle/packs/skin-venom/art/packages/powers/alex_musclemass/alex_musclemass.p3d.rz": "sha256:8f866d33ca8ac55e9a1ee8b772f60daab362b5f8313f16d769f103928ee03557",
         "assets/mod-bundle/packs/skin-venom/art/packages/powers/alex_whipfist/alex_whipfist.p3d.rz": "sha256:f8699b064ff0967e46b77da10d4c82bcbf2b2423adbeb82d3053221af0427e5a",
-        "assets/mod-bundle/remote.yml": "sha256:ad604030ccd4b71e717ad675c2c53561f88d48bb15855532cf5dd6c20e1021fd",
+        "assets/mod-bundle/remote.yml": "sha256:c27fcffb5539488a7606715e8f3ee52ee315250e83fe9ea84a8b6de60a2535a7",
         "assets/mod-bundle/tools/force_desktop_res.c": "sha256:79c017e6bc9cd2ae31dccc74b2f79cc12befd1427983bc2d8c5fb2a71c34ddbc",
         "assets/mod-bundle/tools/prototypef.vcdiff": "sha256:2b3a805383d36fe4b68f0ff6a755c6bb36c752451e6faf8985eff1e1a9a65c76",
         "assets/mod-bundle/tools/reschanger/ResChanger.exe": "sha256:23648e1785ba9e7a61ba4874677a58d93048a10320010b228082457efe4bb8a0",
@@ -152,7 +152,7 @@
         "assets/mod-bundle/tools/trainer/locke_de.nfo": "sha256:28eb3cde2883f0e7456b0270a94ab142fee93d3adcdb9f767d8777a662288c63",
         "assets/mod-bundle/tools/trainer/prototype.v1001.p7trn.exe": "sha256:eff7d26f90b1d535d03953e3d32e29edee76cb4359a096a1a3b4e34fc9cd51ed",
         "assets/mod-bundle/tools/xdelta3-3.1.0-i686.exe": "sha256:5d408327ae84dff3ddabf02f86a32fe2382abce653a4d807579d336446f9ca65",
-        "helpers.sh": "sha256:e2bccdaf922f5955834ee66e4ebcbc4bdc49775cfa504573085b22377ac37278",
+        "helpers.sh": "sha256:b2dd1b727aa4eb215450ea86d5ec21c6e46b9279afa9077e934fda97982fbfae",
         "info.de.txt": "sha256:98cf0732e433468b6298b9a86d8197342e59bcebe62a14880157a2fb6394ec65",
         "info.en.txt": "sha256:149e2e8438053c1de98a40d3bcede3024a0cd3a0d0d8d3e5de69d09f8bd91b64",
         "install.sh": "sha256:00bf5817c8ad03e4e84ec5e07cc21defc622d4e3a2612d2cdd6e28f72417af85",

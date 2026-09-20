@@ -81,6 +81,7 @@ from recipe_discovery import (
     is_adobe_offline_recipe,
     is_maintainer_only,
     merge_recipe_yml_paths,
+    parse_recipe_yml,
     sidebar_label_for_meta,
     source_hints_from_meta,
 )
@@ -89,8 +90,11 @@ assert source_hints_from_meta({"source_hints": "a; b, c"}) == ["a", "b", "c"]
 assert source_hints_from_meta({}) == []
 assert sidebar_label_for_meta({"sidebar_label": "PS"}, "photoshop") == "PS"
 assert sidebar_label_for_meta({"name": "WISO"}, "wiso-steuer") == "WISO"
-assert is_adobe_offline_recipe("photoshop") is True
-assert is_adobe_offline_recipe("wiso-steuer") is False
+ps = parse_recipe_yml(root / "recipes" / "photoshop" / "recipe.yml")
+wiso = parse_recipe_yml(root / "recipes" / "wiso-steuer" / "recipe.yml")
+assert is_adobe_offline_recipe("photoshop", ps) is True
+assert is_adobe_offline_recipe("wiso-steuer", wiso) is False
+assert is_adobe_offline_recipe("photoshop") is False
 assert is_maintainer_only({"maintainer_only": "true"}) is True
 assert is_maintainer_only({"maintainer_only": "no"}) is False
 

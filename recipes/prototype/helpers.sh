@@ -341,47 +341,22 @@ prototype::_load_recipe_assets() {
     source "$f"
 }
 
-# Fetch one pack from assets/mod-bundle/remote.yml when a public URL is set.
+# Fetch one pack from assets/mod-bundle/remote.yml (generic recipe_assets::stage_pack).
 prototype::fetch_remote_pack() {
-    local want="${1:-}" dest="${2:-}" meta file url sha
-    local yml
+    local want="${1:-}" dest="${2:-}" yml
     yml="$(prototype::bundle_root)/remote.yml"
     [ -f "$yml" ] || return 1
     prototype::_load_recipe_assets || return 1
-    meta="$(python3 - "$yml" "$want" <<'PY'
-from pathlib import Path
-import sys
-want = sys.argv[2]
-cur = None
-hit = None
-for line in Path(sys.argv[1]).read_text(encoding="utf-8").splitlines():
-    s = line.strip()
-    if s.startswith("- id:"):
-        if cur and cur.get("id") == want:
-            hit = cur
-        cur = {"id": s.split(":", 1)[1].strip().strip('"')}
-        continue
-    if cur and ":" in s and not s.startswith("- "):
-        key, val = s.split(":", 1)
-        cur[key.strip()] = val.strip().strip('"')
-if cur and cur.get("id") == want:
-    hit = cur
-if not hit:
-    raise SystemExit(1)
-print(hit.get("file", ""))
-print(hit.get("sha256", ""))
-print(hit.get("url", ""))
-PY
-)" || return 1
-    file="$(printf '%s\n' "$meta" | sed -n '1p')"
-    sha="$(printf '%s\n' "$meta" | sed -n '2p')"
-    url="$(printf '%s\n' "$meta" | sed -n '3p')"
-    [ -n "$dest" ] || dest="$(prototype::bundle_cache)/${file}"
-    [ -n "$file" ] || return 1
-    if [ -z "$url" ] || ! recipe_assets::is_public_share_url "$url"; then
-        return 1
-    fi
-    recipe_assets::ensure "$dest" "$url" "$sha"
+    recipe_assets::stage_pack "$yml" "$want" "$dest"
+}
+
+# Drop consumed archives after a successful overlay. Overlay / .tpf stay.
+prototype::_discard_remote_archives() {
+    local yml
+    yml="$(prototype::bundle_root)/remote.yml"
+    [ -f "$yml" ] || return 0
+    prototype::_load_recipe_assets || return 0
+    recipe_assets::discard_yml_archives "$yml"
 }
 
 prototype::bundle_overlay() {
@@ -418,15 +393,16 @@ prototype::deu_cache() {
     echo "$(prototype::bundle_cache)/deu-overlay"
 }
 
+# Stage deu-patch (cache/<recipe-id>/ or optional Downloads seed). Never copy as store.
 prototype::deu_zip_path() {
-    local z
-    for z in \
-        "${HOME}/Downloads/Prototype_DeuPatchBEP.zip" \
-        "$(prototype::bundle_cache)/Prototype_DeuPatchBEP.zip"
-    do
-        [ -f "$z" ] && echo "$z" && return 0
-    done
-    return 1
+    local yml zip=""
+    yml="$(prototype::bundle_root)/remote.yml"
+    [ -f "$yml" ] || return 1
+    prototype::_load_recipe_assets || return 1
+    recipe_assets::stage_pack "$yml" deu-patch || return 1
+    zip="${RECIPE_ASSETS_STAGED:-}"
+    [ -n "$zip" ] && [ -f "$zip" ] || return 1
+    printf '%s' "$zip"
 }
 
 prototype::deu_overlay_ready() {
@@ -463,21 +439,17 @@ PY
 }
 
 # v1.0→v1.3 newest-wins. ~1.2GB loose p3d — cache only, never git (Allagga rule).
+# ZIP is staged then deleted after a successful overlay. Fail keeps the ZIP.
 prototype::seed_deu_overlay() {
-    prototype::deu_overlay_ready && return 0
-    local zip work ov v1 v11 v12 v13
-    if ! zip="$(prototype::deu_zip_path)"; then
-        mkdir -p "$(prototype::bundle_cache)"
-        prototype::fetch_remote_pack deu-patch \
-            "$(prototype::bundle_cache)/Prototype_DeuPatchBEP.zip" || true
-        zip="$(prototype::deu_zip_path)" || return 1
+    if prototype::deu_overlay_ready; then
+        prototype::_discard_remote_archives
+        return 0
     fi
+    local zip work ov v1 v11 v12 v13
+    zip="$(prototype::deu_zip_path)" || return 1
     ov="$(prototype::deu_cache)"
     work="$(prototype::bundle_cache)/deu-work"
     mkdir -p "$(prototype::bundle_cache)"
-    if [ "$zip" != "$(prototype::bundle_cache)/Prototype_DeuPatchBEP.zip" ]; then
-        cp -n "$zip" "$(prototype::bundle_cache)/Prototype_DeuPatchBEP.zip" 2>/dev/null || true
-    fi
     rm -rf "$work" "$ov"
     mkdir -p "$work" "$ov"
     type output::info >/dev/null 2>&1 \
@@ -517,7 +489,15 @@ prototype::seed_deu_overlay() {
     prototype::deu_merge_tree "$v13/out"
     printf '%s\n' "1.4.0" >"$ov/$_PROTOTYPE_DEU_STAMP"
     rm -rf "$work"
-    prototype::deu_overlay_ready
+    if prototype::deu_overlay_ready; then
+        recipe_assets::discard_consumed_archive "$zip"
+        prototype::_discard_remote_archives
+        return 0
+    fi
+    type output::error >/dev/null 2>&1 \
+        && output::error "Deutsch-Patch: Overlay unvollständig — Archiv bleibt für Retry" \
+        || true
+    return 1
 }
 
 # Packed NIS .rz must be stashed (not deleted) so Standard can restore vanilla.
@@ -697,7 +677,7 @@ prototype::apply_deu_overlay() {
     fi
     if ! prototype::seed_deu_overlay; then
         type output::warning >/dev/null 2>&1 \
-            && output::warning "Deutsch-Patch: ZIP fehlt (Downloads, Cache, oder public MEGA-URL in remote.yml) — Sprache bleibt Standard ohne Overlay" \
+            && output::warning "Deutsch-Patch: Archiv fehlt (public MEGA-Share in remote.yml) — Sprache bleibt Standard ohne Overlay" \
             || true
         return 1
     fi
@@ -1184,6 +1164,9 @@ prototype::apply_mod_bundle() {
     prototype::apply_save_100 || true
     prototype::stage_trainer "$game"
     prototype::write_bundle_marker "$game"
+    if prototype::deu_overlay_ready || [ "$(prototype::language_id)" != de ]; then
+        prototype::_discard_remote_archives
+    fi
     type output::success >/dev/null 2>&1 \
         && output::success "Mod-Bundle $(prototype::bundle_version) gelegt (PrototypeFix + No-Intro + Desktop-Pin windowed, Sprint-Fix, Parkour=$(prototype::parkour_on && echo on || echo off), Skin=$(prototype::skin_id), Sprache=$(prototype::language_id), PS3=$(prototype::ps3_buttons_on && echo on || echo off), Save100=$(prototype::save_100_on && echo on || echo off), Trainer bereit, nicht injiziert)" \
         || true

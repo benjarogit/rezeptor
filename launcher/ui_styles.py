@@ -22,7 +22,9 @@ SURFACE_1 = "#252526"  # sidebar / menubar
 SURFACE_2 = "#2B2B2B"  # cards (Fluent-Dialog-nah)
 SURFACE_3 = "#323232"  # hover / elevierter
 BORDER = "#3A3A3A"
-MUTED = "#D4CDC3"  # secondary text — hell genug auf Surface 2 (AA)
+MUTED = "#D4CDC3"  # secondary text — hell enough on Surface 2 (AA)
+# 11px header path/status only — brighter than theme muted, not a global bump.
+HEADER_SECONDARY = "#D4CDC3"
 
 # Status text on dark UI (ok / warn / error / info)
 STATUS_FG = {
@@ -56,6 +58,16 @@ def _hex_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r}, {g}, {b}, {alpha})"
 
 
+def header_secondary_color(theme: str | None = None) -> str:
+    """11px path/status on the header card — WCAG AA without lifting global muted."""
+    from themes import theme_is_dark, theme_tokens
+
+    tok = theme_tokens(theme)
+    if theme_is_dark(theme):
+        return HEADER_SECONDARY
+    return tok["muted"]
+
+
 def style_status_label(label, kind: str = "info", *, size_px: int = 12) -> None:
     """Brand status colors for feedback lines (Gespeichert / Warnung / Fehler)."""
     from themes import theme_tokens
@@ -85,7 +97,13 @@ def host_stylesheet(theme: str | None = None) -> str:
     SURFACE_1 = tok["surface1"]
     SURFACE_2 = tok["surface2"]
     SURFACE_3 = tok["surface3"]
-    COLOR_EXPERIMENTAL = tok["experimental"]
+    from themes import theme_is_dark
+
+    dark = theme_is_dark(theme)
+    HEADER_SECONDARY = "#D4CDC3" if dark else MUTED
+    HEADER_HOVER = (
+        "rgba(255, 255, 255, 0.04)" if dark else "rgba(0, 0, 0, 0.04)"
+    )
     ACCENT_16 = _hex_rgba(ACCENT_COPPER, 0.16)
     ACCENT_18 = _hex_rgba(ACCENT_COPPER, 0.18)
     ACCENT_22 = _hex_rgba(ACCENT_COPPER, 0.22)
@@ -93,8 +111,6 @@ def host_stylesheet(theme: str | None = None) -> str:
     ACCENT_35 = _hex_rgba(ACCENT_COPPER, 0.35)
     ACCENT_45 = _hex_rgba(ACCENT_COPPER, 0.45)
     ACCENT_55 = _hex_rgba(ACCENT_COPPER, 0.55)
-    WARN_16 = _hex_rgba(COLOR_EXPERIMENTAL, 0.16)
-    WARN_28 = _hex_rgba(COLOR_EXPERIMENTAL, 0.28)
     SCROLL_HOVER = _hex_rgba(COLOR_PARCHMENT, 0.35)
     arrow_down = ensure_chevron_png("down", COLOR_PARCHMENT).as_posix()
     arrow_up = ensure_chevron_png("up", COLOR_PARCHMENT).as_posix()
@@ -147,12 +163,23 @@ QScrollArea#recipeCardsScroll > QWidget {{
 QWidget#recipeCardsHost {{
     background-color: transparent;
 }}
+QFrame#sidebarCategoryHeader {{
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}}
+QFrame#sidebarCategoryHeader:hover {{
+    background-color: {HEADER_HOVER};
+}}
+QFrame#sidebarCategoryHeader:focus {{
+    border-color: {ACCENT_COPPER};
+}}
 QLabel#sidebarCategory {{
     color: {MUTED};
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.08em;
-    padding: 8px 4px 2px 4px;
+    padding: 0;
     background-color: transparent;
 }}
 QLabel#sidebarCardTitle {{
@@ -286,7 +313,7 @@ QLabel#appTitle {{
     background: transparent;
 }}
 QLabel#appPath {{
-    color: {MUTED};
+    color: {HEADER_SECONDARY};
     font-size: 11px;
     background: transparent;
 }}
@@ -294,8 +321,19 @@ QLabel#stepLabel {{
     font-weight: 600;
     color: {COLOR_PARCHMENT};
 }}
-QLabel#muted, QLabel#statusDetail {{
+QLabel#progressPct {{
+    color: {HEADER_SECONDARY};
+    font-size: 12px;
+    font-weight: 500;
+    background: transparent;
+}}
+QLabel#muted {{
     color: {MUTED};
+    font-size: 12px;
+    background: transparent;
+}}
+QLabel#statusDetail {{
+    color: {HEADER_SECONDARY};
     font-size: 12px;
     background: transparent;
 }}
@@ -303,7 +341,6 @@ QListWidget#activityList {{
     background-color: {SURFACE_2};
     border: 1px solid {BORDER};
     border-radius: 6px;
-    color: {COLOR_PARCHMENT};
     font-family: "JetBrains Mono", "Fira Code", monospace;
     font-size: 12px;
 }}
@@ -325,7 +362,7 @@ QLineEdit#sidebarSearch {{
     background-color: rgba(255, 255, 255, 0.06);
     border: 1px solid {BORDER};
     border-radius: 8px;
-    padding: 8px 10px;
+    padding: 8px 56px 8px 10px;
     color: {COLOR_PARCHMENT};
     font-size: 13px;
     min-height: 20px;
@@ -335,6 +372,13 @@ QLineEdit#sidebarSearch:focus {{
 }}
 QLineEdit#sidebarSearch::placeholder {{
     color: {MUTED};
+}}
+QLabel#sidebarSearchHint {{
+    color: {HEADER_SECONDARY};
+    font-size: 11px;
+    font-weight: 600;
+    background: transparent;
+    padding: 0 2px;
 }}
 QTextEdit, QPlainTextEdit, QSpinBox {{
     background-color: rgba(255, 255, 255, 0.06);
@@ -415,6 +459,55 @@ QComboBox QAbstractItemView::item:selected {{
     background-color: {ACCENT_35};
     color: {COLOR_PARCHMENT};
 }}
+/* Medizin choice: dark field, copper only on border/hover/focus, parchment text.
+   Fluent ComboBox (QPushButton subclass) plus QComboBox fallback. */
+ComboBox#medizinCombo, QComboBox#medizinCombo {{
+    background-color: rgba(255, 255, 255, 0.0605);
+    border: 1px solid {BORDER};
+    border-radius: 4px;
+    padding: 6px 28px 6px 10px;
+    color: {COLOR_PARCHMENT};
+    min-height: 20px;
+    selection-background-color: transparent;
+    selection-color: {COLOR_PARCHMENT};
+}}
+ComboBox#medizinCombo:hover, QComboBox#medizinCombo:hover {{
+    background-color: rgba(255, 255, 255, 0.0837);
+    border-color: {ACCENT_55};
+}}
+ComboBox#medizinCombo:focus, QComboBox#medizinCombo:focus,
+ComboBox#medizinCombo:pressed, QComboBox#medizinCombo:on {{
+    border-color: {ACCENT_COPPER};
+    background-color: rgba(255, 255, 255, 0.0605);
+    color: {COLOR_PARCHMENT};
+    selection-background-color: transparent;
+    selection-color: {COLOR_PARCHMENT};
+}}
+QComboBox#medizinCombo QAbstractItemView {{
+    background-color: {SURFACE_2};
+    border: 1px solid {BORDER};
+    border-radius: 4px;
+    color: {COLOR_PARCHMENT};
+    outline: 1px solid {ACCENT_COPPER};
+    outline-offset: 0;
+    padding: 4px;
+    selection-background-color: {ACCENT_35};
+    selection-color: {COLOR_PARCHMENT};
+}}
+QComboBox#medizinCombo QAbstractItemView::item {{
+    min-height: 28px;
+    padding: 4px 8px;
+    color: {COLOR_PARCHMENT};
+    background: transparent;
+}}
+QComboBox#medizinCombo QAbstractItemView::item:hover {{
+    background-color: {ACCENT_22};
+    color: {COLOR_PARCHMENT};
+}}
+QComboBox#medizinCombo QAbstractItemView::item:selected {{
+    background-color: {ACCENT_35};
+    color: {COLOR_PARCHMENT};
+}}
 QListWidget::item:selected {{
     background-color: {ACCENT_35};
     color: {COLOR_PARCHMENT};
@@ -485,25 +578,6 @@ QToolButton#openPathBtn {{
     min-height: 26px;
     max-height: 28px;
     background-color: rgba(255, 255, 255, 0.08);
-}}
-/* Text chip (e.g. "4 Hinweise") — must not share the 28px icon-button max-width */
-QToolButton#healthChip {{
-    padding: 2px 10px;
-    margin: 0;
-    min-width: 0;
-    max-width: none;
-    min-height: 22px;
-    max-height: 26px;
-    border: 1px solid {COLOR_EXPERIMENTAL};
-    border-radius: 10px;
-    background-color: {WARN_16};
-    color: {COLOR_EXPERIMENTAL};
-    font-size: 11px;
-    font-weight: 600;
-}}
-QToolButton#healthChip:hover {{
-    background-color: {WARN_28};
-    border-color: {COLOR_EXPERIMENTAL};
 }}
 /* Menubar corner: flag + theme — compact, no chrome */
 QToolButton#langToggle,

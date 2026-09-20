@@ -34,6 +34,11 @@ PY
     [ "$status" -eq 0 ]
 }
 
+@test "recipe trust verifies prototype despite mod-bundle gitignore" {
+    run _verify "$ROOT/recipes/prototype" 1
+    [ "$status" -eq 0 ]
+}
+
 @test "recipe trust verifies wiso-steuer" {
     run _verify "$ROOT/recipes/wiso-steuer" 1
     [ "$status" -eq 0 ]
@@ -70,6 +75,51 @@ assert (root / ".git").is_dir(), "expected git checkout"
 assert manifest_auto_sync_enabled(root) is False
 os.environ["REZEPTOR_DEV"] = "1"
 assert manifest_auto_sync_enabled(root) is True
+print("ok")
+PY
+    [ "$status" -eq 0 ]
+    [[ "$output" == *ok* ]]
+}
+
+@test "recipe trust ignores dotfiles and editor junk" {
+    run python3 - "$ROOT" "$BATS_TEST_TMPDIR" <<'PY'
+import sys
+import shutil
+from pathlib import Path
+
+root = Path(sys.argv[1])
+tmpdir = Path(sys.argv[2])
+sys.path.insert(0, str(root / "launcher"))
+from recipe_trust import (
+    clear_digest_cache,
+    generate_manifest,
+    verify_recipe_trust,
+)
+
+work = tmpdir / "recipes"
+src = root / "recipes" / "wiso-steuer"
+shutil.copytree(src, work / "wiso-steuer")
+manifest_path = work / "manifest.json"
+clear_digest_cache()
+generate_manifest(work, manifest_path)
+
+recipe = work / "wiso-steuer"
+(recipe / ".gitignore").write_text("*.tpf\n", encoding="utf-8")
+(recipe / "launch.sh~").write_text("backup\n", encoding="utf-8")
+pycache = recipe / "__pycache__"
+pycache.mkdir()
+(pycache / "x.pyc").write_bytes(b"\0")
+
+clear_digest_cache()
+ok, reason = verify_recipe_trust(recipe, manifest_path, strict=True)
+assert ok, reason
+generated = generate_manifest(work, manifest_path)
+assert generated == 1
+import json
+files = json.loads(manifest_path.read_text())["recipes"]["wiso-steuer"]["files"]
+assert ".gitignore" not in files
+assert "launch.sh~" not in files
+assert "__pycache__/x.pyc" not in files
 print("ok")
 PY
     [ "$status" -eq 0 ]

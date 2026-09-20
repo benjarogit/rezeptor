@@ -17,17 +17,42 @@ recipe_guard::require_mem() {
     return 0
 }
 
+recipe_guard::_pid_in_prefix() {
+    local pid="$1" prefix="$2" envf="/proc/${pid}/environ"
+    [ -n "$prefix" ] || return 0
+    [ -r "$envf" ] || return 1
+    tr '\0' '\n' <"$envf" 2>/dev/null | grep -Fxq "WINEPREFIX=${prefix}"
+}
+
+recipe_guard::_cmdline_has_exe() {
+    # Token basename equals needle (case-insensitive) — not a path substring.
+    local cmdline="$1" want="$2" tok base
+    want="$(printf '%s' "$want" | tr '[:upper:]' '[:lower:]')"
+    want="${want%.exe}"
+    for tok in $cmdline; do
+        base="$(printf '%s' "$tok" | tr '\\' '/' )"
+        base="${base##*/}"
+        base="$(printf '%s' "$base" | tr '[:upper:]' '[:lower:]')"
+        base="${base%.exe}"
+        [ "$base" = "$want" ] && return 0
+    done
+    return 1
+}
+
 recipe_guard::process_matches() {
     # True if a real process matches needle.
     # For *.exe: match /proc/comm (Wine sets Windows EXE name) — not argv that merely
     # *mention* the EXE (AdobeIPCBroker … Photoshop.exe → false "already running").
+    # Optional $2 = WINEPREFIX: only count processes in that prefix.
     local needle="$1"
-    local pid cmdline comm want
+    local prefix="${2:-}"
+    local pid cmdline comm want n
     want="$(printf '%s' "$needle" | tr '[:upper:]' '[:lower:]')"
     want="${want%.exe}"
 
     for pid in /proc/[0-9]*; do
         # PID can vanish mid-scan — silence bash redirection errors into the launch log.
+        n="${pid##*/}"
         cmdline=""
         if [ -r "${pid}/cmdline" ]; then
             cmdline="$(tr '\0' ' ' <"${pid}/cmdline" 2>/dev/null || true)"
@@ -53,14 +78,27 @@ recipe_guard::process_matches() {
                     [ "$comm" = "$want" ] \
                         || { [ "${#comm}" -ge 8 ] && [ "${want#"$comm"}" != "$want" ]; }
                 }; then
+                    recipe_guard::_pid_in_prefix "$n" "$prefix" || continue
                     return 0
                 fi
+                # Wine wrapper: comm is wine64, EXE is a later argv token.
+                case "$comm" in
+                    wine|wine64|wine-preloader|wine64-preloader)
+                        if recipe_guard::_cmdline_has_exe "$cmdline" "$needle"; then
+                            recipe_guard::_pid_in_prefix "$n" "$prefix" || continue
+                            return 0
+                        fi
+                        ;;
+                esac
                 continue
                 ;;
         esac
 
         case "$cmdline" in
-            *"${needle}"*) return 0 ;;
+            *"${needle}"*)
+                recipe_guard::_pid_in_prefix "$n" "$prefix" || continue
+                return 0
+                ;;
         esac
     done
     return 1

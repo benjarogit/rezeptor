@@ -76,6 +76,29 @@ def clear_digest_cache() -> None:
     _DIGEST_CACHE.clear()
 
 
+def _skip_recipe_file(path: Path) -> bool:
+    """Skip editor/dev junk that is not a shipped recipe asset.
+
+    Same rules as ``scripts/recipe-manifest.sh``: bytecode, editor backups,
+    and dotfiles (``.gitignore`` cache rules, ``.DS_Store``) are not hashed
+    or verified.
+    """
+    if "__pycache__" in path.parts or path.suffix in {".pyc", ".pyo"}:
+        return True
+    name = path.name
+    return name.endswith("~") or name.startswith(".")
+
+
+def _iter_recipe_files(recipe_dir: Path, *, sort: bool = True):
+    """Yield shipped files under *recipe_dir* (no dirs, no skipped junk)."""
+    it = recipe_dir.rglob("*")
+    if sort:
+        it = sorted(it)
+    for path in it:
+        if path.is_file() and not _skip_recipe_file(path):
+            yield path
+
+
 def generate_manifest(recipes_dir: Path, manifest_path: Path) -> int:
     """Write manifest.json from recipe tree. Returns recipe count."""
     clear_digest_cache()
@@ -90,9 +113,7 @@ def generate_manifest(recipes_dir: Path, manifest_path: Path) -> int:
             continue
         rid = _recipe_id(recipe_dir)
         files: dict[str, str] = {}
-        for path in sorted(recipe_dir.rglob("*")):
-            if not path.is_file():
-                continue
+        for path in _iter_recipe_files(recipe_dir):
             rel = path.relative_to(recipe_dir).as_posix()
             files[rel] = _file_digest(path)
         recipes[rid] = {"files": files}
@@ -126,9 +147,7 @@ def approve_recipe_manifest(recipe_dir: Path, manifest_path: Path) -> str:
         manifest["recipes"] = {}
 
     files: dict[str, str] = {}
-    for path in sorted(recipe_dir.rglob("*")):
-        if not path.is_file():
-            continue
+    for path in _iter_recipe_files(recipe_dir):
         rel = path.relative_to(recipe_dir).as_posix()
         files[rel] = _file_digest(path)
     manifest["recipes"][rid] = {"files": files}
@@ -174,9 +193,7 @@ def _recipe_dir_stale_vs_manifest(
     expected: set[str] = set(entry.get("files", {}))
     actual: set[str] = set()
     needs_hash_check = False
-    for path in recipe_dir.rglob("*"):
-        if not path.is_file():
-            continue
+    for path in _iter_recipe_files(recipe_dir, sort=False):
         rel = path.relative_to(recipe_dir).as_posix()
         actual.add(rel)
         if rel not in expected:
@@ -260,9 +277,7 @@ def verify_recipe_trust(
 
     expected: dict[str, str] = entry.get("files", {})
     actual: dict[str, str] = {}
-    for path in recipe_dir.rglob("*"):
-        if not path.is_file():
-            continue
+    for path in _iter_recipe_files(recipe_dir, sort=False):
         rel = path.relative_to(recipe_dir).as_posix()
         actual[rel] = _file_digest(path)
 
