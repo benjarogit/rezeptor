@@ -106,6 +106,16 @@ def linuxguides_url() -> str:
     """LinuxGuides forum (community link on home)."""
     return "https://forum.linuxguides.de/"
 
+
+def phials_adobe_installers_url() -> str:
+    """PhialsBasement Adobe installer notes (home credit link)."""
+    return "https://github.com/PhialsBasement/wine-adobe-installers"
+
+
+def siximon_lightroom_url() -> str:
+    """6im0n Lightroom-on-Linux notes (home credit link)."""
+    return "https://github.com/6im0n/lightroom-classic-on-linux"
+
 def github_doc_url(rel_path: str, branch: str = "main") -> str:
     """GitHub-URL für eine Datei unter docs/."""
     return f"https://github.com/{GITHUB_REPO}/blob/{branch}/docs/{rel_path}"
@@ -208,10 +218,13 @@ def parse_validate_version_fields(output: str) -> tuple[str, str]:
 def version_guarantee_mismatch(guaranteed: str, detected: str) -> bool:
     if not guaranteed or not detected:
         return False
-    g, d = guaranteed.strip(), detected.strip()
+    from version_detect import normalize_version_string
+
+    g = normalize_version_string(guaranteed)
+    d = normalize_version_string(detected)
     if g == d:
         return False
-    # Detail-Suffix erlaubt: "… (Build 7575778)"
+    # Detail suffix allowed: "… (Build 7575778)"
     if d.startswith(g + " ") or d.startswith(g + " ("):
         return False
     return True
@@ -801,6 +814,22 @@ def build_diagnose_zip(
     return out, len(picked)
 
 
+def _issue_notes_key_for_recipe(recipe_id: str) -> str:
+    """Optional extra issue bullet from recipe.yml ``issue_notes_key``."""
+    rid = (recipe_id or "").strip()
+    if not rid or rid == "launcher":
+        return ""
+    yml = ROOT / "recipes" / rid / "recipe.yml"
+    if not yml.is_file():
+        return ""
+    try:
+        from recipe_discovery import parse_recipe_yml
+
+        return (parse_recipe_yml(yml).get("issue_notes_key") or "").strip()
+    except (OSError, ValueError, KeyError):
+        return ""
+
+
 def build_issue_body(
     recipe_id: str,
     report_path: Path,
@@ -835,8 +864,9 @@ def build_issue_body(
     ]
     if session_id:
         parts.append(t("dialog.issue_session", session=session_id))
-    if recipe_id in ("photoshop", "photoshop-m0nkrus"):
-        parts.append(t("dialog.issue_photoshop"))
+    notes_key = _issue_notes_key_for_recipe(recipe_id)
+    if notes_key:
+        parts.append(t(notes_key))
     parts.extend(
         [
             "",

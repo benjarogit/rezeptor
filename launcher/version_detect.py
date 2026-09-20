@@ -336,6 +336,20 @@ def _parse_scalar(val: str) -> Any:
 # Version/resource strings live well below this; avoid loading multi-hundred-MB EXEs.
 _PE_SCAN_MAX = 32 * 1024 * 1024
 
+# Windows VERSIONINFO string table often stores "1,0,0,1" (compiler tuple).
+# Never run these through locale number format (de_DE would turn 1.0.0.1 into 1,0,0,1).
+_VERSION_TUPLE_RE = re.compile(r"^\d+(?:\s*,\s*\d+){1,3}$")
+
+
+def normalize_version_string(raw: str) -> str:
+    """Keep version text as-is except Windows comma tuples → dotted form."""
+    s = (raw or "").strip()
+    if not s:
+        return ""
+    if _VERSION_TUPLE_RE.fullmatch(s):
+        return ".".join(p.strip() for p in s.split(","))
+    return s
+
 
 def _pe_read_capped(exe: Path, limit: int = _PE_SCAN_MAX) -> bytes:
     with exe.open("rb") as f:
@@ -351,12 +365,16 @@ def _pe_field(exe: Path, field: str) -> str:
     i = data.find(marker)
     if i < 0:
         return ""
-    chunk = data[i + len(marker) : i + len(marker) + 160]
+    after = data[i + len(marker) : i + len(marker) + 160]
+    # StringTable may pad the key to a DWORD with extra UTF-16 nulls.
+    off = 0
+    while off + 1 < len(after) and after[off : off + 2] == b"\x00\x00":
+        off += 2
     try:
-        s = chunk.decode("utf-16le", errors="ignore")
+        s = after[off:].decode("utf-16le", errors="ignore")
     except Exception:
         return ""
-    return s.split("\x00", 1)[0].strip()
+    return normalize_version_string(s.split("\x00", 1)[0].strip())
 
 
 def _bytes_contains_ci(haystack: bytes, needle: bytes) -> bool:
@@ -718,5 +736,5 @@ def detect_recipe_version(
         if isinstance(raw, list):
             rules = [r for r in raw if isinstance(r, dict)]
     if rules:
-        return detect_with_rules(path, rules, guaranteed=g)
+        return normalize_version_string(detect_with_rules(path, rules, guaranteed=g))
     return ""

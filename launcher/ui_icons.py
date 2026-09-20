@@ -48,6 +48,16 @@ FA_FLASK = "\uf0c3"
 FA_GLOBE = "\uf0ac"
 FA_LINUX = "\uf17c"  # Font Awesome Brands
 FA_COMPASS = "\uf14e"
+FA_HOUSE = "\uf015"
+FA_GEAR = "\uf013"
+FA_PLUS = "\uf067"
+FA_TRASH = "\uf1f8"
+FA_EYE = "\uf06e"
+FA_EYE_SLASH = "\uf070"
+FA_CHEVRON_DOWN = "\uf078"
+FA_CHEVRON_RIGHT = "\uf054"
+FA_FILE_ARCHIVE = "\uf1c6"
+FA_LINK = "\uf0c1"
 
 _KIND_GLYPH = {
     "ok": FA_CHECK,
@@ -78,29 +88,42 @@ _KIND_GLYPH = {
     "globe": FA_GLOBE,
     "linux": FA_LINUX,
     "compass": FA_COMPASS,
+    "house": FA_HOUSE,
+    "home": FA_HOUSE,
+    "gear": FA_GEAR,
+    "settings": FA_GEAR,
+    "plus": FA_PLUS,
+    "trash": FA_TRASH,
+    "uninstall": FA_TRASH,
+    "eye": FA_EYE,
+    "eye-slash": FA_EYE_SLASH,
+    "chevron-down": FA_CHEVRON_DOWN,
+    "chevron-right": FA_CHEVRON_RIGHT,
+    "archive": FA_FILE_ARCHIVE,
+    "link": FA_LINK,
 }
 
 _BRAND_KINDS = frozenset({"github", "reddit", "linux"})
 
-# Farben wie vor Dracula (Kupfer / Grün / Amber)
+# Brand tokens (docs/BRAND.md). Literals only — ui_styles imports this module.
 _KIND_COLOR = {
-    "ok": "#3ddc84",
-    "error": "#f85149",
-    "warn": "#e6a700",
-    "step": "#58a6ff",
-    "info": "#a1a1aa",
-    "question": "#58a6ff",
-    "log": "#c9d1d9",
-    "progress": "#58a6ff",
-    "launch": "#e4e4e7",
-    "install": "#e4e4e7",
-    "repair": "#e4e4e7",
-    "validate": "#e4e4e7",
-    "kill": "#f85149",
-    "more": "#a1a1aa",
-    "folder": "#a1a1aa",
-    "kit-medical": "#a1a1aa",
-    "medizin": "#a1a1aa",
+    "ok": "#639922",
+    "error": "#E07070",
+    "warn": "#d9a441",
+    "step": "#B87333",
+    "info": "#D4CDC3",
+    "question": "#D4CDC3",
+    "log": "#D4CDC3",
+    "progress": "#B87333",
+    "launch": "#EDE6D6",
+    "install": "#EDE6D6",
+    "repair": "#EDE6D6",
+    "validate": "#EDE6D6",
+    "kill": "#E07070",
+    "more": "#D4CDC3",
+    "folder": "#D4CDC3",
+    "kit-medical": "#D4CDC3",
+    "medizin": "#D4CDC3",
 }
 
 

@@ -30,7 +30,7 @@ Theme: Fluent Dark + copper (`#B87333`) — see [Brand](BRAND.md).
 
 The **Medizin** button (first-aid kit icon) sits next to **More** — not inside the More menu.
 
-Lasting per-recipe toggles (`options.env`). After changing options, the primary button often becomes **Repair now** — click once, or the old settings stay active.
+Lasting per-recipe toggles (`options.env`). Not installed: the choice applies on the next install. Installed with a stale overlay: **Repair** to apply.
 
 ### Photoshop (CC 2021)
 
@@ -56,6 +56,19 @@ Defaults are **off**. Tips in the Medizin dialog have the same guidance.
 | Trainer / mods / skip intro | BYOS — see recipe info text. |
 
 After changing preset/graphics: **Repair** or **Launch** once so `Engine.ini` / Halo-*UserSettings apply.
+
+### Prototype
+
+| Option | Effect |
+|--------|--------|
+| **Mod bundle** | Overlay 1.5.0: PrototypeFix, No-Intro, desktop pin, sprint fix, parkour (default on), German patch, standard skin. No ReShade (Home is dead). Continue Lua stays off. Trainer is under `rezeptor-trainer/` and `trainer/`, not launched with the game (button while running). Allagga/P2/Venom `.tpf` are TexMod and are not injected. On by default. |
+| **Game language** | Choice German (default: patch files + `FE_Language=68`) / Standard / French / Italian / Spanish. Not an in-game setting, not the Rezeptor UI language. |
+| **Skin** | Choice Standard (default, vanilla) / Venom / Anti-Venom. Same slot, not both. Then Repair or Launch. |
+| **Parkour** | Default on. Loose `art/startup_fig.p3d` only (balanced). No Lua — Continue stays. |
+| **Load 100% save** | Default off. Writes saves to prefix `Documents/Prototype`; backup first. |
+| **PS3 buttons** | Default off. Xbox prompts → PS3. |
+
+After toggling: **Repair**, then **Launch**. Git launcher: `install.sh` / `repair.sh` / `launch.sh` without a GUI restart; `recipe.yml` / `info.*` need a launcher restart.
 
 ## Status & validation
 
@@ -85,7 +98,7 @@ Typical options:
 | Action | Effect |
 |--------|--------|
 | **Hide** | Removed from the list; data stays |
-| **Uninstall** | `uninstall.sh` → `purge_recipe_data` (desktop + data_root) |
+| **Uninstall** | `uninstall.sh` → `purge_recipe_data` (desktop + data_root + asset cache) |
 
 Details: [Uninstall](UNINSTALL.md) · [Catalog](CATALOG.md)
 

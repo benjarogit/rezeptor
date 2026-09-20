@@ -105,7 +105,7 @@
     },
     "prototype": {
       "files": {
-        "assets/mod-bundle/bundle.yml": "sha256:9246edc83cc69000d65c8288538fbefade193bb404b766ed36121cce29a73bb1",
+        "assets/mod-bundle/bundle.yml": "sha256:a7d90acf77a8a3f3d44b6acbff108ddf32650008e214c93477e293d1869af75a",
         "assets/mod-bundle/overlay/art/alex/alex_fig.p3d.rz": "sha256:6e7a02308caee679ba8805806eca46ea8e27f34706ba0cd1cad2f6b300e64e61",
         "assets/mod-bundle/overlay/art/hud/protolegalscreen.gfx": "sha256:be6a49344cbff927cd4fafefd5ec516edf84a4a15270e0f69738d1d3e888bc2a",
         "assets/mod-bundle/overlay/art/startup_fig.p3d": "sha256:06d0774f81222e95d5153f629de5504ed2413df04b1ef9e07216de1c9fac2e9c",
@@ -143,7 +143,7 @@
         "assets/mod-bundle/packs/skin-venom/art/packages/powers/alex_hammerfist/alex_hammerfist.p3d.rz": "sha256:e8d89d8ee463d102b064181abf1bb1af7bf171f4d631b87f9100eea52577f5c4",
         "assets/mod-bundle/packs/skin-venom/art/packages/powers/alex_musclemass/alex_musclemass.p3d.rz": "sha256:8f866d33ca8ac55e9a1ee8b772f60daab362b5f8313f16d769f103928ee03557",
         "assets/mod-bundle/packs/skin-venom/art/packages/powers/alex_whipfist/alex_whipfist.p3d.rz": "sha256:f8699b064ff0967e46b77da10d4c82bcbf2b2423adbeb82d3053221af0427e5a",
-        "assets/mod-bundle/remote.yml": "sha256:ad604030ccd4b71e717ad675c2c53561f88d48bb15855532cf5dd6c20e1021fd",
+        "assets/mod-bundle/remote.yml": "sha256:c27fcffb5539488a7606715e8f3ee52ee315250e83fe9ea84a8b6de60a2535a7",
         "assets/mod-bundle/tools/force_desktop_res.c": "sha256:79c017e6bc9cd2ae31dccc74b2f79cc12befd1427983bc2d8c5fb2a71c34ddbc",
         "assets/mod-bundle/tools/prototypef.vcdiff": "sha256:2b3a805383d36fe4b68f0ff6a755c6bb36c752451e6faf8985eff1e1a9a65c76",
         "assets/mod-bundle/tools/reschanger/ResChanger.exe": "sha256:23648e1785ba9e7a61ba4874677a58d93048a10320010b228082457efe4bb8a0",
@@ -152,7 +152,7 @@
         "assets/mod-bundle/tools/trainer/locke_de.nfo": "sha256:28eb3cde2883f0e7456b0270a94ab142fee93d3adcdb9f767d8777a662288c63",
         "assets/mod-bundle/tools/trainer/prototype.v1001.p7trn.exe": "sha256:eff7d26f90b1d535d03953e3d32e29edee76cb4359a096a1a3b4e34fc9cd51ed",
         "assets/mod-bundle/tools/xdelta3-3.1.0-i686.exe": "sha256:5d408327ae84dff3ddabf02f86a32fe2382abce653a4d807579d336446f9ca65",
-        "helpers.sh": "sha256:e2bccdaf922f5955834ee66e4ebcbc4bdc49775cfa504573085b22377ac37278",
+        "helpers.sh": "sha256:b2dd1b727aa4eb215450ea86d5ec21c6e46b9279afa9077e934fda97982fbfae",
         "info.de.txt": "sha256:98cf0732e433468b6298b9a86d8197342e59bcebe62a14880157a2fb6394ec65",
         "info.en.txt": "sha256:149e2e8438053c1de98a40d3bcede3024a0cd3a0d0d8d3e5de69d09f8bd91b64",
         "install.sh": "sha256:00bf5817c8ad03e4e84ec5e07cc21defc622d4e3a2612d2cdd6e28f72417af85",

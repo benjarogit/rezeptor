@@ -12,7 +12,67 @@ source "$ROOT/core/recipe-assets.sh"
 CACHE_DEFAULT="${WINE_SOFTWARE_BASE:-$HOME/.local/share/wine-software}/cache"
 
 mega_logged_in() {
-    command -v mega-whoami >/dev/null 2>&1 && mega-whoami >/dev/null 2>&1
+    if command -v mega-whoami >/dev/null 2>&1 && mega-whoami >/dev/null 2>&1; then
+        return 0
+    fi
+    if command -v mega-exec >/dev/null 2>&1 && mega-exec whoami >/dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+print_login_hint() {
+    cat <<'EOF'
+mega-cmd is not logged in (or not installed).
+
+Install (Arch/CachyOS, official mega.io package):
+  https://mega.io/de/cmd
+
+One login. Password is prompted. Never store it in git or this repo:
+  mega-login IHRE_MEGA_EMAIL
+
+Then this script does the rest (upload, public /file/ + /folder/ export, hashes):
+  make recipe-assets-publish
+EOF
+}
+
+# Existing public export, or create one. Never /fm/. Accept copyright with -f.
+mega_public_link() {
+    local remote_path="${1:?}"
+    local link
+    command -v mega-export >/dev/null 2>&1 || return 1
+    link="$(mega-export "$remote_path" 2>/dev/null | tr -d '\r' | grep -oE 'https://mega\.(nz|io)/(file|folder)/[^[:space:]]+' | tail -n1)"
+    if recipe_assets::is_public_share_url "$link"; then
+        printf '%s' "$link"
+        return 0
+    fi
+    link="$(mega-export -a -f "$remote_path" 2>/dev/null | tr -d '\r' | grep -oE 'https://mega\.(nz|io)/(file|folder)/[^[:space:]]+' | tail -n1)"
+    recipe_assets::is_public_share_url "$link" || return 1
+    printf '%s' "$link"
+}
+
+write_lock_base_url() {
+    local url="${1:?}" lock
+    lock="$(recipe_assets::_lock_file)"
+    [ -f "$lock" ] || return 1
+    recipe_assets::is_public_share_url "$url" || return 1
+    python3 - "$lock" "$url" <<'PY'
+from pathlib import Path
+import sys
+path, url = Path(sys.argv[1]), sys.argv[2]
+lines = path.read_text(encoding="utf-8").splitlines(keepends=True)
+out = []
+wrote = False
+for line in lines:
+    if line.startswith("MEGA_ASSETS_BASE_URL="):
+        out.append(f'MEGA_ASSETS_BASE_URL="{url}"\n')
+        wrote = True
+    else:
+        out.append(line)
+if not wrote:
+    out.append(f'MEGA_ASSETS_BASE_URL="{url}"\n')
+path.write_text("".join(out), encoding="utf-8")
+PY
 }
 
 mega_put_export() {
@@ -22,10 +82,9 @@ mega_put_export() {
     remote_path="${dest_dir%/}/${name}"
     command -v mega-put >/dev/null 2>&1 || return 1
     command -v mega-mkdir >/dev/null 2>&1 && mega-mkdir -p "$dest_dir" >/dev/null 2>&1 || true
-    mega-put "$local_file" "${dest_dir}/" >/dev/null || return 1
-    command -v mega-export >/dev/null 2>&1 || return 1
-    link="$(mega-export -a "$remote_path" 2>/dev/null | tr -d '\r' | awk '/https:\/\//{print $NF; exit}')"
-    recipe_assets::is_public_share_url "$link" || return 1
+    # Progress stays on stderr so command substitution only captures the share URL.
+    mega-put "$local_file" "${dest_dir}/" >&2 || return 1
+    link="$(mega_public_link "$remote_path")" || return 1
     printf '%s' "$link"
 }
 
@@ -131,8 +190,8 @@ if mega_logged_in; then
     logged=1
     echo "mega-cmd session: OK"
 else
-    echo "mega-cmd is not logged in (or not installed)."
-    echo "Install MEGA-CLI, run mega-login, then: make recipe-assets-publish"
+    print_login_hint
+    echo
     echo "Hashes will still be written from local files."
 fi
 
@@ -182,8 +241,18 @@ if [ "$found" -eq 0 ]; then
     exit 0
 fi
 
+if [ "$logged" -eq 1 ]; then
+    folder_link=""
+    if folder_link="$(mega_public_link "$remote_dir")"; then
+        write_lock_base_url "$folder_link"
+        echo "MEGA_ASSETS_BASE_URL=$folder_link"
+    else
+        echo "Folder export failed for $remote_dir (file URLs in remote.yml may still work)."
+    fi
+fi
+
 if [ "$logged" -eq 0 ]; then
     echo
-    echo "Next: install mega-cmd, mega-login, then make recipe-assets-publish"
     echo "A public /folder/ or /file/ + key is required before recipes can download."
+    echo "After mega-login: make recipe-assets-publish"
 fi

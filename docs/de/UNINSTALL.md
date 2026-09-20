@@ -16,12 +16,14 @@ Vorlage und CI (`recipes-check`, `tests/uninstall-purge.bats`) erzwingen das.
 Reihenfolge:
 
 1. `recipe_desktop::remove` (Menü- + Desktop-Verknüpfungen, Icons) — best effort
-2. Gewählten `DATA_ROOT` (GUI-Ziel / `data_root.path`)
-3. Kanonischen `data_root` aus YAML, falls verschieden und noch vorhanden
+2. Rezept-Asset-Cache: `cache/<id>/` und `cache/<id>-mod-bundle/` (Overlay, ZIP-Reste, lose Packs)
+3. Gewählten `DATA_ROOT` (GUI-Ziel / `data_root.path`, inkl. `options.env`)
+4. Kanonischen `data_root` aus YAML, falls verschieden und noch vorhanden
 
-Enthalten typischerweise: `prefix/`, `recipe.env`, Marker, Staging, Wrapper unter dem Rezept-Datenort.
+Enthalten typischerweise: `prefix/`, `recipe.env`, `options.env`, Marker, Staging, Wrapper, Trainer-Kopie unter dem Rezept-Datenort.
 
 Sicherheit: Löschen von `/`, `$HOME`, `/usr`, `/etc` usw. wird blockiert.
+Geteilte Caches (`cache/winetricks`, `cache/vcredist`) bleiben.
 
 ## Was bewusst bleibt
 

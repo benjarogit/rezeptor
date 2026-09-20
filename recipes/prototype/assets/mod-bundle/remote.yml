@@ -1,6 +1,8 @@
-# Large packs not in git. Fetched via recipe_assets::ensure (SHA-256).
+# Large packs not in git. Staged via recipe_assets::stage_pack (SHA-256).
+# Dest: ~/.local/share/wine-software/cache/<recipe-id>/ — never ~/Downloads.
+# Archives are deleted after a successful overlay. Loose files (tpf) stay.
 # url must be a public MEGA share (/file/ or /folder/ + key). Never /fm/.
-# Empty url: local seed only (Downloads or wine-software cache).
+# Optional leftover in ~/Downloads may seed once (not copied as a store).
 version: 1
 packs:
   - id: deu-patch

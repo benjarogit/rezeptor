@@ -39,6 +39,7 @@ try:
         BodyLabel,
         CaptionLabel,
         CardWidget,
+        ComboBox,
         FluentIcon,
         IconWidget,
         Pivot,
@@ -75,6 +76,7 @@ except ImportError:
 
     PrimaryPushButton = QPushButton  # type: ignore[misc, assignment]
     PushButton = QPushButton  # type: ignore[misc, assignment]
+    ComboBox = None  # type: ignore[misc, assignment]
     RoundMenu = QMenu  # type: ignore[misc, assignment]
     MenuAnimationType = None  # type: ignore[misc, assignment]
     CardWidget = QWidget  # type: ignore[misc, assignment]

@@ -16,12 +16,14 @@ Templates and CI (`recipes-check`, `tests/uninstall-purge.bats`) enforce this.
 Order:
 
 1. `recipe_desktop::remove` (menu + desktop shortcuts, icons) — best effort
-2. Chosen `DATA_ROOT` (GUI target / `data_root.path`)
-3. Canonical `data_root` from YAML if different and still present
+2. Recipe asset cache: `cache/<id>/` and `cache/<id>-mod-bundle/` (overlay, leftover zips, loose packs)
+3. Chosen `DATA_ROOT` (GUI target / `data_root.path`, including `options.env`)
+4. Canonical `data_root` from YAML if different and still present
 
-Typically includes: `prefix/`, `recipe.env`, markers, staging, wrappers under the recipe data path.
+Typically includes: `prefix/`, `recipe.env`, `options.env`, markers, staging, wrappers, trainer copy under the recipe data path.
 
 Safety: deleting `/`, `$HOME`, `/usr`, `/etc`, etc. is blocked.
+Shared caches (`cache/winetricks`, `cache/vcredist`) stay.
 
 ## What intentionally remains
 

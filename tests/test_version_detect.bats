@@ -185,6 +185,53 @@ print('ok')
     [[ "$output" == *ok* ]]
 }
 
+@test "normalize_version_string keeps dotted form and maps Windows tuples" {
+    run python3 -c "
+import sys
+sys.path.insert(0, '$PROJECT_ROOT/launcher')
+from version_detect import normalize_version_string
+assert normalize_version_string('1.0.0.1') == '1.0.0.1'
+assert normalize_version_string('1,0,0,1') == '1.0.0.1'
+assert normalize_version_string('1, 0, 0, 1') == '1.0.0.1'
+assert normalize_version_string('22.0.0.35') == '22.0.0.35'
+assert normalize_version_string('Halo CE (Build 9)') == 'Halo CE (Build 9)'
+assert normalize_version_string('') == ''
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *ok* ]]
+}
+
+@test "pe_field reads ProductVersion and maps comma tuples to dotted" {
+    FIX="$BATS_TEST_TMPDIR/fake-proto.exe"
+    python3 - "$FIX" <<'PY'
+from pathlib import Path
+import sys
+path = Path(sys.argv[1])
+# UTF-16LE StringTable: ProductVersion + value, FileVersion + padded value.
+blob = b"MZ" + b"\x00" * 32
+blob += "ProductVersion\x00".encode("utf-16le") + "1,0,0,1\x00".encode("utf-16le")
+blob += "FileVersion\x00\x00".encode("utf-16le") + "1,0,0,1\x00".encode("utf-16le")
+path.write_bytes(blob)
+PY
+    run python3 -c "
+import sys
+from pathlib import Path
+sys.path.insert(0, '$PROJECT_ROOT/launcher')
+from version_detect import _pe_field, detect_with_rules
+exe = Path('$FIX')
+assert _pe_field(exe, 'ProductVersion') == '1.0.0.1', _pe_field(exe, 'ProductVersion')
+assert _pe_field(exe, 'FileVersion') == '1.0.0.1', _pe_field(exe, 'FileVersion')
+hit = detect_with_rules(str(exe.parent), [
+    {'kind': 'pe_field', 'glob': 'fake-proto.exe', 'field': 'ProductVersion'},
+])
+assert hit == '1.0.0.1', hit
+print('ok')
+"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *ok* ]]
+}
+
 @test "path_regex source_refs and empty version_detect" {
     mkdir -p "$FIXTURE/Adobe Photoshop 22.0/extra"
     run python3 -c "

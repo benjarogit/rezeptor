@@ -135,6 +135,7 @@ EOF
 id: photoshop
 data_root: "$canonical"
 name: Photoshop
+desktop_legacy: "Adobe Photoshop 2021.desktop"
 EOF
 
   (
@@ -163,4 +164,61 @@ EOF
   [ ! -e "$desk/rezeptor-photoshop.desktop" ]
   [ ! -e "$apps/rezeptor-photoshop.desktop" ]
   [ ! -e "$desk/Adobe Photoshop 2021.desktop" ]
+}
+
+@test "purge_recipe_data removes recipe asset cache and keeps shared cache plus Downloads" {
+  canonical="$WINE_SOFTWARE_BASE/fake-recipe"
+  chosen="$TEST_BASE/custom-target"
+  mkdir -p "$canonical" "$chosen/prefix" \
+    "$WINE_SOFTWARE_BASE/cache/fake-recipe" \
+    "$WINE_SOFTWARE_BASE/cache/fake-recipe-mod-bundle/deu-overlay" \
+    "$WINE_SOFTWARE_BASE/cache/fake-recipe-oldname" \
+    "$WINE_SOFTWARE_BASE/cache/winetricks" \
+    "$WINE_SOFTWARE_BASE/cache/vcredist" \
+    "$TEST_BASE/Downloads/Prototype-AnkerGames"
+  echo "$chosen" >"$canonical/data_root.path"
+  echo "FOO=1" >"$chosen/recipe.env"
+  echo "choice=1" >"$chosen/options.env"
+  echo zip >"$WINE_SOFTWARE_BASE/cache/fake-recipe/pack.zip"
+  echo overlay >"$WINE_SOFTWARE_BASE/cache/fake-recipe-mod-bundle/deu-overlay/.rezeptor-deu-stamp"
+  echo tpf >"$WINE_SOFTWARE_BASE/cache/fake-recipe-mod-bundle/skin.tpf"
+  echo wt >"$WINE_SOFTWARE_BASE/cache/winetricks/keep.bin"
+  echo vc >"$WINE_SOFTWARE_BASE/cache/vcredist/keep.bin"
+  echo dump >"$TEST_BASE/Downloads/Prototype-AnkerGames/prototypef.exe"
+
+  tmp_yml="$TEST_BASE/recipe.yml"
+  cat >"$tmp_yml" <<EOF
+id: fake-recipe
+data_root: "$canonical"
+name: Fake
+EOF
+
+  (
+    set -eu
+    export RECIPE_DIR="$ROOT/recipes/photoshop"
+    export PROJECT_ROOT="$ROOT"
+    export CORE_DIR="$ROOT/core"
+    export RECIPE_YML="$tmp_yml"
+    export RECIPE_ID="fake-recipe"
+    export DATA_ROOT="$chosen"
+    export HOME="$TEST_BASE"
+    # shellcheck source=/dev/null
+    source "$ROOT/core/paths.sh"
+    # shellcheck source=/dev/null
+    source "$ROOT/core/recipe.sh"
+    # shellcheck source=/dev/null
+    source "$ROOT/core/recipe-hooks.sh"
+    # shellcheck source=/dev/null
+    source "$ROOT/core/recipe-desktop.sh"
+    recipe_hooks::purge_recipe_data
+  )
+
+  [ ! -e "$chosen" ]
+  [ ! -e "$canonical" ]
+  [ ! -e "$WINE_SOFTWARE_BASE/cache/fake-recipe" ]
+  [ ! -e "$WINE_SOFTWARE_BASE/cache/fake-recipe-mod-bundle" ]
+  [ ! -e "$WINE_SOFTWARE_BASE/cache/fake-recipe-oldname" ]
+  [ -f "$WINE_SOFTWARE_BASE/cache/winetricks/keep.bin" ]
+  [ -f "$WINE_SOFTWARE_BASE/cache/vcredist/keep.bin" ]
+  [ -f "$TEST_BASE/Downloads/Prototype-AnkerGames/prototypef.exe" ]
 }

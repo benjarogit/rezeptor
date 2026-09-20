@@ -79,14 +79,15 @@ pack = Path('$PACK')
 assert _looks_like_adobe_pack_root(pack)
 assert _matches_m0nkrus_220_pack(pack)
 assert adobe_pack_root_for_source(str(pack)) == str(pack.resolve())
-iso = Path(normalize_folder_source('photoshop', str(pack)))
+_adobe = {'installer_engine': 'adobe'}
+iso = Path(normalize_folder_source('photoshop', str(pack), meta=_adobe))
 assert iso.suffix.lower() == '.iso'
 assert iso.is_file()
 # Set-up tree
 setup = Path('$SETUP')
-assert normalize_folder_source('photoshop', str(setup)) == str(setup.resolve())
+assert normalize_folder_source('photoshop', str(setup), meta=_adobe) == str(setup.resolve())
 # ISO file returns itself
-assert normalize_folder_source('photoshop', str(iso)) == str(iso.resolve())
+assert normalize_folder_source('photoshop', str(iso), meta=_adobe) == str(iso.resolve())
 print('ok')
 "
     [ "$status" -eq 0 ]
@@ -155,6 +156,37 @@ dlg.primary_edit.setText('$EXE')
 env = dlg.build_env(Path('$BATS_TEST_TMPDIR'))
 assert env.get('RECIPE_INSTALLER_PATH') == str(Path('$EXE').resolve()) or env.get('RECIPE_INSTALLER_PATH') == '$EXE'
 print('ok', env)
+"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *ok* ]]
+}
+
+@test "source version hint never locale-formats dotted ProductVersion" {
+    run python3 -c "
+import locale
+import sys
+sys.path.insert(0, '$PROJECT_ROOT/launcher')
+from i18n import set_locale, t
+from version_detect import normalize_version_string
+
+# German locale must not rewrite 1.0.0.1 as 1,0,0,1 (thousand/decimal).
+try:
+    locale.setlocale(locale.LC_ALL, 'de_DE.UTF-8')
+except locale.Error:
+    try:
+        locale.setlocale(locale.LC_ALL, 'de_DE.utf8')
+    except locale.Error:
+        pass
+set_locale('de')
+detected = normalize_version_string('1,0,0,1')
+assert detected == '1.0.0.1', detected
+text = t('source.version_mismatch', detected=detected, guaranteed='1.0.0.1')
+assert '1.0.0.1' in text, text
+assert '1,0,0,1' not in text, text
+ok = t('source.version_ok', detected=detected, guaranteed='1.0.0.1')
+assert ok.startswith('Erkannt: 1.0.0.1'), ok
+assert '1,0,0,1' not in ok
+print('ok')
 "
     [ "$status" -eq 0 ]
     [[ "$output" == *ok* ]]

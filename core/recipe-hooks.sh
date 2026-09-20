@@ -81,7 +81,9 @@ recipe_hooks::load() {
     fi
 
     case "$profile" in
-        minimal) ;;
+        minimal)
+            recipe_hooks::_source recipe-kill.sh
+            ;;
         install)
             recipe_hooks::_source security.sh
             recipe_hooks::_source env-file.sh
@@ -98,6 +100,7 @@ recipe_hooks::load() {
             recipe_hooks::_source recipe-vcrun.sh
             recipe_hooks::_source recipe-dotnet.sh
             recipe_hooks::_source recipe-wine-silent.sh
+            recipe_hooks::_source_if_present recipe-assets.sh
             recipe_hooks::_source_if_present recipe-app-link.sh
             recipe_hooks::wine_wrappers
             recipe_hooks::force_prefix
@@ -113,6 +116,7 @@ recipe_hooks::load() {
             recipe_hooks::_source recipe-install.sh
             recipe_hooks::_source recipe-updates.sh
             recipe_hooks::_source recipe-wine-silent.sh
+            recipe_hooks::_source_if_present recipe-assets.sh
             recipe_hooks::wine_wrappers
             recipe_hooks::force_prefix
             export WINEARCH="${WINEARCH:-win64}"
@@ -123,6 +127,7 @@ recipe_hooks::load() {
             recipe_hooks::_source recipe-dotnet.sh
             recipe_hooks::_source recipe-wine-silent.sh
             recipe_hooks::_source recipe-guard.sh
+            recipe_hooks::_source recipe-kill.sh
             recipe_hooks::wine_wrappers
             recipe_hooks::force_prefix
             ;;
@@ -141,6 +146,7 @@ recipe_hooks::load() {
             recipe_hooks::_source recipe-vcrun.sh
             recipe_hooks::_source recipe-dotnet.sh
             recipe_hooks::_source recipe-wine-silent.sh
+            recipe_hooks::_source_if_present recipe-assets.sh
             recipe_hooks::_source_if_present recipe-app-link.sh
             recipe_hooks::wine_wrappers
             recipe_hooks::force_prefix
@@ -353,20 +359,21 @@ recipe_hooks::installer_family() {
 
 # Windows-Installationsziel für Inno /DIR= (unter Prefix drive_c).
 recipe_hooks::installer_wine_dir() {
+    local wine_dir=""
     if [ -n "${RECIPE_INSTALLER_DIR:-}" ]; then
         printf '%s\n' "$RECIPE_INSTALLER_DIR"
         return 0
     fi
-    case "${RECIPE_ID:-}" in
-        halo-campaign-evolved)
-            echo 'C:\Games\HaloCampaignEvolved'
-            ;;
-        *)
-            if [ -n "${RECIPE_ID:-}" ]; then
-                printf 'C:\\Games\\%s\n' "$RECIPE_ID"
-            fi
-            ;;
-    esac
+    if [ -n "${RECIPE_YML:-}" ] && [ -f "${RECIPE_YML}" ]; then
+        wine_dir="$(recipe_get "$RECIPE_YML" installer_wine_dir 2>/dev/null || true)"
+    fi
+    if [ -n "$wine_dir" ]; then
+        printf '%s\n' "$wine_dir"
+        return 0
+    fi
+    if [ -n "${RECIPE_ID:-}" ]; then
+        printf 'C:\\Games\\%s\n' "$RECIPE_ID"
+    fi
 }
 
 # Offline-EXE: genau ein Aufruf je Familie — kein ||-Stapel (sonst mehrere GUIs bei Abbruch).
@@ -558,8 +565,10 @@ recipe_hooks::validate_work_root() {
     return "$failures"
 }
 
-# Deinstallation: Desktop + gewählter DATA_ROOT + kanonischer data_root (data_root.path).
-# Portable-/Spielordner außerhalb von DATA_ROOT bleiben unberührt (z. B. WISO-Portable).
+# Uninstall: desktop + chosen DATA_ROOT + canonical data_root (data_root.path)
+# + recipe asset cache (cache/<id>/ and cache/<id>-mod-bundle/).
+# Portable/game folders outside DATA_ROOT stay (e.g. WISO portable).
+# Shared caches (winetricks, vcredist) stay.
 recipe_hooks::purge_recipe_data() {
     local canonical="" chosen="${DATA_ROOT:-}"
     local raw=""
@@ -567,6 +576,21 @@ recipe_hooks::purge_recipe_data() {
     recipe_hooks::_source recipe-desktop.sh 2>/dev/null || true
     if type recipe_desktop::remove >/dev/null 2>&1; then
         recipe_desktop::remove || true
+    fi
+
+    recipe_hooks::_source_if_present recipe-assets.sh
+    if type recipe_assets::purge_recipe_cache >/dev/null 2>&1; then
+        recipe_assets::purge_recipe_cache "${RECIPE_ID:-}" || true
+    else
+        case "${RECIPE_ID:-}" in
+            ""|.|..|*/*|*\\*) ;;
+            *)
+                if type wine_software_base >/dev/null 2>&1; then
+                    rm -rf "$(wine_software_base)/cache/${RECIPE_ID}" \
+                        "$(wine_software_base)/cache/${RECIPE_ID}-mod-bundle"
+                fi
+                ;;
+        esac
     fi
 
     raw="$(recipe_get "$RECIPE_YML" data_root 2>/dev/null || true)"

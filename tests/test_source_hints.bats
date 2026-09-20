@@ -81,7 +81,7 @@ import sys
 sys.path.insert(0, "launcher")
 from ui_source import normalize_folder_source, adobe_pack_root_for_source
 pack = Path("$PACK")
-got = normalize_folder_source("photoshop-m0nkrus", str(pack), version_hint="22.1.1.138")
+got = normalize_folder_source("photoshop-m0nkrus", str(pack), version_hint="22.1.1.138", meta={"installer_engine": "adobe"})
 assert got.endswith(".iso"), got
 assert "22.1.1.138" in Path(got).name
 root = adobe_pack_root_for_source(got)
@@ -113,7 +113,10 @@ with tempfile.TemporaryDirectory() as td:
     (root / "ps2021_missing_libs.7z").write_bytes(b"7z")
     assert _looks_like_adobe_pack_root(root)
     iso = normalize_folder_source(
-        "photoshop-m0nkrus", str(root), version_hint="22.1.1.138"
+        "photoshop-m0nkrus",
+        str(root),
+        version_hint="22.1.1.138",
+        meta={"installer_engine": "adobe"},
     )
     assert iso.endswith(".iso")
     assert adobe_pack_root_for_source(iso) == str(root.resolve())
@@ -147,9 +150,14 @@ assert _looks_like_adobe_pack_root(pack)
 # Accept darf Pack-Root als Ordner behalten
 assert pack.is_dir()
 # ISO-Pfad allein ist Datei — Accept muss is_file().iso erlauben
-iso = normalize_folder_source("photoshop-m0nkrus", str(pack), version_hint="22.1.1.138")
+iso = normalize_folder_source(
+    "photoshop-m0nkrus",
+    str(pack),
+    version_hint="22.1.1.138",
+    meta={"installer_engine": "adobe"},
+)
 assert Path(iso).is_file() and iso.endswith(".iso")
-assert is_adobe_offline_recipe("photoshop-m0nkrus")
+assert is_adobe_offline_recipe("photoshop-m0nkrus", {"installer_engine": "adobe"})
 ok_dir = pack.is_dir()
 ok_iso = Path(iso).is_file() and Path(iso).suffix.lower() == ".iso"
 assert ok_dir and ok_iso
@@ -238,7 +246,7 @@ from ui_source import (
 from recipe_discovery import is_adobe_offline_recipe
 
 assert not is_adobe_offline_recipe("photoshop-m0nkrus-220")
-assert is_adobe_offline_recipe("photoshop-m0nkrus")
+assert is_adobe_offline_recipe("photoshop-m0nkrus", {"installer_engine": "adobe"})
 
 with tempfile.TemporaryDirectory() as td:
     root = Path(td) / "Photoshop.2021"

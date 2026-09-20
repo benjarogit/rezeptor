@@ -65,6 +65,16 @@ class RezeptorSettings:
     settings_geometry: str = ""
 
 
+def _sanitize_mega_assets_url(raw: object) -> str:
+    """Public MEGA/HTTPS share only. File-manager /fm/ and http:// are dropped."""
+    url = str(raw or "").strip()
+    if not url or url.startswith("http://"):
+        return ""
+    if "/fm/" in url:
+        return ""
+    return url
+
+
 def _parse_str_list(raw: object) -> list[str]:
     if not isinstance(raw, list):
         return []
@@ -392,7 +402,7 @@ def load_settings() -> RezeptorSettings:
             data.get("sidebar_collapsed_categories")
         ),
         recipe_sources=_parse_recipe_sources(data.get("recipe_sources")),
-        mega_assets_base_url=str(data.get("mega_assets_base_url", "") or "").strip(),
+        mega_assets_base_url=_sanitize_mega_assets_url(data.get("mega_assets_base_url")),
         archive_passwords=passwords,
         recipe_install_env=_parse_recipe_install_env(data.get("recipe_install_env")),
         host_deps_prompt_done=bool(data.get("host_deps_prompt_done", False)),
@@ -418,6 +428,10 @@ def save_settings(settings: RezeptorSettings) -> None:
     if not settings.locale:
         settings.locale = _default_locale()
     data = asdict(settings)
+    data["mega_assets_base_url"] = _sanitize_mega_assets_url(
+        data.get("mega_assets_base_url")
+    )
+    settings.mega_assets_base_url = str(data["mega_assets_base_url"])
     passwords = _parse_str_list(data.pop("archive_passwords", []))
     settings.archive_passwords = passwords
     _atomic_write_text(
