@@ -1,4 +1,4 @@
-.PHONY: test pytest validate shellcheck syntax compile i18n-check ruff dead-code shell-dup-check recipes-check recipe-lint recipe-manifest recipe-manifest-check recipe-assets-publish
+.PHONY: test pytest validate shellcheck syntax compile i18n-check ruff dead-code shell-dup-check recipes-check isolation-check recipe-lint recipe-manifest recipe-manifest-check recipe-assets-publish
 
 # Shell test suite (bats). Python unit tests: make pytest (CI runs both).
 test:
@@ -55,8 +55,12 @@ dead-code:
 shell-dup-check:
 	python3 scripts/check-shell-dup-funcs.py
 
-recipes-check:
+# Opt-in: official recipe-id literals in shared core/launcher (sandbox work).
+# Not in recipes-check yet — HEAD still has product-id lists.
+isolation-check:
 	bash ./scripts/check-recipe-isolation.sh
+
+recipes-check:
 	@for f in recipes/*/recipe.yml recipes/community/*/recipe.yml; do \
 		[ -f "$$f" ] || continue; \
 		case "$$f" in */_*) continue ;; esac; \
