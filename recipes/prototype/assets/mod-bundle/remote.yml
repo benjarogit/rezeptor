@@ -1,0 +1,104 @@
+# Large packs not in git. Fetched via recipe_assets::ensure (SHA-256).
+# url must be a public MEGA share (/file/ or /folder/ + key). Never /fm/.
+# Empty url: local seed only (Downloads or wine-software cache).
+version: 1
+packs:
+  - id: deu-patch
+    file: Prototype_DeuPatchBEP.zip
+    cache_rel: prototype-mod-bundle/Prototype_DeuPatchBEP.zip
+    sha256:  fbbd62485f2b9a2ddf910f16b1456237a6b86b560786265932b2655328fbd642
+    size: 987048760
+    url: ""
+    required: true
+    note: "Bollwurf Deutsch-Patch ZIP (~942MB). Unpacked overlay stays cache-only."
+  - id: texmod-allagga-1
+    file: 1.tpf
+    cache_rel: prototype-mod-bundle/1.tpf
+    sha256:  d17eb46465e1f646aa0e8bcfd6f10dbcebbb070b476fd674c51398bd8f93fd9a
+    size: 61459100
+    url: ""
+    required: false
+  - id: texmod-allagga-2
+    file: 2.tpf
+    cache_rel: prototype-mod-bundle/2.tpf
+    sha256:  63f657f7a83182a88b5a5c866021a29db404c48d302e876a55ddf76f1e48058a
+    size: 98998229
+    url: ""
+    required: false
+  - id: texmod-allagga-3
+    file: 3.tpf
+    cache_rel: prototype-mod-bundle/3.tpf
+    sha256:  1796c05bfede96c3e134c5dd3d7543c566a039d5aa6bdb13cacfee957688c7ff
+    size: 58084939
+    url: ""
+    required: false
+  - id: texmod-allagga-4
+    file: 4.tpf
+    cache_rel: prototype-mod-bundle/4.tpf
+    sha256:  ff1cef2b93afadc61a75883c139327a79af637be6b853870da67b7ef065a2dd9
+    size: 44258264
+    url: ""
+    required: false
+  - id: texmod-allagga-5
+    file: 5.tpf
+    cache_rel: prototype-mod-bundle/5.tpf
+    sha256:  25192ac99f876c96b63e250dd1a7c39bebdeff510b2e734d01e942235497560f
+    size: 27195408
+    url: ""
+    required: false
+  - id: texmod-allagga-6
+    file: 6.tpf
+    cache_rel: prototype-mod-bundle/6.tpf
+    sha256:  bcf1d32a300a008260eb13e90e3c753324cb0a924905146fa66da32f2d2f4a68
+    size: 20739958
+    url: ""
+    required: false
+  - id: texmod-allagga-7
+    file: 7.tpf
+    cache_rel: prototype-mod-bundle/7.tpf
+    sha256:  66f6bd8e3dc0e4bb248c778f3ad4a4fdd5822e4b0061952608d44c7b2cb2d7af
+    size: 23325037
+    url: ""
+    required: false
+  - id: texmod-allagga-8
+    file: 8.tpf
+    cache_rel: prototype-mod-bundle/8.tpf
+    sha256:  7d240279cb5b2a1bd1a53166b8fc6e674aef563ffcfbd591d9f21cdbb1024b40
+    size: 53390507
+    url: ""
+    required: false
+  - id: texmod-alpha
+    file: AlphaOutfit.tpf
+    cache_rel: prototype-mod-bundle/AlphaOutfit.tpf
+    sha256:  7c9aaf5a7736a5ee7b068f0ddf9e15452160c5aaedd5f21bfbfbf5917042efe4
+    size: 20751776
+    url: ""
+    required: false
+  - id: texmod-antivenom
+    file: ANTI-VENOM 1.1.tpf
+    cache_rel: prototype-mod-bundle/ANTI-VENOM 1.1.tpf
+    sha256:  6f89196c5180ee6f536ca9514f11e4c9571fda5522bf1a9e7bf0fb183918cc2a
+    size: 7676975
+    url: ""
+    required: false
+  - id: texmod-extra
+    file: Extra.tpf
+    cache_rel: prototype-mod-bundle/Extra.tpf
+    sha256:  5a890bf31976844e44b6716b5a62460e95b5bb5b7366df5cd04789b00e13d7c9
+    size: 29502553
+    url: ""
+    required: false
+  - id: texmod-p2-style
+    file: P2 Style v3.0.tpf
+    cache_rel: prototype-mod-bundle/P2 Style v3.0.tpf
+    sha256:  abb926dd4db0a33c449330e38f00778a769c1f43e7ab602b3dee25b95f66d93d
+    size: 48946674
+    url: ""
+    required: false
+  - id: texmod-venom
+    file: Venom Symbiote.tpf
+    cache_rel: prototype-mod-bundle/Venom Symbiote.tpf
+    sha256:  4637575043a8b7b48f01c0f2c97c3be7825121722091d2d8d7acebfcb04b1385
+    size: 7404269
+    url: ""
+    required: false

@@ -8,7 +8,7 @@ not every source is equivalent.
 Shipped under `recipes/<id>/`, indexed in `recipes/catalog.json` (`trust: official`).
 Guarded by CI (`recipe-lint`, manifest checks).
 
-Currently **7** official product recipes in **5** categories.
+Currently **8** official product recipes in **5** categories.
 
 ### Graphics & Design
 
@@ -41,6 +41,7 @@ Currently **7** official product recipes in **5** categories.
 | ID | Name | Description |
 |----|------|-------------|
 | `halo-campaign-evolved` | Halo Campaign Evolved | ElAmigos/RUNE, graphics presets (default Recommended RTX 2060), optional Steam Non-Steam, BYOS trainer |
+| `prototype` | Prototype | AnkerGames folder (2009), German patch + parkour + sprint fix, Proton-GE 11, DX9, Medizin **Mod bundle 1.5.0** (no ReShade) |
 
 Templates under `recipes/_template*` and entries under `recipes/community/` are **not** bundled product recipes.
 
@@ -86,6 +87,8 @@ Only use when the option changes behaviour (e.g. opt-out). Not for actions Insta
 Photoshop: three UI toggles (`PHOTOSHOP_UI_HOME_SCREEN`, `PHOTOSHOP_UI_RICH_TOOLTIPS`, `PHOTOSHOP_UI_MODERN_NEW`), default `false` — see [User guide](USER-GUIDE.md#medizin-recipe-options).
 
 Halo: quality preset (`HALO_GFX_PRESET`, default `balanced` / Recommended RTX 2060), graphics toggles, optional **Launch via Steam** + Proton choice — see [User guide](USER-GUIDE.md#medizin-recipe-options).
+
+Prototype: **Mod bundle** (`PROTOTYPE_MOD_BUNDLE`, default on) plus **Game language** (`PROTOTYPE_LANGUAGE`, default `de`) and **Skin** (`PROTOTYPE_SKIN`, default `standard`). Parkour default on, 100% save and PS3 buttons default off. Trainer is staged under `rezeptor-trainer/`, not launched. No ReShade.
 
 ```yaml
 options:

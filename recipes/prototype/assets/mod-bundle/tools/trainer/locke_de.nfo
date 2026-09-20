@@ -1,0 +1,78 @@
+                          _                _        
+                         | |              | |       
+                         | |     ___   ___| | _____ 
+                         | |    / _ \ / __| |/ / _ \
+                         | |___| (_) | (__|   <  __/
+                         \_____/\___/ \___|_|\_\___|
+
+
+                           - P R E S E N T S -
+
+
+                         date ......: 2022/11/16
+                         game ......: Prototype
+                         version ...: 1.0.0.1
+
+
+                             >>> OPTIONS <<<
+
+                         Hotkey | Action
+                         컴컴컴�|컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴컴�
+                         NUM1   | Unsterblich
+                                |
+                         NUM2   | Uendlich Munition
+                                |
+                         NUM3   | +500.000 EP
+                                |
+                         NUM4   | Einfache Kills / Chaos Modus*
+                                |
+                         NUM5   | Deaktivere Aufmerksamkeitsmesser*
+                                |
+                         NUM6   | Deaktiviere Abkuehlzeit der Waffen
+                                |
+                         NUM7   | Deaktiviere Timer*
+
+
+
+                           >>> INFORMATION <<<
+
+     !!! Probleme? Versucht den Trainer mit Adminrechten zu starten.
+     
+     Dieser Trainer wurde mit der Spielversion v1.0.0.1 getestet.
+     Ausserdem wurde der Trainer mit dem Widescreen-Fix getestet da
+     dieser die *.dll austauscht auf welcher der Trainer beruht.
+
+     Sollte es noch jemals ein Update fuer dieses Spiel geben und
+     die Funktion des Trainers nicht mehr gegeben sein, werde ich
+     versuchen ein Update zu erstellen.
+
+
+                              >>> NOTES <<<
+
+     NUM3 - +500.000 EP
+     Dies ist das erste Mal das ich in einem meiner Trainer die
+     'Pointer Methode' verwende, ich hoffe es funktioniert bei jedem.
+
+     NUM4 - Einfache Kills / Chaos Modus
+     Es ist vermutlich keine gute Idee diesen Cheat die ganze Zeit
+     aktiviert zu lassen. Beim Testen habe ich bemerkt das manchmal
+     Gegner sterben bevor das Event sie zu toeten ueberhaupt gestartet
+     hat. Im schlimmsten Fall geht es dann im Spiel nicht weiter.
+     Es ist aber ziemlich spassig, mit aktiviertem Cheat durch die
+     Stadt zu ziehen.
+
+     NUM5 - Deaktiviere Aufmerksamkeitsmesser
+     Es gibt im Spiele einige gescriptete Events welche den
+     Aufmerksamkeitsmesser voll ausschlagen lassen.
+
+     NUM7 - Deaktiviere Timer
+     Es koennte moeglich sein dass das Deaktivieren des Timers
+     unerwuenschte Nebeneffekte im Spiel hat. Ich wuerde empfehlen
+     diesen Cheat nur bei Bedarf zu nutzen (Missiontimer / Events).
+
+
+
+     Web: https://www.locke-trainer.de/
+     MD5: fc76b50d941b8c6e5d05bd93ef87411a
+     SHA-256: eff7d26f90b1d535d03953e3d32e29edee76cb4359a096a1a3b4e34fc9cd51ed
+     Virustotal: https://www.virustotal.com/gui/file/eff7d26f90b1d535d03953e3d32e29edee76cb4359a096a1a3b4e34fc9cd51ed

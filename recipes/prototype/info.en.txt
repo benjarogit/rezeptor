@@ -1,0 +1,50 @@
+# Prototype (2009)
+
+Author: benjarogit
+Version: Prototype 1.0.0.1 (AnkerGames, German)
+
+## Summary
+Prototype (Activision / Radical, 2009) on Proton-GE 11. Pre-installed game folder, no setup. BYOS: you bring the pack. Language: German (default).
+
+## Requirements
+• Proton-GE 11 (used automatically)
+• Folder or archive with `prototypef.exe` and `prototypeenginef.dll` (typically `Prototype-AnkerGames/Prototype/`)
+• DirectX 9 / VC++ 2005 / XAudio2 are set up by the recipe
+• 32-bit audio: package `lib32-libpulse` (otherwise winepulse may log c0000135)
+
+## Install
+1. Choose Install
+2. Point the source at the `Prototype-AnkerGames` folder or directly at `Prototype/`
+3. Choose a target folder (default: ~/Games/Prototype). The recipe links the game folder and does not copy the 8 GB tree.
+
+## Usage
+• Launch from Rezeptor
+• **Language (German default):** not an in-game settings toggle and not the Rezeptor UI language under Settings. Medizin **Game language** writes files + registry.
+  – **German (default):** Bollwurf patch as loose files. The dump has no German slot (`art.rcf` only EN/FR/IT/ES). Repair copies the patch textbible to `textbible_german.p3d`, renames the frontend block in `fe_textbible.p3d` to `german`, sets the title in `protostart.gfx` to “DRUECKEN SIE ENTER”, and writes `FE_Language=68` (`LanguageCode=DEU`, `LCID=1031`). Without that the title stays French (APPUYEZ) because `FE_Language=70` loads French chrome.
+  – **Standard:** original dump, English. Patch stripped, `ENU` / `LCID=1033` / `FE_Language=69`.
+  – **French / Italian / Spanish:** the same packs as in the dump (`textbible_french/italian/spanish` in `art.rcf`). Patch stripped, `FE_Language` 70 / 73 / 83. Audio stays English (the dump only has `audio/english`). No Russian or extra slot in the dump.
+  – The EXE patch (vcdiff / GameLaunchFix) does not apply to this Steamless dump; the original EXE stays. That is expected and is not shown in the live progress list.
+  – Then **Repair** or **Launch**. The large overlay (~1.2 GB) lives in the cache (`~/.local/share/wine-software/cache/prototype-mod-bundle/deu-overlay/`), not in git. First Repair needs `~/Downloads/Prototype_DeuPatchBEP.zip`, the cache copy, or the public MEGA share in `assets/mod-bundle/remote.yml` (SHA-256 check).
+
+## Medizin
+• Toggle **Mod bundle** (on by default, version **1.5.0**). Install/Repair writes the overlay next to `prototypef.exe`.
+• Contents (default on): PrototypeFix 1.8b (emoose) + No-Intro 0.2 + `force_desktop_res` (1080p windowed pin) + Sprint Light Attack Fix + **Parkour 1.2 Balanced** + German patch + standard skin (vanilla) + `startup_fig.p3d`.
+• ReShade is not included. Home does not open a graphics menu.
+• `force_desktop_res.asi` pins Continue Reset to desktop 1080p **and** `Windowed=TRUE`. The 2009 RAiN Resolution Changer stays under `tools/reschanger/` and is **not** copied next to the EXE — it loses to the pin (Continue Reset ignores the old menu list). Target remains 1920×1080 @ monitor Hz (144 here).
+• `binkw32.dll` is the ASI loader. Original Bink sits beside it as `binkw32Hooked.dll` (otherwise the first intro movie kills the process).
+• **Sprint Light Attack Fix 1.0:** `art/alex/alex_fig.p3d.rz` + `art/startup_fig.p3d.rz` (preinstalled, default on). Existing `art/startup_fig.p3d` (legal fig) stays as a bundle file; Parkour overwrites that same `.p3d` path when on.
+• **Parkour (default on):** Realistic Hardcore 1.2, loose `art/startup_fig.p3d` only (balanced sprint). **No Lua, no ASI** — Continue stays. Sprint fix (`.p3d.rz`) and Venom stay beside it. TexMod `.tpf` (particles/skin) are not injected.
+• **Load 100% save (default off):** Medizin toggle. Writes `profile.bin` + `slot-A/B/C.bin` to `prefix/drive_c/users/steamuser/Documents/Prototype/` (where Prototype loads). Existing saves are copied to `rezeptor-save-backup/` first. Off leaves the current save.
+• **PS3 buttons (default off):** Xbox prompts → PS3 (`art/hud/fecontrollerimage.gfx`, `fe_frontend`/`fe_ingame`/`fe_pause`, `fonts_latin.gfx`). No conflict with the German patch/sprint/Venom.
+• **Skins:** Medizin **Skin** — choice **Standard** (default, vanilla, no AzimCrew p3d) / Venom / Anti-Venom. Same slot `art/packages/powers/alex_*`, not both at once. Switch, then Repair or Launch. If you already had Venom: set Medizin to Standard, then Repair. The `.tpf` files (TexMod 2006) stay in the cache like Allagga and are **not** injected; the visible change is the p3d model swap.
+• **Trainer (Locke v1.0.0.1 +7):** after Repair at `<game dir>/rezeptor-trainer/prototype.v1001.p7trn.exe` and also `~/.local/share/wine-software/prototype/trainer/prototype.v1001.p7trn.exe`. **Not launched with the game.** **Start trainer** button next to Quit once Prototype is running. A cheat overlay often kills Present under Proton. Hotkeys NUM1–7, see `locke.nfo`.
+• DXVK d3d9 stays in the prefix (2 compiler threads / 2 backbuffers, 32-bit). Quit is prefix-scoped; Proton names the window `steam_app_10150`.
+• Allagga, P2 Style, Venom `.tpf`, Anti-Venom `.tpf` and Parkour `.tpf` are TexMod 2006. There is no honest auto-inject under Proton. Packages stay in the cache or are omitted.
+• Credits: emoose / PrototypeFix, No-Intro fix author, Bollwurf/Dragonfire (German patch), AzimCrew (Venom / Anti-Venom), Locke (trainer), RAiN (Resolution Changer, unused), Sprint Light Attack Fix, Realistic Hardcore Parkour 1.2, PS3 Buttons, 100% save pack.
+
+## Notes
+• This pack is a Steam dump with Steamless already applied. No SecuROM and no Games for Windows Live in this EXE.
+• Defaults (every host): Windows 10, VC++ 2005, D3DX9, XACT/XAudio2, DXVK d3d9, 32-bit, Proton esync/fsync left as-is. The EXE gets LARGE_ADDRESS_AWARE (32-bit, otherwise 2 GB).
+• Per-machine extras (measured at launch): DXVK GPU filter, FPS cap = monitor Hz, NVIDIA shader cache in the prefix.
+• Logs: Settings under the Rezeptor menu
+• Test after 1.5.0: restart the launcher, check **Medizin**, **Quit**, **Repair** (marker 1.5.0), **Launch**, **Continue**. Home is dead. Trainer button only while the game is running.

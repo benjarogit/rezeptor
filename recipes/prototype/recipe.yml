@@ -1,0 +1,178 @@
+# Prototype (2009, Activision/Radical) — AnkerGames pre-installed folder.
+# Steamless already applied in the dump (no SecuROM / GFWL in this build).
+id: prototype
+schema_version: 1
+maintainer_only: false
+icon: "{repo}/images/prototype-icon.png"
+name: "Prototype"
+app_link_name: Prototype
+author: "benjarogit"
+category: "Spiele"
+min_app_version: "1.1.49"
+version_guaranteed: "1.0.0.1"
+version_label: "Prototype (2009) — AnkerGames, Deutsch"
+sidebar_label: "Prototype"
+tested_on: "2026-09-20"
+version_detect:
+  - kind: pe_field
+    glob: "**/prototypef.exe"
+    field: ProductVersion
+  - kind: pe_field
+    glob: "**/prototypef.exe"
+    field: FileVersion
+  - kind: path_regex
+    regex: "(?i)Prototype-AnkerGames"
+  - kind: path_regex
+    regex: "(?i)prototypef\\.exe"
+source_hints:
+  - "Prototype-AnkerGames"
+  - "prototypef.exe"
+  - "AnkerGames Prototype"
+notify_title: "Prototype"
+data_root: "~/.local/share/wine-software/prototype"
+prefix: "{data_root}/prefix"
+runtime: proton-ge
+proton_ge_tag: GE-Proton11-3
+install_type: portable_launch
+portable_source: true
+deploy_mode: link
+target_default: "~/Games/Prototype"
+target_label: "Datenordner (frei wählbar — Prefix + Link auf den Spielordner)"
+source_kind: folder
+source_label: "Spielordner (Prototype-AnkerGames / Prototype/ mit prototypef.exe, Deutsch)"
+source_formats: zip,7z,rar,tar.gz,tgz
+steam_appid: "10150"
+# Medicine: Mod-Bundle (one overlay) plus language/skin choices. Not BYOS fix_kind.
+fix_kind: none
+options:
+  - id: mod_bundle
+    env: PROTOTYPE_MOD_BUNDLE
+    group: mods
+    type: bool
+    default: true
+    label:
+      de: "Mod-Bundle"
+      en: "Mod bundle"
+    tip:
+      de: "Ein Pack 1.5.x: PrototypeFix 1.8b, No-Intro 0.2, 1080p-Windowed-Pin, Sprint-Fix, Parkour (Default an), Deutsch-Patch (Default), Standard-Skin (Vanilla). ReShade ist nicht dabei. Trainer liegt nach Reparieren unter rezeptor-trainer/prototype.v1001.p7trn.exe (Button „Trainer starten“ wenn das Spiel läuft, nicht mitstarten). Resolution-Changer 2009 verliert gegen den Desktop-Pin. Allagga/P2/Venom-.tpf sind TexMod und werden nicht injiziert. Aus + Reparieren nimmt das Overlay weg."
+      en: "Pack 1.5.x: PrototypeFix 1.8b, No-Intro 0.2, 1080p windowed pin, sprint fix, parkour (default on), German patch (default), standard skin (vanilla). ReShade is not included. After Repair the trainer is at rezeptor-trainer/prototype.v1001.p7trn.exe (“Start trainer” while the game is running, not launched with it). The 2009 Resolution Changer loses to the desktop pin. Allagga/P2/Venom .tpf are TexMod and are not injected. Off + Repair strips the overlay."
+  - id: language
+    env: PROTOTYPE_LANGUAGE
+    group: mods
+    type: choice
+    default: de
+    choices:
+      - id: de
+        label:
+          de: "Deutsch"
+          en: "German"
+      - id: standard
+        label:
+          de: "Standard"
+          en: "Standard"
+      - id: fr
+        label:
+          de: "Französisch"
+          en: "French"
+      - id: it
+        label:
+          de: "Italienisch"
+          en: "Italian"
+      - id: es
+        label:
+          de: "Spanisch"
+          en: "Spanish"
+    label:
+      de: "Spielsprache"
+      en: "Game language"
+    tip:
+      de: "Deutsch (Default) ist der Bollwurf-Patch: Menü und Titel auf Deutsch, nicht APPUYEZ. Standard/Französisch/Italienisch/Spanisch sind die Packs im Dump (Patch weg, Audio bleibt Englisch). Kein Russisch im Dump. Kein In-Game-Schalter. Danach Reparieren oder Starten. Die Rezeptor-UI-Sprache ändert das Spiel nicht."
+      en: "German (default) is the Bollwurf patch: menus and title in German, not APPUYEZ. Standard/French/Italian/Spanish are the dump packs (patch stripped, audio stays English). No Russian in the dump. Not an in-game toggle. Then Repair or Launch. The Rezeptor UI language does not change the game."
+  - id: skin
+    env: PROTOTYPE_SKIN
+    group: mods
+    type: choice
+    default: standard
+    choices:
+      - id: standard
+        label:
+          de: "Standard"
+          en: "Standard"
+      - id: venom
+        label:
+          de: "Venom"
+          en: "Venom"
+      - id: antivenom
+        label:
+          de: "Anti-Venom"
+          en: "Anti-Venom"
+    label:
+      de: "Skin"
+      en: "Skin"
+    tip:
+      de: "Standard = Vanilla, keine AzimCrew-Dateien. Venom und Anti-Venom belegen denselben Slot (art/packages/powers/alex_*) — nur einer. Umschalten, dann Reparieren oder Starten. Die .tpf brauchen TexMod und werden unter Proton nicht injiziert."
+      en: "Standard = vanilla, no AzimCrew files. Venom and Anti-Venom share the same slot (art/packages/powers/alex_*) — one at a time. Switch, then Repair or Launch. The .tpf files need TexMod and are not injected under Proton."
+  - id: parkour
+    env: PROTOTYPE_PARKOUR
+    group: mods
+    type: bool
+    default: true
+    label:
+      de: "Parkour (Realistic Hardcore)"
+      en: "Parkour (realistic hardcore)"
+    tip:
+      de: "Default an. Nur lose art/startup_fig.p3d (Balanced Sprint). Kein Lua, kein ASI — Continue bleibt. Sprint-Fix (.p3d.rz) und Venom bleiben daneben. TexMod-.tpf (Partikel/Skin) werden nicht injiziert. Aus + Reparieren legt die Legal-Fig aus dem Bundle zurück."
+      en: "Default on. Loose art/startup_fig.p3d only (balanced sprint). No Lua, no ASI — Continue stays. Sprint fix (.p3d.rz) and Venom stay beside it. TexMod .tpf (particles/skin) are not injected. Off + Repair restores the bundle legal fig."
+  - id: save_100
+    env: PROTOTYPE_SAVE_100
+    group: mods
+    type: bool
+    default: false
+    label:
+      de: "100%-Spielstand laden"
+      en: "Load 100% save"
+    tip:
+      de: "Default aus. Legt profile.bin + slot-A/B/C.bin in den Prefix-User-Ordner Documents/Prototype (dort lädt das Spiel). Vorhandene Saves werden vorher nach rezeptor-save-backup/ kopiert, nicht still überschrieben. Aus lässt den aktuellen Spielstand unangetastet."
+      en: "Default off. Writes profile.bin + slot-A/B/C.bin into the prefix user folder Documents/Prototype (where the game loads). Existing saves are copied to rezeptor-save-backup/ first, never silently overwritten. Off leaves the current save alone."
+  - id: ps3_buttons
+    env: PROTOTYPE_PS3_BUTTONS
+    group: mods
+    type: bool
+    default: false
+    label:
+      de: "PS3-Tasten (statt Xbox)"
+      en: "PS3 buttons (instead of Xbox)"
+    tip:
+      de: "Default aus. Ersetzt Xbox-Prompts durch PS3 (HUD: fecontrollerimage.gfx, fe_frontend/ingame/pause, fonts_latin). Kein Konflikt mit Deutsch-Patch/Sprint/Venom. Umschalten, dann Reparieren oder Starten."
+      en: "Default off. Replaces Xbox prompts with PS3 (HUD: fecontrollerimage.gfx, fe_frontend/ingame/pause, fonts_latin). No conflict with the German patch/sprint/Venom. Switch, then Repair or Launch."
+exe_glob: "**/prototypef.exe"
+launch_process_patterns: [prototypef.exe]
+kill_patterns: [prototypef.exe, prototype.v1001.p7trn.exe]
+desktop_categories: "Game;"
+# Proton sets WM_CLASS from SteamAppId. The GNOME/KDE hang dialog names this.
+startup_wm_class: steam_app_10150
+desktop_keywords: "prototype;game;activision;radical;deutsch;"
+extra_scripts: [helpers, trainer]
+# Defaults (every host): win10, VC++ 2005, D3DX9, XACT/XAudio2, DXVK d3d9 (helpers).
+# German default: Bollwurf files remapped to german slot + FE_Language=68 + title GFX.
+# System extras (GPU / refresh / LAA) live in helpers.sh — not hardcoded here.
+winetricks: [win10, vcrun2005, d3dx9, xact]
+env:
+  WINEDEBUG: "-all"
+  SteamAppId: "10150"
+  SteamGameId: "10150"
+  RECIPE_WINE_SHOW_GUI: "1"
+  WINEDLLOVERRIDES: "d3d9,dxgi,d3d11,d3d10core=n"
+validate: validate.sh
+launch: launch.sh
+install: install.sh
+repair: repair.sh
+kill: kill.sh
+uninstall: uninstall.sh
+install_steps:
+  - prepare_source
+  - require_portable
+  - prefix
+  - winetricks
+  - deploy_graphics
+  - emit_log_paths

@@ -1,0 +1,50 @@
+# Prototype (2009)
+
+Autor: benjarogit
+Version: Prototype 1.0.0.1 (AnkerGames, Deutsch)
+
+## Kurzbeschreibung
+Prototype (Activision / Radical, 2009) unter Proton-GE 11. Vorinstallierter Spielordner, kein Setup. BYOS: du bringst den Pack mit. Sprache: Deutsch (Default).
+
+## Voraussetzungen
+• Proton-GE 11 (wird automatisch verwendet)
+• Ordner oder Archiv mit `prototypef.exe` und `prototypeenginef.dll` (typisch `Prototype-AnkerGames/Prototype/`)
+• DirectX 9 / VC++ 2005 / XAudio2 werden vom Rezept eingerichtet
+• 32-Bit-Audio: Paket `lib32-libpulse` (sonst kann winepulse in den Logs c0000135 zeigen)
+
+## Installation
+1. „Installieren“ wählen
+2. Quelle auf den Ordner `Prototype-AnkerGames` oder direkt auf `Prototype/` zeigen
+3. Zielordner wählen (Standard: ~/Games/Prototype). Das Rezept verlinkt den Spielordner, kopiert die 8 GB nicht.
+
+## Nutzung
+• Start über Rezeptor „Starten“
+• **Sprache (Default Deutsch):** kein In-Game-Settings-Schalter und nicht die Rezeptor-UI-Sprache unter Einstellungen. Medizin **Spielsprache** schreibt Dateien + Registry.
+  – **Deutsch (Default):** Bollwurf-Patch als lose Dateien. Der Dump hat keinen eigenen German-Slot (`art.rcf` nur EN/FR/IT/ES). Repair legt die Patch-Textbible nach `textbible_german.p3d`, benennt den Frontend-Block in `fe_textbible.p3d` auf `german` um, setzt den Titel in `protostart.gfx` auf „DRUECKEN SIE ENTER“ und `FE_Language=68` (`LanguageCode=DEU`, `LCID=1031`). Ohne das bleibt der Titel französisch (APPUYEZ), weil `FE_Language=70` den French-Chrome lädt.
+  – **Standard:** Original-Dump, Englisch. Patch weg, `ENU` / `LCID=1033` / `FE_Language=69`.
+  – **Französisch / Italienisch / Spanisch:** dieselben Packs wie im Dump (`textbible_french/italian/spanish` in `art.rcf`). Patch weg, `FE_Language` 70 / 73 / 83. Audio bleibt Englisch (im Dump gibt es nur `audio/english`). Kein Russisch und kein weiterer Slot im Dump.
+  – Der EXE-Patch (vcdiff / GameLaunchFix) gilt nicht für diesen Steamless-Dump; die Original-EXE bleibt. Das ist normal und erscheint nicht im Live-Vorgang.
+  – Danach **Reparieren** oder **Starten**. Das große Overlay (~1,2 GB) liegt im Cache (`~/.local/share/wine-software/cache/prototype-mod-bundle/deu-overlay/`), nicht in Git. Erste Reparatur braucht `~/Downloads/Prototype_DeuPatchBEP.zip`, die Kopie im Cache, oder den öffentlichen MEGA-Share in `assets/mod-bundle/remote.yml` (SHA256-Check).
+
+## Medizin
+• Schalter **Mod-Bundle** (Standard an, Version **1.5.0**). Install/Reparieren legt das Overlay neben `prototypef.exe`.
+• Inhalt (Default an): PrototypeFix 1.8b (emoose) + No-Intro 0.2 + `force_desktop_res` (1080p windowed Pin) + Sprint Light Attack Fix + **Parkour 1.2 Balanced** + Deutsch-Patch + Standard-Skin (Vanilla) + `startup_fig.p3d`.
+• ReShade ist nicht dabei. Pos1 öffnet kein Grafik-Menü.
+• `force_desktop_res.asi` pinnt Continue-Reset auf Desktop 1080p **und** `Windowed=TRUE`. Der RAiN Resolution Changer (2009) liegt nur unter `tools/reschanger/` und wird **nicht** neben die EXE gelegt — er verliert gegen den Pin (Continue Reset ignoriert die alte Menü-Liste). Ziel bleibt 1920×1080 @ Monitor-Hz (hier 144).
+• `binkw32.dll` = ASI-Loader. Original-Bink liegt daneben als `binkw32Hooked.dll` (sonst Absturz beim ersten Intro-Film).
+• **Sprint Light Attack Fix 1.0:** `art/alex/alex_fig.p3d.rz` + `art/startup_fig.p3d.rz` (vorinstalliert, Default an). Das bestehende `art/startup_fig.p3d` (Legal-Fig) bleibt als Bundle-Datei; Parkour überschreibt denselben `.p3d`-Pfad wenn an.
+• **Parkour (Default an):** Realistic Hardcore 1.2, nur lose `art/startup_fig.p3d` (Balanced Sprint). **Kein Lua, kein ASI** — Continue bleibt. Sprint-Fix (`.p3d.rz`) und Venom bleiben daneben. TexMod-`.tpf` (Partikel/Skin) werden nicht injiziert.
+• **100%-Spielstand laden (Default aus):** Medizin-Schalter. Legt `profile.bin` + `slot-A/B/C.bin` nach `prefix/drive_c/users/steamuser/Documents/Prototype/` (dort lädt Prototype). Vorhandene Saves werden vorher nach `rezeptor-save-backup/` kopiert. Aus lässt den aktuellen Spielstand.
+• **PS3-Tasten (Default aus):** Xbox-Prompts durch PS3 ersetzen (`art/hud/fecontrollerimage.gfx`, `fe_frontend`/`fe_ingame`/`fe_pause`, `fonts_latin.gfx`). Kein Konflikt mit Deutsch-Patch/Sprint/Venom.
+• **Skins:** Medizin **Skin** — Choice **Standard** (Default, Vanilla, keine AzimCrew-p3d) / Venom / Anti-Venom. Gleicher Slot `art/packages/powers/alex_*`, nicht gleichzeitig. Umschalten, dann Reparieren oder Starten. Wer schon Venom hatte: Medizin auf Standard, dann Reparieren. Die `.tpf` (TexMod 2006) liegen im Cache wie Allagga und werden **nicht** injiziert; sichtbar ist der p3d-Modellswap.
+• **Trainer (Locke v1.0.0.1 +7):** nach Reparieren unter `<Spielordner>/rezeptor-trainer/prototype.v1001.p7trn.exe` und zusätzlich `~/.local/share/wine-software/prototype/trainer/prototype.v1001.p7trn.exe`. **Startet nicht mit.** Button **Trainer starten** neben Beenden, sobald Prototype läuft. Cheat-Overlay killt unter Proton oft Present. Hotkeys NUM1–7, siehe `locke_de.nfo`.
+• DXVK-d3d9 bleibt im Prefix (2 Compiler-Threads / 2 Backbuffers, 32-Bit). Beenden ist prefix-scoped; das Fenster heißt unter Proton `steam_app_10150`.
+• Allagga, P2 Style, Venom-`.tpf`, Anti-Venom-`.tpf` und Parkour-`.tpf` sind TexMod 2006. Unter Proton kein ehrlicher Auto-Inject. Pakete bleiben im Cache bzw. weg.
+• Credits: emoose / PrototypeFix, No-Intro-Fix-Autor, Bollwurf/Dragonfire (Deutsch-Patch), AzimCrew (Venom / Anti-Venom), Locke (Trainer), RAiN (Resolution Changer, ungenutzt), Sprint Light Attack Fix, Realistic Hardcore Parkour 1.2, PS3 Buttons, 100%-Save-Pack.
+
+## Hinweise
+• Dieses Pack ist ein Steam-Dump mit bereits angewandtem Steamless. Kein SecuROM, kein Games for Windows Live in dieser EXE.
+• Defaults (jedes System): Windows 10, VC++ 2005, D3DX9, XACT/XAudio2, DXVK-d3d9, 32-Bit, Proton esync/fsync unverändert. Die EXE bekommt LARGE_ADDRESS_AWARE (32-Bit, sonst 2 GB).
+• Extra je Rechner (beim Start gemessen): GPU-Filter für DXVK, FPS-Deckel = Monitor-Hz, NVIDIA-Shader-Cache im Prefix.
+• Logs: Einstellungen im Menü „Rezeptor“
+• Test nach 1.5.0: Launcher neu, **Medizin** prüfen, **Beenden**, **Reparieren** (Marker 1.5.0), **Starten**, **Continue**. Pos1 tot. Trainer-Button nur wenn das Spiel läuft.

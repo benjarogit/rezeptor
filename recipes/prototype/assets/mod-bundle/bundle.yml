@@ -1,0 +1,158 @@
+# Prototype Mod-Bundle — one overlay, Medizin toggles for language/skin/parkour/save/PS3.
+# Archives are assemble-time references only (not GUI sources).
+id: prototype-mod-bundle
+name: "Prototype Mod-Bundle"
+version: "1.5.0"
+marker: rezeptor-mod-bundle.yml
+
+merge_rule: >
+  Complementary paths are kept. Same destination: newest archive mtime wins.
+  Function beats date only if the pack would otherwise break.
+
+parts:
+  - id: prototypefix
+    version: "1.8b"
+    date: "2025-10-01"
+    source: "PrototypeFix (Nexus prototype/mods/52, emoose)"
+  - id: no-intro
+    version: "0.2"
+    date: "2026-08-08"
+    source: "PROTOTYPE No-Intro Fix"
+  - id: startup-fig
+    version: "1.0"
+    date: "2026-09-19"
+    source: "startup_fig.p3d (character/legal fig replace)"
+  - id: sprint-light-attack
+    version: "1.0"
+    date: "2026-09-19"
+    source: "Sprint Light Attack Fix (art/alex/alex_fig.p3d.rz + art/startup_fig.p3d.rz). Default on."
+  - id: deu-patch
+    version: "1.3"
+    date: "2022-01-29"
+    source: "Prototype Deutschpatch Bollwurf Edition (v1.0–v1.3). Loose p3d overlay, cache-only (~1.2GB). Default on."
+  - id: venom-skin
+    version: "1.0"
+    date: "2024-02-07"
+    source: "Venom Mod by AzimCrew (model swap p3d.rz). Optional Medizin choice. .tpf stays in cache, not injected."
+  - id: antivenom-skin
+    version: "1.1"
+    date: "2024-02-06"
+    source: "Anti-Venom Mod by AzimCrew (same powers slot as Venom). Optional, exclusive with Venom."
+  - id: locke-trainer
+    version: "p7"
+    date: "2022-11-16"
+    source: "Prototype.v1001.PLUS.7.TRAINER-Locke. Staged under rezeptor-trainer/, never auto-injected."
+  - id: rain-reschanger
+    version: "2009-08-22"
+    date: "2009-08-22"
+    source: "Prototype.Resolution.Changer-RAiN. Tools only; loses to force_desktop_res 1080p windowed pin."
+  - id: parkour
+    version: "1.2"
+    date: "2025-10-17"
+    source: "Realistic hardcore Parkour mod 1.2 (Balanced sprint). Loose startup_fig.p3d only. Default on."
+  - id: save-100
+    version: "1.01"
+    date: "2019-08-06"
+    source: "Prototype 100% save (profile.bin + slot-A/B/C.bin). Medizin, default off."
+  - id: ps3-buttons
+    version: "1.0"
+    date: "2024-09-24"
+    source: "PS3 Buttons (Xbox HUD prompts → PS3). Medizin, default off."
+
+# Same-path winners (why). No four-layer stack.
+conflicts:
+  - path: binkw32.dll
+    winner: prototypefix
+    why: required
+    note: >
+      ASI loader (2023-12-12). No other part ships binkw32. Original game
+      bink is backed up as binkw32.dll.rezeptor_bak and copied to
+      binkw32Hooked.dll (Ultimate ASI Loader forward target). Without the
+      hooked file, _BinkOpen is a stub and the first intro movie kills the
+      process.
+  - path: prototypef.exe
+    winner: prototypefix
+    why: required
+    note: >
+      Not copied. vcdiff GameLaunchFix applied onto the live EXE (backup
+      .rezeptor_bak). May fail on Steamless-unmatched bytes — then original stays.
+  - path: art/startup_fig.p3d
+    winner: parkour-or-startup-fig
+    why: exclusive
+    note: >
+      Parkour 1.2 (default on, 2025-10-17) and the legal-fig overlay share
+      this loose path. Medizin PROTOTYPE_PARKOUR=on copies the Balanced
+      sprint p3d after the overlay so Parkour wins. Off restores the
+      bundle legal fig. Sprint Fix uses art/startup_fig.p3d.rz (different
+      path) plus art/alex/alex_fig.p3d.rz — complementary, both stay.
+  - path: art/hud/fecontrollerimage.gfx
+    winner: ps3-buttons
+    why: exclusive
+    note: >
+      PS3 Buttons (default off). Same for fe_frontend/ingame/pause.p3d.rz
+      and fonts_latin.gfx. Deutsch-Patch / Sprint / Venom do not ship these
+      HUD files. Newest-wins would not apply.
+  - path: art/packages/powers/alex_armour/alex_armour.p3d.rz
+    winner: venom-or-antivenom
+    why: exclusive
+    note: >
+      Venom and Anti-Venom model swaps share this slot (and the other
+      alex_* power p3d.rz files). Medizin PROTOTYPE_SKIN picks one.
+      Default standard (vanilla, no AzimCrew overlay). TexMod .tpf is not injected.
+  - path: ResChanger.exe
+    winner: force_desktop_res
+    why: required
+    note: >
+      2009 RAiN GUI patches a menu resolution the game no longer honors on
+      Continue Reset. PrototypeFix CustomResolution=-1 plus force_desktop_res
+      pin 1920x1080 windowed. ResChanger stays in tools/, is never copied
+      next to the EXE, and is deleted if found there.
+
+kept_complementary:
+  - prototype_fix.asi / prototype_fix.ini (PrototypeFix)
+  - force_desktop_res.asi (Reset pin to desktop + Windowed)
+  - art/hud/protolegalscreen.gfx + movies/*.bik (No-Intro 0.2, newest videos)
+  - art/alex/alex_fig.p3d.rz + art/startup_fig.p3d.rz (Sprint Light Attack Fix)
+  - Parkour Balanced sprint art/startup_fig.p3d (Medizin, default on)
+  - Deutsch-Patch loose p3d in cache (textbible + audio/english + NIS + movies/woi)
+  - Venom / Anti-Venom model packs (Medizin choice, exclusive)
+  - PS3 Buttons HUD (Medizin, default off)
+  - 100% save under prefix Documents/Prototype (Medizin, default off; backup first)
+  - Locke trainer under rezeptor-trainer/ and data_root/trainer/ (manual / Trainer-starten button)
+  - Allagga / P2 Style / Venom / Anti-Venom / Parkour .tpf stay in cache only (TexMod 2006, not injected)
+
+skipped:
+  - prototypeenginef.dll  # SHA identical to AnkerGames dump
+  - binkw32Hooked.dll     # not in overlay; copied from binkw32.dll.rezeptor_bak
+  - ApplyGameLaunchFix.bat / xdelta left in tools/ (apply via Proton wine)
+  - Allagga d3d9.log
+  - Allagga / P2 Style / Venom / Anti-Venom .tpf next to the EXE (TexMod cannot hook on Proton)
+  - Deutsch-Patch v1.0 Rcf.exe in-place merge (destructive). Loose p3d overlay instead.
+  - ResChanger.exe next to the EXE (loses to force_desktop_res)
+  - Locke trainer auto-inject at launch (cheat overlay often kills Present)
+  - Parkour TexMod .tpf (particles/skin) next to the EXE
+  - Parkour Save/slot-A.bin (not the 100% Medizin save)
+  - Overwriting Documents/Prototype without rezeptor-save-backup/
+
+optional_payload:
+  kind: cache-only
+  in_repo: false
+  cache_rel: cache/prototype-mod-bundle
+  remote: remote.yml
+  note: >
+    Deutsch-Patch overlay (~1.2GB loose p3d) and TexMod .tpf (Allagga, P2 Style,
+    Venom, Anti-Venom) stay in ~/.local/share/wine-software/cache/prototype-mod-bundle/.
+    SHA-256 lives in remote.yml. Seed from ~/Downloads/Prototype_DeuPatchBEP.zip,
+    the cache copy, or a public MEGA share in remote.yml (never /fm/).
+    Default Starten does not inject TexMod.
+
+critical:
+  - prototype_fix.asi
+  - force_desktop_res.asi
+  - binkw32Hooked.dll
+  - art/hud/protolegalscreen.gfx
+  - art/startup_fig.p3d
+  - art/alex/alex_fig.p3d.rz
+  - art/hud/fe_textbible.p3d
+  # alex_armour.p3d.rz is venom/antivenom only — Standard leaves vanilla in art.rcf.
+  # Parkour/PS3/100%-save are Medizin — validated in helpers, not always on disk.

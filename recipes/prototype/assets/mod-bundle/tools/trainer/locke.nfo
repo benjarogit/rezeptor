@@ -1,0 +1,76 @@
+                          _                _        
+                         | |              | |       
+                         | |     ___   ___| | _____ 
+                         | |    / _ \ / __| |/ / _ \
+                         | |___| (_) | (__|   <  __/
+                         \_____/\___/ \___|_|\_\___|
+
+
+                           - P R E S E N T S -
+
+
+                         date ......: 2022/11/16
+                         game ......: Prototype
+                         version ...: 1.0.0.1
+
+
+                             >>> OPTIONS <<<
+
+                         Hotkey | Action
+                         컴컴컴�|컴컴컴컴컴컴컴컴컴컴컴컴컴
+                         NUM1   | Godmode
+                                |
+                         NUM2   | Infinite Ammo
+                                |
+                         NUM3   | +500.000 EP
+                                |
+                         NUM4   | Easy Kills / Chaos Mode*
+                                |
+                         NUM5   | Disable Attention Meter*
+                                |
+                         NUM6   | Disable Weapon Cooldown
+                                |
+                         NUM7   | Disable Timers*
+
+
+
+                           >>> INFORMATION <<<
+
+     !!! Any problems? Try to run the trainer with admin privileges.
+     
+     This trainer was tested with game version 1.0.0.1.
+     It was also tested with the widescreen-fix, since the trainer
+     relies on the *.dll that gets exchanged with that fix.
+     
+     I think there will be no more updates for this game but in case
+     it does I will try to fix the trainer if something gets broken.
+
+
+                              >>> NOTES <<<
+
+     NUM3 - +500.000 EP
+     This is the first time I'm using the 'pointer technique', I hope
+     it works well for everyone.
+
+     NUM4 - Easy Kills / Chaos Mode
+     It's not always a good idea to keep this cheat activated. While
+     testing I noticed that some enemys are dead before the event to
+     kill them even started, this will kinda lock you.
+     But it's kinda fun to roam through the city while this cheat
+     is activated.
+
+     NUM5 - Disable Attention Meter
+     There are some scripted events that will trigger the attention
+     meter.
+
+     NUM7 - Disable Timers
+     It could be possitble that deactivating the timer have some
+     unwanted side effects. I would recommend to only activate this
+     cheat when really needed (mission timers / events).
+
+
+
+     Web: https://www.locke-trainer.de/
+     MD5: fc76b50d941b8c6e5d05bd93ef87411a
+     SHA-256: eff7d26f90b1d535d03953e3d32e29edee76cb4359a096a1a3b4e34fc9cd51ed
+     Virustotal: https://www.virustotal.com/gui/file/eff7d26f90b1d535d03953e3d32e29edee76cb4359a096a1a3b4e34fc9cd51ed

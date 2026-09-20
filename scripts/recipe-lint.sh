@@ -220,6 +220,11 @@ lint_recipe_dir() {
         [ -x "$f" ] || lint_err "$base: optionale Hook nicht ausführbar: $val"
     done
 
+    extra_scripts="$(recipe_get "$yml" extra_scripts 2>/dev/null || true)"
+    extra_scripts="${extra_scripts#[}"
+    extra_scripts="${extra_scripts%]}"
+    extra_scripts="${extra_scripts//,/ }"
+
     shopt -s nullglob
     for f in "$dir"/*.sh; do
         rel="$(basename "$f")"
@@ -227,7 +232,17 @@ lint_recipe_dir() {
         for a in "${ALLOWED_ROOT_SH[@]}"; do
             [ "$rel" = "$a.sh" ] && allowed=1 && break
         done
-        [ "$allowed" -eq 1 ] || lint_err "$base: unbekanntes Root-Skript: $rel (nur Hooks erlaubt)"
+        if [ "$allowed" -eq 0 ]; then
+            for a in $extra_scripts; do
+                a="${a#\"}"
+                a="${a%\"}"
+                a="${a#"${a%%[![:space:]]*}"}"
+                a="${a%"${a##*[![:space:]]}"}"
+                [ -n "$a" ] || continue
+                [ "$rel" = "${a}.sh" ] && allowed=1 && break
+            done
+        fi
+        [ "$allowed" -eq 1 ] || lint_err "$base: unbekanntes Root-Skript: $rel (nur Hooks + extra_scripts erlaubt)"
     done
     shopt -u nullglob
 

@@ -1,0 +1,4 @@
+# Allagga / Venom / Anti-Venom TexMod payloads stay out of git.
+*.tpf
+# German patch overlay is cache-only (~1.2GB). Never commit deu-overlay/.
+deu-overlay/

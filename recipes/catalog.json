@@ -24,6 +24,18 @@
       }
     },
     {
+      "id": "photoshop-2026",
+      "name": "Adobe Photoshop 2026",
+      "category": "Grafik & Design",
+      "trust": "official",
+      "path": "photoshop-2026",
+      "min_app_version": "1.1.48",
+      "summary": {
+        "de": "Adobe Photoshop 2026 (27.7.0.11) unter Proton-GE — Offline-Installer. Dank an PhialsBasement und 6im0n.",
+        "en": "Adobe Photoshop 2026 (27.7.0.11) on Proton-GE — offline installer. Thanks to PhialsBasement and 6im0n."
+      }
+    },
+    {
       "id": "lightroom-classic",
       "name": "Adobe Lightroom Classic",
       "category": "Grafik & Design",
@@ -80,6 +92,18 @@
       "summary": {
         "de": "Halo Campaign Evolved (ElAmigos) unter Proton-GE — Offline, Grafik-Presets, optional Steam Non-Steam, Trainer/Mods.",
         "en": "Halo Campaign Evolved (ElAmigos) on Proton-GE — offline, graphics presets, optional Steam Non-Steam, trainer/mods."
+      }
+    },
+    {
+      "id": "prototype",
+      "name": "Prototype",
+      "category": "Spiele",
+      "trust": "official",
+      "path": "prototype",
+      "min_app_version": "1.1.49",
+      "summary": {
+        "de": "Prototype (2009, AnkerGames) unter Proton-GE 11 — Deutsch-Patch (Default), Parkour, Standard-Skin, Sprint-Fix, DX9, Mod-Bundle 1.5.0 ohne ReShade.",
+        "en": "Prototype (2009, AnkerGames) on Proton-GE 11 — German patch (default), parkour, standard skin, sprint fix, DX9, mod bundle 1.5.0 without ReShade."
       }
     }
   ]
