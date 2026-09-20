@@ -1,4 +1,4 @@
-.PHONY: test pytest validate shellcheck syntax compile i18n-check ruff dead-code shell-dup-check recipes-check recipe-lint recipe-manifest recipe-manifest-check
+.PHONY: test pytest validate shellcheck syntax compile i18n-check ruff dead-code shell-dup-check recipes-check recipe-lint recipe-manifest recipe-manifest-check recipe-assets-publish
 
 # Shell test suite (bats). Python unit tests: make pytest (CI runs both).
 test:
@@ -56,6 +56,7 @@ shell-dup-check:
 	python3 scripts/check-shell-dup-funcs.py
 
 recipes-check:
+	bash ./scripts/check-recipe-isolation.sh
 	@for f in recipes/*/recipe.yml recipes/community/*/recipe.yml; do \
 		[ -f "$$f" ] || continue; \
 		case "$$f" in */_*) continue ;; esac; \
@@ -77,3 +78,8 @@ recipe-manifest:
 
 recipe-manifest-check: recipe-manifest
 	git diff --exit-code recipes/manifest.json
+
+# Upload large remote packs (mega-cmd session) and write SHA-256 into remote.yml.
+# Without login: hashes local files and prints how to log in.
+recipe-assets-publish:
+	bash ./scripts/recipe-assets-publish.sh

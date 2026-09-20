@@ -42,7 +42,11 @@ class RezeptorSettings:
     custom_category_order: list[str] = field(default_factory=list)  # DnD order for non-standard categories
     # User sidebar category override (rid → category). Default remains recipe.yml.
     recipe_category_overrides: dict[str, str] = field(default_factory=dict)
+    # Collapsed sidebar category keys (empty = all expanded).
+    sidebar_collapsed_categories: list[str] = field(default_factory=list)
     recipe_sources: list[dict] = field(default_factory=list)  # [{id, url, label, trusted: bool}]
+    # Public MEGA share for large recipe packs (/folder/ or /file/ + key, never /fm/).
+    mega_assets_base_url: str = ""
     # Archive passwords (secrets file; never persisted in settings.json)
     archive_passwords: list[str] = field(default_factory=list)
     # Pending install env per recipe id (source/target from dialog — not yet installed)
@@ -384,7 +388,11 @@ def load_settings() -> RezeptorSettings:
         recipe_order=_parse_str_list(data.get("recipe_order")),
         custom_category_order=_parse_str_list(data.get("custom_category_order")),
         recipe_category_overrides=_parse_str_dict(data.get("recipe_category_overrides")),
+        sidebar_collapsed_categories=_parse_str_list(
+            data.get("sidebar_collapsed_categories")
+        ),
         recipe_sources=_parse_recipe_sources(data.get("recipe_sources")),
+        mega_assets_base_url=str(data.get("mega_assets_base_url", "") or "").strip(),
         archive_passwords=passwords,
         recipe_install_env=_parse_recipe_install_env(data.get("recipe_install_env")),
         host_deps_prompt_done=bool(data.get("host_deps_prompt_done", False)),

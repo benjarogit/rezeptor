@@ -5,6 +5,12 @@ Deep reference for `recipe.yml`, `install_steps`, and hooks.
 
 Templates: `recipes/_template/`, `recipes/_template-installer/`.
 
+### Add-only (maintainer)
+
+A new recipe may only add: `recipes/<id>/`, optional `core/recipe-<id>-*.sh`, a catalog entry, icon, own tests/`info.*.txt`.  
+It must **not** edit other recipes, Photoshop quit, or shared ID lists. Put behaviour in `recipe.yml` flags (`installer_engine`, `launch_wait`, `extra_scripts`, desktop fields).  
+**`git add` immediately.** Untracked files are unprotected (the 2026-08-14 reset deleted uncommitted recipes).
+
 ---
 
 ## Architecture
@@ -35,7 +41,7 @@ After install/repair, Core creates an **absolute symlink** under `DATA_ROOT` tha
 | State / source (priority) | Typical recipes |
 |---------------------------|-----------------|
 | `GAME_ROOT` → `GAME_DIR` | Halo, Steam templates |
-| `WISO_PORTABLE_ROOT` (`portable.env`) | WISO |
+| `source_env` in `portable.env` (e.g. `WISO_PORTABLE_ROOT`) | Portable recipes |
 | `WORK_ROOT` (directory) | Photoshop, Premiere, portable, MSI |
 
 Optional in `recipe.yml`: `app_link_name: MyFolder` (default: recipe `id`). Core: `recipe_app_link::ensure` / `::validate` (validate = OK/WARN; never clobbers a real user file). Purge removes only the link inside `DATA_ROOT`, not folders outside.
@@ -138,6 +144,16 @@ proton_ge_tag: GE-Proton11-3          # else core/runtime.lock (default)
 ```
 
 Medicine alternative is a generic `PROTON_GE_TAG` choice only, not a Photoshop bool. Details: [ENTWICKLER.md](ENTWICKLER.md#proton-ge-per-recipe).
+
+### Large mod packs (GitHub vs MEGA)
+
+Small overlay files (under the GitHub limit, practically ~100 MB per file) live in the recipe `assets/` tree.  
+Larger packs stay **out of git**: `assets/**/remote.yml` with `file`, `sha256`, and optional `url`.
+
+- Download only through `core/recipe-assets.sh` (`recipe_assets::ensure`) — HTTPS + SHA-256, same pattern as Proton-GE / nvidia-libs.
+- A MEGA URL must be a **public share** (`https://mega.nz/file/…#Key` or `/folder/…#Key`). File-manager (`/fm/`) is not a download.
+- MEGA base: `core/recipe-assets.lock` (`MEGA_ASSETS_BASE_URL`), override `mega_assets_base_url` in settings or `REZEPTOR_MEGA_ASSETS_URL`.
+- Maintainer: `make recipe-assets-publish` (mega-cmd session) writes hashes and public links. No MEGA passwords in the repo.
 
 ### Recommended
 
@@ -370,6 +386,7 @@ Full API: **[CORE-API.md](CORE-API.md)**. Short:
 | `recipe-install.sh` | prepare_source / apply_fix |
 | `recipe-prefix.sh` / `recipe-winetricks.sh` / `recipe-win10.sh` | Prefix, winetricks (retry 139), Win10 |
 | `recipe-validate.sh` | OK/FAIL/WARN helpers |
+| `recipe-assets.sh` | Large packs: HTTPS/MEGA download + SHA-256 |
 | `recipe-<id>.sh` | App logic |
 | `wine-runtime.sh` | Proton-GE + graphics DLLs |
 

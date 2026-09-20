@@ -123,6 +123,11 @@ site/
 # ============================================================
 .audit/
 
+# Large recipe overlay caches (Deutsch-Patch, TexMod) — never git
+recipes/**/deu-overlay/
+recipes/**/*.tpf
+**/Prototype_DeuPatchBEP.zip
+
 # RepoWise local index (wiki.db, caches — machine-local, not for git)
 .repowise/
 

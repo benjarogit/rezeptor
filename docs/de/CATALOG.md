@@ -8,7 +8,7 @@ nicht jede Quelle ist gleichwertig.
 Im Repository unter `recipes/<id>/` gebündelt, indexiert in `recipes/catalog.json` (`trust: official`).
 CI sichert sie ab (`recipe-lint`, Manifest-Check).
 
-Aktuell **7** offizielle Produktrezepte in **5** Kategorien.
+Aktuell **8** offizielle Produktrezepte in **5** Kategorien.
 
 ### Grafik & Design
 
@@ -41,6 +41,7 @@ Aktuell **7** offizielle Produktrezepte in **5** Kategorien.
 | ID | Name | Beschreibung |
 |----|------|--------------|
 | `halo-campaign-evolved` | Halo Campaign Evolved | ElAmigos/RUNE, Grafik-Presets (Default Empfohlen RTX 2060), optional Steam Non-Steam, BYOS-Trainer |
+| `prototype` | Prototype | AnkerGames-Ordner (2009), Deutsch-Patch + Parkour + Sprint-Fix, Proton-GE 11, DX9, Medizin **Mod-Bundle 1.5.0** (ohne ReShade) |
 
 Vorlagen unter `recipes/_template*` und Einträge unter `recipes/community/` sind **keine** mitgelieferten Produktrezepte.
 
@@ -86,6 +87,8 @@ Sinnvoll nur, wenn die Option Verhalten ändert (z. B. Feature opt-out). Nicht
 Photoshop: drei UI-Schalter (`PHOTOSHOP_UI_HOME_SCREEN`, `PHOTOSHOP_UI_RICH_TOOLTIPS`, `PHOTOSHOP_UI_MODERN_NEW`), Default `false` — siehe [Benutzerhandbuch](USER-GUIDE.md#medizin-rezept-optionen).
 
 Halo: Qualitäts-Preset (`HALO_GFX_PRESET`, Default `balanced` / Empfohlen RTX 2060), Grafik-Toggles, optional **Start über Steam** + Proton-Choice — siehe [Benutzerhandbuch](USER-GUIDE.md#medizin-rezept-optionen).
+
+Prototype: **Mod-Bundle** (`PROTOTYPE_MOD_BUNDLE`, Default an) plus Choice **Spielsprache** (`PROTOTYPE_LANGUAGE`, Default `de`) und **Skin** (`PROTOTYPE_SKIN`, Default `standard`). Parkour Default an, 100%-Save und PS3-Tasten Default aus. Trainer liegt unter `rezeptor-trainer/`, startet nicht mit. Ohne ReShade.
 
 ```yaml
 options:

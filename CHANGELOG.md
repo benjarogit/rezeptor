@@ -5,6 +5,15 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.49] - 2026-09-20
+
+### Added
+- Prototype (2009) recipe: AnkerGames folder on Proton-GE 11, mod bundle 1.5.x (PrototypeFix, no ReShade, German patch default, parkour, skins, trainer button)
+- Shared remote-asset fetch (`core/recipe-assets.sh`): HTTPS or public MEGA share, SHA-256 check; `make recipe-assets-publish` writes hashes (mega-cmd upload when logged in)
+
+### Changed
+- Large Deutsch-Patch / TexMod packs stay out of git; hashes live in `recipes/prototype/assets/mod-bundle/remote.yml`
+
 ## [1.1.48] - 2026-08-15
 
 ### Changed
