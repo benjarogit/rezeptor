@@ -54,7 +54,7 @@ _critical_stub() {
     remote="$BUNDLE/remote.yml"
     [ -f "$remote" ]
     grep -q 'id: deu-patch' "$remote"
-    grep -q 'sha256:  fbbd62485f2b9a2ddf910f16b1456237a6b86b560786265932b2655328fbd642' "$remote"
+    grep -qE 'sha256:[[:space:]]+fbbd62485f2b9a2ddf910f16b1456237a6b86b560786265932b2655328fbd642' "$remote"
     ! grep -E '^[[:space:]]*url:[[:space:]]*.*/fm/' "$remote"
 }
 

@@ -41,10 +41,14 @@ setup() {
     rm -f "$dest"
 }
 
-@test "lock file has an empty MEGA base and a remote dir" {
-    grep -q '^MEGA_ASSETS_BASE_URL=$' "$ROOT/core/recipe-assets.lock"
+@test "lock file has a public MEGA folder share and a remote dir" {
     grep -q '^MEGA_ASSETS_REMOTE_DIR=' "$ROOT/core/recipe-assets.lock"
     ! grep -E '^MEGA_ASSETS_BASE_URL=.*/fm/' "$ROOT/core/recipe-assets.lock"
+    line="$(grep -E '^MEGA_ASSETS_BASE_URL=' "$ROOT/core/recipe-assets.lock" | tail -n1)"
+    url="${line#MEGA_ASSETS_BASE_URL=}"
+    url="${url#\"}"
+    url="${url%\"}"
+    recipe_assets::is_public_share_url "$url"
 }
 
 @test "recipe-assets.sh has no official recipe-id literals" {
