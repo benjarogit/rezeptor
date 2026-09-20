@@ -3,6 +3,6 @@
 # or https://mega.nz/file/XXXX#KEY. File-Manager URLs (/fm/) are not downloads.
 # Leave empty until a public share exists. Override: settings.json
 # mega_assets_base_url, or env REZEPTOR_MEGA_ASSETS_URL.
-MEGA_ASSETS_BASE_URL=
+MEGA_ASSETS_BASE_URL="https://mega.nz/folder/9cBAmBiD#J-lzWU_Eer-6uAO2CCsvrA"
 # Path inside a logged-in mega-cmd session (upload only, not a public URL).
 MEGA_ASSETS_REMOTE_DIR=/Rezeptor-assets

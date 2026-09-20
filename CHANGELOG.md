@@ -5,6 +5,14 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.50] - 2026-09-20
+
+### Added
+- Public MEGA shares for Prototype remote packs (Deutsch-Patch ZIP and TexMod `.tpf` files): per-file `/file/` URLs in `remote.yml` plus a folder base in `core/recipe-assets.lock`
+
+### Fixed
+- Lock stores the folder share quoted so the decryption key after `#` is not treated as a shell comment
+
 ## [1.1.49] - 2026-09-20
 
 ### Added

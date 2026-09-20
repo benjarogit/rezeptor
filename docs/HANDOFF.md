@@ -166,8 +166,7 @@ Still open (not a code hole in this cut):
 
 ## Open work
 
-- Latest released: **v1.1.48** (Photoshop Quit #10 exit ladder, Lightroom Classic recipe).
-  Prototype 1.5.x + remote-asset MEGA/SHA-256 ships as **v1.1.49**.
+- Latest released: **v1.1.50**. Prototype MEGA public share is live (`core/recipe-assets.lock` folder + per-file keys); Deutsch-Patch and TexMod packs fetch with SHA-256.
 - **Photoshop stalls on exit now and then** (once in four live runs): window gone,
   `Photoshop.exe` alive, prefs never written. The ladder therefore sends a soft
   Wine `taskkill` (WM_CLOSE) before forcing. Cause unknown — if the reporter
