@@ -115,6 +115,24 @@ _tmp="$(_extract_deb \
     "a4b3c32dc008275ffcacccc1c77c030f01aad38e232e05d5ad116b76656c607c")"
 cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libxcb-cursor.so.0"* "$APPDIR/usr/lib/"
 rm -rf "$_tmp"
+# Same for libxkbcommon-x11.so.0 (AppImage catalog Ubuntu 22.04 + Xvfb has no host copy).
+# Do not copy CachyOS host libs: those need GLIBC_2.38. Bookworm stays <= 2.33.
+_tmp="$(_extract_deb \
+    "http://deb.debian.org/debian/pool/main/libx/libxkbcommon/libxkbcommon-x11-0_1.5.0-1_amd64.deb" \
+    "9b34d760f0ca0f125419a6becc6492c489f0371953ef42caad3401199a497ff5")"
+cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libxkbcommon-x11.so.0"* "$APPDIR/usr/lib/"
+rm -rf "$_tmp"
+_tmp="$(_extract_deb \
+    "http://deb.debian.org/debian/pool/main/libx/libxkbcommon/libxkbcommon0_1.5.0-1_amd64.deb" \
+    "e3fe045b9a33a101de1c5a912a4a10928db055c3f68930f47eccbb44d7c7d54e")"
+cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libxkbcommon.so.0"* "$APPDIR/usr/lib/"
+rm -rf "$_tmp"
+# Hard NEEDED of libxkbcommon-x11; minimal Xvfb images often omit libxcb-xkb1.
+_tmp="$(_extract_deb \
+    "http://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-xkb1_1.15-1_amd64.deb" \
+    "1dc2f0de8576b1855b451a7e2a7163ecb5be08f8384f49655414714b48f6fa1b")"
+cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libxcb-xkb.so.1"* "$APPDIR/usr/lib/"
+rm -rf "$_tmp"
 chmod +x "$APPDIR/usr/bin/cabextract" "$APPDIR/usr/bin/unzip"
 
 cat > "$APPDIR/rezeptor.desktop" <<EOF
@@ -123,7 +141,7 @@ Type=Application
 Name=Rezeptor
 Exec=AppRun
 Icon=rezeptor
-Categories=Utility;Graphics;
+Categories=Utility;
 StartupWMClass=rezeptor
 EOF
 # App icon = Rezeptor (not Photoshop — that confused window/taskbar for all recipes)

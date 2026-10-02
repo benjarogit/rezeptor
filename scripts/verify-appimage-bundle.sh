@@ -63,13 +63,15 @@ case "$pyqt_path" in
         ;;
 esac
 
-# Qt xcb platform needs libxcb-cursor (minimal Ubuntu often lacks the host package).
-if ! ls "$ROOT/usr/lib"/libxcb-cursor.so.0* >/dev/null 2>&1; then
-    echo "FAIL: AppDir missing bundled libxcb-cursor.so.0 under usr/lib" >&2
-    fail=1
-else
-    echo "Bundled libxcb-cursor present under usr/lib"
-fi
+# Qt xcb platform needs these on minimal Ubuntu (catalog Xvfb has no host copies).
+for _qt_xcb_lib in libxcb-cursor.so.0 libxkbcommon-x11.so.0 libxkbcommon.so.0 libxcb-xkb.so.1; do
+    if ! ls "$ROOT/usr/lib/${_qt_xcb_lib}"* >/dev/null 2>&1; then
+        echo "FAIL: AppDir missing bundled ${_qt_xcb_lib} under usr/lib" >&2
+        fail=1
+    else
+        echo "Bundled ${_qt_xcb_lib} present under usr/lib"
+    fi
+done
 if ! grep -q 'libxcb-cursor' "$ROOT/AppRun"; then
     echo "FAIL: AppRun missing libxcb-cursor preflight / install hints" >&2
     fail=1
