@@ -166,8 +166,8 @@ Still open (not a code hole in this cut):
 
 ## Open work
 
-- **AppImage catalog PR** [AppImage/appimage.github.io#6520](https://github.com/AppImage/appimage.github.io/pull/6520): v1.1.52 ships bookworm `libxkbcommon-x11`, `libxkbcommon`, and `libxcb-xkb` in the AppImage. After GitHub Release assets are live, `benjarogit` posts `/retest` on that PR. Do not comment until Benny approves the English text.
-- Latest released: **v1.1.52** (AppImage Qt xcb libs for Ubuntu 22.04 catalog). Previous: **v1.1.51** (Medizin CTA, asset cache purge/ZIP cleanup, PE version hint). Prototype MEGA public share is live (`core/recipe-assets.lock` folder + per-file keys); Deutsch-Patch and TexMod packs fetch with SHA-256.
+- **AppImage catalog PR** [AppImage/appimage.github.io#6520](https://github.com/AppImage/appimage.github.io/pull/6520): v1.1.52 fixed xkbcommon; retest then failed on `libxcb-icccm.so.4`. v1.1.53 ships the full Qt xcb-util family (icccm/image/keysyms/render-util/util) plus cursor/xkbcommon. After Release: `/retest` as `benjarogit` (English, after Benny approves).
+- Latest released: **v1.1.53** (full Qt xcb-util AppImage pins). Previous: **v1.1.52** (xkbcommon), **v1.1.51** (Medizin CTA, asset cache purge/ZIP cleanup, PE version hint). Prototype MEGA public share is live (`core/recipe-assets.lock` folder + per-file keys); Deutsch-Patch and TexMod packs fetch with SHA-256.
 - Source dialog: Prototype PE `ProductVersion` is the Windows tuple `1,0,0,1`. Display and compare as `1.0.0.1` (`version_detect.normalize_version_string`). Never locale-format version strings.
 - Live install 2026-09-20 (`~/.local/share/wine-software/prototype/`): prefix + desktop + Mod-Bundle 1.5.0 (de, venom, parkour on). No `ReShade32.dll` / `init.lua`. AnkerGames parent dump untouched; `Prototype/` is the link target and holds the overlay. ZIP cache gone. `deu-overlay` cache missing after uninstall-purge + reinstall (German already on the dump, seed skipped). Newest install/launch logs have no MEGA fetch line.
 - **Photoshop stalls on exit now and then** (once in four live runs): window gone,

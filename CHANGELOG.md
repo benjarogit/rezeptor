@@ -5,6 +5,11 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.53] - 2026-10-02
+
+### Fixed
+- AppImage catalog on Ubuntu 22.04: ship the full Qt xcb-util set (`libxcb-icccm`, `libxcb-image`, `libxcb-keysyms`, `libxcb-render-util`, `libxcb-util`) with the existing cursor/xkbcommon pins. Partial pins only moved the next missing `.so`.
+
 ## [1.1.52] - 2026-10-02
 
 ### Fixed

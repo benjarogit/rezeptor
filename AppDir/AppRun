@@ -10,8 +10,9 @@ if [ ! -d "$PROJECT_ROOT" ] && [ -d "$HERE/usr/share/photoshopCClinux" ]; then
 fi
 # Bundled python only — never fall back to host python3 (Bazzite / immutable).
 export PATH="$HERE/python/bin:$HERE/usr/bin:$HERE/runtime/winetricks:$PROJECT_ROOT/core:$PATH"
-# Bundled libmspack (cabextract) plus Qt xcb helpers: libxcb-cursor,
-# libxkbcommon-x11, libxkbcommon, libxcb-xkb (see scripts/build-appimage.sh).
+# Bundled libmspack (cabextract) plus Qt xcb helpers: xcb-util family
+# (cursor/icccm/image/keysyms/render-util/util), xkbcommon-x11, xkbcommon,
+# xcb-xkb (see scripts/build-appimage.sh).
 if [ -d "$HERE/usr/lib" ]; then
     export LD_LIBRARY_PATH="$HERE/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 fi
