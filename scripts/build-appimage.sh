@@ -108,31 +108,31 @@ _tmp="$(_extract_deb \
     "fbf5d0c0dd516770dd1910543baf9050bfb8b4cfa4baf457c8117bd8f93393c5")"
 cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libmspack.so.0"* "$APPDIR/usr/lib/"
 rm -rf "$_tmp"
-# Qt6 xcb plugin (PyQt6) needs libxcb-cursor.so.0 — often missing on minimal Ubuntu/Debian.
-# Bundle pinned bookworm .so so AppImage starts without a host apt install.
-_tmp="$(_extract_deb \
-    "http://deb.debian.org/debian/pool/main/x/xcb-util-cursor/libxcb-cursor0_0.1.4-1_amd64.deb" \
-    "a4b3c32dc008275ffcacccc1c77c030f01aad38e232e05d5ad116b76656c607c")"
-cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libxcb-cursor.so.0"* "$APPDIR/usr/lib/"
-rm -rf "$_tmp"
-# Same for libxkbcommon-x11.so.0 (AppImage catalog Ubuntu 22.04 + Xvfb has no host copy).
-# Do not copy CachyOS host libs: those need GLIBC_2.38. Bookworm stays <= 2.33.
-_tmp="$(_extract_deb \
-    "http://deb.debian.org/debian/pool/main/libx/libxkbcommon/libxkbcommon-x11-0_1.5.0-1_amd64.deb" \
-    "9b34d760f0ca0f125419a6becc6492c489f0371953ef42caad3401199a497ff5")"
-cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libxkbcommon-x11.so.0"* "$APPDIR/usr/lib/"
-rm -rf "$_tmp"
-_tmp="$(_extract_deb \
-    "http://deb.debian.org/debian/pool/main/libx/libxkbcommon/libxkbcommon0_1.5.0-1_amd64.deb" \
-    "e3fe045b9a33a101de1c5a912a4a10928db055c3f68930f47eccbb44d7c7d54e")"
-cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libxkbcommon.so.0"* "$APPDIR/usr/lib/"
-rm -rf "$_tmp"
-# Hard NEEDED of libxkbcommon-x11; minimal Xvfb images often omit libxcb-xkb1.
-_tmp="$(_extract_deb \
-    "http://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-xkb1_1.15-1_amd64.deb" \
-    "1dc2f0de8576b1855b451a7e2a7163ecb5be08f8384f49655414714b48f6fa1b")"
-cp -a "$_tmp/usr/lib/x86_64-linux-gnu/libxcb-xkb.so.1"* "$APPDIR/usr/lib/"
-rm -rf "$_tmp"
+# Qt6 xcb (PyQt6 libqxcb / Qt6XcbQpa) needs the xcb-util family + xkbcommon-x11.
+# AppImage catalog Ubuntu 22.04 + Xvfb / firejail has no host copies of these.
+# Pin Debian bookworm only (GLIBC <= 2.33). Never copy CachyOS host libs (GLIBC 2.38).
+# Ship the full NEEDED set in one go — partial pins only shift the next missing .so.
+_qt_xcb_debs=(
+    "http://deb.debian.org/debian/pool/main/x/xcb-util-cursor/libxcb-cursor0_0.1.4-1_amd64.deb|a4b3c32dc008275ffcacccc1c77c030f01aad38e232e05d5ad116b76656c607c|libxcb-cursor.so.0"
+    "http://deb.debian.org/debian/pool/main/x/xcb-util-wm/libxcb-icccm4_0.4.1-1.1_amd64.deb|f323194cb04cd4e5ae064fafec39db6dcf8a431cbd65a0bc53fa6c359862d8ff|libxcb-icccm.so.4"
+    "http://deb.debian.org/debian/pool/main/x/xcb-util-image/libxcb-image0_0.4.0-2_amd64.deb|a475522faef7672ca065fdcd2594bc755bfcc4d819909f9d944e8c002b4460d1|libxcb-image.so.0"
+    "http://deb.debian.org/debian/pool/main/x/xcb-util-keysyms/libxcb-keysyms1_0.4.0-1+b2_amd64.deb|aed1436db9a3e63b10d00c4ed16248b5c82b5dd2963a83a761f406af65eb4b49|libxcb-keysyms.so.1"
+    "http://deb.debian.org/debian/pool/main/x/xcb-util-renderutil/libxcb-render-util0_0.3.9-1+b1_amd64.deb|be4b38a63e65c84e2f1322f044d05a9baa677e0f3dc68b742a0a109a3ff40ae9|libxcb-render-util.so.0"
+    "http://deb.debian.org/debian/pool/main/x/xcb-util/libxcb-util1_0.4.0-1+b1_amd64.deb|4c48af51fb2ac1be0490067e7450aeda27bf6c6c395165de02199eee4835336f|libxcb-util.so.1"
+    "http://deb.debian.org/debian/pool/main/libx/libxkbcommon/libxkbcommon-x11-0_1.5.0-1_amd64.deb|9b34d760f0ca0f125419a6becc6492c489f0371953ef42caad3401199a497ff5|libxkbcommon-x11.so.0"
+    "http://deb.debian.org/debian/pool/main/libx/libxkbcommon/libxkbcommon0_1.5.0-1_amd64.deb|e3fe045b9a33a101de1c5a912a4a10928db055c3f68930f47eccbb44d7c7d54e|libxkbcommon.so.0"
+    "http://deb.debian.org/debian/pool/main/libx/libxcb/libxcb-xkb1_1.15-1_amd64.deb|1dc2f0de8576b1855b451a7e2a7163ecb5be08f8384f49655414714b48f6fa1b|libxcb-xkb.so.1"
+)
+for _entry in "${_qt_xcb_debs[@]}"; do
+    _url="${_entry%%|*}"
+    _rest="${_entry#*|}"
+    _sha="${_rest%%|*}"
+    _soname="${_rest#*|}"
+    _tmp="$(_extract_deb "$_url" "$_sha")"
+    cp -a "$_tmp/usr/lib/x86_64-linux-gnu/${_soname}"* "$APPDIR/usr/lib/"
+    rm -rf "$_tmp"
+done
+unset _entry _url _rest _sha _soname _tmp _qt_xcb_debs
 chmod +x "$APPDIR/usr/bin/cabextract" "$APPDIR/usr/bin/unzip"
 
 cat > "$APPDIR/rezeptor.desktop" <<EOF

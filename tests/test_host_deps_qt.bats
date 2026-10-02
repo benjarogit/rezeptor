@@ -36,3 +36,22 @@ load test_helper
     grep -q '1dc2f0de8576b1855b451a7e2a7163ecb5be08f8384f49655414714b48f6fa1b' \
         "$ROOT/scripts/build-appimage.sh"
 }
+
+@test "build-appimage pins full Qt xcb-util family for AppDir usr/lib" {
+    ROOT="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+    grep -q 'libxcb-icccm4_0.4.1-1.1_amd64.deb' "$ROOT/scripts/build-appimage.sh"
+    grep -q 'f323194cb04cd4e5ae064fafec39db6dcf8a431cbd65a0bc53fa6c359862d8ff' \
+        "$ROOT/scripts/build-appimage.sh"
+    grep -q 'libxcb-image0_0.4.0-2_amd64.deb' "$ROOT/scripts/build-appimage.sh"
+    grep -q 'a475522faef7672ca065fdcd2594bc755bfcc4d819909f9d944e8c002b4460d1' \
+        "$ROOT/scripts/build-appimage.sh"
+    grep -q 'libxcb-keysyms1_0.4.0-1+b2_amd64.deb' "$ROOT/scripts/build-appimage.sh"
+    grep -q 'aed1436db9a3e63b10d00c4ed16248b5c82b5dd2963a83a761f406af65eb4b49' \
+        "$ROOT/scripts/build-appimage.sh"
+    grep -q 'libxcb-render-util0_0.3.9-1+b1_amd64.deb' "$ROOT/scripts/build-appimage.sh"
+    grep -q 'be4b38a63e65c84e2f1322f044d05a9baa677e0f3dc68b742a0a109a3ff40ae9' \
+        "$ROOT/scripts/build-appimage.sh"
+    grep -q 'libxcb-util1_0.4.0-1+b1_amd64.deb' "$ROOT/scripts/build-appimage.sh"
+    grep -q '4c48af51fb2ac1be0490067e7450aeda27bf6c6c395165de02199eee4835336f' \
+        "$ROOT/scripts/build-appimage.sh"
+}

@@ -63,8 +63,19 @@ case "$pyqt_path" in
         ;;
 esac
 
-# Qt xcb platform needs these on minimal Ubuntu (catalog Xvfb has no host copies).
-for _qt_xcb_lib in libxcb-cursor.so.0 libxkbcommon-x11.so.0 libxkbcommon.so.0 libxcb-xkb.so.1; do
+# Qt xcb platform needs the full xcb-util + xkbcommon set on minimal Ubuntu
+# (AppImage catalog Xvfb / firejail has no host copies).
+for _qt_xcb_lib in \
+    libxcb-cursor.so.0 \
+    libxcb-icccm.so.4 \
+    libxcb-image.so.0 \
+    libxcb-keysyms.so.1 \
+    libxcb-render-util.so.0 \
+    libxcb-util.so.1 \
+    libxkbcommon-x11.so.0 \
+    libxkbcommon.so.0 \
+    libxcb-xkb.so.1
+do
     if ! ls "$ROOT/usr/lib/${_qt_xcb_lib}"* >/dev/null 2>&1; then
         echo "FAIL: AppDir missing bundled ${_qt_xcb_lib} under usr/lib" >&2
         fail=1
