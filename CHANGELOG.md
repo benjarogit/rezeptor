@@ -5,6 +5,14 @@ GitHub Release notes should match these bullets.
 
 ## [Unreleased]
 
+## [1.1.52] - 2026-10-02
+
+### Fixed
+- AppImage starts on minimal Ubuntu 22.04 (AppImage catalog Xvfb): ship Debian bookworm `libxkbcommon-x11`, `libxkbcommon`, and `libxcb-xkb` next to `libxcb-cursor`. Do not copy CachyOS host libs (those need GLIBC 2.38).
+
+### Changed
+- AppImage `.desktop` Categories is `Utility` only (one main category).
+
 ## [1.1.51] - 2026-09-20
 
 ### Fixed
