@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Visual C++ 2015–2022 via offizielle Microsoft-Installer (zuverlässiger als winetricks vcrun2019).
+# Visual C++ 2015–2026 via offizielle Microsoft-Installer (zuverlässiger als winetricks vcrun2019).
 
 recipe_vcrun::cache_dir() {
     if type wine_software_cache_dir >/dev/null 2>&1; then
@@ -64,14 +64,14 @@ recipe_vcrun::ensure() {
 
     if ! recipe_vcrun::dll_ok "$sys32"; then
         if type output::step >/dev/null 2>&1; then
-            output::step "Visual C++ 2015–2022 (x64, Microsoft)"
+            output::step "Visual C++ 2015–2026 (x64, Microsoft)"
         fi
         recipe_vcrun::install_exe "$x64" "$log" || return 1
     fi
 
     if ! recipe_vcrun::dll_ok "$wow64"; then
         if type output::step >/dev/null 2>&1; then
-            output::step "Visual C++ 2015–2022 (x86, Microsoft)"
+            output::step "Visual C++ 2015–2026 (x86, Microsoft)"
         fi
         recipe_vcrun::install_exe "$x86" "$log" || true
     fi
